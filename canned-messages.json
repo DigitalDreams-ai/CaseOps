@@ -2,6 +2,6 @@
   {
     "id": "initial-response",
     "name": "Initial Response",
-    "template": "Hi {{issueReporter}},\n\nThe issue {{issueKey}} has been assigned to me. I'm taking a look now and will keep you updated as I make progress.\nLet me know if there's any additional context that might help.\n\n[insert signature]"
+    "template": "Hi {{issueReporter}},\n\nIssue {{issueKey}} has been assigned to me. I'm taking a look now and will keep you updated as I make progress.\nLet me know if there's any additional context that might help.\n\n[insert signature]"
   }
 ]
