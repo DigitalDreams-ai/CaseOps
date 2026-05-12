@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SharingRules xmlns="http://soap.sforce.com/2006/04/metadata">
+    <sharingOwnerRules>
+        <fullName>Share_RR_Assignments_BizAnalyst</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>Share Round Robin Assignments with Business Analyst</label>
+        <sharedTo>
+            <role>Business_Analyst</role>
+        </sharedTo>
+        <sharedFrom>
+            <allInternalUsers/>
+        </sharedFrom>
+    </sharingOwnerRules>
+</SharingRules>
