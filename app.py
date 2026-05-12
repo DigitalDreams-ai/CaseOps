@@ -361,7 +361,8 @@ def api_issues():
 def _get_issue_reporter(key: str) -> str:
     """Extract reporter from raw JSON (synced by jira_sync.py)."""
     raw = _raw_json(key)
-    reporter = raw.get("fields", {}).get("reporter", {})
+    # Raw JSON structure: { "issue": { "fields": { "reporter": {...} } } }
+    reporter = raw.get("issue", {}).get("fields", {}).get("reporter", {})
     if isinstance(reporter, dict):
         name = reporter.get("displayName", "")
         if name:
