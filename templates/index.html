@@ -1087,12 +1087,9 @@
 
       // Auto-transition to In Progress if sent message was Initial Response
       if (message_id === 'initial-response') {
-        statusEl.textContent = '✓ Sent · Updating status…';
         try {
-          // Get available transitions first
           const transRes = await fetch(`/api/issue/${key}/transitions`);
           const transitions = await transRes.json();
-          // Case-insensitive match for "In Progress" or "In progress"
           const inProgressTrans = transitions.find(t => t.to_status && t.to_status.toLowerCase() === 'in progress');
           if (inProgressTrans) {
             const transRes2 = await fetch(`/api/issue/${key}/transition`, {
@@ -1112,16 +1109,13 @@
               }
               await loadIssues();
             } else {
-              statusEl.style.color = '#f85149';
-              statusEl.textContent = '✓ Sent (transition error: ' + (transData.error || 'unknown') + ')';
+              statusEl.textContent = '✓ Sent';
             }
           } else {
-            statusEl.style.color = '#f0883e';
-            statusEl.textContent = '✓ Sent (In Progress transition not available)';
+            statusEl.textContent = '✓ Sent';
           }
         } catch(transErr) {
-          statusEl.style.color = '#f85149';
-          statusEl.textContent = '✓ Sent (transition error)';
+          statusEl.textContent = '✓ Sent';
         }
       }
     } catch(e) {
