@@ -73,23 +73,16 @@ Use `skills-ref validate ./skills/<skill-name>` if the tool is available, but do
 <claude-mem-context>
 # Memory Context
 
-# [CaseOps] recent context, 2026-05-12 11:48am MST
+# [CaseOps] recent context, 2026-05-12 12:29pm MST
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 50 obs (20,515t read) | 328,697t work | 94% savings
+Stats: 50 obs (20,695t read) | 463,214t work | 96% savings
 
 ### May 8, 2026
-655 10:50a 🔵 Agent Reasoning Draft Schema Structure Confirmed
-656 " 🔵 HEAL-33505 Issue Packet: Production Org Record ID Confirmed
-657 10:51a 🔵 HEAL-33505 Evidence Ledger: Production URLs Flagged Not Customer-Safe
-658 " 🔵 HEAL-33505 Issue Brief: Category salesforce_workflow_error, Investigation Status Failed
-659 " 🔵 HEAL-33505 Salesforce Investigation: Exact Org Mismatch Error Confirmed
-661 " 🔴 HEAL-33505 Agent Discovery Draft JSON Repair
-660 " 🔵 HEAL-33505 Read Recovery Plan: Org Mismatch Details and Fallback Searches Not Run
-662 " 🔵 HEAL-33505 Human Ask Packet: Waiting for Sandbox Record Link or Production Confirmation
+662 10:51a 🔵 HEAL-33505 Human Ask Packet: Waiting for Sandbox Record Link or Production Confirmation
 663 " 🔵 HEAL-33505 Active Blockers: Cross-Org Record Mismatch
 664 " 🔵 HEAL-33505 Fix Proposal Blocked: Two Gates Failed Out of 12
 665 10:52a 🔵 HEAL-33505 MCP Request Contract: Local Metadata Search Returned No Matches
@@ -133,6 +126,13 @@ Stats: 50 obs (20,515t read) | 328,697t work | 94% savings
 ### May 12, 2026
 1036 11:40a ✅ .gitignore Reorganized and Deduplicated for CaseOps Project
 1037 11:41a 🔵 .gitignore File Contains Near-Complete Duplicate Block
+1038 11:48a 🔄 CaseOps .gitignore reorganized with deduplication and expanded coverage
+1039 12:10p ✅ .gitignore Reorganized and Deduplicated for CaseOps
+1040 12:11p ✅ CaseOps Repository Fully Staged and Committed in 4 Atomic Commits
+1041 " ✅ .gitignore Significantly Expanded Beyond Deduplication
+1042 " ✅ sfdx-project.json Updated: Name Added, API Version Bumped to 66.0
+1043 " 🔵 CaseOps Project Structure: Flask GUI + Jira Sync + Agent Skills + Salesforce SFDX
+1044 " 🟣 5-Skill CaseOps Agent Skills Pack Committed to Repository
 
-Access 329k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 463k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>
