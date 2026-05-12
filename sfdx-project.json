@@ -12,7 +12,8 @@
             "path": "unpackaged"
         }
     ],
+    "name": "CaseOps",
     "namespace": null,
-    "sourceApiVersion": "61.0",
+    "sourceApiVersion": "66.0",
     "packageAliases": {}
 }
