@@ -359,11 +359,15 @@ def api_issues():
 
 
 def _get_issue_reporter(key: str) -> str:
+    """Extract reporter from raw JSON (synced by jira_sync.py)."""
     raw = _raw_json(key)
     reporter = raw.get("fields", {}).get("reporter", {})
     if isinstance(reporter, dict):
-        return reporter.get("displayName", "Colleague")
-    return "Colleague"
+        name = reporter.get("displayName", "")
+        if name:
+            return name
+    # If reporter not found, return empty string (don't use fallback)
+    return ""
 
 
 @app.get("/api/issue/<key>")

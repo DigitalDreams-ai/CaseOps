@@ -1092,28 +1092,36 @@
           // Get available transitions first
           const transRes = await fetch(`/api/issue/${key}/transitions`);
           const transitions = await transRes.json();
-          const inProgressTrans = transitions.find(t => t.to_status === 'In Progress');
+          // Case-insensitive match for "In Progress" or "In progress"
+          const inProgressTrans = transitions.find(t => t.to_status && t.to_status.toLowerCase() === 'in progress');
           if (inProgressTrans) {
             const transRes2 = await fetch(`/api/issue/${key}/transition`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ transition_id: inProgressTrans.id, new_status: 'In Progress' }),
+              body: JSON.stringify({ transition_id: inProgressTrans.id, new_status: inProgressTrans.to_status }),
             });
             const transData = await transRes2.json();
             if (transRes2.ok) {
+              statusEl.style.color = '#3fb950';
               statusEl.textContent = '✓ Sent & Transitioned to In Progress';
               const meta = document.getElementById('detail-meta');
               if (meta) {
                 const oldText = meta.textContent;
-                const newText = oldText.replace(/Status: [^|]+/, 'Status: In Progress');
+                const newText = oldText.replace(/Status: [^|]+/, `Status: ${inProgressTrans.to_status}`);
                 meta.textContent = newText;
               }
               await loadIssues();
+            } else {
+              statusEl.style.color = '#f85149';
+              statusEl.textContent = '✓ Sent (transition error: ' + (transData.error || 'unknown') + ')';
             }
+          } else {
+            statusEl.style.color = '#f0883e';
+            statusEl.textContent = '✓ Sent (In Progress transition not available)';
           }
         } catch(transErr) {
-          // Silently ignore transition error - message was sent successfully
-          statusEl.textContent = '✓ Sent (transition failed)';
+          statusEl.style.color = '#f85149';
+          statusEl.textContent = '✓ Sent (transition error)';
         }
       }
     } catch(e) {
