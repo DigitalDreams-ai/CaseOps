@@ -842,6 +842,16 @@
         ${isRunning ? 'disabled' : ''}>Sync This Issue</button>
       <button class="btn primary" data-run-key="${key}" onclick="runAction('full_issue','${key}')"
         ${isRunning ? 'disabled' : ''}>Run Pipeline For This Issue</button>
+      <select id="transition-select" class="btn" style="padding:5px 8px;">
+        <option value="">Change status…</option>
+      </select>
+      <button class="btn primary" id="transition-btn" onclick="applyTransition('${key}')" disabled>Apply</button>
+      <span id="transition-status" style="font-size:12px;"></span>
+      <select id="message-select" class="btn" style="padding:5px 8px;">
+        <option value="">Send message…</option>
+      </select>
+      <button class="btn primary" id="message-btn" onclick="sendCannedMessage('${key}')" disabled>Send</button>
+      <span id="message-status" style="font-size:12px;"></span>
       <div class="spacer"></div>
       ${jiraLink}
       <button class="btn" onclick="copyPrompt(${JSON.stringify(issue.claude_prompt)})">Copy Claude Prompt</button>
@@ -875,6 +885,8 @@
     if (targetEl) selectTab(key, targetTab.id, targetEl);
 
     renderInstructionPanel(issue);
+    loadTransitions(key);
+    loadCannedMessages(key, issue.status);
   }
 
   async function selectTab(key, ftype, tabEl) {
@@ -950,6 +962,161 @@
         btn.disabled = false;
       }
     } catch (e) {
+      statusEl.style.color = '#f85149';
+      statusEl.textContent = e.message;
+      btn.disabled = false;
+    }
+  }
+
+  async function loadTransitions(key) {
+    const sel = document.getElementById('transition-select');
+    const btn = document.getElementById('transition-btn');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Loading…</option>';
+    try {
+      const res = await fetch(`/api/issue/${key}/transitions`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      sel.innerHTML = '<option value="">Change status…</option>' +
+        data.map(t => `<option value="${escHtml(t.id)}" data-status="${escHtml(t.to_status)}">${escHtml(t.name)}</option>`).join('');
+      sel.onchange = () => { btn.disabled = !sel.value; };
+    } catch(e) {
+      sel.innerHTML = `<option value="">Error: ${escHtml(e.message)}</option>`;
+    }
+  }
+
+  async function applyTransition(key) {
+    const sel = document.getElementById('transition-select');
+    const btn = document.getElementById('transition-btn');
+    const statusEl = document.getElementById('transition-status');
+    const opt = sel.options[sel.selectedIndex];
+    const transition_id = sel.value;
+    const new_status = opt.getAttribute('data-status') || '';
+    if (!transition_id) return;
+
+    btn.disabled = true;
+    statusEl.style.color = '#8b949e';
+    statusEl.textContent = 'Applying…';
+
+    try {
+      const res = await fetch(`/api/issue/${key}/transition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transition_id, new_status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      // Update detail-meta status text
+      const meta = document.getElementById('detail-meta');
+      if (meta) {
+        const oldText = meta.textContent;
+        const newText = oldText.replace(/Status: [^|]+/, `Status: ${new_status}`);
+        meta.textContent = newText;
+      }
+
+      statusEl.style.color = '#3fb950';
+      statusEl.textContent = `→ ${new_status}`;
+      logLine(`Transitioned ${key} to ${new_status}`, 'ok', key);
+
+      // Re-load issue list so sidebar badge/group updates
+      await loadIssues();
+    } catch(e) {
+      statusEl.style.color = '#f85149';
+      statusEl.textContent = e.message;
+      btn.disabled = false;
+    }
+  }
+
+  async function loadCannedMessages(key, status) {
+    const sel = document.getElementById('message-select');
+    const btn = document.getElementById('message-btn');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Loading…</option>';
+    try {
+      const res = await fetch(`/api/canned-messages`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      // Filter messages based on status
+      const available = data.filter(m => {
+        if (m.id === 'initial-response') {
+          return status === 'Waiting for support';
+        }
+        return true;
+      });
+
+      if (available.length === 0) {
+        sel.innerHTML = '<option value="">No messages available</option>';
+        btn.disabled = true;
+      } else {
+        sel.innerHTML = '<option value="">Send message…</option>' +
+          available.map(m => `<option value="${escHtml(m.id)}">${escHtml(m.name)}</option>`).join('');
+        sel.onchange = () => { btn.disabled = !sel.value; };
+      }
+    } catch(e) {
+      sel.innerHTML = `<option value="">Error: ${escHtml(e.message)}</option>`;
+    }
+  }
+
+  async function sendCannedMessage(key) {
+    const sel = document.getElementById('message-select');
+    const btn = document.getElementById('message-btn');
+    const statusEl = document.getElementById('message-status');
+    const message_id = sel.value;
+    if (!message_id) return;
+
+    btn.disabled = true;
+    statusEl.style.color = '#8b949e';
+    statusEl.textContent = 'Sending…';
+
+    try {
+      const res = await fetch(`/api/issue/${key}/send-canned-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      statusEl.style.color = '#3fb950';
+      statusEl.textContent = '✓ Sent';
+      logLine(`Sent message to ${key}`, 'ok', key);
+      sel.value = '';
+      btn.disabled = true;
+
+      // Auto-transition to In Progress if sent message was Initial Response
+      if (message_id === 'initial-response') {
+        statusEl.textContent = '✓ Sent · Updating status…';
+        try {
+          // Get available transitions first
+          const transRes = await fetch(`/api/issue/${key}/transitions`);
+          const transitions = await transRes.json();
+          const inProgressTrans = transitions.find(t => t.to_status === 'In Progress');
+          if (inProgressTrans) {
+            const transRes2 = await fetch(`/api/issue/${key}/transition`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ transition_id: inProgressTrans.id, new_status: 'In Progress' }),
+            });
+            const transData = await transRes2.json();
+            if (transRes2.ok) {
+              statusEl.textContent = '✓ Sent & Transitioned to In Progress';
+              const meta = document.getElementById('detail-meta');
+              if (meta) {
+                const oldText = meta.textContent;
+                const newText = oldText.replace(/Status: [^|]+/, 'Status: In Progress');
+                meta.textContent = newText;
+              }
+              await loadIssues();
+            }
+          }
+        } catch(transErr) {
+          // Silently ignore transition error - message was sent successfully
+          statusEl.textContent = '✓ Sent (transition failed)';
+        }
+      }
+    } catch(e) {
       statusEl.style.color = '#f85149';
       statusEl.textContent = e.message;
       btn.disabled = false;

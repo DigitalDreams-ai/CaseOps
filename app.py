@@ -22,6 +22,9 @@ from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request, send_file, stream_with_context
 
+from caseops_paths import default_jira_dir
+from jira_sync import JiraClient, update_manifest_status
+
 try:
     import markdown as md_lib
 
@@ -355,6 +358,14 @@ def api_issues():
     return jsonify(result)
 
 
+def _get_issue_reporter(key: str) -> str:
+    raw = _raw_json(key)
+    reporter = raw.get("fields", {}).get("reporter", {})
+    if isinstance(reporter, dict):
+        return reporter.get("displayName", "Colleague")
+    return "Colleague"
+
+
 @app.get("/api/issue/<key>")
 def api_issue(key: str):
     issues = _read_manifest()
@@ -371,6 +382,7 @@ def api_issue(key: str):
         "tabs": tabs,
         "claude_prompt": _claude_prompt(key, row.get("Summary", "")),
         "jira_url": f"{JIRA_BASE_URL}/browse/{key}" if JIRA_BASE_URL else "",
+        "reporter": _get_issue_reporter(key),
     })
 
 
@@ -495,6 +507,14 @@ def api_post_comment(key: str):
         return jsonify({"error": "No body provided."}), 400
     if not JIRA_BASE_URL:
         return jsonify({"error": "JIRA_BASE_URL not configured."}), 500
+
+    # Append signature to public Jira messages
+    if is_public:
+        sig_file = ROOT / "jira-signature.txt"
+        if sig_file.exists():
+            signature = sig_file.read_text(encoding="utf-8").strip()
+            body = f"{body}\n\n{signature}"
+
     try:
         auth = _jira_auth_header()
         payload = json.dumps({"body": body, "public": is_public}).encode("utf-8")
@@ -516,6 +536,120 @@ def api_post_comment(key: str):
         return jsonify({"error": f"Jira {exc.code}: {details[:300]}"}), 502
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+
+
+@app.get("/api/issue/<key>/transitions")
+def api_issue_transitions(key: str):
+    _load_jira_env()
+    try:
+        auth = _jira_auth_header()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 401
+    if not JIRA_BASE_URL:
+        return jsonify({"error": "JIRA_BASE_URL not configured"}), 500
+    client = JiraClient(base_url=JIRA_BASE_URL, auth_header=auth)
+    try:
+        transitions = client.get_transitions(key)
+    except Exception as e:
+        return jsonify({"error": str(e)[:300]}), 502
+    return jsonify(transitions)
+
+
+@app.post("/api/issue/<key>/transition")
+def api_issue_transition(key: str):
+    data = request.get_json(silent=True) or {}
+    transition_id = str(data.get("transition_id", "")).strip()
+    new_status = str(data.get("new_status", "")).strip()
+    if not transition_id:
+        return jsonify({"error": "transition_id required"}), 400
+
+    _load_jira_env()
+    try:
+        auth = _jira_auth_header()
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 401
+    if not JIRA_BASE_URL:
+        return jsonify({"error": "JIRA_BASE_URL not configured"}), 500
+    client = JiraClient(base_url=JIRA_BASE_URL, auth_header=auth)
+    try:
+        client.apply_transition(key, transition_id)
+    except Exception as e:
+        return jsonify({"error": str(e)[:300]}), 502
+
+    # Update local manifest
+    try:
+        update_manifest_status(key, new_status, default_jira_dir())
+    except Exception:
+        pass  # non-fatal — Jira side succeeded
+
+    return jsonify({"ok": True, "new_status": new_status})
+
+
+@app.route("/api/canned-messages", methods=["GET"])
+def api_canned_messages():
+    messages_file = ROOT / "canned-messages.json"
+    if not messages_file.exists():
+        return jsonify([])
+    try:
+        messages = json.loads(messages_file.read_text(encoding="utf-8"))
+        return jsonify(messages)
+    except Exception:
+        return jsonify([])
+
+
+@app.route("/api/issue/<key>/send-canned-message", methods=["POST"])
+def api_send_canned_message(key: str):
+    data = request.get_json(silent=True) or {}
+    message_id = data.get("message_id", "").strip()
+    if not message_id:
+        return jsonify({"error": "message_id required"}), 400
+
+    messages_file = ROOT / "canned-messages.json"
+    if not messages_file.exists():
+        return jsonify({"error": "No canned messages configured"}), 400
+    try:
+        messages = json.loads(messages_file.read_text(encoding="utf-8"))
+    except Exception:
+        return jsonify({"error": "Failed to load canned messages"}), 500
+
+    message = next((m for m in messages if m.get("id") == message_id), None)
+    if not message:
+        return jsonify({"error": "Message not found"}), 404
+
+    template = message.get("template", "")
+    reporter = _get_issue_reporter(key)
+
+    body = template.replace("{{issueReporter}}", reporter).replace("{{issueKey}}", key)
+
+    if "[insert signature]" in body:
+        sig_file = ROOT / "jira-signature.txt"
+        sig = sig_file.read_text(encoding="utf-8").strip() if sig_file.exists() else ""
+        body = body.replace("[insert signature]", sig)
+
+    if not JIRA_BASE_URL:
+        return jsonify({"error": "JIRA_BASE_URL not configured"}), 500
+
+    try:
+        auth = _jira_auth_header()
+        payload = json.dumps({"body": body, "public": True}).encode("utf-8")
+        req = urllib.request.Request(
+            f"{JIRA_BASE_URL}/rest/servicedeskapi/request/{key}/comment",
+            data=payload,
+            headers={
+                "Authorization": auth,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+        return jsonify({"ok": True, "id": result.get("id", "")})
+    except urllib.error.HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="replace")
+        return jsonify({"error": f"Jira {exc.code}: {details[:300]}"}), 502
+    except Exception as exc:
+        return jsonify({"error": str(exc)[:300]}), 500
 
 
 @app.get("/files/attachments/<key>/<path:filename>")

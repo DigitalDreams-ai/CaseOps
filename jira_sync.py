@@ -447,6 +447,37 @@ class JiraClient:
 
         return downloaded
 
+    def get_transitions(self, key: str) -> list[dict[str, str]]:
+        """Return available transitions for an issue.
+        Each item: {id: str, name: str, to_status: str}
+        """
+        data = self.request("GET", f"/rest/api/3/issue/{urllib.parse.quote(key)}/transitions")
+        return [
+            {"id": t["id"], "name": t["name"], "to_status": t["to"].get("name", "")}
+            for t in data.get("transitions", [])
+        ]
+
+    def apply_transition(self, key: str, transition_id: str) -> None:
+        """POST a transition to Jira. Raises on non-2xx."""
+        data = json.dumps({"transition": {"id": transition_id}}).encode("utf-8")
+        headers = {
+            "Accept": "application/json",
+            "Authorization": self.auth_header,
+            "Content-Type": "application/json",
+        }
+        request = urllib.request.Request(
+            f"{self.base_url}/rest/api/3/issue/{urllib.parse.quote(key)}/transitions",
+            data=data,
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request) as response:
+                pass  # 204 No Content response, no body to parse
+        except urllib.error.HTTPError as error:
+            details = error.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Jira API error {error.code} for transitions: {details}") from error
+
     def get_attached_forms(self, issue_key: str, cloud_id: str) -> list[dict[str, Any]]:
         forms = []
         seen_form_ids = set()
@@ -760,6 +791,25 @@ def write_manifest(path: Path, rows: list[dict[str, str]]) -> None:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(existing.values())
+
+
+def update_manifest_status(key: str, new_status: str, jira_dir: Path) -> None:
+    """Update Status column in manifest.csv for a single key."""
+    manifest_path = jira_dir / "manifest.csv"
+    if not manifest_path.exists():
+        return
+    rows = list(csv.DictReader(manifest_path.read_text(encoding="utf-8").splitlines()))
+    if not rows:
+        return
+    for row in rows:
+        if row.get("Key") == key:
+            row["Status"] = new_status
+            break
+    fieldnames = ["Key", "Status", "Summary", "Updated", "RawPath", "SummaryPath", "AttachmentCount", "FormCount"]
+    with manifest_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def now_iso() -> str:
