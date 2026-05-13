@@ -845,14 +845,20 @@
 
     const dash = document.getElementById('dashboard');
     if (dash) dash.style.display = 'none';
-    document.getElementById('detail-title').textContent = `${issue.key} — ${issue.summary}`;
-    document.getElementById('detail-title').style.color = '';
-    document.getElementById('detail-meta').textContent =
-      `Status: ${issue.status}   |   Updated: ${issue.updated || '—'}`;
+    const titleEl = document.getElementById('detail-title');
+    if (titleEl) {
+      titleEl.textContent = `${issue.key} — ${issue.summary}`;
+      titleEl.style.color = '';
+    }
+    const metaEl = document.getElementById('detail-meta');
+    if (metaEl) {
+      metaEl.textContent = `Status: ${issue.status}   |   Updated: ${issue.updated || '—'}`;
+    }
 
     // actions
     const actionsEl = document.getElementById('detail-actions');
-    actionsEl.style.display = 'flex';
+    if (actionsEl) actionsEl.style.display = 'flex';
+    else return;
     const isRunning = activeRuns.has(key);
     const jiraLink = issue.jira_url
       ? `<a class="btn" href="${escHtml(issue.jira_url)}" target="_blank" rel="noopener">View in Jira</a>`
@@ -879,6 +885,7 @@
 
     // tabs
     const tabsEl = document.getElementById('tabs');
+    if (!tabsEl) return;
     tabsEl.style.display = 'flex';
     tabsEl.innerHTML = '';
 
@@ -1096,8 +1103,10 @@
     if (!message_id) return;
 
     btn.disabled = true;
-    statusEl.style.color = '#8b949e';
-    statusEl.textContent = 'Sending…';
+    if (statusEl) {
+      statusEl.style.color = '#8b949e';
+      statusEl.textContent = 'Sending…';
+    }
 
     try {
       const res = await fetch(`/api/issue/${key}/send-canned-message`, {
@@ -1108,8 +1117,10 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
 
-      statusEl.style.color = '#3fb950';
-      statusEl.textContent = '✓ Sent';
+      if (statusEl) {
+        statusEl.style.color = '#3fb950';
+        statusEl.textContent = '✓ Sent';
+      }
       logLine(`Sent message to ${key}`, 'ok', key);
       sel.value = '';
       btn.disabled = true;
@@ -1128,8 +1139,10 @@
             });
             const transData = await transRes2.json();
             if (transRes2.ok) {
-              statusEl.style.color = '#3fb950';
-              statusEl.textContent = '✓ Sent & Transitioned to In Progress';
+              if (statusEl) {
+                statusEl.style.color = '#3fb950';
+                statusEl.textContent = '✓ Sent & Transitioned to In Progress';
+              }
               const meta = document.getElementById('detail-meta');
               if (meta) {
                 const oldText = meta.textContent;
@@ -1138,18 +1151,20 @@
               }
               await loadIssues();
             } else {
-              statusEl.textContent = '✓ Sent';
+              if (statusEl) statusEl.textContent = '✓ Sent';
             }
           } else {
-            statusEl.textContent = '✓ Sent';
+            if (statusEl) statusEl.textContent = '✓ Sent';
           }
         } catch(transErr) {
-          statusEl.textContent = '✓ Sent';
+          if (statusEl) statusEl.textContent = '✓ Sent';
         }
       }
     } catch(e) {
-      statusEl.style.color = '#f85149';
-      statusEl.textContent = e.message;
+      if (statusEl) {
+        statusEl.style.color = '#f85149';
+        statusEl.textContent = e.message;
+      }
       btn.disabled = false;
     }
   }
