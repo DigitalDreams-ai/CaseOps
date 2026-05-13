@@ -85,8 +85,11 @@ docs/
 .project
 .settings/
 
-# Local assistant/session data
-.claude/
+# Local assistant/session data (track CaseOps Claude Code skill stub under .claude/skills/)
+.claude/*
+!.claude/skills/
+!.claude/skills/jira-salesforce-fix-pipeline/
+!.claude/skills/jira-salesforce-fix-pipeline/SKILL.md
 .playwright-mcp/
 
 # OS files
