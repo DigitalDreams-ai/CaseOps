@@ -26,6 +26,7 @@ from datetime import date
 from pathlib import Path
 
 from caseops_paths import PROJECT_ROOT, default_jira_dir, default_jira_env_file
+from jira_sync import MANIFEST_FIELDNAMES
 
 CLOSED_STATUSES = {"closed", "resolved"}
 ESCALATED_STATUS = "escalated to engineering"
@@ -169,11 +170,12 @@ def run_sync(args: argparse.Namespace) -> int:
         new_rows = read_manifest(manifest_path)
         for row in new_rows:
             existing_rows[row["Key"]] = row  # update or add the synced key
-        fieldnames = ["Key", "Status", "Summary", "Updated", "RawPath", "SummaryPath", "AttachmentCount", "FormCount"]
+        fieldnames = MANIFEST_FIELDNAMES
+        merged = {k: {fn: row.get(fn, "") for fn in fieldnames} for k, row in existing_rows.items()}
         with manifest_path.open("w", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
             writer.writeheader()
-            writer.writerows(existing_rows.values())
+            writer.writerows(merged.values())
         print(f"Manifest merged: {len(existing_rows)} total issue(s).", flush=True)
 
     return result

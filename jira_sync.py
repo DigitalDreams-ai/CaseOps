@@ -51,6 +51,8 @@ DEFAULT_ASSIGNEE = "user@example.com"
 TRIAGE_REQUIRED_FIELDS = [
     "summary",
     "status",
+    "priority",
+    "duedate",
     "assignee",
     "reporter",
     "description",
@@ -149,12 +151,20 @@ def main() -> int:
         updated = issue.get("fields", {}).get("updated")
         newest_updated = max_jira_datetime(newest_updated, updated)
 
+        pri_raw = issue.get("fields", {}).get("priority")
+        priority_name = ""
+        if isinstance(pri_raw, dict):
+            priority_name = pri_raw.get("name") or ""
+        duedate = issue.get("fields", {}).get("duedate") or ""
+
         manifest_rows.append(
             {
                 "Key": key,
                 "Status": get_nested(issue, ["fields", "status", "name"]) or "",
                 "Summary": issue.get("fields", {}).get("summary") or "",
                 "Updated": updated or "",
+                "Due": duedate if isinstance(duedate, str) else "",
+                "Priority": priority_name,
                 "RawPath": str(raw_dir / f"{key}.json").replace("\\", "/"),
                 "SummaryPath": str(summary_dir / f"{key}.md").replace("\\", "/"),
                 "AttachmentCount": str(len(attachments)),
@@ -775,8 +785,22 @@ def write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+MANIFEST_FIELDNAMES = [
+    "Key",
+    "Status",
+    "Summary",
+    "Updated",
+    "Due",
+    "Priority",
+    "RawPath",
+    "SummaryPath",
+    "AttachmentCount",
+    "FormCount",
+]
+
+
 def write_manifest(path: Path, rows: list[dict[str, str]]) -> None:
-    fieldnames = ["Key", "Status", "Summary", "Updated", "RawPath", "SummaryPath", "AttachmentCount", "FormCount"]
+    fieldnames = MANIFEST_FIELDNAMES
     # Merge: preserve existing rows for keys not in the new batch.
     existing: dict[str, dict[str, str]] = {}
     if path.exists():
@@ -784,9 +808,9 @@ def write_manifest(path: Path, rows: list[dict[str, str]]) -> None:
             for row in csv.DictReader(fh):
                 key = row.get("Key", "")
                 if key:
-                    existing[key] = row
+                    existing[key] = {fn: row.get(fn, "") for fn in fieldnames}
     for row in rows:
-        existing[row["Key"]] = row
+        existing[row["Key"]] = {fn: row.get(fn, "") for fn in fieldnames}
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
@@ -798,14 +822,17 @@ def update_manifest_status(key: str, new_status: str, jira_dir: Path) -> None:
     manifest_path = jira_dir / "manifest.csv"
     if not manifest_path.exists():
         return
-    rows = list(csv.DictReader(manifest_path.read_text(encoding="utf-8").splitlines()))
+    fieldnames = MANIFEST_FIELDNAMES
+    rows: list[dict[str, str]] = []
+    with manifest_path.open(encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            rows.append({fn: row.get(fn, "") for fn in fieldnames})
     if not rows:
         return
     for row in rows:
         if row.get("Key") == key:
             row["Status"] = new_status
             break
-    fieldnames = ["Key", "Status", "Summary", "Updated", "RawPath", "SummaryPath", "AttachmentCount", "FormCount"]
     with manifest_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()

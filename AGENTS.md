@@ -17,6 +17,8 @@ Skills must follow the Agent Skills format:
 - `name` must be lowercase kebab-case and match the parent folder name.
 - Prefer the standard folders `scripts/`, `references/`, and `assets/`.
 
+For **Claude Code** in this repo, a thin entrypoint mirrors the skill name under `.claude/skills/jira-salesforce-fix-pipeline/SKILL.md`; it points at the canonical `skills/.../SKILL.md` — edit workflow only under `skills/`.
+
 Do not add a required custom registry or runner unless the user explicitly asks for local helper tooling.
 
 ## Implementation Priorities

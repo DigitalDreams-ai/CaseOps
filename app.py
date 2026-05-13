@@ -13,11 +13,14 @@ import csv
 import json
 import os
 import queue
+import re
 import subprocess
 import sys
 import threading
+import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request, send_file, stream_with_context
@@ -43,7 +46,14 @@ OUTPUTS = ROOT / "outputs"
 
 
 def _load_jira_env() -> None:
-    """Load .env.jira into os.environ (does not overwrite existing vars)."""
+    """Load .env.jira into os.environ.
+
+    By default does not overwrite existing non-empty values.
+    Exceptions:
+    - ANTHROPIC_API_KEY: always set from the file when the line has a non-empty
+      value (Claude Code subprocess must see it; a blank OS placeholder no longer blocks it).
+    - Any key: if currently unset or empty/whitespace, the file value is applied.
+    """
     env_file = ROOT / ".env.jira"
     if not env_file.exists():
         return
@@ -53,8 +63,17 @@ def _load_jira_env() -> None:
             continue
         key, _, value = line.partition("=")
         key = key.strip()
-        if key and key not in os.environ:
-            os.environ[key] = value.strip()
+        if not key:
+            continue
+        value = value.strip().strip('"').strip("'")
+        if not value:
+            continue
+        if key == "ANTHROPIC_API_KEY":
+            os.environ[key] = value
+            continue
+        cur = os.environ.get(key, "")
+        if key not in os.environ or not str(cur).strip():
+            os.environ[key] = value
 
 
 _load_jira_env()
@@ -145,8 +164,10 @@ def _do_stream_claude(prompt: str, run_key: str) -> None:
            "--verbose",
            "--dangerously-skip-permissions"]
     try:
+        # Explicit env so ANTHROPIC_API_KEY from .env.jira is always passed on Windows/Linux.
         proc = subprocess.Popen(
             cmd,
+            env=os.environ.copy(),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.DEVNULL,
@@ -236,8 +257,9 @@ def _stream_full_issue(key: str, run_key: str) -> None:
             _log_q.put(f"{run_key}|-- Handing off to Claude --")
             prompt = _build_claude_prompt(
                 key,
-                "Process this issue through the full jira-salesforce-fix-pipeline skill. "
-                "Complete the investigation, draft internal notes, and draft the Jira message.",
+                "Run the full CaseOps fix pipeline for this issue through completion of investigation, "
+                "internal notes, and Jira customer message (and any sandbox/escalation steps the playbook "
+                "requires for this issue).",
             )
             _do_stream_claude(prompt, run_key)
         else:
@@ -265,13 +287,25 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
 
     files_block = "\n".join(existing) if existing else "  - None yet"
 
+    skill_md = (ROOT / "skills" / "jira-salesforce-fix-pipeline" / "SKILL.md").resolve()
+    skill_line = str(skill_md) if skill_md.is_file() else f"(missing) {skill_md}"
+
     return (
         f"Issue: {key} — {summary}\n"
         f"Status: {status}\n\n"
         f"Existing pipeline files:\n{files_block}\n\n"
-        f"Instruction: {instruction}\n\n"
-        f"Use the jira-salesforce-fix-pipeline skill to handle this. "
-        f"Read the existing files above for context before taking any action."
+        f"## Playbook (mandatory — read first)\n"
+        f"A Claude Code stub may exist at .claude/skills/jira-salesforce-fix-pipeline/SKILL.md; "
+        f"the full workflow is always in the file below — read it completely, then execute it for issue {key}:\n"
+        f"  {skill_line}\n"
+        f"Use references/ and assets/ next to that SKILL.md when the playbook points to them.\n\n"
+        f"## Instruction\n"
+        f"{instruction}\n\n"
+        f"## Rules\n"
+        f"- Do not ask the user to pick a workflow or skill; the playbook above is the workflow.\n"
+        f"- Proceed with the next pipeline steps implied by the playbook and by which outputs/ files "
+        f"already exist for {key}.\n"
+        f"- Create or update outputs/ artifacts this issue needs (paths as defined in the playbook).\n"
     )
 
 
@@ -323,11 +357,54 @@ def _attachment_count(key: str) -> int:
     return len(_raw_json(key).get("attachments", []))
 
 
+_ROLLUP_FILENAME = re.compile(r"^issue-summary-\d{4}-\d{2}-\d{2}\.md$")
+
+
+def _pipeline_file_flags(key: str) -> dict[str, bool]:
+    """Which pipeline output files exist for this issue (for dashboard / API)."""
+    return {
+        "has_jira_summary": (OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key)).exists(),
+        "has_investigation": (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists(),
+        "has_internal_notes": (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists(),
+        "has_jira_message": (OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)).exists(),
+        "has_test_report": (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists(),
+        "has_eng_handoff": (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists(),
+    }
+
+
+def _latest_issue_summary_path() -> Path | None:
+    candidates = list(OUTPUTS.glob("issue-summary-*.md"))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
 def _claude_prompt(key: str, summary: str) -> str:
     return (
         f'Process {key} through the jira-salesforce-fix-pipeline skill.\n\n'
         f'Issue: {summary}'
     )
+
+
+def _due_end_ms(due_str: str) -> int | None:
+    """Jira `duedate` is YYYY-MM-DD. Return UTC end-of-day epoch milliseconds, or None."""
+    if not due_str or not str(due_str).strip():
+        return None
+    s = str(due_str).strip()[:10]
+    try:
+        dt = datetime.strptime(s, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        eod = dt.replace(hour=23, minute=59, second=59, microsecond=999000)
+        return int(eod.timestamp() * 1000)
+    except ValueError:
+        return None
+
+
+def _sla_remaining_ms(due_str: str) -> int | None:
+    """Milliseconds until end of due date (negative if overdue). None if no due date."""
+    end = _due_end_ms(due_str)
+    if end is None:
+        return None
+    return end - int(time.time() * 1000)
 
 
 # -- routes ------------------------------------------------------------------
@@ -346,16 +423,30 @@ def api_issues():
     for row in issues:
         key = row.get("Key", "")
         status = row.get("Status", "")
+        flags = _pipeline_file_flags(key)
+        due = row.get("Due", "") or ""
         result.append({
             "key": key,
             "status": status,
             "summary": row.get("Summary", ""),
             "disposition": _disposition(status),
             "updated": row.get("Updated", ""),
+            "due": due,
+            "priority_name": row.get("Priority", "") or "",
+            "sla_remaining_ms": _sla_remaining_ms(due),
             "jira_url": f"{JIRA_BASE_URL}/browse/{key}" if JIRA_BASE_URL else "",
-            "has_jira_message": (OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)).exists(),
+            **flags,
         })
     return jsonify(result)
+
+
+@app.get("/api/latest-issue-summary")
+def api_latest_issue_summary():
+    path = _latest_issue_summary_path()
+    if not path:
+        return jsonify({"label": None, "url": None})
+    name = path.name
+    return jsonify({"label": name, "url": f"/files/rollup/{name}"})
 
 
 def _get_issue_reporter(key: str) -> str:
@@ -378,12 +469,16 @@ def api_issue(key: str):
     if not row:
         return jsonify({"error": "not found"}), 404
     tabs = _available_tabs(key)
+    due = row.get("Due", "") or ""
     return jsonify({
         "key": key,
         "status": row.get("Status", ""),
         "summary": row.get("Summary", ""),
         "disposition": _disposition(row.get("Status", "")),
         "updated": row.get("Updated", ""),
+        "due": due,
+        "priority_name": row.get("Priority", "") or "",
+        "sla_remaining_ms": _sla_remaining_ms(due),
         "tabs": tabs,
         "claude_prompt": _claude_prompt(key, row.get("Summary", "")),
         "jira_url": f"{JIRA_BASE_URL}/browse/{key}" if JIRA_BASE_URL else "",
@@ -680,6 +775,21 @@ def serve_attachment(key: str, filename: str):
     if not str(path).startswith(str(att_dir.resolve())):
         return jsonify({"error": "forbidden"}), 403
     if not path.exists():
+        return jsonify({"error": "not found"}), 404
+    return send_file(path)
+
+
+@app.get("/files/rollup/<path:filename>")
+def serve_issue_rollup(filename: str):
+    if not _ROLLUP_FILENAME.match(filename):
+        return jsonify({"error": "invalid"}), 400
+    path = (OUTPUTS / filename).resolve()
+    out = OUTPUTS.resolve()
+    try:
+        path.relative_to(out)
+    except ValueError:
+        return jsonify({"error": "forbidden"}), 403
+    if not path.is_file():
         return jsonify({"error": "not found"}), 404
     return send_file(path)
 

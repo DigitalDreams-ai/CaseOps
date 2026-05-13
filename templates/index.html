@@ -107,9 +107,17 @@
       color: #6e7681;
       cursor: pointer;
       transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
     }
     .sort-pill:hover { color: #c9d1d9; border-color: #6e7681; }
     .sort-pill.active { background: #21262d; color: #e6edf3; border-color: #8b949e; }
+    .sort-pill-dir {
+      font-size: 10px;
+      opacity: 0.85;
+      min-width: 0.65em;
+    }
     #issue-list {
       flex: 1;
       overflow-y: auto;
@@ -246,6 +254,41 @@
       white-space: nowrap;
       align-self: flex-end;
     }
+
+    /* ── Run-complete toast (per-issue finish while viewing another) ── */
+    .run-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      max-width: 340px;
+      padding: 12px 40px 12px 14px;
+      background: #21262d;
+      border: 1px solid #388bfd;
+      border-radius: 8px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+      z-index: 1000;
+      cursor: pointer;
+      font-size: 13px;
+      color: #e6edf3;
+      line-height: 1.45;
+    }
+    .run-toast.hidden { display: none; }
+    .run-toast:focus { outline: 2px solid #388bfd; outline-offset: 2px; }
+    .run-toast-close {
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      color: #8b949e;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .run-toast-close:hover { color: #e6edf3; background: #30363d; }
 
     /* ── Tabs ────────────────────────────────────────────────── */
     #tabs {
@@ -513,45 +556,207 @@
     #filter-input:focus { outline: none; border-color: #388bfd; }
     #filter-input::placeholder { color: #484f58; }
 
-    /* ── Dashboard ───────────────────────────────────────────── */
+    /* ── Dashboard (Overview) — simple, readable ─────────────── */
     #dashboard {
-      padding: 32px 28px 20px;
+      padding: 24px 28px 28px;
+      max-width: 640px;
+      margin: 0 auto;
     }
     #dashboard h2 {
-      font-size: 18px;
+      font-size: 22px;
       font-weight: 600;
       color: #e6edf3;
-      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
     }
     .dash-cards {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    @media (min-width: 720px) {
+      .dash-cards { grid-template-columns: repeat(4, 1fr); }
     }
     .dash-card {
       background: #161b22;
       border: 1px solid #30363d;
       border-radius: 8px;
-      padding: 14px 16px;
+      padding: 12px 14px;
     }
     .dash-count {
-      font-size: 28px;
+      font-size: 22px;
       font-weight: 700;
       font-family: "SF Mono", "Fira Code", monospace;
       color: #e6edf3;
-      line-height: 1;
+      line-height: 1.1;
       margin-bottom: 4px;
     }
     .dash-label {
       font-size: 11px;
-      color: #6e7681;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      color: #8b949e;
+      font-weight: 500;
+      line-height: 1.3;
     }
     .dash-card.c-active   .dash-count { color: #79c0ff; }
     .dash-card.c-escalated .dash-count { color: #f0883e; }
     .dash-card.c-ready    .dash-count { color: #3fb950; }
     .dash-card.c-pending  .dash-count { color: #8b949e; }
+
+    .overview-meta {
+      font-size: 13px;
+      color: #8b949e;
+      margin: 0 0 20px;
+      line-height: 1.5;
+    }
+    .overview-focus {
+      margin-bottom: 16px;
+    }
+    .overview-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e6edf3;
+      margin-bottom: 4px;
+      letter-spacing: -0.01em;
+    }
+    .overview-caption {
+      font-size: 12px;
+      font-weight: 400;
+      color: #6e7681;
+    }
+    .overview-lede {
+      font-size: 12px;
+      color: #6e7681;
+      margin: 0 0 14px;
+      line-height: 1.45;
+    }
+    .overview-more {
+      font-size: 12px;
+      color: #6e7681;
+      margin: 12px 0 0;
+      padding-top: 10px;
+      border-top: 1px solid #21262d;
+    }
+    details.overview-fold {
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: #161b22;
+    }
+    details.overview-fold summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 12px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #c9d1d9;
+      user-select: none;
+    }
+    details.overview-fold summary::-webkit-details-marker { display: none; }
+    details.overview-fold summary::before {
+      content: '';
+      display: inline-block;
+      width: 0;
+      height: 0;
+      margin-right: 8px;
+      border-left: 5px solid #8b949e;
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+      transform: translateY(-1px);
+      transition: transform 0.12s;
+    }
+    details.overview-fold[open] summary::before {
+      transform: rotate(90deg) translate(2px, -1px);
+    }
+    .overview-pill-count {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #8b949e;
+      background: #21262d;
+      border-radius: 10px;
+      vertical-align: middle;
+    }
+    .overview-pill-count:empty {
+      display: none;
+    }
+    .overview-fold-body {
+      padding: 4px 14px 14px;
+      border-top: 1px solid #21262d;
+    }
+    .overview-empty {
+      font-size: 12px;
+      color: #6e7681;
+      margin: 8px 0 4px;
+      line-height: 1.45;
+    }
+    .overview-row {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      background: #0d1117;
+      color: #c9d1d9;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .overview-row:hover {
+      background: #161b22;
+      border-color: #484f58;
+    }
+    .overview-row-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 10px;
+    }
+    .overview-row-key {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .overview-row-key.active { color: #79c0ff; }
+    .overview-row-key.escalated { color: #f0883e; }
+    .overview-row-key.closed { color: #6e7681; }
+    .overview-row-hint {
+      font-size: 11px;
+      font-weight: 500;
+      color: #f0883e;
+      background: #2d1800;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .overview-row-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 10px;
+      background: #21262d;
+      color: #8b949e;
+      margin-left: auto;
+      max-width: 42%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .overview-row-sum {
+      font-size: 12px;
+      color: #8b949e;
+      line-height: 1.4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .overview-rollup-link { color: #388bfd; font-size: 13px; }
+    .overview-rollup-hint { font-size: 11px; color: #6e7681; }
 
     /* ── Scrollbars ──────────────────────────────────────────── */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -569,9 +774,10 @@
     <div class="dot" id="status-dot"></div>
     <span id="status-text">Idle</span>
   </div>
-  <button class="btn" onclick="runAction('sync')">Sync Jira</button>
-  <button class="btn" onclick="runAction('triage')">Triage</button>
+  <button class="btn" onclick="runAction('sync')">Full Jira Sync</button>
+  <button class="btn" onclick="runAction('triage')">Full Triage</button>
   <button class="btn primary" onclick="runAction('full')">Full Run</button>
+  <button type="button" class="btn" id="topbar-overview-btn" onclick="showOverview()">Overview</button>
 </div>
 
 <!-- Main layout -->
@@ -582,9 +788,10 @@
     <div id="sidebar-header">
       <div class="label">Issues</div>
       <div id="sort-pills">
-        <button class="sort-pill active" data-sort="number" onclick="setSort('number')">#</button>
-        <button class="sort-pill" data-sort="date" onclick="setSort('date')">Date</button>
-        <button class="sort-pill" data-sort="status" onclick="setSort('status')">Status</button>
+        <button type="button" class="sort-pill active" data-sort="number" onclick="setSort('number')">#<span class="sort-pill-dir" aria-hidden="true"></span></button>
+        <button type="button" class="sort-pill" data-sort="date" onclick="setSort('date')">Date<span class="sort-pill-dir" aria-hidden="true"></span></button>
+        <button type="button" class="sort-pill" data-sort="status" onclick="setSort('status')">Status<span class="sort-pill-dir" aria-hidden="true"></span></button>
+        <button type="button" class="sort-pill" data-sort="priority" onclick="setSort('priority')" title="Remaining time until due date (end of due day UTC). No due date sorts last.">Priority<span class="sort-pill-dir" aria-hidden="true"></span></button>
       </div>
       <input id="filter-input" type="search" placeholder="Filter by key or summary…" oninput="filterIssues(this.value)">
     </div>
@@ -611,6 +818,7 @@
     <div id="content-area">
       <div id="dashboard">
         <h2>Overview</h2>
+        <p id="overview-meta" class="overview-meta"></p>
         <div class="dash-cards">
           <div class="dash-card c-active">
             <div class="dash-count" id="dash-active">—</div>
@@ -622,17 +830,54 @@
           </div>
           <div class="dash-card c-ready">
             <div class="dash-count" id="dash-ready">—</div>
-            <div class="dash-label">Jira Draft Ready</div>
+            <div class="dash-label">Draft ready</div>
           </div>
           <div class="dash-card c-pending">
             <div class="dash-count" id="dash-pending">—</div>
-            <div class="dash-label">Pending Work</div>
+            <div class="dash-label">Needs draft</div>
           </div>
         </div>
+
+        <section class="overview-focus">
+          <h3 class="overview-title">Needs attention <span id="overview-next-caption" class="overview-caption"></span></h3>
+          <p class="overview-lede">Issues that still need a synced summary, investigation, or customer-ready draft.</p>
+          <div id="overview-next-steps"></div>
+          <p id="overview-next-more" class="overview-more" style="display:none;"></p>
+        </section>
+
+        <details class="overview-fold">
+          <summary>Ready to review <span id="overview-summary-ready" class="overview-pill-count"></span></summary>
+          <div class="overview-fold-body">
+            <p class="overview-lede" style="margin-top:8px;">Draft Jira reply is on file — open an issue to review or post.</p>
+            <div id="overview-ready-post"></div>
+          </div>
+        </details>
+
+        <details class="overview-fold">
+          <summary>Escalations without handoff <span id="overview-summary-esc" class="overview-pill-count"></span></summary>
+          <div class="overview-fold-body">
+            <div id="overview-escalations"></div>
+          </div>
+        </details>
+
+        <details class="overview-fold">
+          <summary>Dated rollup &amp; export</summary>
+          <div class="overview-fold-body">
+            <div id="overview-rollup"></div>
+          </div>
+        </details>
+
+        <details class="overview-fold">
+          <summary>Recently updated</summary>
+          <div class="overview-fold-body">
+            <div id="overview-recent"></div>
+          </div>
+        </details>
         {% if not has_manifest %}
-        <button class="btn primary" onclick="runAction('sync')" style="margin-top:20px;">Sync Jira Now</button>
+        <button class="btn primary" onclick="runAction('sync')" style="margin-top:20px;">Full Jira Sync</button>
         {% endif %}
       </div>
+      <div id="issue-body" style="display:none;"></div>
     </div>
     <div id="log-pane">
       <div id="log-header">
@@ -651,13 +896,113 @@
   <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
 </div>
 
+<div id="run-toast"
+     class="run-toast hidden"
+     role="status"
+     aria-live="polite"
+     tabindex="-1"
+     onclick="onRunToastActivate(event)">
+  <button type="button"
+          class="run-toast-close"
+          aria-label="Dismiss"
+          onclick="onRunToastDismiss(event)">&times;</button>
+  <div class="run-toast-body"></div>
+</div>
+
 <script>
   let activeKey = null;
   let activeTab = null;
+  /** Incremented on each selectIssue call; stale in-flight responses must not repaint UI. */
+  let selectIssueSeq = 0;
+  /** Incremented on each selectTab call; stale tab fetches must not overwrite the panel. */
+  let selectTabSeq = 0;
   let eventSource = null;
   const activeRuns = new Set();
   let currentSort = 'number';
+  /** false = descending (first click on a sort key); true = ascending (second click on same key). */
+  let sortAscending = false;
   let cachedIssues = [];
+  let runToastTimer = null;
+  const SESSION_ACTIVE_ISSUE = 'caseops.activeIssueKey';
+  const SESSION_ACTIVE_TAB = 'caseops.activeTabId';
+
+  function persistSelectedIssue(key) {
+    try {
+      sessionStorage.setItem(SESSION_ACTIVE_ISSUE, key);
+    } catch (_) {}
+  }
+
+  function persistActiveTab(ftype) {
+    try {
+      sessionStorage.setItem(SESSION_ACTIVE_TAB, ftype);
+    } catch (_) {}
+  }
+
+  function clearSavedIssueSession() {
+    try {
+      sessionStorage.removeItem(SESSION_ACTIVE_ISSUE);
+      sessionStorage.removeItem(SESSION_ACTIVE_TAB);
+    } catch (_) {}
+  }
+
+  function resetMainToOverview() {
+    activeKey = null;
+    document.querySelectorAll('.issue-item').forEach(el => el.classList.remove('selected'));
+    const dash = document.getElementById('dashboard');
+    const issueBody = document.getElementById('issue-body');
+    if (dash) dash.style.display = '';
+    if (issueBody) {
+      issueBody.style.display = 'none';
+      issueBody.innerHTML = '';
+    }
+    const titleEl = document.getElementById('detail-title');
+    if (titleEl) {
+      titleEl.textContent = 'Select an issue';
+      titleEl.style.color = '#6e7681';
+    }
+    const metaEl = document.getElementById('detail-meta');
+    if (metaEl) metaEl.textContent = '';
+    const actionsEl = document.getElementById('detail-actions');
+    if (actionsEl) actionsEl.style.display = 'none';
+    const tabsEl = document.getElementById('tabs');
+    if (tabsEl) {
+      tabsEl.style.display = 'none';
+      tabsEl.innerHTML = '';
+    }
+    const inst = document.getElementById('instruction-panel');
+    if (inst) inst.style.display = 'none';
+  }
+
+  function showOverview() {
+    clearSavedIssueSession();
+    activeTab = null;
+    resetMainToOverview();
+    renderLogForKey('__global__');
+    const ca = document.getElementById('content-area');
+    if (ca) ca.scrollTop = 0;
+    void loadIssues();
+  }
+
+  /** After manifest is loaded: reopen last issue from this tab (sessionStorage). */
+  function restoreIssueFromSession() {
+    let key = null;
+    try {
+      key = sessionStorage.getItem(SESSION_ACTIVE_ISSUE);
+    } catch (_) {
+      return;
+    }
+    if (!key) return;
+    if (!cachedIssues.some(i => i.key === key)) {
+      clearSavedIssueSession();
+      return;
+    }
+    let tab = null;
+    try {
+      tab = sessionStorage.getItem(SESSION_ACTIVE_TAB);
+    } catch (_) {}
+    activeTab = tab || null;
+    selectIssue(key);
+  }
 
   // ── SSE stream (persistent) ────────────────────────────────
 
@@ -678,8 +1023,23 @@
           loadIssues();
           if (activeKey) selectIssue(activeKey);
         } else {
-          refreshSidebarItem(runKey);
-          if (activeKey === runKey) selectIssue(runKey);
+          loadIssues()
+            .then(() => {
+              if (activeKey !== runKey) {
+                showRunCompleteToast(runKey);
+                return;
+              }
+              return selectIssue(runKey).then(() => {
+                if (activeKey !== runKey) return;
+                if (activeTab) {
+                  const tabEl = document.querySelector(`[data-ftype="${activeTab}"]`);
+                  if (tabEl) selectTab(runKey, activeTab, tabEl);
+                }
+              });
+            })
+            .catch(() => {
+              logLine('Failed to refresh issue list after run.', 'err', runKey);
+            });
         }
       } else {
         // Format: "run_key|log line"
@@ -707,7 +1067,10 @@
   // Disable/enable the action buttons for a specific issue key.
   function setIssueRunning(runKey, running) {
     if (runKey === '__global__') {
-      document.querySelectorAll('#topbar .btn').forEach(b => b.disabled = running);
+      document.querySelectorAll('#topbar .btn').forEach(b => {
+        if (b.id === 'topbar-overview-btn') return;
+        b.disabled = running;
+      });
     } else {
       document.querySelectorAll(`#detail-actions .btn[data-run-key="${runKey}"]`)
         .forEach(b => b.disabled = running);
@@ -724,6 +1087,7 @@
     const res = await fetch('/api/issues');
     cachedIssues = await res.json();
     updateDashboard(cachedIssues);
+    renderOverviewPanels(cachedIssues);
     const q = document.getElementById('filter-input').value;
     renderIssueList(q ? cachedIssues.filter(i => matchesFilter(i, q)) : cachedIssues);
   }
@@ -731,12 +1095,137 @@
   function updateDashboard(issues) {
     const active    = issues.filter(i => i.disposition === 'active').length;
     const escalated = issues.filter(i => i.disposition === 'escalated').length;
-    const ready     = issues.filter(i => i.has_jira_message).length;
+    const ready     = issues.filter(i => i.disposition === 'active' && i.has_jira_message).length;
     const pending   = issues.filter(i => i.disposition === 'active' && !i.has_jira_message).length;
     document.getElementById('dash-active').textContent    = active;
     document.getElementById('dash-escalated').textContent = escalated;
     document.getElementById('dash-ready').textContent     = ready;
     document.getElementById('dash-pending').textContent   = pending;
+  }
+
+  function overviewTrunc(str, n) {
+    const s = str || '';
+    if (s.length <= n) return s;
+    return s.slice(0, n - 1) + '…';
+  }
+
+  function overviewRowButton(i, hint) {
+    const disp = i.disposition || 'active';
+    const rawKey = i.key || '';
+    const safeKey = rawKey.replace(/"/g, '&quot;');
+    return '' +
+      '<button type="button" class="overview-row" data-key="' + safeKey + '">' +
+        '<div class="overview-row-top">' +
+          '<span class="overview-row-key ' + escHtml(disp) + '">' + escHtml(rawKey) + '</span>' +
+          '<span class="overview-row-hint">' + escHtml(hint) + '</span>' +
+          '<span class="overview-row-badge">' + escHtml(overviewTrunc(i.status, 40)) + '</span>' +
+        '</div>' +
+        '<div class="overview-row-sum">' + escHtml(overviewTrunc(i.summary, 120)) + '</div>' +
+      '</button>';
+  }
+
+  function renderOverviewPanels(issues) {
+    const meta = document.getElementById('overview-meta');
+    if (meta) {
+      const n = issues.length;
+      const nActive = issues.filter(i => i.disposition === 'active').length;
+      meta.textContent = n
+        ? `${n} in manifest · ${nActive} active`
+        : 'No manifest yet — run Full Jira Sync.';
+    }
+
+    const activeIssues = issues.filter(i => i.disposition === 'active');
+    const gaps = [];
+    for (const i of activeIssues) {
+      if (!i.has_jira_summary) {
+        gaps.push({ i, hint: 'Needs summary', sort: 0 });
+      } else if (!i.has_investigation) {
+        gaps.push({ i, hint: 'Needs investigation', sort: 1 });
+      } else if (!i.has_jira_message) {
+        gaps.push({ i, hint: 'Needs draft', sort: 2 });
+      }
+    }
+    gaps.sort((a, b) => {
+      if (a.sort !== b.sort) return a.sort - b.sort;
+      const na = parseInt(a.i.key.split('-')[1], 10) || 0;
+      const nb = parseInt(b.i.key.split('-')[1], 10) || 0;
+      return nb - na;
+    });
+
+    const nextCap = 8;
+    const nextEl = document.getElementById('overview-next-steps');
+    const capEl = document.getElementById('overview-next-caption');
+    const moreEl = document.getElementById('overview-next-more');
+    if (capEl) {
+      capEl.textContent = gaps.length ? `· ${Math.min(nextCap, gaps.length)} of ${gaps.length}` : '';
+    }
+    if (nextEl) {
+      nextEl.innerHTML = gaps.length
+        ? gaps.slice(0, nextCap).map(x => overviewRowButton(x.i, x.hint)).join('')
+        : '<p class="overview-empty">Nothing queued — active issues either have a draft or there are no active issues.</p>';
+    }
+    if (moreEl) {
+      const rest = gaps.length - nextCap;
+      if (rest > 0) {
+        moreEl.style.display = '';
+        moreEl.textContent =
+          `${rest} more in this queue. Use the sidebar list or expand sections below to find them.`;
+      } else {
+        moreEl.style.display = 'none';
+        moreEl.textContent = '';
+      }
+    }
+
+    const ready = activeIssues.filter(i => i.has_jira_message).sort((a, b) =>
+      (parseInt(b.key.split('-')[1], 10) || 0) - (parseInt(a.key.split('-')[1], 10) || 0));
+    const readyLim = 12;
+    const sumReady = document.getElementById('overview-summary-ready');
+    if (sumReady) sumReady.textContent = ready.length ? String(ready.length) : '';
+    const readyEl = document.getElementById('overview-ready-post');
+    if (readyEl) {
+      readyEl.innerHTML = ready.length
+        ? ready.slice(0, readyLim).map(item => overviewRowButton(item, 'Review')).join('')
+        : '<p class="overview-empty">No drafts ready yet.</p>';
+    }
+
+    const escNeed = issues.filter(i => i.disposition === 'escalated' && !i.has_eng_handoff)
+      .sort((a, b) =>
+        (parseInt(b.key.split('-')[1], 10) || 0) - (parseInt(a.key.split('-')[1], 10) || 0));
+    const sumEsc = document.getElementById('overview-summary-esc');
+    if (sumEsc) sumEsc.textContent = escNeed.length ? String(escNeed.length) : '';
+    const escEl = document.getElementById('overview-escalations');
+    if (escEl) {
+      escEl.innerHTML = escNeed.length
+        ? escNeed.slice(0, 10).map(item => overviewRowButton(item, 'Handoff')).join('')
+        : '<p class="overview-empty">All set here.</p>';
+    }
+
+    const recent = [...issues].sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+    const recentEl = document.getElementById('overview-recent');
+    if (recentEl) {
+      recentEl.innerHTML = recent.slice(0, 10).map(item =>
+        overviewRowButton(item, (item.updated || '').slice(0, 10) || '—')).join('');
+    }
+
+    fetch('/api/latest-issue-summary')
+      .then(r => r.json())
+      .then(d => {
+        const rollupEl = document.getElementById('overview-rollup');
+        if (!rollupEl) return;
+        if (d.url && d.label) {
+          rollupEl.innerHTML =
+            '<a class="overview-rollup-link" href="' + escHtml(d.url) + '" target="_blank" rel="noopener">' +
+              escHtml(d.label) +
+            '</a><span class="overview-rollup-hint"> · markdown file</span>';
+        } else {
+          rollupEl.innerHTML =
+            '<p class="overview-empty">No issue-summary-YYYY-MM-DD.md yet. Run triage or sync.</p>';
+        }
+      })
+      .catch(() => {
+        const rollupEl = document.getElementById('overview-rollup');
+        if (rollupEl) rollupEl.innerHTML = '<p class="overview-empty">Could not load rollup info.</p>';
+      });
   }
 
   function matchesFilter(issue, q) {
@@ -749,28 +1238,60 @@
     renderIssueList(filtered);
   }
 
+  function slaSortKey(issue) {
+    if (issue.sla_remaining_ms != null && Number.isFinite(issue.sla_remaining_ms)) {
+      return issue.sla_remaining_ms;
+    }
+    return Number.POSITIVE_INFINITY;
+  }
+
   function sortedGroup(issues) {
+    const desc = !sortAscending;
     return [...issues].sort((a, b) => {
       if (currentSort === 'number') {
-        const na = parseInt(a.key.split('-')[1]) || 0;
-        const nb = parseInt(b.key.split('-')[1]) || 0;
-        return nb - na; // newest number first
+        const na = parseInt(a.key.split('-')[1], 10) || 0;
+        const nb = parseInt(b.key.split('-')[1], 10) || 0;
+        return desc ? nb - na : na - nb;
       }
       if (currentSort === 'date') {
-        return b.updated.localeCompare(a.updated); // newest date first
+        const ua = a.updated || '';
+        const ub = b.updated || '';
+        return desc ? ub.localeCompare(ua) : ua.localeCompare(ub);
       }
       if (currentSort === 'status') {
-        return a.status.localeCompare(b.status) || b.key.localeCompare(a.key);
+        const c = desc ? b.status.localeCompare(a.status) : a.status.localeCompare(b.status);
+        if (c !== 0) return c;
+        return a.key.localeCompare(b.key);
+      }
+      if (currentSort === 'priority') {
+        const ra = slaSortKey(a);
+        const rb = slaSortKey(b);
+        return desc ? rb - ra : ra - rb;
       }
       return 0;
     });
   }
 
+  function updateSortPillIndicators() {
+    const sym = sortAscending ? '↑' : '↓';
+    document.querySelectorAll('.sort-pill .sort-pill-dir').forEach(el => {
+      const pill = el.closest('.sort-pill');
+      el.textContent = pill && pill.dataset.sort === currentSort ? sym : '';
+    });
+  }
+
   function setSort(sort) {
-    currentSort = sort;
+    if (currentSort === sort) {
+      sortAscending = !sortAscending;
+    } else {
+      currentSort = sort;
+      sortAscending = false;
+    }
     document.querySelectorAll('.sort-pill').forEach(p =>
-      p.classList.toggle('active', p.dataset.sort === sort));
-    renderIssueList(cachedIssues);
+      p.classList.toggle('active', p.dataset.sort === currentSort));
+    updateSortPillIndicators();
+    const q = document.getElementById('filter-input').value;
+    renderIssueList(q ? cachedIssues.filter(i => matchesFilter(i, q)) : cachedIssues);
   }
 
   function renderIssueList(issues) {
@@ -789,6 +1310,8 @@
     if (active.length)    renderGroup(el, 'Active', active);
     if (escalated.length) renderGroup(el, 'Escalated', escalated);
     if (closed.length)    renderGroup(el, 'Closed / Resolved', closed);
+
+    updateSortPillIndicators();
   }
 
   function renderGroup(container, label, issues) {
@@ -832,7 +1355,29 @@
   // ── Issue detail ───────────────────────────────────────────
 
   async function selectIssue(key) {
+    const seq = ++selectIssueSeq;
+    const res = await fetch(`/api/issue/${key}`);
+    if (seq !== selectIssueSeq) return;
+
+    const issue = await res.json();
+    if (seq !== selectIssueSeq) return;
+
+    if (!res.ok || !issue.key) {
+      if (seq !== selectIssueSeq) return;
+      clearSavedIssueSession();
+      logLine(
+        (issue && (issue.error || issue.message)) || `Issue ${key} could not be loaded.`,
+        'err',
+        key
+      );
+      resetMainToOverview();
+      renderLogForKey('__global__');
+      return;
+    }
+
     activeKey = key;
+    selectTabSeq++;
+    persistSelectedIssue(key);
     renderLogForKey(key);
 
     // highlight sidebar
@@ -840,11 +1385,10 @@
       el.classList.toggle('selected', el.dataset.key === key);
     });
 
-    const res = await fetch(`/api/issue/${key}`);
-    const issue = await res.json();
-
     const dash = document.getElementById('dashboard');
+    const issueBody = document.getElementById('issue-body');
     if (dash) dash.style.display = 'none';
+    if (issueBody) issueBody.style.display = 'block';
     const titleEl = document.getElementById('detail-title');
     if (titleEl) {
       titleEl.textContent = `${issue.key} — ${issue.summary}`;
@@ -886,15 +1430,20 @@
     // tabs
     const tabsEl = document.getElementById('tabs');
     if (!tabsEl) return;
+    if (seq !== selectIssueSeq) return;
     tabsEl.style.display = 'flex';
     tabsEl.innerHTML = '';
 
     if (issue.tabs.length === 0) {
       tabsEl.innerHTML = '<div class="tab" style="color:#6e7681;cursor:default;">No files yet</div>';
-      document.getElementById('content-area').innerHTML =
-        '<p class="empty" style="margin-top:20px;">Run the pipeline to generate files for this issue.</p>';
+      if (issueBody) {
+        issueBody.innerHTML =
+          '<p class="empty" style="margin-top:20px;">Run the pipeline to generate files for this issue.</p>';
+      }
       return;
     }
+
+    if (seq !== selectIssueSeq) return;
 
     issue.tabs.forEach((tab, i) => {
       const el = document.createElement('div');
@@ -917,20 +1466,27 @@
   }
 
   async function selectTab(key, ftype, tabEl) {
+    const seq = ++selectTabSeq;
     activeTab = ftype;
+    persistActiveTab(ftype);
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     tabEl.classList.add('active');
 
-    document.getElementById('content-area').innerHTML =
+    const issueBody = document.getElementById('issue-body');
+    if (!issueBody) return;
+    issueBody.innerHTML =
       '<p style="color:#6e7681;padding:20px;">Loading...</p>';
 
     const res = await fetch(`/api/issue/${key}/file/${ftype}`);
+    if (seq !== selectTabSeq || activeKey !== key) return;
     const data = await res.json();
-    const area = document.getElementById('content-area');
+    if (seq !== selectTabSeq || activeKey !== key) return;
+    const area = issueBody;
     area.innerHTML = data.html || '<p class="empty">Empty.</p>';
 
     if (ftype === 'jira_summary') {
-      await appendAttachments(key, area);
+      await appendAttachments(key, area, seq);
+      if (seq !== selectTabSeq || activeKey !== key) return;
     }
     if ((ftype === 'jira_message' || ftype === 'internal_notes') && data.raw) {
       appendPostPanel(key, ftype, data.raw, area);
@@ -996,18 +1552,26 @@
   }
 
   async function loadTransitions(key) {
-    const sel = document.getElementById('transition-select');
-    const btn = document.getElementById('transition-btn');
+    let sel = document.getElementById('transition-select');
     if (!sel) return;
     sel.innerHTML = '<option value="">Loading…</option>';
     try {
       const res = await fetch(`/api/issue/${key}/transitions`);
       const data = await res.json();
+      if (activeKey !== key) return;
+      sel = document.getElementById('transition-select');
+      if (!sel) return;
       if (!res.ok) throw new Error(data.error || 'Failed');
       sel.innerHTML = '<option value="">Change status…</option>' +
         data.map(t => `<option value="${escHtml(t.id)}" data-status="${escHtml(t.to_status)}">${escHtml(t.name)}</option>`).join('');
-      sel.onchange = () => { btn.disabled = !sel.value; };
+      sel.onchange = () => {
+        const b = document.getElementById('transition-btn');
+        if (b) b.disabled = !sel.value;
+      };
     } catch(e) {
+      if (activeKey !== key) return;
+      sel = document.getElementById('transition-select');
+      if (!sel) return;
       sel.innerHTML = `<option value="">Error: ${escHtml(e.message)}</option>`;
     }
   }
@@ -1035,6 +1599,11 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
+      if (activeKey !== key) {
+        logLine(`Transitioned ${key} to ${new_status}`, 'ok', key);
+        await loadIssues();
+        return;
+      }
 
       // Update detail-meta status text
       const meta = document.getElementById('detail-meta');
@@ -1053,22 +1622,27 @@
       // Re-load issue list so sidebar badge/group updates
       await loadIssues();
     } catch(e) {
-      if (statusEl) {
-        statusEl.style.color = '#f85149';
-        statusEl.textContent = e.message;
+      if (activeKey === key) {
+        if (statusEl) {
+          statusEl.style.color = '#f85149';
+          statusEl.textContent = e.message;
+        }
+        if (btn) btn.disabled = false;
       }
-      btn.disabled = false;
     }
   }
 
   async function loadCannedMessages(key, status) {
-    const sel = document.getElementById('message-select');
-    const btn = document.getElementById('message-btn');
+    let sel = document.getElementById('message-select');
     if (!sel) return;
     sel.innerHTML = '<option value="">Loading…</option>';
     try {
       const res = await fetch(`/api/canned-messages`);
       const data = await res.json();
+      if (activeKey !== key) return;
+      sel = document.getElementById('message-select');
+      const btnCurrent = document.getElementById('message-btn');
+      if (!sel) return;
       if (!res.ok) throw new Error(data.error || 'Failed');
 
       // Filter messages based on status
@@ -1084,13 +1658,16 @@
 
       if (available.length === 0) {
         sel.innerHTML = '<option value="">No messages available</option>';
-        btn.disabled = true;
+        if (btnCurrent) btnCurrent.disabled = true;
       } else {
         sel.innerHTML = '<option value="">Send message…</option>' +
           available.map(m => `<option value="${escHtml(m.id)}">${escHtml(m.name)}</option>`).join('');
-        sel.onchange = () => { btn.disabled = !sel.value; };
+        sel.onchange = () => { if (btnCurrent) btnCurrent.disabled = !sel.value; };
       }
     } catch(e) {
+      if (activeKey !== key) return;
+      sel = document.getElementById('message-select');
+      if (!sel) return;
       sel.innerHTML = `<option value="">Error: ${escHtml(e.message)}</option>`;
     }
   }
@@ -1117,6 +1694,12 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
 
+      if (activeKey !== key) {
+        logLine(`Sent message to ${key}`, 'ok', key);
+        await loadIssues();
+        return;
+      }
+
       if (statusEl) {
         statusEl.style.color = '#3fb950';
         statusEl.textContent = '✓ Sent';
@@ -1130,6 +1713,10 @@
         try {
           const transRes = await fetch(`/api/issue/${key}/transitions`);
           const transitions = await transRes.json();
+          if (activeKey !== key) {
+            await loadIssues();
+            return;
+          }
           const inProgressTrans = transitions.find(t => t.to_status && t.to_status.toLowerCase() === 'in progress');
           if (inProgressTrans) {
             const transRes2 = await fetch(`/api/issue/${key}/transition`, {
@@ -1138,6 +1725,10 @@
               body: JSON.stringify({ transition_id: inProgressTrans.id, new_status: inProgressTrans.to_status }),
             });
             const transData = await transRes2.json();
+            if (activeKey !== key) {
+              await loadIssues();
+              return;
+            }
             if (transRes2.ok) {
               if (statusEl) {
                 statusEl.style.color = '#3fb950';
@@ -1161,20 +1752,23 @@
         }
       }
     } catch(e) {
-      if (statusEl) {
-        statusEl.style.color = '#f85149';
-        statusEl.textContent = e.message;
+      if (activeKey === key) {
+        if (statusEl) {
+          statusEl.style.color = '#f85149';
+          statusEl.textContent = e.message;
+        }
+        if (btn) btn.disabled = false;
       }
-      btn.disabled = false;
     }
   }
 
-  async function appendAttachments(key, area) {
+  async function appendAttachments(key, area, tabSeq) {
     let atts;
     try {
       const res = await fetch(`/api/issue/${key}/attachments`);
       atts = await res.json();
     } catch (_) { return; }
+    if (tabSeq !== selectTabSeq || activeKey !== key) return;
     if (!Array.isArray(atts) || atts.length === 0) return;
 
     // Find the "Attachments" heading in the rendered markdown
@@ -1280,26 +1874,39 @@
     setIssueRunning(runKey, true);
   }
 
-  // Refresh a single issue's sidebar chip without touching other items.
-  async function refreshSidebarItem(key) {
-    try {
-      const res = await fetch(`/api/issue/${key}`);
-      if (!res.ok) return;
-      const issue = await res.json();
-      const item = document.querySelector(`.issue-item[data-key="${key}"]`);
-      if (!item) {
-        // Issue wasn't in the list before (e.g. newly synced); reload all.
-        loadIssues();
-        return;
-      }
-      item.querySelector('.issue-key').textContent = issue.key;
-      item.querySelector('.issue-summary').textContent = issue.summary;
-      const badge = item.querySelector('.badge');
-      badge.textContent = issue.status;
-      badge.className = `badge ${issue.disposition}`;
-    } catch (_) {
-      // Network error — leave sidebar as-is.
+  function hideRunToast() {
+    const el = document.getElementById('run-toast');
+    if (runToastTimer) {
+      clearTimeout(runToastTimer);
+      runToastTimer = null;
     }
+    el.classList.add('hidden');
+    el.removeAttribute('data-issue-key');
+  }
+
+  function showRunCompleteToast(key) {
+    const el = document.getElementById('run-toast');
+    const body = el.querySelector('.run-toast-body');
+    body.textContent =
+      `Run finished for ${key}. Click this banner to open the issue and refresh tabs.`;
+    el.dataset.issueKey = key;
+    el.classList.remove('hidden');
+    if (runToastTimer) clearTimeout(runToastTimer);
+    runToastTimer = setTimeout(() => hideRunToast(), 12000);
+  }
+
+  function onRunToastDismiss(event) {
+    event.stopPropagation();
+    hideRunToast();
+  }
+
+  function onRunToastActivate(event) {
+    if (event.target.closest('.run-toast-close')) return;
+    const el = document.getElementById('run-toast');
+    const key = el.dataset.issueKey;
+    if (!key) return;
+    hideRunToast();
+    selectIssue(key);
   }
 
   // ── Log ───────────────────────────────────────────────────
@@ -1430,8 +2037,16 @@
 
   // ── Init ──────────────────────────────────────────────────
 
-  loadIssues();
+  loadIssues()
+    .then(() => restoreIssueFromSession())
+    .catch(() => {});
   initStream();
+  document.getElementById('dashboard').addEventListener('click', ev => {
+    const btn = ev.target.closest('button.overview-row[data-key]');
+    if (!btn) return;
+    const key = btn.getAttribute('data-key');
+    if (key) selectIssue(key);
+  });
 </script>
 </body>
 </html>
