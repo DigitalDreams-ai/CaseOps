@@ -793,7 +793,19 @@
 
   function renderGroup(container, label, issues) {
     const g = document.createElement('div');
-    g.innerHTML = `<div class="group-label">${label}</div>`;
+    const isCollapsible = true;
+    const isCollapsed = label !== 'Active';
+
+    const groupLabel = document.createElement('div');
+    groupLabel.className = 'group-label';
+    groupLabel.style.cursor = 'pointer';
+    groupLabel.innerHTML = `<span style="user-select:none;">${isCollapsed ? '▶' : '▼'} ${label}</span>`;
+    g.appendChild(groupLabel);
+
+    const itemsContainer = document.createElement('div');
+    itemsContainer.className = 'group-items';
+    if (isCollapsed) itemsContainer.style.display = 'none';
+
     issues.forEach(issue => {
       const item = document.createElement('div');
       item.className = 'issue-item' + (issue.key === activeKey ? ' selected' : '');
@@ -804,8 +816,16 @@
         <div class="issue-summary">${escHtml(issue.summary)}</div>
         <span class="badge ${issue.disposition}">${escHtml(issue.status)}</span>
       `;
-      g.appendChild(item);
+      itemsContainer.appendChild(item);
     });
+
+    groupLabel.onclick = () => {
+      const isHidden = itemsContainer.style.display === 'none';
+      itemsContainer.style.display = isHidden ? '' : 'none';
+      groupLabel.innerHTML = isHidden ? `<span style="user-select:none;">▼ ${label}</span>` : `<span style="user-select:none;">▶ ${label}</span>`;
+    };
+
+    g.appendChild(itemsContainer);
     container.appendChild(g);
   }
 
@@ -995,8 +1015,10 @@
     if (!transition_id) return;
 
     btn.disabled = true;
-    statusEl.style.color = '#8b949e';
-    statusEl.textContent = 'Applying…';
+    if (statusEl) {
+      statusEl.style.color = '#8b949e';
+      statusEl.textContent = 'Applying…';
+    }
 
     try {
       const res = await fetch(`/api/issue/${key}/transition`, {
@@ -1015,15 +1037,19 @@
         meta.textContent = newText;
       }
 
-      statusEl.style.color = '#3fb950';
-      statusEl.textContent = `→ ${new_status}`;
+      if (statusEl) {
+        statusEl.style.color = '#3fb950';
+        statusEl.textContent = `→ ${new_status}`;
+      }
       logLine(`Transitioned ${key} to ${new_status}`, 'ok', key);
 
       // Re-load issue list so sidebar badge/group updates
       await loadIssues();
     } catch(e) {
-      statusEl.style.color = '#f85149';
-      statusEl.textContent = e.message;
+      if (statusEl) {
+        statusEl.style.color = '#f85149';
+        statusEl.textContent = e.message;
+      }
       btn.disabled = false;
     }
   }
@@ -1042,6 +1068,9 @@
       const available = data.filter(m => {
         if (m.id === 'initial-response') {
           return status === 'Waiting for support';
+        }
+        if (m.id === 'closing-response') {
+          return true;
         }
         return true;
       });

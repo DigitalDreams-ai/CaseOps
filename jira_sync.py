@@ -656,7 +656,7 @@ def render_summary(bundle: dict[str, Any]) -> str:
         ]
     )
 
-    for comment in bundle.get("comments", []):
+    for comment in sorted(bundle.get("comments", []), key=lambda c: c.get("created", ""), reverse=True):
         visibility = "public" if comment.get("jsdPublic") is True else "internal/unknown"
         lines.extend(
             [

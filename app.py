@@ -649,6 +649,22 @@ def api_send_canned_message(key: str):
         )
         with urllib.request.urlopen(req) as resp:
             result = json.loads(resp.read().decode("utf-8"))
+
+        # Auto-transition to Resolved for closing-response message
+        if message_id == "closing-response":
+            try:
+                from jira_sync import JiraClient
+                client = JiraClient(JIRA_BASE_URL, auth)
+                transitions = client.get_transitions(key)
+                resolved_transition = next(
+                    (t for t in transitions if t["to_status"].lower() == "resolved"),
+                    None
+                )
+                if resolved_transition:
+                    client.apply_transition(key, resolved_transition["id"])
+            except Exception:
+                pass  # Non-fatal — comment was posted successfully
+
         return jsonify({"ok": True, "id": result.get("id", "")})
     except urllib.error.HTTPError as exc:
         details = exc.read().decode("utf-8", errors="replace")
