@@ -21,7 +21,9 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
+from functools import wraps
 from pathlib import Path
+from typing import Any
 
 from flask import Flask, Response, jsonify, render_template, request, send_file, stream_with_context
 
@@ -39,10 +41,18 @@ except ImportError:
         import html
         return f"<pre style='white-space:pre-wrap'>{html.escape(text)}</pre>"
 
+try:
+    from anthropic import Anthropic
+except ImportError:
+    Anthropic = None  # type: ignore[misc, assignment]
+
 
 app = Flask(__name__)
 ROOT = Path(__file__).resolve().parent
 OUTPUTS = ROOT / "outputs"
+
+# Set in `.env.jira`: how CaseOps passes auth to the `claude` subprocess (see caseops_llm_auth_uses_anthropic_api_key).
+CASEOPS_LLM_AUTH_ENV = "CASEOPS_LLM_AUTH"
 
 
 def _load_jira_env() -> None:
@@ -51,7 +61,11 @@ def _load_jira_env() -> None:
     By default does not overwrite existing non-empty values.
     Exceptions:
     - ANTHROPIC_API_KEY: always set from the file when the line has a non-empty
-      value (Claude Code subprocess must see it; a blank OS placeholder no longer blocks it).
+      value (used for the Anthropic **Messages API** when ``CASEOPS_LLM_AUTH=api_key``;
+      still present in the environment when ``CASEOPS_LLM_AUTH=claude_code`` but the
+      Flask app omits it from the Claude Code **subprocess** in that mode).
+    - CASEOPS_LLM_AUTH: always set from the file when the line has a non-empty
+      value (so switching API vs Claude Code mode in ``.env.jira`` applies on reload).
     - Any key: if currently unset or empty/whitespace, the file value is applied.
     """
     env_file = ROOT / ".env.jira"
@@ -71,6 +85,9 @@ def _load_jira_env() -> None:
         if key == "ANTHROPIC_API_KEY":
             os.environ[key] = value
             continue
+        if key == CASEOPS_LLM_AUTH_ENV:
+            os.environ[key] = value
+            continue
         cur = os.environ.get(key, "")
         if key not in os.environ or not str(cur).strip():
             os.environ[key] = value
@@ -78,6 +95,20 @@ def _load_jira_env() -> None:
 
 _load_jira_env()
 JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "").rstrip("/")
+
+
+def caseops_llm_auth_uses_anthropic_api_key() -> bool:
+    """If True, CaseOps LLM calls use the **Anthropic Messages API** (API key billing).
+
+    If False, CaseOps spawns the **Claude Code CLI** and omits ``ANTHROPIC_API_KEY`` so the CLI uses
+    subscription / ``claude login`` (or its defaults).
+    Unrecognized ``CASEOPS_LLM_AUTH`` values default to API mode (backward compatible).
+    """
+    raw = (os.environ.get(CASEOPS_LLM_AUTH_ENV) or "api_key").strip().lower()
+    if raw in ("claude_code", "claude", "subscription", "max"):
+        return False
+    # api_key, anthropic_api, api, empty, or anything else → keep API key in env for subprocess
+    return True
 
 
 def _jira_auth_header() -> str:
@@ -94,7 +125,7 @@ def _jira_auth_header() -> str:
         return f"Basic {base64.b64encode(f'{email}:{token}'.encode()).decode()}"
     raise RuntimeError("No Jira auth found in .env.jira")
 
-CLOSED_STATUSES = {"closed", "resolved"}
+CLOSED_STATUSES = {"closed", "resolved", "canceled", "cancelled"}
 ESCALATED_STATUS = "escalated to engineering"
 
 FILE_LOCATIONS: dict[str, str] = {
@@ -114,12 +145,72 @@ FILE_LABELS: dict[str, str] = {
     "jira_message":    "Jira Message",
     "test_report":     "Test Report",
     "eng_handoff":     "Eng Handoff",
-    "closed_resolved": "Closed/Resolved",
+    "closed_resolved": "Closed / Resolved / Canceled",
     "attachments":     "Attachments",
 }
 
 # Global actions (sync, triage, full) use this sentinel key.
 _GLOBAL_KEY = "__global__"
+
+OUTPUTS_PIPELINE_LOGS = OUTPUTS / "pipeline-logs"
+_PIPELINE_LOG_LOCK = threading.Lock()
+_PIPELINE_LOG_TAIL_BYTES = 3 * 1024 * 1024
+_PIPELINE_LOG_TAIL_LINES = 12_000
+
+
+def _pipeline_log_path(run_key: str) -> Path:
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", run_key) or "unknown"
+    return OUTPUTS_PIPELINE_LOGS / f"{safe}.jsonl"
+
+
+def _persist_pipeline_record(run_key: str, text: str, *, kind: str = "line") -> None:
+    OUTPUTS_PIPELINE_LOGS.mkdir(parents=True, exist_ok=True)
+    rec = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "run_key": run_key,
+        "kind": kind,
+        "text": text,
+    }
+    line = json.dumps(rec, ensure_ascii=False) + "\n"
+    with _PIPELINE_LOG_LOCK:
+        with _pipeline_log_path(run_key).open("a", encoding="utf-8") as fh:
+            fh.write(line)
+
+
+def _log_emit_line(run_key: str, text: str) -> None:
+    """Notify SSE clients and append to per-key pipeline history on disk."""
+    _log_q.put(f"{run_key}|{text}")
+    _persist_pipeline_record(run_key, text, kind="line")
+
+
+def _log_emit_done(run_key: str) -> None:
+    _log_q.put(f"__done__|{run_key}")
+    _persist_pipeline_record(run_key, "", kind="done")
+
+
+def _read_pipeline_log_entries(run_key: str) -> list[dict[str, Any]]:
+    path = _pipeline_log_path(run_key)
+    if not path.is_file():
+        return []
+    with _PIPELINE_LOG_LOCK:
+        blob = path.read_bytes()
+    if len(blob) > _PIPELINE_LOG_TAIL_BYTES:
+        blob = blob[-_PIPELINE_LOG_TAIL_BYTES:]
+        nl = blob.find(b"\n")
+        if nl != -1:
+            blob = blob[nl + 1 :]
+    rows: list[dict[str, Any]] = []
+    for raw_line in blob.decode("utf-8", errors="replace").splitlines():
+        raw_line = raw_line.strip()
+        if not raw_line:
+            continue
+        try:
+            rows.append(json.loads(raw_line))
+        except json.JSONDecodeError:
+            continue
+    if len(rows) > _PIPELINE_LOG_TAIL_LINES:
+        rows = rows[-_PIPELINE_LOG_TAIL_LINES :]
+    return rows
 
 # -- run state ---------------------------------------------------------------
 # Multiple issue-specific runs are allowed in parallel.
@@ -129,6 +220,73 @@ _GLOBAL_KEY = "__global__"
 _state_lock = threading.Lock()
 _active_keys: set[str] = set()          # currently running run keys
 _log_q: queue.Queue[str] = queue.Queue()  # tagged messages: "key|line" or "__done__|key"
+
+
+def _claude_process_env() -> dict[str, str]:
+    """Environment for Claude Code CLI subprocess (``claude_code`` mode only)."""
+    env = os.environ.copy()
+    if not caseops_llm_auth_uses_anthropic_api_key():
+        env.pop("ANTHROPIC_API_KEY", None)
+    chrome = (env.get("CASEOPS_CLAUDE_BROWSER") or "").strip()
+    if chrome:
+        env["BROWSER"] = chrome
+        if not (env.get("CLAUDE_CODE_CHROME_PATH") or "").strip():
+            env["CLAUDE_CODE_CHROME_PATH"] = chrome
+    return env
+
+
+def _salesforce_browser_prompt_section() -> str:
+    """Tell Claude how to open Salesforce when CaseOps spawns the CLI (no secrets logged to SSE)."""
+    chrome = (os.environ.get("CASEOPS_CLAUDE_BROWSER") or "").strip()
+    generic = (os.environ.get("CASEOPS_SALESFORCE_MAGIC_LINK") or "").strip()
+    prod_magic = (os.environ.get("CASEOPS_PRODUCTION_MAGIC_LINK") or "").strip()
+    sand_magic = (os.environ.get("CASEOPS_SANDBOX_MAGIC_LINK") or "").strip()
+    prod_label = (os.environ.get("CASEOPS_PRODUCTION_READ_ORG") or "Production").strip()
+    sand_label = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "Sandbox").strip()
+
+    has_magic = bool(generic or prod_magic or sand_magic)
+    if not has_magic and not chrome:
+        return ""
+
+    lines = [
+        "## Salesforce in the browser (this CaseOps / Claude run)",
+        "If you need the Salesforce UI in a browser for this task:",
+        "**Permission model (mandatory):** The Production frontdoor session is **read-only** — investigate, query, and view only; "
+        "do **not** create, update, delete, or deploy **anything** in Production. The Sandbox frontdoor session may use **full CRUD** "
+        "for metadata deploy, test fixes, and record operations required by the playbook.",
+    ]
+    if chrome:
+        lines.append(
+            f"- Open OAuth or Salesforce URLs using **Google Chrome Dev** at: `{chrome}`. "
+            "This subprocess sets `BROWSER` (and `CLAUDE_CODE_CHROME_PATH`) when configured; "
+            "if a tool still opens another browser, use Chrome Dev manually at that path."
+        )
+    if generic:
+        lines.append(
+            "- Open this **session / frontdoor link** first in that Chrome Dev session when the target org is not specified below "
+            "(do not paste into Jira, git commits, or customer-facing artifacts):"
+        )
+        lines.append(generic)
+    if prod_magic:
+        lines.append(
+            f"- **Production ({prod_label})** via `CASEOPS_PRODUCTION_MAGIC_LINK` — **read-only**: use this session only for investigation "
+            "(view/query). No Production creates, edits, deletes, or deployments. Open this link first in Chrome Dev for prod UI:"
+        )
+        lines.append(prod_magic)
+    if sand_magic:
+        lines.append(
+            f"- **Sandbox ({sand_label})** via `CASEOPS_SANDBOX_MAGIC_LINK` — **full CRUD** allowed: deploy, test, and change records/metadata "
+            "as the playbook requires. Open this link first in Chrome Dev for sandbox UI:"
+        )
+        lines.append(sand_magic)
+    if not has_magic:
+        lines.append(
+            "- No Salesforce session link is set in `.env.jira` "
+            "(`CASEOPS_SALESFORCE_MAGIC_LINK`, `CASEOPS_PRODUCTION_MAGIC_LINK`, and/or `CASEOPS_SANDBOX_MAGIC_LINK`). "
+            "If login blocks progress, say what you need."
+        )
+    lines.append("")
+    return "\n".join(lines)
 
 
 def _do_stream_proc(cmd: list[str], run_key: str) -> int:
@@ -148,26 +306,150 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
         )
         assert proc.stdout
         for line in proc.stdout:
-            _log_q.put(f"{run_key}|{line.rstrip()}")
+            _log_emit_line(run_key, line.rstrip())
         proc.wait()
-        _log_q.put(f"{run_key}|-- exit code {proc.returncode} --")
+        _log_emit_line(run_key, f"-- exit code {proc.returncode} --")
         return proc.returncode
     except Exception as exc:
-        _log_q.put(f"{run_key}|ERROR: {exc}")
+        _log_emit_line(run_key, f"ERROR: {exc}")
         return 1
 
 
-def _do_stream_claude(prompt: str, run_key: str) -> None:
-    """Run Claude Code CLI non-interactively, parsing stream-json output."""
-    cmd = ["claude", "-p", prompt,
-           "--output-format", "stream-json",
-           "--verbose",
-           "--dangerously-skip-permissions"]
+def _retry_with_backoff(max_attempts: int = 3, backoff_factor: float = 2.0):
+    """Decorator for exponential backoff retry on transient errors."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exc = None
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exc = e
+                    if attempt < max_attempts - 1:
+                        wait_time = backoff_factor ** attempt
+                        time.sleep(wait_time)
+            raise last_exc
+        return wrapper
+    return decorator
+
+
+def _do_stream_anthropic_messages_api(prompt: str, run_key: str) -> None:
+    """Stream a single user turn via Anthropic Messages API (API key on your Anthropic account)."""
+    if Anthropic is None:
+        _log_emit_line(
+            run_key,
+            "ERROR: Python package `anthropic` is not installed. "
+            "Install with: pip install anthropic",
+        )
+        return
+    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not api_key:
+        _log_emit_line(
+            run_key,
+            "ERROR: ANTHROPIC_API_KEY is empty. Set it in `.env.jira` when using CASEOPS_LLM_AUTH=api_key.",
+        )
+        return
+    model = (os.environ.get("CASEOPS_ANTHROPIC_MODEL") or "claude-sonnet-4-6").strip()
+    max_raw = (os.environ.get("CASEOPS_ANTHROPIC_MAX_TOKENS") or "16384").strip()
     try:
-        # Explicit env so ANTHROPIC_API_KEY from .env.jira is always passed on Windows/Linux.
+        max_tokens = max(256, min(int(max_raw), 64_000))
+    except ValueError:
+        max_tokens = 16384
+    _log_emit_line(
+        run_key,
+        "CaseOps LLM: Anthropic Messages API (CASEOPS_LLM_AUTH=api_key). "
+        "Responses bill to your API key. **No agent tools** (no Bash/Read/skills runtime).",
+    )
+    _log_emit_line(run_key, f"model={model} max_tokens={max_tokens}")
+
+    @_retry_with_backoff(max_attempts=3, backoff_factor=2.0)
+    def call_api():
+        client = Anthropic(api_key=api_key)
+        buf = ""
+        system_prompt = """You are CaseOps, a Jira triage and issue investigation assistant owned by Sean.
+
+## Your voice
+Sound like Sean, not like a perfect LLM. Be direct, concrete, human.
+
+## Message formats: two audiences
+
+### 1. Suggested reply (customer / portal / reporter)
+Plain-language note to the requester. What you checked, what it means for them, one clear question or offer to help validate.
+
+**Voice for customer messages:**
+- Short, human, straightforward wording. No corporate fluff.
+- No "we," "we've," "let's," "us." Prefer you / I / neutral facts.
+- Don't bury them in Salesforce IDs, file paths, or admin jargon unless they asked.
+- Prefer short paragraphs; avoid bullet lists unless they asked for steps.
+- Thank them in a concrete way if they gave good repro, screenshots, or clear steps.
+- Avoid em dashes. Avoid hyphen between clauses as punctuation.
+
+**Every customer-facing draft must pass all of:**
+- ✓ No em dash; no hyphen as clause punctuation
+- ✓ Brief (not a full investigation replay)
+- ✓ Casual, normal tone
+- ✓ Specific thanks when repro/detail helped
+- ✓ No bullets unless they asked for steps
+- ✓ No internal IDs, repo paths, heavy jargon unless they asked
+- ✓ No we / we've / we're / us / let us
+
+If anything fails → rewrite and run the checklist again.
+
+### 2. ## [INTERNAL]
+Lean root-cause memo: not agent chatter. Intended as paste-ready Jira internal text only.
+
+**Structure:**
+- What it is NOT (negative space)
+- Where the real gap is
+- Why the symptom shows up
+- Keep it short. Full evidence stays in Investigation section.
+- Include Action: {what Sean does next} if applicable.
+
+## Your task
+Analyze the issue. Draft both formats. If you don't have enough info for a solid Suggested reply, ask clarifying questions instead of guessing. Better to ask than to send weak prose."""
+
+        with client.messages.stream(
+            model=model,
+            max_tokens=max_tokens,
+            system=system_prompt,
+            messages=[{"role": "user", "content": prompt}],
+        ) as stream:
+            for text in stream.text_stream:
+                buf += text
+                while "\n" in buf:
+                    line, buf = buf.split("\n", 1)
+                    if line.strip():
+                        _log_emit_line(run_key, line.rstrip())
+            if buf.strip():
+                _log_emit_line(run_key, buf.strip())
+        _log_emit_line(run_key, "-- stream complete --")
+
+    try:
+        call_api()
+    except Exception as exc:
+        _log_emit_line(run_key, f"ERROR: Anthropic API (after retries): {exc}")
+
+
+def _do_stream_claude_code_cli(prompt: str, run_key: str) -> None:
+    """Run Claude Code CLI non-interactively, parsing stream-json output."""
+    cmd = [
+        "claude",
+        "-p",
+        prompt,
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--dangerously-skip-permissions",
+    ]
+    try:
+        _log_emit_line(
+            run_key,
+            "CaseOps LLM: Claude Code CLI (CASEOPS_LLM_AUTH=claude_code; ANTHROPIC_API_KEY omitted).",
+        )
         proc = subprocess.Popen(
             cmd,
-            env=os.environ.copy(),
+            env=_claude_process_env(),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.DEVNULL,
@@ -185,7 +467,7 @@ def _do_stream_claude(prompt: str, run_key: str) -> None:
             try:
                 event = json.loads(raw)
             except json.JSONDecodeError:
-                _log_q.put(f"{run_key}|{raw}")
+                _log_emit_line(run_key, raw)
                 continue
 
             etype = event.get("type", "")
@@ -196,19 +478,19 @@ def _do_stream_claude(prompt: str, run_key: str) -> None:
                     if btype == "text":
                         for line in block.get("text", "").splitlines():
                             if line.strip():
-                                _log_q.put(f"{run_key}|{line}")
+                                _log_emit_line(run_key, line)
                     elif btype == "tool_use":
                         tool = block.get("name", "tool")
-                        inp  = block.get("input", {})
+                        inp = block.get("input", {})
                         detail = inp.get("command") or inp.get("file_path") or inp.get("path") or ""
                         detail = str(detail)[:80]
-                        _log_q.put(f"{run_key}|[{tool}]{' ' + detail if detail else ''}")
+                        _log_emit_line(run_key, f"[{tool}]{' ' + detail if detail else ''}")
 
             elif etype == "result":
                 subtype = event.get("subtype", "")
-                cost    = event.get("cost_usd")
+                cost = event.get("cost_usd")
                 cost_str = f"  cost: ${cost:.4f}" if cost else ""
-                _log_q.put(f"{run_key}|-- {subtype}{cost_str} --")
+                _log_emit_line(run_key, f"-- {subtype}{cost_str} --")
 
             elif etype == "system":
                 pass  # ignore init events
@@ -217,16 +499,24 @@ def _do_stream_claude(prompt: str, run_key: str) -> None:
             err = proc.stderr.read().strip()
             if err:
                 for line in err.splitlines():
-                    _log_q.put(f"{run_key}|ERR: {line}")
+                    _log_emit_line(run_key, f"ERR: {line}")
 
         proc.wait()
         if proc.returncode != 0:
-            _log_q.put(f"{run_key}|-- exit code {proc.returncode} --")
+            _log_emit_line(run_key, f"-- exit code {proc.returncode} --")
 
     except FileNotFoundError:
-        _log_q.put(f"{run_key}|ERROR: 'claude' CLI not found. Is Claude Code installed and on PATH?")
+        _log_emit_line(run_key, "ERROR: 'claude' CLI not found. Is Claude Code installed and on PATH?")
     except Exception as exc:
-        _log_q.put(f"{run_key}|ERROR: {exc}")
+        _log_emit_line(run_key, f"ERROR: {exc}")
+
+
+def _do_stream_claude(prompt: str, run_key: str) -> None:
+    """LLM entry: API Messages when ``api_key`` auth; else Claude Code CLI."""
+    if caseops_llm_auth_uses_anthropic_api_key():
+        _do_stream_anthropic_messages_api(prompt, run_key)
+    else:
+        _do_stream_claude_code_cli(prompt, run_key)
 
 
 def _stream_proc(cmd: list[str], run_key: str) -> None:
@@ -235,7 +525,8 @@ def _stream_proc(cmd: list[str], run_key: str) -> None:
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
-        _log_q.put(f"__done__|{run_key}")
+        _log_emit_line(run_key, "Done: global run" if run_key == _GLOBAL_KEY else f"Done: {run_key}")
+        _log_emit_done(run_key)
 
 
 def _stream_claude_proc(prompt: str, run_key: str) -> None:
@@ -244,7 +535,8 @@ def _stream_claude_proc(prompt: str, run_key: str) -> None:
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
-        _log_q.put(f"__done__|{run_key}")
+        _log_emit_line(run_key, "Done: global run" if run_key == _GLOBAL_KEY else f"Done: {run_key}")
+        _log_emit_done(run_key)
 
 
 def _stream_full_issue(key: str, run_key: str) -> None:
@@ -254,7 +546,7 @@ def _stream_full_issue(key: str, run_key: str) -> None:
         cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file, "--issue", key]
         exit_code = _do_stream_proc(cmd, run_key)
         if exit_code == 0:
-            _log_q.put(f"{run_key}|-- Handing off to Claude --")
+            _log_emit_line(run_key, "-- Handing off to Claude --")
             prompt = _build_claude_prompt(
                 key,
                 "Run the full CaseOps fix pipeline for this issue through completion of investigation, "
@@ -263,15 +555,16 @@ def _stream_full_issue(key: str, run_key: str) -> None:
             )
             _do_stream_claude(prompt, run_key)
         else:
-            _log_q.put(f"{run_key}|-- Pipeline failed (exit {exit_code}) -- skipping Claude --")
+            _log_emit_line(run_key, f"-- Pipeline failed (exit {exit_code}) -- skipping Claude --")
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
-        _log_q.put(f"__done__|{run_key}")
+        _log_emit_line(run_key, f"Done: {run_key}")
+        _log_emit_done(run_key)
 
 
 def _build_claude_prompt(key: str, instruction: str) -> str:
-    """Build a context-rich prompt for Claude Code."""
+    """Build a context-rich prompt for CaseOps LLM runs (API or Claude Code CLI)."""
     issues = _read_manifest()
     row = next((r for r in issues if r.get("Key") == key), {})
     summary = row.get("Summary", "")
@@ -290,23 +583,41 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
     skill_md = (ROOT / "skills" / "jira-salesforce-fix-pipeline" / "SKILL.md").resolve()
     skill_line = str(skill_md) if skill_md.is_file() else f"(missing) {skill_md}"
 
-    return (
+    core = (
         f"Issue: {key} — {summary}\n"
         f"Status: {status}\n\n"
         f"Existing pipeline files:\n{files_block}\n\n"
         f"## Playbook (mandatory — read first)\n"
         f"A Claude Code stub may exist at .claude/skills/jira-salesforce-fix-pipeline/SKILL.md; "
-        f"the full workflow is always in the file below — read it completely, then execute it for issue {key}:\n"
+        f"the entrypoint is the file below. Read SKILL.md fully, then read "
+        f"`skills/jira-salesforce-fix-pipeline/references/workflow.md` end-to-end (authoritative steps 1–11), "
+        f"then execute for issue {key}:\n"
         f"  {skill_line}\n"
-        f"Use references/ and assets/ next to that SKILL.md when the playbook points to them.\n\n"
+        f"Use `references/sub-agent-prompts.md`, `references/safety-policy.md`, `references/quality-checklist.md`, "
+        f"and `assets/` under that skill when the playbook points to them.\n\n"
         f"## Instruction\n"
         f"{instruction}\n\n"
+        f"{_salesforce_browser_prompt_section()}"
         f"## Rules\n"
         f"- Do not ask the user to pick a workflow or skill; the playbook above is the workflow.\n"
         f"- Proceed with the next pipeline steps implied by the playbook and by which outputs/ files "
         f"already exist for {key}.\n"
         f"- Create or update outputs/ artifacts this issue needs (paths as defined in the playbook).\n"
+        f"- In every confirmed solution, state **Production vs Sandbox** clearly: what Production has (read-only verification), "
+        f"what is **Sandbox-only**, and whether **Production metadata deploy** is required (**Yes — e.g. Gearset** / **No** / **N/A**). "
+        f"Never imply Production has new metadata just because Sandbox validation passed. Do not deploy to Production unless the operator explicitly requests it.\n"
     )
+    if caseops_llm_auth_uses_anthropic_api_key():
+        core += (
+            "\n## CaseOps runtime: Anthropic Messages API (no tools)\n\n"
+            "This request is executed with the **Anthropic Messages API** only (`CASEOPS_LLM_AUTH=api_key`). "
+            "You have **no** agent tools: you cannot read paths from disk, run shell commands, use a browser, "
+            "or run Claude Code skills. Playbook file paths above are **not** available to you automatically. "
+            "Ground yourself in the Issue line, Status, the **Existing pipeline files** path list, and the "
+            "**Instruction** section. If the task requires autonomous repo execution, say so and tell the operator "
+            "to set **`CASEOPS_LLM_AUTH=claude_code`** (Claude Code CLI with tools) or run Claude Code in the repo.\n"
+        )
+    return core
 
 
 # -- helpers -----------------------------------------------------------------
@@ -369,7 +680,41 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
         "has_jira_message": (OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)).exists(),
         "has_test_report": (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists(),
         "has_eng_handoff": (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists(),
+        "has_confirmed_solution": _test_report_confirms_fix(key),
     }
+
+
+def _test_report_confirms_fix(key: str) -> bool:
+    """True when outputs/test-reports/<KEY>.md marks Fixed? affirmatively (Sandbox validation)."""
+    path = OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)
+    if not path.is_file():
+        return False
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    m = re.search(r"(?im)^##\s*Fixed\?\s*$", text)
+    if not m:
+        return False
+    after = text[m.end() :]
+    block_lines: list[str] = []
+    for raw in after.splitlines():
+        if re.match(r"^\s*##\s", raw) and block_lines:
+            break
+        s = raw.strip()
+        if s:
+            block_lines.append(s)
+        if len(block_lines) > 24:
+            break
+    if not block_lines:
+        return False
+    blob = " ".join(block_lines).lower()
+    if re.search(r"\b(no|not\s+fixed|false|fail(?:ed|ing)?|unfixed)\b", blob):
+        return False
+    if re.search(r"\b(yes|pass(?:ed)?|confirmed|resolved)\b", blob):
+        return True
+    first = block_lines[0].lower().lstrip("-*•").strip()
+    return first in ("yes", "y", "true", "✓", "ok")
 
 
 def _latest_issue_summary_path() -> Path | None:
@@ -574,7 +919,41 @@ def api_stream():
 @app.get("/api/status")
 def api_status():
     with _state_lock:
-        return jsonify({"active_keys": list(_active_keys), "count": len(_active_keys)})
+        return jsonify({
+            "active_keys": list(_active_keys),
+            "count": len(_active_keys),
+            "caseops_llm_auth": (
+                "api_key" if caseops_llm_auth_uses_anthropic_api_key() else "claude_code"
+            ),
+            "caseops_llm_backend": (
+                "anthropic_messages_api"
+                if caseops_llm_auth_uses_anthropic_api_key()
+                else "claude_code_cli"
+            ),
+        })
+
+
+@app.get("/api/pipeline-log/<key>")
+def api_pipeline_log(key: str):
+    """JSONL-backed history for global runs (__global__) or a Jira issue key."""
+    return jsonify({"entries": _read_pipeline_log_entries(key)})
+
+
+@app.post("/api/pipeline-log/clear")
+def api_pipeline_log_clear():
+    """Remove one pipeline log file (JSON body: {\"key\": \"HEAL-1\"} or __global__)."""
+    data = request.get_json(silent=True) or {}
+    run_key = (data.get("key") or data.get("run_key") or "").strip()
+    if not run_key:
+        return jsonify({"error": "key required"}), 400
+    with _PIPELINE_LOG_LOCK:
+        p = _pipeline_log_path(run_key)
+        if p.is_file():
+            try:
+                p.unlink()
+            except OSError:
+                return jsonify({"error": "could not delete log file"}), 500
+    return jsonify({"ok": True})
 
 
 @app.get("/api/issue/<key>/attachments")
@@ -679,8 +1058,8 @@ def api_issue_transition(key: str):
     # Update local manifest
     try:
         update_manifest_status(key, new_status, default_jira_dir())
-    except Exception:
-        pass  # non-fatal — Jira side succeeded
+    except Exception as e:
+        sys.stderr.write(f"Warning: failed to update manifest for {key}: {e}\n")
 
     return jsonify({"ok": True, "new_status": new_status})
 

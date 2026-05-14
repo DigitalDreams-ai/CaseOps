@@ -4,765 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CaseOps</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 14px;
-      background: #0d1117;
-      color: #e6edf3;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* ── Top bar ─────────────────────────────────────────────── */
-    #topbar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 0 16px;
-      height: 48px;
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
-      flex-shrink: 0;
-    }
-    #topbar h1 { font-size: 15px; font-weight: 600; color: #e6edf3; }
-    #topbar .spacer { flex: 1; }
-    #run-status {
-      font-size: 12px;
-      color: #8b949e;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    #run-status .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #238636;
-      transition: background 0.3s;
-    }
-    #run-status .dot.active { background: #f0883e; animation: pulse 1s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-    .btn {
-      padding: 5px 12px;
-      border-radius: 6px;
-      border: 1px solid #30363d;
-      background: #21262d;
-      color: #c9d1d9;
-      font-size: 12px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .btn:hover { background: #30363d; border-color: #8b949e; }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
-    .btn.primary:hover { background: #388bfd; border-color: #388bfd; }
-    .btn.danger { background: #da3633; border-color: #da3633; color: #fff; }
-
-    /* ── Main layout ─────────────────────────────────────────── */
-    #layout {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    /* ── Sidebar ─────────────────────────────────────────────── */
-    #sidebar {
-      width: 280px;
-      flex-shrink: 0;
-      background: #161b22;
-      border-right: 1px solid #30363d;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    #sidebar-header {
-      padding: 10px 14px 8px;
-      border-bottom: 1px solid #21262d;
-      flex-shrink: 0;
-    }
-    #sidebar-header .label {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #8b949e;
-      margin-bottom: 6px;
-    }
-    #sort-pills {
-      display: flex;
-      gap: 4px;
-    }
-    .sort-pill {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 10px;
-      border: 1px solid #30363d;
-      background: transparent;
-      color: #6e7681;
-      cursor: pointer;
-      transition: all 0.15s;
-      display: inline-flex;
-      align-items: center;
-      gap: 2px;
-    }
-    .sort-pill:hover { color: #c9d1d9; border-color: #6e7681; }
-    .sort-pill.active { background: #21262d; color: #e6edf3; border-color: #8b949e; }
-    .sort-pill-dir {
-      font-size: 10px;
-      opacity: 0.85;
-      min-width: 0.65em;
-    }
-    #issue-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 6px 0;
-    }
-    .group-label {
-      padding: 8px 14px 4px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #6e7681;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .issue-item {
-      padding: 8px 14px;
-      cursor: pointer;
-      border-left: 3px solid transparent;
-      transition: background 0.1s;
-    }
-    .issue-item:hover { background: #1c2128; }
-    .issue-item.selected { background: #1c2128; border-left-color: #388bfd; }
-    .issue-key {
-      font-size: 12px;
-      font-weight: 600;
-      font-family: "SF Mono", "Fira Code", monospace;
-      margin-bottom: 2px;
-    }
-    .issue-key.active   { color: #388bfd; }
-    .issue-key.escalated { color: #f0883e; }
-    .issue-key.closed   { color: #6e7681; }
-    .issue-summary {
-      font-size: 12px;
-      color: #8b949e;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .badge {
-      display: inline-block;
-      font-size: 10px;
-      padding: 1px 6px;
-      border-radius: 10px;
-      margin-top: 3px;
-      font-weight: 500;
-    }
-    .badge.active    { background: #1f3a5c; color: #79c0ff; }
-    .badge.escalated { background: #3d2600; color: #f0883e; }
-    .badge.closed    { background: #21262d; color: #6e7681; }
-
-    /* ── Main panel ──────────────────────────────────────────── */
-    #main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: #0d1117;
-    }
-
-    #detail-header {
-      padding: 14px 20px 10px;
-      border-bottom: 1px solid #21262d;
-      flex-shrink: 0;
-    }
-    #detail-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #e6edf3;
-      margin-bottom: 4px;
-    }
-    #detail-meta { font-size: 12px; color: #8b949e; }
-
-    #detail-actions {
-      display: flex;
-      gap: 8px;
-      padding: 10px 20px;
-      border-bottom: 1px solid #21262d;
-      flex-shrink: 0;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    #detail-actions .spacer { flex: 1; }
-
-    /* ── Instruction panel ───────────────────────────────────── */
-    #instruction-panel {
-      padding: 10px 20px 12px;
-      border-bottom: 1px solid #21262d;
-      flex-shrink: 0;
-      display: none;
-    }
-    #instruction-context {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 8px;
-    }
-    .ctx-chip {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 10px;
-      background: #21262d;
-      color: #8b949e;
-      border: 1px solid #30363d;
-    }
-    .ctx-chip.done { color: #3fb950; border-color: #238636; background: #0d2818; }
-    .ctx-chip.pending { color: #f0883e; border-color: #6e3a00; background: #2d1800; }
-    #instruction-row {
-      display: flex;
-      gap: 8px;
-      align-items: flex-end;
-    }
-    #instruction-input {
-      flex: 1;
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #e6edf3;
-      font-size: 13px;
-      font-family: inherit;
-      padding: 8px 12px;
-      resize: vertical;
-      min-height: 60px;
-      max-height: 160px;
-      line-height: 1.5;
-      transition: border-color 0.15s;
-    }
-    #instruction-input:focus {
-      outline: none;
-      border-color: #388bfd;
-    }
-    #instruction-input::placeholder { color: #484f58; }
-    #send-claude-btn {
-      flex-shrink: 0;
-      padding: 8px 14px;
-      white-space: nowrap;
-      align-self: flex-end;
-    }
-
-    /* ── Run-complete toast (per-issue finish while viewing another) ── */
-    .run-toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      max-width: 340px;
-      padding: 12px 40px 12px 14px;
-      background: #21262d;
-      border: 1px solid #388bfd;
-      border-radius: 8px;
-      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
-      z-index: 1000;
-      cursor: pointer;
-      font-size: 13px;
-      color: #e6edf3;
-      line-height: 1.45;
-    }
-    .run-toast.hidden { display: none; }
-    .run-toast:focus { outline: 2px solid #388bfd; outline-offset: 2px; }
-    .run-toast-close {
-      position: absolute;
-      top: 4px;
-      right: 6px;
-      width: 28px;
-      height: 28px;
-      border: none;
-      background: transparent;
-      color: #8b949e;
-      font-size: 20px;
-      line-height: 1;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .run-toast-close:hover { color: #e6edf3; background: #30363d; }
-
-    /* ── Tabs ────────────────────────────────────────────────── */
-    #tabs {
-      display: flex;
-      gap: 0;
-      padding: 0 20px;
-      border-bottom: 1px solid #21262d;
-      flex-shrink: 0;
-      overflow-x: auto;
-    }
-    .tab {
-      padding: 8px 14px;
-      font-size: 13px;
-      color: #8b949e;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      white-space: nowrap;
-      transition: color 0.15s;
-    }
-    .tab:hover { color: #c9d1d9; }
-    .tab.active { color: #e6edf3; border-bottom-color: #f78166; }
-
-    /* ── Content ─────────────────────────────────────────────── */
-    #content-area {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-    }
-    #content-area .empty { color: #6e7681; font-style: italic; }
-
-    /* markdown rendering */
-    #content-area h1,h2,h3,h4 { color: #e6edf3; margin: 16px 0 8px; font-weight: 600; }
-    #content-area h1 { font-size: 20px; border-bottom: 1px solid #21262d; padding-bottom: 8px; }
-    #content-area h2 { font-size: 16px; }
-    #content-area h3 { font-size: 14px; }
-    #content-area p  { color: #c9d1d9; line-height: 1.6; margin-bottom: 10px; }
-    #content-area ul,ol { color: #c9d1d9; padding-left: 20px; margin-bottom: 10px; line-height: 1.6; }
-    #content-area code {
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 12px;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 4px;
-      padding: 1px 5px;
-      color: #f0883e;
-    }
-    #content-area pre {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      padding: 14px;
-      overflow-x: auto;
-      margin-bottom: 12px;
-    }
-    #content-area pre code {
-      background: none;
-      border: none;
-      padding: 0;
-      color: #c9d1d9;
-    }
-    #content-area table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 14px;
-      font-size: 13px;
-    }
-    #content-area th {
-      background: #161b22;
-      color: #8b949e;
-      text-align: left;
-      padding: 6px 10px;
-      border: 1px solid #30363d;
-      font-weight: 600;
-    }
-    #content-area td {
-      padding: 6px 10px;
-      border: 1px solid #21262d;
-      color: #c9d1d9;
-      vertical-align: top;
-    }
-    #content-area tr:nth-child(even) td { background: #0d1117; }
-    #content-area a { color: #388bfd; }
-    #content-area blockquote {
-      border-left: 3px solid #30363d;
-      padding-left: 12px;
-      color: #8b949e;
-      margin-bottom: 10px;
-    }
-
-    /* ── Log pane ────────────────────────────────────────────── */
-    #log-pane {
-      height: 180px;
-      flex-shrink: 0;
-      background: #010409;
-      border-top: 1px solid #21262d;
-      display: flex;
-      flex-direction: column;
-    }
-    #log-header {
-      display: flex;
-      align-items: center;
-      padding: 4px 12px;
-      background: #161b22;
-      border-bottom: 1px solid #21262d;
-      font-size: 11px;
-      color: #6e7681;
-      gap: 10px;
-    }
-    #log-header span { font-weight: 600; }
-    #log-clear { margin-left: auto; cursor: pointer; color: #6e7681; font-size: 11px; }
-    #log-clear:hover { color: #c9d1d9; }
-    #log-output {
-      flex: 1;
-      overflow-y: auto;
-      padding: 8px 12px;
-      font-family: "SF Mono", "Fira Code", Consolas, monospace;
-      font-size: 12px;
-      color: #8b949e;
-      line-height: 1.5;
-    }
-    #log-output .log-err { color: #f85149; }
-    #log-output .log-ok  { color: #3fb950; }
-    #log-output .log-info { color: #79c0ff; }
-
-    /* ── Empty state ─────────────────────────────────────────── */
-    #empty-state {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      color: #6e7681;
-    }
-    #empty-state h2 { font-size: 18px; color: #8b949e; }
-    #empty-state p  { font-size: 13px; text-align: center; max-width: 320px; line-height: 1.6; }
-
-    /* ── Attachments ─────────────────────────────────────────── */
-    .att-divider { border: none; border-top: 1px solid #21262d; margin: 20px 0 16px; }
-    .att-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      padding: 4px 0;
-    }
-    .att-card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 10px;
-      width: 180px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .att-card.att-file { width: 260px; }
-    .att-img {
-      width: 100%;
-      height: 130px;
-      object-fit: cover;
-      border-radius: 4px;
-      border: 1px solid #21262d;
-      display: block;
-    }
-    .att-name {
-      font-size: 12px;
-      color: #c9d1d9;
-      word-break: break-all;
-      font-family: "SF Mono", "Fira Code", monospace;
-    }
-    .att-meta { font-size: 11px; color: #6e7681; }
-    .att-dl {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #388bfd;
-      text-decoration: none;
-    }
-    .att-dl:hover { text-decoration: underline; }
-    .att-icon { font-size: 22px; flex-shrink: 0; }
-
-    /* ── Lightbox ────────────────────────────────────────────── */
-    #lightbox {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      cursor: zoom-out;
-    }
-    #lightbox.open { display: flex; }
-    #lightbox img {
-      max-width: 90vw;
-      max-height: 90vh;
-      border-radius: 6px;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.7);
-      cursor: default;
-    }
-    #lightbox-close {
-      position: fixed;
-      top: 16px;
-      right: 20px;
-      font-size: 28px;
-      color: #e6edf3;
-      cursor: pointer;
-      line-height: 1;
-      opacity: 0.7;
-    }
-    #lightbox-close:hover { opacity: 1; }
-
-    /* ── Post-to-Jira panel ─────────────────────────────────── */
-    .jira-post-panel {
-      margin-top: 28px;
-      border-top: 1px solid #30363d;
-      padding-top: 16px;
-    }
-    .jira-post-label {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #6e7681;
-      margin-bottom: 8px;
-    }
-    .jira-post-editor {
-      width: 100%;
-      min-height: 180px;
-      background: #0d1117;
-      color: #e6edf3;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      padding: 12px;
-      font-family: "SF Mono", "Fira Code", Consolas, monospace;
-      font-size: 12px;
-      line-height: 1.6;
-      resize: vertical;
-      transition: border-color 0.15s;
-    }
-    .jira-post-editor:focus { outline: none; border-color: #388bfd; }
-    .jira-post-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 8px;
-    }
-    .jira-post-status {
-      font-size: 12px;
-      color: #8b949e;
-    }
-
-    /* ── Filter bar ─────────────────────────────────────────── */
-    #filter-input {
-      width: 100%;
-      margin-top: 8px;
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #e6edf3;
-      font-size: 12px;
-      padding: 5px 10px;
-      transition: border-color 0.15s;
-    }
-    #filter-input:focus { outline: none; border-color: #388bfd; }
-    #filter-input::placeholder { color: #484f58; }
-
-    /* ── Dashboard (Overview) — simple, readable ─────────────── */
-    #dashboard {
-      padding: 24px 28px 28px;
-      max-width: 640px;
-      margin: 0 auto;
-    }
-    #dashboard h2 {
-      font-size: 22px;
-      font-weight: 600;
-      color: #e6edf3;
-      letter-spacing: -0.02em;
-      margin-bottom: 6px;
-    }
-    .dash-cards {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-    @media (min-width: 720px) {
-      .dash-cards { grid-template-columns: repeat(4, 1fr); }
-    }
-    .dash-card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 12px 14px;
-    }
-    .dash-count {
-      font-size: 22px;
-      font-weight: 700;
-      font-family: "SF Mono", "Fira Code", monospace;
-      color: #e6edf3;
-      line-height: 1.1;
-      margin-bottom: 4px;
-    }
-    .dash-label {
-      font-size: 11px;
-      color: #8b949e;
-      font-weight: 500;
-      line-height: 1.3;
-    }
-    .dash-card.c-active   .dash-count { color: #79c0ff; }
-    .dash-card.c-escalated .dash-count { color: #f0883e; }
-    .dash-card.c-ready    .dash-count { color: #3fb950; }
-    .dash-card.c-pending  .dash-count { color: #8b949e; }
-
-    .overview-meta {
-      font-size: 13px;
-      color: #8b949e;
-      margin: 0 0 20px;
-      line-height: 1.5;
-    }
-    .overview-focus {
-      margin-bottom: 16px;
-    }
-    .overview-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #e6edf3;
-      margin-bottom: 4px;
-      letter-spacing: -0.01em;
-    }
-    .overview-caption {
-      font-size: 12px;
-      font-weight: 400;
-      color: #6e7681;
-    }
-    .overview-lede {
-      font-size: 12px;
-      color: #6e7681;
-      margin: 0 0 14px;
-      line-height: 1.45;
-    }
-    .overview-more {
-      font-size: 12px;
-      color: #6e7681;
-      margin: 12px 0 0;
-      padding-top: 10px;
-      border-top: 1px solid #21262d;
-    }
-    details.overview-fold {
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      margin-bottom: 8px;
-      background: #161b22;
-    }
-    details.overview-fold summary {
-      cursor: pointer;
-      list-style: none;
-      padding: 12px 14px;
-      font-size: 13px;
-      font-weight: 500;
-      color: #c9d1d9;
-      user-select: none;
-    }
-    details.overview-fold summary::-webkit-details-marker { display: none; }
-    details.overview-fold summary::before {
-      content: '';
-      display: inline-block;
-      width: 0;
-      height: 0;
-      margin-right: 8px;
-      border-left: 5px solid #8b949e;
-      border-top: 4px solid transparent;
-      border-bottom: 4px solid transparent;
-      transform: translateY(-1px);
-      transition: transform 0.12s;
-    }
-    details.overview-fold[open] summary::before {
-      transform: rotate(90deg) translate(2px, -1px);
-    }
-    .overview-pill-count {
-      display: inline-block;
-      margin-left: 6px;
-      padding: 1px 8px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #8b949e;
-      background: #21262d;
-      border-radius: 10px;
-      vertical-align: middle;
-    }
-    .overview-pill-count:empty {
-      display: none;
-    }
-    .overview-fold-body {
-      padding: 4px 14px 14px;
-      border-top: 1px solid #21262d;
-    }
-    .overview-empty {
-      font-size: 12px;
-      color: #6e7681;
-      margin: 8px 0 4px;
-      line-height: 1.45;
-    }
-    .overview-row {
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 6px;
-      width: 100%;
-      text-align: left;
-      padding: 12px 14px;
-      margin-bottom: 8px;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      background: #0d1117;
-      color: #c9d1d9;
-      cursor: pointer;
-      transition: background 0.12s, border-color 0.12s;
-    }
-    .overview-row:hover {
-      background: #161b22;
-      border-color: #484f58;
-    }
-    .overview-row-top {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px 10px;
-    }
-    .overview-row-key {
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 12px;
-      font-weight: 600;
-      flex-shrink: 0;
-    }
-    .overview-row-key.active { color: #79c0ff; }
-    .overview-row-key.escalated { color: #f0883e; }
-    .overview-row-key.closed { color: #6e7681; }
-    .overview-row-hint {
-      font-size: 11px;
-      font-weight: 500;
-      color: #f0883e;
-      background: #2d1800;
-      padding: 2px 8px;
-      border-radius: 4px;
-      flex-shrink: 0;
-    }
-    .overview-row-badge {
-      font-size: 10px;
-      padding: 3px 8px;
-      border-radius: 10px;
-      background: #21262d;
-      color: #8b949e;
-      margin-left: auto;
-      max-width: 42%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .overview-row-sum {
-      font-size: 12px;
-      color: #8b949e;
-      line-height: 1.4;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .overview-rollup-link { color: #388bfd; font-size: 13px; }
-    .overview-rollup-hint { font-size: 11px; color: #6e7681; }
-
-    /* ── Scrollbars ──────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/caseops.css') }}">
 </head>
 <body>
 
@@ -880,8 +122,10 @@
       <div id="issue-body" style="display:none;"></div>
     </div>
     <div id="log-pane">
+      <div id="log-resize-handle" title="Drag to resize"></div>
       <div id="log-header">
-        <span>Pipeline Log</span>
+        <button type="button" id="log-collapse-btn" class="log-header-btn" title="Collapse log">▼</button>
+        <span>Pipeline log</span>
         <span id="log-clear" onclick="clearLog()">Clear</span>
       </div>
       <div id="log-output"></div>
@@ -977,14 +221,14 @@
     clearSavedIssueSession();
     activeTab = null;
     resetMainToOverview();
-    renderLogForKey('__global__');
+    void loadPipelineHistory('__global__');
     const ca = document.getElementById('content-area');
     if (ca) ca.scrollTop = 0;
     void loadIssues();
   }
 
   /** After manifest is loaded: reopen last issue from this tab (sessionStorage). */
-  function restoreIssueFromSession() {
+  async function restoreIssueFromSession() {
     let key = null;
     try {
       key = sessionStorage.getItem(SESSION_ACTIVE_ISSUE);
@@ -1001,7 +245,7 @@
       tab = sessionStorage.getItem(SESSION_ACTIVE_TAB);
     } catch (_) {}
     activeTab = tab || null;
-    selectIssue(key);
+    await selectIssue(key);
   }
 
   // ── SSE stream (persistent) ────────────────────────────────
@@ -1017,7 +261,7 @@
         updateStatus();
         // Re-enable buttons for this run key
         setIssueRunning(runKey, false);
-        logLine(`Done: ${runKey === '__global__' ? 'global run' : runKey}`, 'ok', runKey);
+        // "Done: …" is sent by the server and persisted; avoid duplicate client line.
         // Refresh UI
         if (runKey === '__global__') {
           loadIssues();
@@ -1130,7 +374,7 @@
       const n = issues.length;
       const nActive = issues.filter(i => i.disposition === 'active').length;
       meta.textContent = n
-        ? `${n} in manifest · ${nActive} active`
+        ? `${n} in manifest · ${nActive} active — global runs (Full Jira Sync, Triage, Full Run) stream in the Pipeline log on the right.`
         : 'No manifest yet — run Full Jira Sync.';
     }
 
@@ -1309,7 +553,7 @@
 
     if (active.length)    renderGroup(el, 'Active', active);
     if (escalated.length) renderGroup(el, 'Escalated', escalated);
-    if (closed.length)    renderGroup(el, 'Closed / Resolved', closed);
+    if (closed.length)    renderGroup(el, 'Closed / Resolved / Canceled', closed);
 
     updateSortPillIndicators();
   }
@@ -1334,10 +578,27 @@
       item.className = 'issue-item' + (issue.key === activeKey ? ' selected' : '');
       item.dataset.key = issue.key;
       item.onclick = () => selectIssue(issue.key);
+      const needsTriage =
+        label === 'Active' && !issue.has_jira_summary
+          ? '<span class="badge needs-triage" title="No synced Jira summary on disk yet (outputs/jira/summary). Run Sync This Issue or Full Jira Sync — same as overview &quot;Needs summary&quot;.">Not triaged</span>'
+          : '';
+      const engEsc =
+        label === 'Active' && issue.has_eng_handoff
+          ? '<span class="badge eng-escalation" title="Engineering handoff is on file (outputs/engineering-escalations). Treat as escalate to Engineering per playbook.">Eng escalation</span>'
+          : '';
+      const confirmed =
+        label === 'Active' && issue.has_confirmed_solution
+          ? '<span class="badge confirmed-solution" title="Sandbox test report marks the issue fixed (outputs/test-reports). Does not mean Production is updated — see investigation / Jira draft for Gearset vs already-in-Prod.">Confirmed fix</span>'
+          : '';
       item.innerHTML = `
         <div class="issue-key ${issue.disposition}">${issue.key}</div>
         <div class="issue-summary">${escHtml(issue.summary)}</div>
-        <span class="badge ${issue.disposition}">${escHtml(issue.status)}</span>
+        <div class="issue-item-meta">
+          <span class="badge ${issue.disposition}">${escHtml(issue.status)}</span>
+          ${needsTriage}
+          ${confirmed}
+          ${engEsc}
+        </div>
       `;
       itemsContainer.appendChild(item);
     });
@@ -1368,7 +629,7 @@
       logLine(
         (issue && (issue.error || issue.message)) || `Issue ${key} could not be loaded.`,
         'err',
-        key
+        '__global__'
       );
       resetMainToOverview();
       renderLogForKey('__global__');
@@ -1402,7 +663,10 @@
     // actions
     const actionsEl = document.getElementById('detail-actions');
     if (actionsEl) actionsEl.style.display = 'flex';
-    else return;
+    else {
+      await loadPipelineHistory(key, selectIssueSeq);
+      return;
+    }
     const isRunning = activeRuns.has(key);
     const jiraLink = issue.jira_url
       ? `<a class="btn" href="${escHtml(issue.jira_url)}" target="_blank" rel="noopener">View in Jira</a>`
@@ -1429,7 +693,10 @@
 
     // tabs
     const tabsEl = document.getElementById('tabs');
-    if (!tabsEl) return;
+    if (!tabsEl) {
+      await loadPipelineHistory(key, selectIssueSeq);
+      return;
+    }
     if (seq !== selectIssueSeq) return;
     tabsEl.style.display = 'flex';
     tabsEl.innerHTML = '';
@@ -1440,10 +707,9 @@
         issueBody.innerHTML =
           '<p class="empty" style="margin-top:20px;">Run the pipeline to generate files for this issue.</p>';
       }
+      await loadPipelineHistory(key, selectIssueSeq);
       return;
     }
-
-    if (seq !== selectIssueSeq) return;
 
     issue.tabs.forEach((tab, i) => {
       const el = document.createElement('div');
@@ -1463,6 +729,7 @@
     renderInstructionPanel(issue);
     loadTransitions(key);
     loadCannedMessages(key, issue.status);
+    await loadPipelineHistory(key, selectIssueSeq);
   }
 
   async function selectTab(key, ftype, tabEl) {
@@ -1609,7 +876,7 @@
       const meta = document.getElementById('detail-meta');
       if (meta) {
         const oldText = meta.textContent;
-        const newText = oldText.replace(/Status: [^|]+/, `Status: ${new_status}`);
+        const newText = oldText.replace(/Status: [^|]+/, `Status: ${new_status}   `);
         meta.textContent = newText;
       }
 
@@ -1627,7 +894,12 @@
           statusEl.style.color = '#f85149';
           statusEl.textContent = e.message;
         }
-        if (btn) btn.disabled = false;
+        if (btn) {
+          btn.disabled = false;
+          setTimeout(() => {
+            if (btn && activeKey === key) btn.disabled = !sel.value;
+          }, 500);
+        }
       }
     }
   }
@@ -1919,6 +1191,38 @@
     return logBuffers[key];
   }
 
+  function inferLogCls(text) {
+    if (!text) return undefined;
+    if (/^ERR:/i.test(text) || /^ERROR/i.test(text)) return 'err';
+    if (/^-- exit code [1-9]/.test(text)) return 'err';
+    if (/^Done:/.test(text)) return 'ok';
+    if (/^Starting:/i.test(text)) return 'info';
+    return undefined;
+  }
+
+  async function loadPipelineHistory(key, expectedIssueSeq) {
+    try {
+      const res = await fetch('/api/pipeline-log/' + encodeURIComponent(key));
+      if (!res.ok) return;
+      const data = await res.json();
+      if (
+        expectedIssueSeq !== undefined &&
+        expectedIssueSeq !== selectIssueSeq
+      ) {
+        return;
+      }
+      const entries = data.entries || [];
+      const buf = [];
+      for (const e of entries) {
+        if (e.kind === 'done') continue;
+        const text = e.text != null ? String(e.text) : '';
+        buf.push({ text, cls: inferLogCls(text) });
+      }
+      logBuffers[key] = buf;
+      if (key === (activeKey || '__global__')) renderLogForKey(key);
+    } catch (_) {}
+  }
+
   function _appendLogDOM(text, cls) {
     const el = document.getElementById('log-output');
     const line = document.createElement('div');
@@ -1930,20 +1234,30 @@
 
   function logLine(text, cls, forKey) {
     const key = forKey !== undefined ? forKey : (activeKey || '__global__');
-    _logBuf(key).push({text, cls});
-    if (key === (activeKey || '__global__')) _appendLogDOM(text, cls);
+    const effCls = cls !== undefined ? cls : inferLogCls(text);
+    _logBuf(key).push({text, cls: effCls});
+    const viewing = key === (activeKey || '__global__');
+    if (viewing) _appendLogDOM(text, effCls);
   }
 
   function renderLogForKey(key) {
     const el = document.getElementById('log-output');
     el.innerHTML = '';
-    (_logBuf(key)).forEach(({text, cls}) => _appendLogDOM(text, cls));
+    _logBuf(key).forEach(({text, cls}) => _appendLogDOM(text, cls));
   }
 
-  function clearLog() {
+  async function clearLog() {
     const key = activeKey || '__global__';
-    logBuffers[key] = [];
+    delete logBuffers[key];
     document.getElementById('log-output').innerHTML = '';
+    renderLogForKey(key);
+    try {
+      await fetch('/api/pipeline-log/clear', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({key}),
+      });
+    } catch (_) {}
   }
 
   // ── Clipboard ─────────────────────────────────────────────
@@ -1973,7 +1287,7 @@
       { id: 'internal_notes', label: 'Notes drafted',     group: 'done'    },
       { id: 'jira_message',   label: 'Jira message',      group: 'done'    },
       { id: 'eng_handoff',    label: 'Eng escalation',    group: 'done'    },
-      { id: 'closed_resolved',label: 'Closed/Resolved',   group: 'done'    },
+      { id: 'closed_resolved', label: 'Closed / Resolved / Canceled', group: 'done' },
     ];
     const pending = [
       { id: 'investigation',  label: 'Investigation needed' },
@@ -2006,9 +1320,15 @@
       return;
     }
     if (!activeKey) return;
-    await runAction('claude_instruction', activeKey, instruction);
+    const key = activeKey;
+    await runAction('claude_instruction', key, instruction);
     // Clear the textarea after sending
     document.getElementById('instruction-input').value = '';
+    // Refresh tabs to show newly acquired files
+    if (activeKey === key) {
+      await loadIssues();
+      await selectIssue(key);
+    }
   }
 
   // ── Lightbox ──────────────────────────────────────────────
@@ -2035,12 +1355,104 @@
     return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  const LOG_PANE_H_KEY = 'caseops.logPaneHeightPx';
+  const LOG_PANE_COLLAPSE_KEY = 'caseops.logPaneCollapsed';
+
+  function initLogPaneLayout() {
+    const pane = document.getElementById('log-pane');
+    const handle = document.getElementById('log-resize-handle');
+    const btn = document.getElementById('log-collapse-btn');
+    if (!pane || !handle || !btn) return;
+
+    let savedH = parseInt(localStorage.getItem(LOG_PANE_H_KEY) || '', 10);
+    if (!Number.isFinite(savedH) || savedH < 80) savedH = 180;
+    const maxH = () => Math.max(120, Math.floor(window.innerHeight * 0.88));
+
+    savedH = Math.min(savedH, maxH());
+
+    if (localStorage.getItem(LOG_PANE_COLLAPSE_KEY) === '1') {
+      pane.classList.add('collapsed');
+      btn.textContent = '▶';
+      btn.title = 'Expand log';
+      pane.style.height = '';
+    } else {
+      pane.classList.remove('collapsed');
+      btn.textContent = '▼';
+      btn.title = 'Collapse log';
+      pane.style.height = savedH + 'px';
+    }
+
+    btn.addEventListener('click', () => {
+      if (pane.classList.contains('collapsed')) {
+        pane.classList.remove('collapsed');
+        localStorage.setItem(LOG_PANE_COLLAPSE_KEY, '0');
+        let h = parseInt(localStorage.getItem(LOG_PANE_H_KEY) || '', 10);
+        if (!Number.isFinite(h) || h < 80) h = savedH;
+        savedH = Math.min(h, maxH());
+        pane.style.height = savedH + 'px';
+        btn.textContent = '▼';
+        btn.title = 'Collapse log';
+      } else {
+        savedH = Math.round(pane.getBoundingClientRect().height);
+        localStorage.setItem(LOG_PANE_H_KEY, String(savedH));
+        pane.classList.add('collapsed');
+        localStorage.setItem(LOG_PANE_COLLAPSE_KEY, '1');
+        pane.style.height = '';
+        btn.textContent = '▶';
+        btn.title = 'Expand log';
+      }
+    });
+
+    let dragging = false;
+    let startY = 0;
+    let startH = 0;
+    handle.addEventListener('mousedown', e => {
+      if (pane.classList.contains('collapsed')) return;
+      dragging = true;
+      startY = e.clientY;
+      startH = pane.getBoundingClientRect().height;
+      e.preventDefault();
+      document.body.style.userSelect = 'none';
+    });
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dy = startY - e.clientY;
+      let h = Math.round(startH + dy);
+      h = Math.max(80, Math.min(h, maxH()));
+      pane.style.height = h + 'px';
+      savedH = h;
+    });
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      document.body.style.userSelect = '';
+      if (!pane.classList.contains('collapsed'))
+        localStorage.setItem(LOG_PANE_H_KEY, String(savedH));
+    });
+
+    window.addEventListener('resize', () => {
+      if (pane.classList.contains('collapsed')) return;
+      const cap = maxH();
+      if (pane.getBoundingClientRect().height > cap) {
+        savedH = cap;
+        pane.style.height = savedH + 'px';
+        localStorage.setItem(LOG_PANE_H_KEY, String(savedH));
+      }
+    });
+  }
+
   // ── Init ──────────────────────────────────────────────────
 
   loadIssues()
-    .then(() => restoreIssueFromSession())
-    .catch(() => {});
-  initStream();
+    .then(async () => {
+      await loadPipelineHistory('__global__');
+      await restoreIssueFromSession();
+      initStream();
+    })
+    .catch(() => {
+      initStream();
+    });
+  initLogPaneLayout();
   document.getElementById('dashboard').addEventListener('click', ev => {
     const btn = ev.target.closest('button.overview-row[data-key]');
     if (!btn) return;
