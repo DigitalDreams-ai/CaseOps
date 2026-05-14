@@ -1,7 +1,7 @@
-# Closed / Resolved Archive — [KEY]
+# Closed / Resolved / Canceled Archive — [KEY]
 
 - Key:
-- Jira status: Closed | Resolved
+- Jira status: [JIRA_STATUS]
 - Summary:
 - Reporter:
 - Last updated (Jira):

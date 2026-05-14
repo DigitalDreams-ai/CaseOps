@@ -126,6 +126,8 @@ CaseOps/
       SKILL.md
       references/
         workflow.md
+        sub-agent-prompts.md
+        quality-checklist.md
         safety-policy.md
       assets/
         investigation-record-template.md
@@ -296,6 +298,8 @@ skills/
     SKILL.md
     references/
       workflow.md
+      sub-agent-prompts.md
+      quality-checklist.md
       safety-policy.md
     assets/
       investigation-record-template.md
@@ -485,7 +489,8 @@ The first milestone is complete when:
 - `skills/jira-salesforce-fix-pipeline/SKILL.md` exists.
 - Its frontmatter has valid `name` and `description`.
 - The folder name and frontmatter `name` match.
-- `references/workflow.md` exists.
+- `references/workflow.md` exists (authoritative numbered workflow).
+- `references/sub-agent-prompts.md` and `references/quality-checklist.md` exist.
 - `references/safety-policy.md` exists.
 - Investigation, Engineering handoff, notes, Jira message, issue summary, and test report templates exist.
 - Supporting skills exist for Jira analysis, Production metadata investigation, Sandbox deploy/test, and response drafting.

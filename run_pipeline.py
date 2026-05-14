@@ -5,7 +5,7 @@ Runs the deterministic stages of the Jira-to-Salesforce fix pipeline:
 
   1. Sync issues from Jira via jira_sync.py (skippable with --no-sync).
   2. Read manifest.csv and triage every issue by status.
-  3. Archive Closed/Resolved issues to outputs/closed-resolved/.
+  3. Archive Closed/Resolved/Canceled issues to outputs/closed-resolved/.
   4. Archive pre-escalated issues to outputs/engineering-escalations/.
   5. Scaffold investigation records for active issues.
   6. Scaffold or update the dated issue summary.
@@ -28,7 +28,7 @@ from pathlib import Path
 from caseops_paths import PROJECT_ROOT, default_jira_dir, default_jira_env_file
 from jira_sync import MANIFEST_FIELDNAMES
 
-CLOSED_STATUSES = {"closed", "resolved"}
+CLOSED_STATUSES = {"closed", "resolved", "canceled", "cancelled"}
 ESCALATED_STATUS = "escalated to engineering"
 
 SKILLS_DIR = PROJECT_ROOT / "skills" / "jira-salesforce-fix-pipeline" / "assets"
@@ -91,13 +91,13 @@ def main() -> int:
             active.append(issue)
 
     print(f"  Total synced:             {len(issues)}")
-    print(f"  Closed / Resolved:        {len(closed)}")
+    print(f"  Closed / Resolved / Canceled: {len(closed)}")
     print(f"  Escalated to Engineering: {len(escalated)}")
     print(f"  Active (needs processing): {len(active)}")
     print()
 
     if not args.dry_run:
-        print("-- Step 3: Archiving Closed / Resolved --------------------")
+        print("-- Step 3: Archiving Closed / Resolved / Canceled --------")
         for issue in closed:
             path = archive_closed(issue, jira_dir, closed_dir)
             print(f"  {issue['Key']}  ->  {path.relative_to(PROJECT_ROOT)}")
@@ -195,7 +195,7 @@ def archive_closed(issue: dict[str, str], jira_dir: Path, dest_dir: Path) -> Pat
     content = (
         template
         .replace("[KEY]", issue["Key"])
-        .replace("Closed | Resolved", issue["Status"])
+        .replace("[JIRA_STATUS]", issue["Status"])
         .replace("- Summary:", f"- Summary: {issue['Summary']}")
         .replace("- Last updated (Jira):", f"- Last updated (Jira): {issue.get('Updated', '')}")
         .replace("[Paste or copy content from outputs/jira/summary/<KEY>.md]", summary_md)
@@ -270,8 +270,8 @@ def scaffold_summary(
             f"- Total issues synced: {len(all_issues)}",
         )
         .replace(
-            "- Closed / Resolved (skipped, not processed):",
-            f"- Closed / Resolved (skipped, not processed): {len(closed)}",
+            "- Closed / Resolved / Canceled (skipped, not processed):",
+            f"- Closed / Resolved / Canceled (skipped, not processed): {len(closed)}",
         )
         .replace(
             "- Pre-escalated in Jira (skipped, not processed):",

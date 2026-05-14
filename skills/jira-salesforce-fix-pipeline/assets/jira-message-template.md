@@ -11,6 +11,14 @@ I investigated and resolved this issue in Sandbox.
 
 **What was changed:**
 
+**Production vs Sandbox (required — pick one wording and delete the rest):**
+
+- **Deploy required:** The fix was **validated in Sandbox only**. **Production has not been updated** by this work. **[Operator: promote these changes to Production via Gearset (or your standard path) — e.g. metadata: …]**
+- **No deploy:** **No Production metadata deployment is required** for this fix because … **(e.g. the permission set already exists in Production; issue was assignment/access/data.)**
+- **N/A:** **No metadata change** — …
+
+Do **not** say “add a permission set” without clarifying whether that component **already exists in Production** or **only exists in Sandbox until deploy**.
+
 **Sandbox validation:**
 - Sandbox:
 - Steps tested:
