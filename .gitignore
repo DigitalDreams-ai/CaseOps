@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.jira.example
 .env.jira
 
 # CaseOps local secrets
@@ -73,6 +74,7 @@ outputs/test-reports/
 outputs/engineering-escalations/
 outputs/closed-resolved/
 outputs/issue-summary-*.md
+outputs/pipeline-logs/
 
 # Docs
 docs/
