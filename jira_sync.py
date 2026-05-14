@@ -796,6 +796,7 @@ MANIFEST_FIELDNAMES = [
     "SummaryPath",
     "AttachmentCount",
     "FormCount",
+    "EscalationReady",
 ]
 
 
