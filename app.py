@@ -334,8 +334,11 @@ def _retry_with_backoff(max_attempts: int = 3, backoff_factor: float = 2.0):
     return decorator
 
 
-def _do_stream_anthropic_messages_api(prompt: str, run_key: str) -> None:
-    """Stream a single user turn via Anthropic Messages API (API key on your Anthropic account)."""
+def _do_stream_anthropic_messages_api(prompt: str, run_key: str, issue_key: str | None = None) -> None:
+    """Stream a single user turn via Anthropic Messages API (API key on your Anthropic account).
+
+    If issue_key is provided, parse Suggested reply and [INTERNAL] output into separate files.
+    """
     if Anthropic is None:
         _log_emit_line(
             run_key,
@@ -364,9 +367,11 @@ def _do_stream_anthropic_messages_api(prompt: str, run_key: str) -> None:
     _log_emit_line(run_key, f"model={model} max_tokens={max_tokens}")
 
     @_retry_with_backoff(max_attempts=3, backoff_factor=2.0)
-    def call_api():
+    def call_api() -> str:
+        """Returns full API response text."""
         client = Anthropic(api_key=api_key)
         buf = ""
+        full_response = ""
         system_prompt = """You are CaseOps, a Jira triage and issue investigation assistant owned by Sean.
 
 ## Your voice
@@ -417,6 +422,7 @@ Analyze the issue. Draft both formats. If you don't have enough info for a solid
         ) as stream:
             for text in stream.text_stream:
                 buf += text
+                full_response += text
                 while "\n" in buf:
                     line, buf = buf.split("\n", 1)
                     if line.strip():
@@ -424,15 +430,22 @@ Analyze the issue. Draft both formats. If you don't have enough info for a solid
             if buf.strip():
                 _log_emit_line(run_key, buf.strip())
         _log_emit_line(run_key, "-- stream complete --")
+        return full_response
 
     try:
-        call_api()
+        full_output = call_api()
+        if issue_key:
+            _save_claude_output(full_output, issue_key)
     except Exception as exc:
         _log_emit_line(run_key, f"ERROR: Anthropic API (after retries): {exc}")
 
 
-def _do_stream_claude_code_cli(prompt: str, run_key: str) -> None:
-    """Run Claude Code CLI non-interactively, parsing stream-json output."""
+def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None = None) -> None:
+    """Run Claude Code CLI non-interactively, parsing stream-json output.
+
+    If issue_key is provided, parse output for Suggested reply and [INTERNAL] sections
+    and save to separate files.
+    """
     cmd = [
         "claude",
         "-p",
@@ -460,6 +473,7 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str) -> None:
             bufsize=1,
         )
         assert proc.stdout
+        assistant_text = []
         for raw in proc.stdout:
             raw = raw.strip()
             if not raw:
@@ -476,7 +490,10 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str) -> None:
                 for block in event.get("message", {}).get("content", []):
                     btype = block.get("type", "")
                     if btype == "text":
-                        for line in block.get("text", "").splitlines():
+                        text = block.get("text", "")
+                        if issue_key:
+                            assistant_text.append(text)
+                        for line in text.splitlines():
                             if line.strip():
                                 _log_emit_line(run_key, line)
                     elif btype == "tool_use":
@@ -502,7 +519,10 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str) -> None:
                     _log_emit_line(run_key, f"ERR: {line}")
 
         proc.wait()
-        if proc.returncode != 0:
+        if proc.returncode == 0 and issue_key and assistant_text:
+            full_output = "\n".join(assistant_text)
+            _save_claude_output(full_output, issue_key)
+        elif proc.returncode != 0:
             _log_emit_line(run_key, f"-- exit code {proc.returncode} --")
 
     except FileNotFoundError:
@@ -511,12 +531,15 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str) -> None:
         _log_emit_line(run_key, f"ERROR: {exc}")
 
 
-def _do_stream_claude(prompt: str, run_key: str) -> None:
-    """LLM entry: API Messages when ``api_key`` auth; else Claude Code CLI."""
+def _do_stream_claude(prompt: str, run_key: str, issue_key: str | None = None) -> None:
+    """LLM entry: API Messages when ``api_key`` auth; else Claude Code CLI.
+
+    If issue_key is provided, parse Suggested reply and [INTERNAL] output into separate files.
+    """
     if caseops_llm_auth_uses_anthropic_api_key():
-        _do_stream_anthropic_messages_api(prompt, run_key)
+        _do_stream_anthropic_messages_api(prompt, run_key, issue_key)
     else:
-        _do_stream_claude_code_cli(prompt, run_key)
+        _do_stream_claude_code_cli(prompt, run_key, issue_key)
 
 
 def _stream_proc(cmd: list[str], run_key: str) -> None:
@@ -529,9 +552,49 @@ def _stream_proc(cmd: list[str], run_key: str) -> None:
         _log_emit_done(run_key)
 
 
-def _stream_claude_proc(prompt: str, run_key: str) -> None:
+def _save_claude_output(content: str, key: str) -> None:
+    """Parse Claude output with Suggested reply and [INTERNAL] sections into separate files.
+
+    Expected format:
+      ## Suggested reply
+      ...customer message...
+
+      ## [INTERNAL]
+      ...internal memo...
+    """
+    suggested_start = content.find("## Suggested reply")
+    internal_start = content.find("## [INTERNAL]")
+
+    if suggested_start == -1 and internal_start == -1:
+        return
+
+    # Extract Suggested reply (customer message)
+    if suggested_start != -1:
+        if internal_start != -1:
+            suggested_text = content[suggested_start:internal_start].strip()
+        else:
+            suggested_text = content[suggested_start:].strip()
+        # Remove header line
+        suggested_text = "\n".join(suggested_text.split("\n")[1:]).strip()
+        if suggested_text:
+            path = OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(suggested_text, encoding="utf-8")
+
+    # Extract [INTERNAL] (internal notes)
+    if internal_start != -1:
+        internal_text = content[internal_start:].strip()
+        # Remove header line
+        internal_text = "\n".join(internal_text.split("\n")[1:]).strip()
+        if internal_text:
+            path = OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(internal_text, encoding="utf-8")
+
+
+def _stream_claude_proc(prompt: str, run_key: str, issue_key: str | None = None) -> None:
     try:
-        _do_stream_claude(prompt, run_key)
+        _do_stream_claude(prompt, run_key, issue_key)
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
@@ -553,7 +616,7 @@ def _stream_full_issue(key: str, run_key: str) -> None:
                 "internal notes, and Jira customer message (and any sandbox/escalation steps the playbook "
                 "requires for this issue).",
             )
-            _do_stream_claude(prompt, run_key)
+            _do_stream_claude(prompt, run_key, key)
         else:
             _log_emit_line(run_key, f"-- Pipeline failed (exit {exit_code}) -- skipping Claude --")
     finally:
