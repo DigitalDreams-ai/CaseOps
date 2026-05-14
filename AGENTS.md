@@ -17,7 +17,7 @@ Skills must follow the Agent Skills format:
 - `name` must be lowercase kebab-case and match the parent folder name.
 - Prefer the standard folders `scripts/`, `references/`, and `assets/`.
 
-For **Claude Code** in this repo, a thin entrypoint mirrors the skill name under `.claude/skills/jira-salesforce-fix-pipeline/SKILL.md`; it points at the canonical `skills/.../SKILL.md` — edit workflow only under `skills/`.
+For **Claude Code** in this repo, a thin entrypoint mirrors the skill name under `.claude/skills/jira-salesforce-fix-pipeline/SKILL.md`; it points at the canonical `skills/.../SKILL.md` — edit workflow and prompts under `skills/.../references/` (see `workflow.md`, `sub-agent-prompts.md`).
 
 Do not add a required custom registry or runner unless the user explicitly asks for local helper tooling.
 
@@ -32,6 +32,8 @@ skills/jira-salesforce-fix-pipeline/
   SKILL.md
   references/
     workflow.md
+    sub-agent-prompts.md
+    quality-checklist.md
     safety-policy.md
   assets/
     investigation-record-template.md
@@ -55,10 +57,56 @@ skills/jira-salesforce-fix-pipeline/
 - Put Sandbox test reports under `outputs/test-reports/`.
 - Put internal notes under `outputs/internal-notes/`.
 - Put Jira message drafts under `outputs/jira-messages/`.
+- Append-only pipeline stream history under `outputs/pipeline-logs/` (JSONL per run key; gitignored).
 - Do not store credentials or sensitive production data in this repo.
 - Keep Salesforce integrations read-only until the user explicitly approves write/deploy behavior.
+- **Never modify Profile permissions** (Salesforce Profile metadata or profile-level FLS / app visibility / tab settings). Prefer permission-set changes; if the issue requires profile edits, escalate to Engineering or an admin.
+- In investigations, notes, Jira drafts, and rollups: **always** separate **Sandbox-validated** work from **Production**—state whether **Gearset (or deploy) to Production** is required vs **metadata already in Production** vs **N/A**. Do not imply Production was updated unless the operator explicitly deployed.
 - Escalate to Engineering instead of implementing when the solution requires changing Apex/code, flows, approval processes, validation rules, or other business-critical automation.
 - For Engineering escalations, produce a simple handoff: issue summary, root cause, affected metadata, proposed fix, validation evidence, and any records needed to reproduce.
+
+## CaseOps GUI + LLM (API vs Claude Code / Chrome Dev / Salesforce magic link)
+
+A committed template **[`.env.jira.example`](.env.jira.example)** lists **`CASEOPS_LLM_AUTH`** and other common keys—copy it to **`.env.jira`** and edit (your real `.env.jira` is gitignored).
+
+When the Flask app runs an LLM step (**Run Pipeline For This Issue** after `run_pipeline.py`, or **Send to Claude**), **`CASEOPS_LLM_AUTH`** selects the **backend**:
+
+- **`api_key` (default):** CaseOps calls the **Anthropic Messages API** with **`ANTHROPIC_API_KEY`** (install **`pip install anthropic`**). This is **text-only**: no filesystem, shell, browser, or Claude Code skills. The prompt explains limits; use this to avoid **Claude Code subscription / CLI** limits when a single-turn answer is enough.
+- **`claude_code`:** CaseOps spawns the **`claude`** CLI with **`ANTHROPIC_API_KEY` omitted** so **Claude Code** uses **subscription / `claude login`**, including **tools** and full playbook execution in the repo.
+
+Environment variables can steer **Claude Code** browser automation toward **Chrome Dev** and **Salesforce magic links** (those apply to **`claude_code`** runs, not to API-only turns):
+
+Add to **`.env.jira`** (gitignored; never commit):
+
+| Variable | Purpose |
+| -------- | ------- |
+| `CASEOPS_LLM_AUTH` | **`api_key`**: Anthropic **Messages API** + `ANTHROPIC_API_KEY` (see `requirements.txt`). **`claude_code`**: **`claude`** subprocess with API key **omitted** (subscription / login). Aliases for `claude_code`: `claude`, `subscription`, `max`. |
+| `CASEOPS_ANTHROPIC_MODEL` | Optional. Model id for **API** mode (default `claude-sonnet-4-20250514`). |
+| `CASEOPS_ANTHROPIC_MAX_TOKENS` | Optional. Max output tokens for **API** mode (default `16384`, capped). |
+| `CASEOPS_CLAUDE_BROWSER` | Full path to **Chrome Dev** `chrome.exe` (Windows), or the `Google Chrome Dev` binary on macOS/Linux. Passed to the **`claude` subprocess** as `BROWSER` and `CLAUDE_CODE_CHROME_PATH` ( **`claude_code`** mode only). |
+| `CASEOPS_SALESFORCE_MAGIC_LINK` | Optional single frontdoor URL when you do not split prod vs sandbox — clarify org and permission limits in chat if you use this. |
+| `CASEOPS_PRODUCTION_MAGIC_LINK` | Production **frontdoor / session** URL. Use **only for read-only** access in Production: investigation, viewing, querying. **No** create/update/delete or deploy to Production. Prompt label uses `CASEOPS_PRODUCTION_READ_ORG`. |
+| `CASEOPS_SANDBOX_MAGIC_LINK` | Sandbox **frontdoor / session** URL. **Full CRUD** is expected in Sandbox: deploy metadata, test, create/edit/delete records as the playbook requires. Prompt label uses `CASEOPS_SANDBOX_TARGET_ORG`. |
+| `CASEOPS_SANDBOX_TARGET_ORG` | **Allowlisted writable org** for the **`salesforce-sandbox-deploy-test`** skill: the only Salesforce username/alias where deploys and mutating ops are permitted on the Support-resolvable path. Must match your CLI target. See **`skills/jira-salesforce-fix-pipeline/references/safety-policy.md`**. |
+
+**Playbook:** On Support-resolvable fixes, **`jira-salesforce-fix-pipeline`** **always** reaches deploy+test via **`salesforce-sandbox-deploy-test`**; that skill may write **only** to **`CASEOPS_SANDBOX_TARGET_ORG`**.
+
+Use a **separate** Salesforce user or permission set for Production session if needed so the Production link truly reflects **read-only** (e.g. View Setup, Read on objects only). Sandbox session should use a user with normal dev/test permissions.
+
+Injected into the **CaseOps LLM user prompt** for **`claude_code`** runs they configure the CLI; in **`api_key`** mode the same text is included but **no browser tool** runs—treat links as reference only. **These URLs are as sensitive as passwords** while valid—never commit, ticket, or screenshot them.
+
+Example (Windows paths vary; prefer splitting prod vs sandbox):
+
+```env
+CASEOPS_LLM_AUTH=api_key
+CASEOPS_CLAUDE_BROWSER=C:\Program Files\Google\Chrome Dev\Application\chrome.exe
+CASEOPS_PRODUCTION_MAGIC_LINK=https://...
+CASEOPS_SANDBOX_MAGIC_LINK=https://...
+```
+
+Use **`GET /api/status`**: `caseops_llm_auth` is `api_key` or `claude_code`; `caseops_llm_backend` is `anthropic_messages_api` or `claude_code_cli`.
+
+**Note:** **Full Triage** / **Full Run** only run `run_pipeline.py` (no LLM). Configure `.env.jira` for Claude Code **interactively** in a terminal as needed; for IDE-only runs, set the equivalent in Claude Code `settings.json` → `env` if needed.
 
 ## Validation
 

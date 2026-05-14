@@ -14,12 +14,18 @@
 
 ## Sandbox
 
-- The predefined sandbox for this project is `10xhealth-sean` (`CASEOPS_SANDBOX_TARGET_ORG`).
-- Deploying to `10xhealth-sean` does not require additional confirmation.
-- Deploying to any other sandbox or org requires explicit user approval in the current conversation.
-- "Run the pipeline" or any general instruction does NOT constitute approval to deploy to a non-predefined org.
+**HARD REQUIREMENT — single writable org**
+
+- The **only** Salesforce org that may receive **deploys, metadata writes, or mutating data/API operations** from the fix pipeline’s deploy/test step is the value of **`CASEOPS_SANDBOX_TARGET_ORG`** in **`.env.jira`** (username or CLI alias, as your team configures it).
+- Read that value from the file **before** every deploy or write. The CLI target **must match it exactly**. If it does not match, **STOP** — do not deploy elsewhere, including another sandbox.
+- If **`CASEOPS_SANDBOX_TARGET_ORG`** is unset or empty, **STOP** — do not deploy until the operator sets it.
+- Changing the allowlisted org is done by editing **`.env.jira`**, not by choosing a different org in chat.
+- `jira-salesforce-fix-pipeline` **always** invokes **`salesforce-sandbox-deploy-test`** after a Support-resolvable implementation (deploy + test are mandatory on that path).
+- "Run the pipeline" or any general instruction does **not** authorize writes to Production or to any org other than **`CASEOPS_SANDBOX_TARGET_ORG`**.
 - Record all deployment commands and results.
-- Test in Sandbox before claiming the issue is fixed.
+- Test in the allowlisted Sandbox before claiming the issue is fixed.
+
+Examples in docs may show org aliases like `10xhealth-sean` — your environment’s allowlist is **only** what appears in **`CASEOPS_SANDBOX_TARGET_ORG`**.
 
 ## Jira
 
@@ -43,6 +49,12 @@
 - Ask before destructive operations.
 - Do not implement fixes that require Engineering ownership: Apex/code, flows, approval processes, validation rules, or other business-critical automation.
 - For Engineering-owned fixes, stop after diagnosis and draft a clear handoff under `outputs/engineering-escalations/<KEY>.md` with the issue, root cause, affected metadata, potential fix, evidence, and reproduction details.
+
+## Wording: Production vs Sandbox
+
+- **Never** describe a fix as if new or changed metadata already exists in **Production** when it was only deployed or validated in **Sandbox**, unless a **read-only Production check** confirms it.
+- Every **confirmed** Support outcome must say whether the operator must **promote metadata to Production** (e.g. **Gearset**) or whether **no Production deploy** is needed because the relevant metadata **already exists in Production** (or the fix was data/config/access only).
+- This pipeline **does not** deploy to or mutate **Production** unless the operator **explicitly** requests it. Phrases like “add a permission set” must clarify **Sandbox create** vs **already in Production** vs **deploy pending**.
 
 ## Check Before Creating
 
@@ -79,6 +91,7 @@ If the intended name is already taken by something unrelated, propose an alterna
 
 ## Permissions
 
+- **Never modify Profile permissions** — do not deploy or edit Salesforce **Profile** metadata (including field-level security, tab visibility, app assignment, or any profile-level access changes). Use **permission sets** (or document admin steps). If the only valid fix is a profile change, stop and escalate; do not change profiles in Support-owned pipeline work.
 - Never create a new permission set just to grant FLS for a single field or a small group of fields.
 - Always add FLS to existing permission sets. Find which permission sets already cover a similar field on the same object (e.g., a related date or lookup field) and match that access pattern exactly.
 - Query Production with: `SELECT Parent.Name, Parent.Label, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE SobjectType = '[Object]' AND Field = '[Object].[SimilarField__c]' ORDER BY Parent.Label`

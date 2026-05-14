@@ -28,15 +28,15 @@ Issues filtered at triage. No pipeline processing performed.
 
 Active issues that entered the pipeline. Issues with Jira status "Escalated to Engineering" are listed separately in the Escalated to Engineering section below — do not include them here.
 
-| Issue | Jira Status At Sync | Summary | Disposition | Next Step |
-| --- | --- | --- | --- | --- |
+| Issue | Jira Status At Sync | Summary | Disposition | Prod deploy? (Gearset / No / N/A) | Next Step |
+| --- | --- | --- | --- | --- | --- |
 
 ## Sandbox Deployments / Validations
 
 Support-owned fixes validated in Sandbox. Do not include issues that are in the Escalated to Engineering section — their sandbox work is recorded in their handoff files.
 
-| Issue | Sandbox | Deploy / Validation |
-| --- | --- | --- |
+| Issue | Sandbox | Deploy / Validation | Prod deploy needed? |
+| --- | --- | --- | --- |
 
 ## Escalated to Engineering
 
