@@ -615,6 +615,19 @@ a:hover {
   background: var(--color-bg);
   margin: 12px 0;
   overflow: hidden;
+  height: 300px;
+  resize: vertical;
+}
+
+.jira-post-resize-handle {
+  height: 4px;
+  cursor: row-resize;
+  background: var(--color-border);
+  transition: background 0.15s;
+}
+
+.jira-post-resize-handle:hover {
+  background: var(--color-primary);
 }
 
 .jira-post-header {
@@ -661,9 +674,10 @@ a:hover {
   font-family: 'Courier New', monospace;
   font-size: 11px;
   line-height: 1.4;
-  resize: vertical;
-  min-height: 80px;
+  resize: none;
+  min-height: 150px;
   display: block;
+  overflow-y: auto;
 }
 
 .jira-post-panel.collapsed .jira-post-editor {

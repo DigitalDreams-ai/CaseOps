@@ -769,6 +769,7 @@
     panel.className = 'jira-post-panel';
     panel.id = `jira-post-panel-${ftype}`;
     panel.innerHTML = `
+      <div class="jira-post-resize-handle" title="Drag to resize"></div>
       <div class="jira-post-header">
         <button type="button" class="jira-post-toggle" onclick="togglePostPanel('${ftype}')" title="Collapse/expand">▼</button>
         <div class="jira-post-label">${isPublic ? 'Public Reply' : 'Internal Note'} — edit before posting</div>
@@ -785,6 +786,8 @@
     area.appendChild(panel);
     // Set value after insertion to avoid HTML escaping issues
     document.getElementById(`jira-editor-${ftype}`).value = rawText;
+    // Setup resize handle
+    setupPostPanelResize(ftype);
   }
 
   function togglePostPanel(ftype) {
@@ -792,6 +795,37 @@
     if (panel) {
       panel.classList.toggle('collapsed');
     }
+  }
+
+  function setupPostPanelResize(ftype) {
+    const panel = document.getElementById(`jira-post-panel-${ftype}`);
+    const handle = panel ? panel.querySelector('.jira-post-resize-handle') : null;
+    if (!panel || !handle) return;
+
+    let isResizing = false;
+    let startY = 0;
+    let startHeight = 0;
+
+    handle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startY = e.clientY;
+      startHeight = panel.offsetHeight;
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'row-resize';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const delta = e.clientY - startY;
+      const newHeight = Math.max(200, startHeight + delta);
+      panel.style.height = newHeight + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      isResizing = false;
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    });
   }
 
   async function postToJira(key, ftype, isPublic) {
