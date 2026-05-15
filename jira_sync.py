@@ -84,16 +84,23 @@ def main() -> int:
     state_path = out_dir / "state.json"
     state = read_json_file(state_path, default={})
 
-    # Initialize newestCreated from manifest if needed (for first --new-only run)
+    # Initialize newestCreated from raw JSON files if needed (for first --new-only run)
     if args.new_only and not state.get("newestCreated"):
-        manifest_path = out_dir / "manifest.csv"
-        if manifest_path.exists():
+        raw_dir = out_dir / "raw"
+        newest_created_str = None
+        if raw_dir.exists():
             try:
-                rows = list(csv.DictReader(manifest_path.read_text(encoding="utf-8").splitlines()))
-                if rows:
-                    # Get the most recent created date from the manifest (if available)
-                    # For now, just use a very old date to avoid syncing everything again
-                    state["newestCreated"] = rows[-1].get("Updated", "") or "2020-01-01T00:00:00.000Z"
+                # Scan raw JSON files to find the most recent created date
+                for json_file in sorted(raw_dir.glob("*.json")):
+                    try:
+                        issue_data = read_json_file(json_file)
+                        created = issue_data.get("fields", {}).get("created")
+                        if created:
+                            newest_created_str = max_jira_datetime(newest_created_str, created)
+                    except Exception:
+                        pass
+                if newest_created_str:
+                    state["newestCreated"] = newest_created_str
             except Exception:
                 pass
 
