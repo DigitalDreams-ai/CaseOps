@@ -80,12 +80,14 @@
           </div>
         </div>
 
-        <section class="overview-focus">
-          <h3 class="overview-title">Needs attention <span id="overview-next-caption" class="overview-caption"></span></h3>
-          <p class="overview-lede">Issues that still need a synced summary, investigation, or customer-ready draft.</p>
-          <div id="overview-next-steps"></div>
-          <p id="overview-next-more" class="overview-more" style="display:none;"></p>
-        </section>
+        <details class="overview-fold" open>
+          <summary>Needs attention <span id="overview-next-caption" class="overview-pill-count"></span></summary>
+          <div class="overview-fold-body">
+            <p class="overview-lede" style="margin-top:8px;">Issues that still need a synced summary, investigation, or customer-ready draft.</p>
+            <div id="overview-next-steps"></div>
+            <p id="overview-next-more" class="overview-more" style="display:none;"></p>
+          </div>
+        </details>
 
         <details class="overview-fold">
           <summary>Ready to review <span id="overview-summary-ready" class="overview-pill-count"></span></summary>

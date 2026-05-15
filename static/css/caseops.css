@@ -492,6 +492,67 @@ a:hover {
   border-top: 1px solid var(--color-border);
 }
 
+.overview-row {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.overview-row:hover {
+  background: rgba(31, 111, 235, 0.05);
+  border-color: var(--color-primary);
+}
+
+.overview-row-top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.overview-row-key {
+  font-weight: 600;
+  color: var(--color-primary);
+  font-family: 'Courier New', monospace;
+  flex-shrink: 0;
+}
+
+.overview-row-key.escalated {
+  color: var(--color-warn);
+}
+
+.overview-row-hint {
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.overview-row-badge {
+  margin-left: auto;
+  padding: 2px 6px;
+  background: var(--color-surface);
+  border-radius: 3px;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.overview-row-sum {
+  font-size: 12px;
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
 .overview-pill-count {
   display: inline-block;
   padding: 2px 8px;
