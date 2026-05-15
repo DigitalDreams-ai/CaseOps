@@ -194,18 +194,13 @@
     document.querySelectorAll('.issue-item').forEach(el => el.classList.remove('selected'));
     const dash = document.getElementById('dashboard');
     const issueBody = document.getElementById('issue-body');
+    const header = document.getElementById('detail-header');
     if (dash) dash.style.display = '';
     if (issueBody) {
       issueBody.style.display = 'none';
       issueBody.innerHTML = '';
     }
-    const titleEl = document.getElementById('detail-title');
-    if (titleEl) {
-      titleEl.textContent = 'Select an issue';
-      titleEl.style.color = '#6e7681';
-    }
-    const metaEl = document.getElementById('detail-meta');
-    if (metaEl) metaEl.textContent = '';
+    if (header) header.style.display = 'none';
     const actionsEl = document.getElementById('detail-actions');
     if (actionsEl) actionsEl.style.display = 'none';
     const tabsEl = document.getElementById('tabs');
