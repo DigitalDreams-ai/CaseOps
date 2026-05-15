@@ -84,36 +84,14 @@ def main() -> int:
     state_path = out_dir / "state.json"
     state = read_json_file(state_path, default={})
 
-    # Initialize newestCreated from raw JSON files if needed (for first --new-only run)
-    if args.new_only and not state.get("newestCreated"):
-        raw_dir = out_dir / "raw"
-        newest_created_str = None
-        if raw_dir.exists():
-            try:
-                # Scan raw JSON files to find the most recent created date
-                for json_file in sorted(raw_dir.glob("*.json")):
-                    try:
-                        issue_data = read_json_file(json_file)
-                        created = issue_data.get("fields", {}).get("created")
-                        if created:
-                            newest_created_str = max_jira_datetime(newest_created_str, created)
-                    except Exception:
-                        pass
-                if newest_created_str:
-                    state["newestCreated"] = newest_created_str
-            except Exception:
-                pass
-
     print(f"Connecting to {base_url}...", flush=True)
     fields = resolve_issue_fields(args)
     jql = args.jql or default_jql()
     print(f"JQL: {jql}", flush=True)
+
     if args.incremental and state.get("newestUpdated"):
         base_jql = strip_order_by(jql)
         jql = f'({base_jql}) AND updated >= "{state["newestUpdated"]}" ORDER BY updated ASC'
-    elif args.new_only and state.get("newestCreated"):
-        base_jql = strip_order_by(jql)
-        jql = f'({base_jql}) AND created >= "{state["newestCreated"]}" ORDER BY created ASC'
 
     client = JiraClient(base_url=base_url, auth_header=auth_header)
     cloud_id = cloud_id_arg or client.get_cloud_id()
@@ -127,6 +105,19 @@ def main() -> int:
         page_size=args.page_size,
         max_issues=args.max_issues,
     )
+
+    # Filter to only new issues if --new-only
+    if args.new_only and not args.issue:
+        manifest_path = out_dir / "manifest.csv"
+        existing_keys = set()
+        if manifest_path.exists():
+            try:
+                rows = list(csv.DictReader(manifest_path.read_text(encoding="utf-8").splitlines()))
+                existing_keys = {row["Key"] for row in rows if row.get("Key")}
+            except Exception:
+                pass
+        keys = [k for k in keys if k not in existing_keys]
+        print(f"Filtered to {len(keys)} new issue(s) (not in manifest)")
     newest_updated = state.get("newestUpdated")
     newest_created = state.get("newestCreated")
     manifest_rows = []
