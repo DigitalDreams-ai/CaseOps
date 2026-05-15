@@ -924,7 +924,7 @@ def api_run():
     if action == "sync":
         cmd = [sys.executable, "jira_sync.py", "--env-file", env_file]
     elif action == "sync_new":
-        cmd = [sys.executable, "jira_sync.py", "--env-file", env_file, "--incremental"]
+        cmd = [sys.executable, "jira_sync.py", "--env-file", env_file, "--new-only"]
     elif action == "sync_issue" and key:
         cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file, "--issue", key]
     elif action == "triage":

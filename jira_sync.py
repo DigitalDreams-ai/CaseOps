@@ -91,6 +91,9 @@ def main() -> int:
     if args.incremental and state.get("newestUpdated"):
         base_jql = strip_order_by(jql)
         jql = f'({base_jql}) AND updated >= "{state["newestUpdated"]}" ORDER BY updated ASC'
+    elif args.new_only and state.get("newestCreated"):
+        base_jql = strip_order_by(jql)
+        jql = f'({base_jql}) AND created >= "{state["newestCreated"]}" ORDER BY created ASC'
 
     client = JiraClient(base_url=base_url, auth_header=auth_header)
     cloud_id = cloud_id_arg or client.get_cloud_id()
@@ -105,6 +108,7 @@ def main() -> int:
         max_issues=args.max_issues,
     )
     newest_updated = state.get("newestUpdated")
+    newest_created = state.get("newestCreated")
     manifest_rows = []
 
     print(f"Found {len(keys)} issue(s). Syncing...")
@@ -149,7 +153,9 @@ def main() -> int:
         print(f"[{i}/{len(keys)}] {key} - written ({len(comments)} comments, {len(attachments)} attachments, {len(forms)} forms)", flush=True)
 
         updated = issue.get("fields", {}).get("updated")
+        created = issue.get("fields", {}).get("created")
         newest_updated = max_jira_datetime(newest_updated, updated)
+        newest_created = max_jira_datetime(newest_created, created)
 
         pri_raw = issue.get("fields", {}).get("priority")
         priority_name = ""
@@ -178,6 +184,7 @@ def main() -> int:
         {
             "lastRunAt": now_iso(),
             "newestUpdated": newest_updated,
+            "newestCreated": newest_created,
             "lastJql": jql,
             "lastIssueCount": len(keys),
         },
@@ -201,6 +208,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fields", help="Comma-separated Jira fields. Overrides the default triage fields.")
     parser.add_argument("--all-fields", action="store_true", help='Fetch audit-style fields ["*all"].')
     parser.add_argument("--incremental", action="store_true", help="Add updated >= state.newestUpdated to the JQL.")
+    parser.add_argument("--new-only", action="store_true", help="Sync only issues created since last sync (created >= state.newestCreated).")
     parser.add_argument("--page-size", type=int, default=100)
     parser.add_argument("--max-issues", type=int, help="Maximum number of issues to sync from a JQL search.")
     parser.add_argument("--no-attachments", action="store_true", help="Skip attachment file downloads.")
