@@ -914,7 +914,7 @@ def api_run():
     action = data.get("action", "full")
     key = data.get("key", "")
 
-    is_global = action in ("sync", "triage", "full")
+    is_global = action in ("sync", "triage", "full", "sync_new")
     run_key = _GLOBAL_KEY if is_global else key
 
     env_file = str(ROOT / ".env.jira")
@@ -923,6 +923,8 @@ def api_run():
 
     if action == "sync":
         cmd = [sys.executable, "jira_sync.py", "--env-file", env_file]
+    elif action == "sync_new":
+        cmd = [sys.executable, "jira_sync.py", "--env-file", env_file, "--incremental"]
     elif action == "sync_issue" and key:
         cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file, "--issue", key]
     elif action == "triage":
