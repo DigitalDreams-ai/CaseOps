@@ -617,6 +617,7 @@ a:hover {
   overflow: hidden;
   height: 300px;
   resize: vertical;
+  position: relative;
 }
 
 .jira-post-resize-handle {

@@ -805,28 +805,35 @@
     let isResizing = false;
     let startY = 0;
     let startHeight = 0;
+    let lastDelta = 0;
 
     handle.addEventListener('mousedown', (e) => {
       isResizing = true;
       startY = e.clientY;
       startHeight = panel.offsetHeight;
+      lastDelta = 0;
       document.body.style.userSelect = 'none';
       document.body.style.cursor = 'row-resize';
     });
 
     document.addEventListener('mousemove', (e) => {
       if (!isResizing) return;
-      // Drag UP = negative delta = increase height (top edge moves up, bottom stays fixed)
-      // Drag DOWN = positive delta = decrease height (top edge moves down, bottom stays fixed)
+      // Drag UP = negative delta = increase height, move up via transform
+      // Drag DOWN = positive delta = decrease height, move down via transform
+      // transform doesn't interact with margins, keeps bottom anchor fixed
       const delta = e.clientY - startY;
       const newHeight = Math.max(200, startHeight - delta);
+      lastDelta = delta;
       panel.style.height = newHeight + 'px';
+      panel.style.transform = `translateY(${delta}px)`;
     });
 
     document.addEventListener('mouseup', () => {
+      if (!isResizing) return;
       isResizing = false;
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
+      // Keep the top value set during drag to maintain bottom anchor
     });
   }
 
