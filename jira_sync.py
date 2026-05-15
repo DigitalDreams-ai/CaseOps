@@ -84,6 +84,19 @@ def main() -> int:
     state_path = out_dir / "state.json"
     state = read_json_file(state_path, default={})
 
+    # Initialize newestCreated from manifest if needed (for first --new-only run)
+    if args.new_only and not state.get("newestCreated"):
+        manifest_path = out_dir / "manifest.csv"
+        if manifest_path.exists():
+            try:
+                rows = list(csv.DictReader(manifest_path.read_text(encoding="utf-8").splitlines()))
+                if rows:
+                    # Get the most recent created date from the manifest (if available)
+                    # For now, just use a very old date to avoid syncing everything again
+                    state["newestCreated"] = rows[-1].get("Updated", "") or "2020-01-01T00:00:00.000Z"
+            except Exception:
+                pass
+
     print(f"Connecting to {base_url}...", flush=True)
     fields = resolve_issue_fields(args)
     jql = args.jql or default_jql()
