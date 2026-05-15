@@ -617,13 +617,39 @@ a:hover {
   overflow: hidden;
 }
 
-.jira-post-label {
+.jira-post-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 12px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
+}
+
+.jira-post-toggle {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.jira-post-toggle:hover {
+  color: var(--color-text);
+}
+
+.jira-post-panel.collapsed .jira-post-toggle {
+  transform: rotate(-90deg);
+}
+
+.jira-post-label {
   font-size: 12px;
   font-weight: 500;
   color: var(--color-text);
+  flex: 1;
 }
 
 .jira-post-editor {
@@ -637,6 +663,11 @@ a:hover {
   line-height: 1.4;
   resize: vertical;
   min-height: 80px;
+  display: block;
+}
+
+.jira-post-panel.collapsed .jira-post-editor {
+  display: none;
 }
 
 .jira-post-editor:focus {
@@ -651,6 +682,10 @@ a:hover {
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
   align-items: center;
+}
+
+.jira-post-panel.collapsed .jira-post-actions {
+  display: none;
 }
 
 .jira-post-status {

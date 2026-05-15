@@ -767,8 +767,12 @@
 
     const panel = document.createElement('div');
     panel.className = 'jira-post-panel';
+    panel.id = `jira-post-panel-${ftype}`;
     panel.innerHTML = `
-      <div class="jira-post-label">${isPublic ? 'Public Reply' : 'Internal Note'} — edit before posting</div>
+      <div class="jira-post-header">
+        <button type="button" class="jira-post-toggle" onclick="togglePostPanel('${ftype}')" title="Collapse/expand">▼</button>
+        <div class="jira-post-label">${isPublic ? 'Public Reply' : 'Internal Note'} — edit before posting</div>
+      </div>
       <textarea class="jira-post-editor" id="jira-editor-${ftype}"></textarea>
       <div class="jira-post-actions">
         <button class="${btnClass}" id="jira-post-btn-${ftype}"
@@ -781,6 +785,13 @@
     area.appendChild(panel);
     // Set value after insertion to avoid HTML escaping issues
     document.getElementById(`jira-editor-${ftype}`).value = rawText;
+  }
+
+  function togglePostPanel(ftype) {
+    const panel = document.getElementById(`jira-post-panel-${ftype}`);
+    if (panel) {
+      panel.classList.toggle('collapsed');
+    }
   }
 
   async function postToJira(key, ftype, isPublic) {
