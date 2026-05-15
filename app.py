@@ -878,6 +878,7 @@ def api_issue(key: str):
         return jsonify({"error": "not found"}), 404
     tabs = _available_tabs(key)
     due = row.get("Due", "") or ""
+    flags = _pipeline_file_flags(key)
     return jsonify({
         "key": key,
         "status": row.get("Status", ""),
@@ -891,6 +892,7 @@ def api_issue(key: str):
         "claude_prompt": _claude_prompt(key, row.get("Summary", "")),
         "jira_url": f"{JIRA_BASE_URL}/browse/{key}" if JIRA_BASE_URL else "",
         "reporter": _get_issue_reporter(key),
+        **flags,
     })
 
 
@@ -1125,6 +1127,27 @@ def api_issue_transition(key: str):
         sys.stderr.write(f"Warning: failed to update manifest for {key}: {e}\n")
 
     return jsonify({"ok": True, "new_status": new_status})
+
+
+@app.post("/api/issue/<key>/escalate")
+def api_escalate_to_ado(key: str):
+    """Escalate a Jira issue to Azure DevOps."""
+    data = request.get_json(silent=True) or {}
+    work_item_type = str(data.get("work_item_type", "")).strip()
+
+    if not work_item_type:
+        return jsonify({"error": "work_item_type required (Bug or User Story)"}), 400
+
+    if work_item_type not in ("Bug", "User Story"):
+        return jsonify({"error": "work_item_type must be 'Bug' or 'User Story'"}), 400
+
+    try:
+        from ado_integration import escalate_to_ado
+
+        result = escalate_to_ado(key, work_item_type, jira_dir=default_jira_dir())
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)[:500]}), 500
 
 
 @app.route("/api/canned-messages", methods=["GET"])

@@ -686,6 +686,15 @@
       </select>
       <button class="btn primary" id="message-btn" onclick="sendCannedMessage('${key}')" disabled>Send</button>
       <span id="message-status" style="font-size:12px;"></span>
+      ${issue.has_eng_handoff ? `
+        <select id="escalate-type-select" class="btn" style="padding:5px 8px;">
+          <option value="">Escalate to ADO…</option>
+          <option value="Bug">Bug</option>
+          <option value="User Story">User Story</option>
+        </select>
+        <button class="btn primary" id="escalate-btn" onclick="escalateToADO('${key}')" disabled>Create</button>
+        <span id="escalate-status" style="font-size:12px;"></span>
+      ` : ''}
       <div class="spacer"></div>
       ${jiraLink}
       <button class="btn" onclick="copyPrompt(${JSON.stringify(issue.claude_prompt)})">Copy Claude Prompt</button>
@@ -729,6 +738,13 @@
     renderInstructionPanel(issue);
     loadTransitions(key);
     loadCannedMessages(key, issue.status);
+    if (issue.has_eng_handoff) {
+      const sel = document.getElementById('escalate-type-select');
+      const btn = document.getElementById('escalate-btn');
+      if (sel && btn) {
+        sel.onchange = () => { btn.disabled = !sel.value; };
+      }
+    }
     await loadPipelineHistory(key, selectIssueSeq);
   }
 
@@ -1023,6 +1039,53 @@
           if (statusEl) statusEl.textContent = '✓ Sent';
         }
       }
+    } catch(e) {
+      if (activeKey === key) {
+        if (statusEl) {
+          statusEl.style.color = '#f85149';
+          statusEl.textContent = e.message;
+        }
+        if (btn) btn.disabled = false;
+      }
+    }
+  }
+
+  async function escalateToADO(key) {
+    const sel = document.getElementById('escalate-type-select');
+    const btn = document.getElementById('escalate-btn');
+    const statusEl = document.getElementById('escalate-status');
+    const work_item_type = sel.value;
+    if (!work_item_type) return;
+
+    btn.disabled = true;
+    if (statusEl) {
+      statusEl.style.color = '#8b949e';
+      statusEl.textContent = 'Creating…';
+    }
+
+    try {
+      const res = await fetch(`/api/issue/${key}/escalate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ work_item_type }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      if (activeKey !== key) {
+        logLine(`Escalated ${key} to ADO`, 'ok', key);
+        await loadIssues();
+        return;
+      }
+
+      if (statusEl) {
+        statusEl.style.color = '#3fb950';
+        statusEl.textContent = `✓ ADO #${data.ado_id}`;
+      }
+      logLine(`Escalated ${key} to ADO work item ${data.ado_id}`, 'ok', key);
+      sel.value = '';
+      btn.disabled = true;
+      await loadIssues();
     } catch(e) {
       if (activeKey === key) {
         if (statusEl) {
