@@ -604,6 +604,61 @@ a:hover {
 .log-line.warn { color: var(--color-warn); }
 .log-line.info { color: var(--color-text-secondary); }
 
+/* ── Jira Post Panel (Internal Notes, Public Reply) ─────────── */
+
+.jira-post-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg);
+  margin: 12px 0;
+  overflow: hidden;
+}
+
+.jira-post-label {
+  padding: 8px 12px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.jira-post-editor {
+  flex: 1;
+  padding: 10px 12px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: none;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.jira-post-editor:focus {
+  outline: none;
+  background: rgba(31, 111, 235, 0.05);
+}
+
+.jira-post-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  align-items: center;
+}
+
+.jira-post-status {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  flex: 1;
+}
+
 #lightbox {
   display: none;
   position: fixed;
