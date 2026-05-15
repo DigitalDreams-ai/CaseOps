@@ -805,20 +805,26 @@
     let isResizing = false;
     let startY = 0;
     let startHeight = 0;
+    let startTop = 0;
 
     handle.addEventListener('mousedown', (e) => {
       isResizing = true;
       startY = e.clientY;
       startHeight = panel.offsetHeight;
+      startTop = panel.offsetTop;
       document.body.style.userSelect = 'none';
       document.body.style.cursor = 'row-resize';
     });
 
     document.addEventListener('mousemove', (e) => {
       if (!isResizing) return;
+      // Drag UP = negative delta = increase height and move top up
+      // Drag DOWN = positive delta = decrease height and move top down
       const delta = e.clientY - startY;
-      const newHeight = Math.max(200, startHeight + delta);
+      const newHeight = Math.max(200, startHeight - delta);
+      const newTop = startTop + delta;
       panel.style.height = newHeight + 'px';
+      panel.style.marginTop = newTop + 'px';
     });
 
     document.addEventListener('mouseup', () => {
