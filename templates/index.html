@@ -805,13 +805,15 @@
     let isResizing = false;
     let startY = 0;
     let startHeight = 0;
-    let startTop = 0;
+    let startMarginTop = 0;
 
     handle.addEventListener('mousedown', (e) => {
       isResizing = true;
       startY = e.clientY;
       startHeight = panel.offsetHeight;
-      startTop = panel.offsetTop;
+      // Get current marginTop from computed style, default to 12px (CSS default)
+      const computed = window.getComputedStyle(panel);
+      startMarginTop = parseInt(computed.marginTop) || 12;
       document.body.style.userSelect = 'none';
       document.body.style.cursor = 'row-resize';
     });
@@ -822,9 +824,9 @@
       // Drag DOWN = positive delta = decrease height and move top down
       const delta = e.clientY - startY;
       const newHeight = Math.max(200, startHeight - delta);
-      const newTop = startTop + delta;
+      const newMarginTop = Math.max(0, startMarginTop + delta);
       panel.style.height = newHeight + 'px';
-      panel.style.marginTop = newTop + 'px';
+      panel.style.marginTop = newMarginTop + 'px';
     });
 
     document.addEventListener('mouseup', () => {
