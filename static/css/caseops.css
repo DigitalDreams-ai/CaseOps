@@ -677,6 +677,120 @@ a:hover {
 }
 
 /* Scrollbar styling */
+/* ── Attachments ──────────────────────────────────────────── */
+
+.att-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.att-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+  transition: all 0.15s;
+}
+
+.att-card:hover {
+  border-color: var(--color-primary);
+  background: rgba(31, 111, 235, 0.1);
+}
+
+.att-img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 2px;
+  display: block;
+}
+
+.att-card.att-file {
+  justify-content: center;
+  align-items: center;
+  min-height: 120px;
+}
+
+.att-dl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.att-icon {
+  font-size: 32px;
+}
+
+.att-name {
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+.att-meta {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.att-divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 16px 0;
+}
+
+/* ── Lightbox ──────────────────────────────────────────────── */
+
+#lightbox {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+#lightbox.open {
+  display: flex;
+}
+
+#lightbox-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+}
+
+#lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  font-size: 32px;
+  cursor: pointer;
+  color: var(--color-text);
+  user-select: none;
+  transition: color 0.15s;
+}
+
+#lightbox-close:hover {
+  color: var(--color-danger);
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
