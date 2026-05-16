@@ -144,7 +144,10 @@ def main() -> int:
         forms = []
         if not args.no_forms:
             print(f"[{i}/{len(keys)}] {key} - fetching forms...", flush=True)
-            forms = client.get_attached_forms(issue_key=key, cloud_id=cloud_id)
+            try:
+                forms = client.get_attached_forms(issue_key=key, cloud_id=cloud_id)
+            except Exception as e:
+                print(f"[{i}/{len(keys)}] {key} - forms fetch failed (skipping): {str(e)[:100]}", flush=True)
 
         bundle = {
             "issue": issue,
