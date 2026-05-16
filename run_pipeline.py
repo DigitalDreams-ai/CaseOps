@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import subprocess
 import sys
 from datetime import date
@@ -133,12 +134,18 @@ def main() -> int:
         for issue in active:
             print(f"    {issue['Key']}  {issue['Status']}")
             print(f"      {issue['Summary'][:72]}")
-        print(
-            "\n  Ask your AI agent:\n"
-            '  "Process my active Jira issues through the fix pipeline."\n'
-            "\n  The jira-salesforce-fix-pipeline skill will handle diagnosis,\n"
-            "  escalation gate, implementation, deploy/test, and response drafting."
-        )
+        print()
+
+        if not args.dry_run and not args.no_agents:
+            print("-- Step 8: Processing active issues in parallel -----------")
+            process_active_issues_parallel(active)
+        else:
+            print(
+                "\n  Ask your AI agent:\n"
+                '  "Process my active Jira issues through the fix pipeline."\n'
+                "\n  The jira-salesforce-fix-pipeline skill will handle diagnosis,\n"
+                "  escalation gate, implementation, deploy/test, and response drafting."
+            )
     else:
         print("\n  No active issues to process.")
 
@@ -317,6 +324,59 @@ def _read_template(path: Path) -> str:
     return f"[Template not found: {path}]\n"
 
 
+def process_active_issues_parallel(active: list[dict[str, str]], batch_size: int = 5) -> None:
+    """Spawn parallel agents to process active issues through the fix pipeline."""
+    if not active:
+        return
+
+    results_dir = PROJECT_ROOT / "outputs" / "step-8-results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    total = len(active)
+    completed = 0
+    failed = 0
+
+    for i in range(0, total, batch_size):
+        batch = active[i:i + batch_size]
+        print(f"\n  Batch {i // batch_size + 1}: Processing {len(batch)} issue(s)...")
+
+        processes = []
+        for issue in batch:
+            key = issue["Key"]
+            cmd = [
+                sys.executable,
+                "-m", "claude",
+                "run", "jira-salesforce-fix-pipeline",
+                key,
+            ]
+            print(f"    → {key}", flush=True)
+            try:
+                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                processes.append((key, p))
+            except Exception as e:
+                print(f"    ✗ {key} failed to start: {str(e)[:80]}", flush=True)
+                failed += 1
+
+        for key, p in processes:
+            try:
+                stdout, stderr = p.communicate(timeout=600)
+                if p.returncode == 0:
+                    print(f"    ✓ {key} completed", flush=True)
+                    completed += 1
+                else:
+                    print(f"    ✗ {key} failed (exit {p.returncode})", flush=True)
+                    failed += 1
+            except subprocess.TimeoutExpired:
+                p.kill()
+                print(f"    ✗ {key} timeout", flush=True)
+                failed += 1
+            except Exception as e:
+                print(f"    ✗ {key} error: {str(e)[:80]}", flush=True)
+                failed += 1
+
+    print(f"\n  Step 8 complete: {completed} succeeded, {failed} failed out of {total} issues")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="CaseOps pipeline: sync, triage, scaffold, and hand off to AI.",
@@ -357,6 +417,11 @@ examples:
         "--dry-run",
         action="store_true",
         help="Print triage counts but do not write any files",
+    )
+    parser.add_argument(
+        "--no-agents",
+        action="store_true",
+        help="Skip Step 8 (parallel agent processing) and print handoff message instead",
     )
     return parser.parse_args()
 
