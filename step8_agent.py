@@ -36,6 +36,17 @@ def load_env(env_file: Path) -> None:
             os.environ[key] = value
 
 
+def strip_markdown_fences(text: str) -> str:
+    """Strip markdown code block markers (```) from text."""
+    text = text.strip()  # Remove leading/trailing whitespace first
+    lines = text.split("\n")
+    if lines and lines[0].strip().startswith("```"):
+        lines = lines[1:]
+    if lines and lines[-1].strip().startswith("```"):
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Step 8 agent: diagnose, escalate gate, draft notes/message per issue."
@@ -63,7 +74,8 @@ def main() -> int:
     # Check if already processed (idempotent)
     internal_notes_path = outputs_dir / "internal-notes" / f"{key}.md"
     jira_message_path = outputs_dir / "jira-messages" / f"{key}.md"
-    if internal_notes_path.exists() and jira_message_path.exists():
+    investigation_path = outputs_dir / "investigations" / f"{key}.md"
+    if internal_notes_path.exists() and jira_message_path.exists() and investigation_path.exists():
         print(f"  [{key}] already processed, skipping")
         return 0
 
@@ -90,6 +102,9 @@ def main() -> int:
     jira_message_template = (template_dir / "jira-message-template.md").read_text(
         encoding="utf-8"
     )
+    investigation_template = (template_dir / "investigation-record-template.md").read_text(
+        encoding="utf-8"
+    )
 
     # Build prompt
     prompt = f"""You are CaseOps, a Salesforce Support agent AI.
@@ -106,9 +121,25 @@ def main() -> int:
 
 ## Task
 
-Analyze this Salesforce support issue and produce two outputs.
+Analyze this Salesforce support issue and produce three outputs.
 
-### Output A — Internal Notes
+### Output A — Investigation Record (Issue Understanding section)
+
+Fill in the following template's Issue Understanding and Salesforce Problem sections with observations from the Jira summary:
+- Observed Behavior: what the customer reported seeing
+- Expected Behavior: what should happen instead
+- Acceptance Criteria: acceptance criteria from the issue if present
+- Attachments Or Evidence: any attachments or key evidence mentioned
+- Unknowns: what information is still needed to resolve this
+- Confirmed Facts: technical facts established during investigation
+- Hypotheses: potential root causes under investigation
+- Likely Affected Metadata: Salesforce components/fields potentially involved
+
+```markdown
+{investigation_template}
+```
+
+### Output B — Internal Notes
 
 Fill in the following template with your diagnosis, root cause, escalation decision, and any fix notes. If escalating to Engineering, mark that clearly.
 
@@ -116,7 +147,7 @@ Fill in the following template with your diagnosis, root cause, escalation decis
 {internal_notes_template}
 ```
 
-### Output B — Jira Message
+### Output C — Jira Message
 
 Fill in the appropriate block (Confirmed Fix OR Engineering Escalation — delete the other):
 
@@ -130,6 +161,8 @@ Fill in the appropriate block (Confirmed Fix OR Engineering Escalation — delet
 
 Return exactly:
 ```
+---INVESTIGATION---
+<filled investigation record markdown here>
 ---INTERNAL-NOTES---
 <filled internal notes markdown here>
 ---JIRA-MESSAGE---
@@ -162,7 +195,9 @@ Do NOT include any other text before or after these markers.
         return 1
 
     # Parse response
-    if "---INTERNAL-NOTES---" not in response_text or "---JIRA-MESSAGE---" not in response_text:
+    if ("---INVESTIGATION---" not in response_text or
+        "---INTERNAL-NOTES---" not in response_text or
+        "---JIRA-MESSAGE---" not in response_text):
         print(
             f"  [{key}] ERROR: response missing required markers",
             file=sys.stderr,
@@ -170,22 +205,28 @@ Do NOT include any other text before or after these markers.
         return 1
 
     try:
-        before, sep1, after_marker1 = response_text.partition("---INTERNAL-NOTES---")
+        before, sep1, after_marker1 = response_text.partition("---INVESTIGATION---")
         if not sep1:
+            raise ValueError("---INVESTIGATION--- marker not found")
+
+        # Everything between INVESTIGATION and INTERNAL-NOTES
+        investigation_part, sep2, after_marker2 = after_marker1.partition("---INTERNAL-NOTES---")
+        if not sep2:
             raise ValueError("---INTERNAL-NOTES--- marker not found")
 
         # Everything between INTERNAL-NOTES and JIRA-MESSAGE
-        internal_notes_part, sep2, after_marker2 = after_marker1.partition("---JIRA-MESSAGE---")
-        if not sep2:
+        internal_notes_part, sep3, after_marker3 = after_marker2.partition("---JIRA-MESSAGE---")
+        if not sep3:
             raise ValueError("---JIRA-MESSAGE--- marker not found")
 
         # Everything after JIRA-MESSAGE until next marker or end
-        jira_message_part = after_marker2.split("---")[0]  # Stop at next marker if exists
+        jira_message_part = after_marker3.split("---")[0]  # Stop at next marker if exists
 
-        internal_notes = internal_notes_part.strip()
-        jira_message = jira_message_part.strip()
+        investigation_text = strip_markdown_fences(investigation_part)
+        internal_notes = strip_markdown_fences(internal_notes_part)
+        jira_message = strip_markdown_fences(jira_message_part)
 
-        if not internal_notes or not jira_message:
+        if not investigation_text or not internal_notes or not jira_message:
             print(
                 f"  [{key}] ERROR: parsed sections are empty",
                 file=sys.stderr,
@@ -199,15 +240,17 @@ Do NOT include any other text before or after these markers.
     try:
         internal_notes_path.parent.mkdir(parents=True, exist_ok=True)
         jira_message_path.parent.mkdir(parents=True, exist_ok=True)
+        investigation_path.parent.mkdir(parents=True, exist_ok=True)
 
+        investigation_path.write_text(investigation_text, encoding="utf-8")
         internal_notes_path.write_text(internal_notes, encoding="utf-8")
         jira_message_path.write_text(jira_message, encoding="utf-8")
 
         # Check if this is a confirmed solution (not escalated to engineering)
-        # Look for "- Required?: YES" or "- **Required?:** YES" (Engineering Handoff section)
+        # Look for "Required?:" in Engineering Handoff section of investigation record
         is_escalated = False
-        if "Engineering Handoff" in internal_notes:
-            for line in internal_notes.split("\n"):
+        if "## Engineering Handoff" in investigation_text:
+            for line in investigation_text.split("\n"):
                 if "required?" in line.lower() and ":" in line:
                     # Extract the value after the colon (e.g., "YES" or "No")
                     value = line.split(":", 1)[1].strip().lower().strip("*").strip()
