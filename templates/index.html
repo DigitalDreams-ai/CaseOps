@@ -1013,6 +1013,7 @@
       if (!cachedMessages) {
         sel.innerHTML = '<option value="">Loading…</option>';
         const res = await fetch(`/api/canned-messages`);
+        if (!res.ok) throw new Error('Failed to load canned messages');
         cachedMessages = await res.json();
       }
 
@@ -1021,7 +1022,6 @@
       const btnCurrent = document.getElementById('message-btn');
       if (!sel) return;
       const data = cachedMessages;
-      if (!res.ok) throw new Error(data.error || 'Failed');
 
       // Filter messages based on status
       const available = data.filter(m => {
