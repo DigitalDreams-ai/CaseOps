@@ -76,7 +76,20 @@ def main() -> int:
     jira_message_path = outputs_dir / "jira-messages" / f"{key}.md"
     investigation_path = outputs_dir / "investigations" / f"{key}.md"
     if internal_notes_path.exists() and jira_message_path.exists() and investigation_path.exists():
-        print(f"  [{key}] already processed, skipping")
+        # All files exist, but ensure confidence flag exists
+        investigation_text = investigation_path.read_text(encoding="utf-8")
+        investigation_tokens = len(investigation_text) // 4
+        confidence = "high" if investigation_tokens >= 300 else "low"
+        confidence_flags_dir = outputs_dir / "confidence-flags"
+        confidence_flags_dir.mkdir(parents=True, exist_ok=True)
+        for stale in confidence_flags_dir.glob(f"{key}.*"):
+            stale.unlink(missing_ok=True)
+        flag_path = confidence_flags_dir / f"{key}.{confidence}"
+        flag_path.write_text(
+            f"tokens={investigation_tokens}\nconfidence={confidence}\n",
+            encoding="utf-8",
+        )
+        print(f"  [{key}] already processed, skipping (confidence={confidence})")
         return 0
 
     # Read context
