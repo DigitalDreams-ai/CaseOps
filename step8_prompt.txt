@@ -1,0 +1,71 @@
+You are deploying and testing a Salesforce fix in Sandbox.
+
+Issue key: HEAL-33659
+Allowlisted Sandbox (from .env.jira CASEOPS_SANDBOX_TARGET_ORG): 10xhealth-sean
+Fix description: Create custom picklist field Supplement_Inquiry__c on Case object with 44 product values (Precision Aminos through 10X Creatine). Add field to Case-Customer Experience page layout in Call Details area (specifically in the Specialties section). Verify field is accessible to Customer Support users and all picklist values are present and correctly spelled.
+
+Picklist values (44 total):
+1. Precision Aminos
+2. Precision Nutrition Supplement
+3. Precision Weight Management Supplements
+4. 10X 5-MTHF
+5. 10X ALPHA
+6. 10X Aminos - Tropical Orange
+7. 10X Aminos Blend Fruit Punch
+8. 10X Berberine
+9. 10X Calm Tincture 60ml
+10. 10X Children's Multivitamin Gummies / Strawberry Watermelon
+11. 10X Collagen Peptides 30 Serv
+12. 10X Colostrum 60 serving tub
+13. 10X Curcumin/Turmeric
+14. 10X DK CAPSULES 60SERV
+15. 10X FOCUS CAPSULES
+16. 10X Health Lemon-Lime Hydration
+17. 10X Health Wave Crusher Energy
+18. 10X Health Wave Crusher Hydration
+19. 10X Hydration Electrolytes Lemon Lime
+20. 10X Hydration Electrolytes Strawberry Lemonade
+21. 10X MAGNESIUM CAPSULES 60SERV
+22. 10X Methylene Blue Drops (Superhuman Energy)
+23. 10X Methylene Blue Tablets (Superhuman Energy)
+24. 10X MIC CHROMIUM CAPSULES 60SERV
+25. 10X NEURO MEDULLA
+26. 10X OPTIMIZE
+27. 10X Plant Protein Chocolate v2 / 30 servings
+28. 10X Plant Protein Vanilla v2 / 30 servings
+29. 10X PROBIOTICS CAPSULES 60SERV
+30. 10X SLEEP CAPSULES 60SERV
+31. 10X TMG Capsules
+32. 10X VITAMIN C CAPSULES 60SERV
+33. 10X ZINC CAPSULES 60SERV
+34. 10X Blood Flow Support
+35. 10X MoveEase
+36. 10X Creatine
+(Note: Jira form lists some additional products; validate exact count during field creation)
+
+Investigation record: outputs/investigations/HEAL-33659.md
+
+Instructions:
+1. Use the salesforce-sandbox-deploy-test skill (mandatory allowlist rules).
+2. Confirm the CLI/UI org target matches the allowlisted value "10xhealth-sean" exactly before any deploy or write.
+3. Deploy the fix:
+   - Create custom picklist field Supplement_Inquiry__c on Case object
+   - Add all 44 product values to the picklist (preserve exact spelling and capitalization)
+   - Add field to Case-Customer Experience.layout-meta.xml in the Specialties section (Call Details area)
+   - Deploy metadata to Sandbox
+4. Test against the Jira acceptance criteria:
+   - Field existence: Verify Supplement_Inquiry__c exists on Case object in Sandbox
+   - Picklist values: Confirm all 44 product values present and correctly spelled
+   - Page layout: Open Case record in Sandbox; verify field visible in Call Details/Specialties section
+   - User access: Log in as customer support user; confirm field is selectable and saveable
+   - No conflicts: Verify no existing Case fields/layouts broken
+5. Write results to outputs/test-reports/HEAL-33659.md using
+   skills/jira-salesforce-fix-pipeline/assets/test-report-template.md.
+   Fill Production deployment state section (what exists in Production vs Sandbox; Gearset required Y/N/N/A).
+
+Return a compact summary (max 400 tokens) containing:
+- Pass or Fail
+- Steps tested and actual results
+- Whether the issue is confirmed fixed
+- If failed: what broke, what hypothesis was wrong, what to try next
+- Path written: outputs/test-reports/HEAL-33659.md
