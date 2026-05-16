@@ -41,7 +41,7 @@ ISSUE_SUMMARY_TEMPLATE = SKILLS_DIR / "issue-summary-template.md"
 def main() -> int:
     args = parse_args()
     jira_dir = Path(args.jira_dir)
-    out_dir = PROJECT_ROOT / "outputs"
+    out_dir = Path(args.outputs_dir)
 
     closed_dir = out_dir / "closed-resolved"
     escalations_dir = out_dir / "engineering-escalations"
@@ -138,7 +138,7 @@ def main() -> int:
 
         if not args.dry_run and not args.no_agents:
             print("-- Step 8: Processing active issues in parallel -----------")
-            process_active_issues_parallel(active)
+            process_active_issues_parallel(active, out_dir=out_dir, env_file=args.env_file)
         else:
             print(
                 "\n  Ask your AI agent:\n"
@@ -324,12 +324,21 @@ def _read_template(path: Path) -> str:
     return f"[Template not found: {path}]\n"
 
 
-def process_active_issues_parallel(active: list[dict[str, str]], batch_size: int = 12) -> None:
+def process_active_issues_parallel(
+    active: list[dict[str, str]],
+    batch_size: int = 12,
+    out_dir: Path | None = None,
+    env_file: str | None = None,
+) -> None:
     """Spawn parallel agents to process active issues through the fix pipeline."""
     if not active:
         return
 
-    results_dir = PROJECT_ROOT / "outputs" / "step-8-results"
+    if out_dir is None:
+        out_dir = PROJECT_ROOT / "outputs"
+    if env_file is None:
+        env_file = str(PROJECT_ROOT / ".env.jira")
+    results_dir = out_dir / "step-8-results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
     total = len(active)
@@ -346,7 +355,12 @@ def process_active_issues_parallel(active: list[dict[str, str]], batch_size: int
             cmd = [
                 sys.executable,
                 str(PROJECT_ROOT / "step8_agent.py"),
-                "--key", key,
+                "--key",
+                key,
+                "--outputs-dir",
+                str(out_dir),
+                "--env-file",
+                env_file,
             ]
             print(f"    > {key}", flush=True)
             try:
@@ -383,7 +397,7 @@ def process_active_issues_parallel(active: list[dict[str, str]], batch_size: int
     print(f"\n  Step 8 complete: {completed} succeeded, {failed} failed out of {total} issues")
 
 
-def run_nightly_precompute() -> tuple[int, int]:
+def run_nightly_precompute(outputs_dir: Path | None = None) -> tuple[int, int]:
     """Generate investigation records for all active issues (Steps 1-7 only, no Step 8 agent).
 
     Loads active issues from outputs/jira/manifest.csv, scaffolds investigation
@@ -395,6 +409,9 @@ def run_nightly_precompute() -> tuple[int, int]:
         (completed_count, failed_count)
     """
     import time as _time
+
+    if outputs_dir is None:
+        outputs_dir = PROJECT_ROOT / "outputs"
 
     start = _time.monotonic()
     jira_dir = default_jira_dir()
@@ -417,7 +434,7 @@ def run_nightly_precompute() -> tuple[int, int]:
         and i["Status"].lower() != ESCALATED_STATUS
     ]
 
-    investigations_dir = PROJECT_ROOT / "outputs" / "investigations"
+    investigations_dir = outputs_dir / "investigations"
     investigations_dir.mkdir(parents=True, exist_ok=True)
 
     completed = 0
@@ -462,6 +479,11 @@ examples:
         "--jira-dir",
         default=str(default_jira_dir()),
         help="Directory containing manifest.csv and jira outputs (default: outputs/jira)",
+    )
+    parser.add_argument(
+        "--outputs-dir",
+        default=str(PROJECT_ROOT / "outputs"),
+        help="Root outputs directory for this workspace (default: outputs)",
     )
     parser.add_argument(
         "--incremental",

@@ -10,7 +10,7 @@
 
 <!-- Top bar -->
 <div id="topbar">
-  <h1>CaseOps</h1>
+  <h1>CaseOps{% if workspace and workspace != 'default' %} — {{ workspace }}{% endif %}</h1>
   <div class="spacer"></div>
   <div id="run-status">
     <div class="dot" id="status-dot"></div>

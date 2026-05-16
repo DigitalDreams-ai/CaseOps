@@ -72,8 +72,8 @@ def _cache_evict(cache: dict) -> None:
         cache.pop(next(iter(cache)))
 
 
-def _load_jira_env() -> None:
-    """Load .env.jira into os.environ.
+def _load_jira_env(env_file: Path | None = None) -> None:
+    """Load .env.jira (or workspace-specific variant) into os.environ.
 
     By default does not overwrite existing non-empty values.
     Exceptions:
@@ -85,7 +85,8 @@ def _load_jira_env() -> None:
       value (so switching API vs Claude Code mode in ``.env.jira`` applies on reload).
     - Any key: if currently unset or empty/whitespace, the file value is applied.
     """
-    env_file = ROOT / ".env.jira"
+    if env_file is None:
+        env_file = ROOT / ".env.jira"
     if not env_file.exists():
         return
     for line in env_file.read_text(encoding="utf-8").splitlines():
@@ -110,8 +111,7 @@ def _load_jira_env() -> None:
             os.environ[key] = value
 
 
-_load_jira_env()
-JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "").rstrip("/")
+JIRA_BASE_URL = ""  # Set in __main__ after _load_jira_env()
 
 
 def caseops_llm_auth_uses_anthropic_api_key() -> bool:
@@ -627,7 +627,16 @@ def _stream_full_issue(key: str, run_key: str) -> None:
     """Run pipeline script then hand off to Claude for Internal Notes + Jira Message."""
     try:
         env_file = str(ROOT / ".env.jira")
-        cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file, "--issue", key]
+        cmd = [
+            sys.executable,
+            "run_pipeline.py",
+            "--env-file",
+            env_file,
+            "--outputs-dir",
+            str(OUTPUTS),
+            "--issue",
+            key,
+        ]
         exit_code = _do_stream_proc(cmd, run_key)
         if exit_code == 0:
             _log_emit_line(run_key, "-- Handing off to Claude --")
@@ -857,7 +866,12 @@ def _sla_remaining_ms(due_str: str) -> int | None:
 def index():
     issues = _read_manifest()
     has_manifest = _manifest_path().exists()
-    return render_template("index.html", issues=issues, has_manifest=has_manifest)
+    return render_template(
+        "index.html",
+        issues=issues,
+        has_manifest=has_manifest,
+        workspace=app.config.get("WORKSPACE", "default"),
+    )
 
 
 @app.get("/api/issues")
@@ -974,11 +988,27 @@ def api_run():
     elif action == "sync_new":
         cmd = [sys.executable, "jira_sync.py", "--env-file", env_file, "--new-only"]
     elif action == "sync_issue" and key:
-        cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file, "--issue", key]
+        cmd = [
+            sys.executable,
+            "run_pipeline.py",
+            "--env-file",
+            env_file,
+            "--outputs-dir",
+            str(OUTPUTS),
+            "--issue",
+            key,
+        ]
     elif action == "triage":
-        cmd = [sys.executable, "run_pipeline.py", "--no-sync"]
+        cmd = [sys.executable, "run_pipeline.py", "--no-sync", "--outputs-dir", str(OUTPUTS)]
     elif action == "full":
-        cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file]
+        cmd = [
+            sys.executable,
+            "run_pipeline.py",
+            "--env-file",
+            env_file,
+            "--outputs-dir",
+            str(OUTPUTS),
+        ]
     elif action == "full_issue" and key:
         use_full_issue = True
     elif action == "claude_instruction" and key:
@@ -1319,5 +1349,31 @@ def serve_issue_rollup(filename: str):
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="CaseOps: Salesforce support case automation"
+    )
+    parser.add_argument(
+        "--workspace",
+        default=os.environ.get("CASEOPS_WORKSPACE", "default"),
+        help="Workspace name (for multi-org isolation). Reads from .env.jira.{workspace}",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("CASEOPS_PORT", "5000")),
+        help="Flask port",
+    )
+    _args = parser.parse_args()
+
+    WORKSPACE = _args.workspace
+    OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
+    OUTPUTS.mkdir(parents=True, exist_ok=True)
+
+    _load_jira_env(ROOT / f".env.jira.{WORKSPACE}" if WORKSPACE != "default" else ROOT / ".env.jira")
+    JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "").rstrip("/")
+    app.config["WORKSPACE"] = WORKSPACE
+
     # use_reloader=False prevents the dev reloader from killing SSE streams
-    app.run(debug=True, threaded=True, port=5000, use_reloader=False)
+    app.run(debug=True, threaded=True, port=_args.port, use_reloader=False)
