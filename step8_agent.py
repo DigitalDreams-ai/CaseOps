@@ -268,6 +268,21 @@ Do NOT include any other text before or after these markers.
             solutions_dir = outputs_dir / "solutions"
             solutions_dir.mkdir(parents=True, exist_ok=True)
             (solutions_dir / f"{key}").write_text("", encoding="utf-8")
+
+        # Phase 4: Write confidence flag based on investigation token count (rough: len/4)
+        investigation_tokens = len(investigation_text) // 4
+        confidence = "high" if investigation_tokens >= 300 else "low"
+        confidence_flags_dir = outputs_dir / "confidence-flags"
+        confidence_flags_dir.mkdir(parents=True, exist_ok=True)
+        # Remove any stale flag for this key before writing the new one
+        for stale in confidence_flags_dir.glob(f"{key}.*"):
+            stale.unlink(missing_ok=True)
+        flag_path = confidence_flags_dir / f"{key}.{confidence}"
+        flag_path.write_text(
+            f"tokens={investigation_tokens}\nconfidence={confidence}\n",
+            encoding="utf-8",
+        )
+        print(f"  [{key}] confidence={confidence} ({investigation_tokens} tokens)")
     except Exception as e:
         print(f"  [{key}] ERROR: write failed: {str(e)[:200]}", file=sys.stderr)
         return 1

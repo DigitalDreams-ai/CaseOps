@@ -702,6 +702,24 @@
       badgesEl.innerHTML = badges.length > 0
         ? badges.map(b => `<span class="detail-badge${b.cls ? ' ' + b.cls : ''}">${escHtml(b.text)}</span>`).join('')
         : '';
+
+      // Phase 4: Load confidence flag and show badge if low-confidence
+      fetch(`/api/issue/${key}/confidence-flag`)
+        .then(r => r.json())
+        .then(cf => {
+          if (cf.confidence === 'low') {
+            const badge = document.createElement('span');
+            badge.className = 'detail-badge confidence-low';
+            badge.title = `Investigation quality warning: only ~${cf.investigation_tokens} tokens detected. The AI response may be thin — review before sending.`;
+            badge.textContent = '⚠ Low Confidence';
+            badge.style.cssText = 'background:#ffc107;color:#333;cursor:pointer;';
+            badge.onclick = () => alert(
+              `Low Confidence Investigation\n\nApproximate token count: ${cf.investigation_tokens} (threshold: 300)\n\nThe investigation record for ${key} appears to contain a low-effort or incomplete AI response.\n\nPlease review the Investigation tab before using the Jira message draft.`
+            );
+            badgesEl.appendChild(badge);
+          }
+        })
+        .catch(() => { /* non-fatal: badge simply won't appear */ });
     }
 
     const metaEl = document.getElementById('detail-meta');

@@ -54,6 +54,23 @@ OUTPUTS = ROOT / "outputs"
 # Set in `.env.jira`: how CaseOps passes auth to the `claude` subprocess (see caseops_llm_auth_uses_anthropic_api_key).
 CASEOPS_LLM_AUTH_ENV = "CASEOPS_LLM_AUTH"
 
+# ---------------------------------------------------------------------------
+# Phase 2: In-memory caches (session-local, no Redis, 100-key LRU limit)
+# ---------------------------------------------------------------------------
+# Jira summary cache: key → {"html": str, "raw": str}
+jira_summary_cache: dict[str, dict[str, str]] = {}
+
+# Investigation file-flag cache: key → {"has_investigation": bool, "has_solution": bool}
+investigation_cache: dict[str, dict[str, bool]] = {}
+
+_CACHE_MAX_KEYS = 100
+
+
+def _cache_evict(cache: dict) -> None:
+    """Evict oldest entries when cache exceeds _CACHE_MAX_KEYS."""
+    while len(cache) > _CACHE_MAX_KEYS:
+        cache.pop(next(iter(cache)))
+
 
 def _load_jira_env() -> None:
     """Load .env.jira into os.environ.
@@ -598,6 +615,10 @@ def _stream_claude_proc(prompt: str, run_key: str, issue_key: str | None = None)
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
+        # Phase 2: invalidate caches when pipeline completes so stale flags aren't served
+        if issue_key:
+            jira_summary_cache.pop(issue_key, None)
+            investigation_cache.pop(issue_key, None)
         _log_emit_line(run_key, "Done: global run" if run_key == _GLOBAL_KEY else f"Done: {run_key}")
         _log_emit_done(run_key)
 
@@ -622,6 +643,9 @@ def _stream_full_issue(key: str, run_key: str) -> None:
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
+        # Phase 2: invalidate caches for this issue when full-issue run completes
+        jira_summary_cache.pop(key, None)
+        investigation_cache.pop(key, None)
         _log_emit_line(run_key, f"Done: {run_key}")
         _log_emit_done(run_key)
 
@@ -736,10 +760,20 @@ _ROLLUP_FILENAME = re.compile(r"^issue-summary-\d{4}-\d{2}-\d{2}\.md$")
 
 def _pipeline_file_flags(key: str) -> dict[str, bool]:
     """Which pipeline output files exist for this issue (for dashboard / API)."""
-    has_solution = (OUTPUTS / "solutions" / key).exists()
+    # Phase 2: check investigation_cache before disk I/O for investigation/solution flags
+    if key in investigation_cache:
+        cached = investigation_cache[key]
+        has_investigation = cached["has_investigation"]
+        has_solution = cached["has_solution"]
+    else:
+        has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
+        has_solution = (OUTPUTS / "solutions" / key).exists()
+        investigation_cache[key] = {"has_investigation": has_investigation, "has_solution": has_solution}
+        _cache_evict(investigation_cache)
+
     return {
         "has_jira_summary": (OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key)).exists(),
-        "has_investigation": (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists(),
+        "has_investigation": has_investigation,
         "has_internal_notes": (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists(),
         "has_jira_message": (OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)).exists(),
         "has_test_report": (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists(),
@@ -903,11 +937,23 @@ def api_file(key: str, ftype: str):
     rel = FILE_LOCATIONS.get(ftype)
     if not rel:
         return jsonify({"error": "unknown file type"}), 400
+
+    # Phase 2: serve jira_summary from cache (check before disk I/O)
+    if ftype == "jira_summary" and key in jira_summary_cache:
+        return jsonify(jira_summary_cache[key])
+
     path = OUTPUTS / rel.format(key=key)
     if not path.exists():
         return jsonify({"html": "<p class='empty'>File not yet generated.</p>"})
     text = path.read_text(encoding="utf-8", errors="replace")
-    return jsonify({"html": render_md(text), "raw": text})
+    result = {"html": render_md(text), "raw": text}
+
+    # Phase 2: populate jira_summary cache
+    if ftype == "jira_summary":
+        jira_summary_cache[key] = result
+        _cache_evict(jira_summary_cache)
+
+    return jsonify(result)
 
 
 @app.post("/api/run")
@@ -1222,6 +1268,28 @@ def api_send_canned_message(key: str):
         return jsonify({"error": f"Jira {exc.code}: {details[:300]}"}), 502
     except Exception as exc:
         return jsonify({"error": str(exc)[:300]}), 500
+
+
+@app.get("/api/issue/<key>/confidence-flag")
+def api_confidence_flag(key: str):
+    """Phase 4: Return confidence flag for a step8 investigation.
+
+    Returns {"confidence": "high"|"low"|"none", "investigation_tokens": N}
+    """
+    flags_dir = OUTPUTS / "confidence-flags"
+    for level in ("high", "low"):
+        flag_file = flags_dir / f"{key}.{level}"
+        if flag_file.exists():
+            try:
+                text = flag_file.read_text(encoding="utf-8")
+                tokens = 0
+                for line in text.splitlines():
+                    if line.startswith("tokens="):
+                        tokens = int(line.split("=", 1)[1])
+            except Exception:
+                tokens = 0
+            return jsonify({"confidence": level, "investigation_tokens": tokens})
+    return jsonify({"confidence": "none", "investigation_tokens": 0})
 
 
 @app.get("/files/attachments/<key>/<path:filename>")

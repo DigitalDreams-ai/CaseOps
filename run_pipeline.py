@@ -324,7 +324,7 @@ def _read_template(path: Path) -> str:
     return f"[Template not found: {path}]\n"
 
 
-def process_active_issues_parallel(active: list[dict[str, str]], batch_size: int = 5) -> None:
+def process_active_issues_parallel(active: list[dict[str, str]], batch_size: int = 12) -> None:
     """Spawn parallel agents to process active issues through the fix pipeline."""
     if not active:
         return
@@ -381,6 +381,64 @@ def process_active_issues_parallel(active: list[dict[str, str]], batch_size: int
                 failed += 1
 
     print(f"\n  Step 8 complete: {completed} succeeded, {failed} failed out of {total} issues")
+
+
+def run_nightly_precompute() -> tuple[int, int]:
+    """Generate investigation records for all active issues (Steps 1-7 only, no Step 8 agent).
+
+    Loads active issues from outputs/jira/manifest.csv, scaffolds investigation
+    records (Steps 1-5 equivalent), and writes them to outputs/investigations/<KEY>.md.
+    Step 8 (the AI reasoning agent) is intentionally skipped — investigations are
+    created as empty templates for on-demand completion via the GUI.
+
+    Returns:
+        (completed_count, failed_count)
+    """
+    import time as _time
+
+    start = _time.monotonic()
+    jira_dir = default_jira_dir()
+    manifest_path = jira_dir / "manifest.csv"
+
+    if not manifest_path.exists():
+        print(
+            f"[nightly-precompute] manifest.csv not found at {manifest_path}. "
+            "Run a full sync first.",
+            file=sys.stderr,
+        )
+        return 0, 0
+
+    issues = read_manifest(manifest_path)
+
+    # Triage: keep only active issues (skip closed and escalated)
+    active = [
+        i for i in issues
+        if i["Status"].lower() not in CLOSED_STATUSES
+        and i["Status"].lower() != ESCALATED_STATUS
+    ]
+
+    investigations_dir = PROJECT_ROOT / "outputs" / "investigations"
+    investigations_dir.mkdir(parents=True, exist_ok=True)
+
+    completed = 0
+    failed = 0
+
+    for issue in active:
+        try:
+            path, created = scaffold_investigation(issue, investigations_dir)
+            status = "created" if created else "exists "
+            print(f"  [{status}] {issue['Key']}  ->  {path.relative_to(PROJECT_ROOT)}")
+            completed += 1
+        except Exception as exc:
+            print(f"  [FAIL]   {issue['Key']}: {exc}", file=sys.stderr)
+            failed += 1
+
+    elapsed = _time.monotonic() - start
+    print(
+        f"\nNightly pre-compute: generated {completed} investigations "
+        f"({failed} failed) in {elapsed:.1f}s"
+    )
+    return completed, failed
 
 
 def parse_args() -> argparse.Namespace:
