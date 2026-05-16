@@ -204,9 +204,16 @@ Do NOT include any other text before or after these markers.
         jira_message_path.write_text(jira_message, encoding="utf-8")
 
         # Check if this is a confirmed solution (not escalated to engineering)
-        is_escalated = "Engineering Handoff" in internal_notes and (
-            "Required?: Yes" in internal_notes or "required: yes" in internal_notes.lower()
-        )
+        # Look for "- Required?: YES" or "- **Required?:** YES" (Engineering Handoff section)
+        is_escalated = False
+        if "Engineering Handoff" in internal_notes:
+            for line in internal_notes.split("\n"):
+                if "required?" in line.lower() and ":" in line:
+                    # Extract the value after the colon (e.g., "YES" or "No")
+                    value = line.split(":", 1)[1].strip().lower().strip("*").strip()
+                    if value.startswith("yes"):
+                        is_escalated = True
+                    break
         has_solution = not is_escalated
 
         # Write solution marker if applicable
