@@ -736,6 +736,7 @@ _ROLLUP_FILENAME = re.compile(r"^issue-summary-\d{4}-\d{2}-\d{2}\.md$")
 
 def _pipeline_file_flags(key: str) -> dict[str, bool]:
     """Which pipeline output files exist for this issue (for dashboard / API)."""
+    has_solution = (OUTPUTS / "solutions" / key).exists()
     return {
         "has_jira_summary": (OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key)).exists(),
         "has_investigation": (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists(),
@@ -744,6 +745,7 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
         "has_test_report": (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists(),
         "has_eng_handoff": (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists(),
         "has_confirmed_solution": _test_report_confirms_fix(key),
+        "has_solution": has_solution,
     }
 
 

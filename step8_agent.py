@@ -202,6 +202,18 @@ Do NOT include any other text before or after these markers.
 
         internal_notes_path.write_text(internal_notes, encoding="utf-8")
         jira_message_path.write_text(jira_message, encoding="utf-8")
+
+        # Check if this is a confirmed solution (not escalated to engineering)
+        is_escalated = "Engineering Handoff" in internal_notes and (
+            "Required?: Yes" in internal_notes or "required: yes" in internal_notes.lower()
+        )
+        has_solution = not is_escalated
+
+        # Write solution marker if applicable
+        if has_solution:
+            solutions_dir = outputs_dir / "solutions"
+            solutions_dir.mkdir(parents=True, exist_ok=True)
+            (solutions_dir / f"{key}").write_text("", encoding="utf-8")
     except Exception as e:
         print(f"  [{key}] ERROR: write failed: {str(e)[:200]}", file=sys.stderr)
         return 1

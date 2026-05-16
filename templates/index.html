@@ -620,12 +620,17 @@
         label === 'Active' && issue.has_confirmed_solution
           ? '<span class="badge confirmed-solution" title="Sandbox test report marks the issue fixed (outputs/test-reports). Does not mean Production is updated — see investigation / Jira draft for Gearset vs already-in-Prod.">Confirmed fix</span>'
           : '';
+      const solution =
+        label === 'Active' && issue.has_solution
+          ? '<span class="badge solution" title="Agent has analyzed this issue and drafted a proposed solution (outputs/internal-notes + jira-messages). Solution may be local fix or escalation to Engineering.">Solution</span>'
+          : '';
       item.innerHTML = `
         <div class="issue-key ${issue.disposition}">${issue.key}</div>
         <div class="issue-summary">${escHtml(issue.summary)}</div>
         <div class="issue-item-meta">
           <span class="badge ${issue.disposition}">${escHtml(issue.status)}</span>
           ${needsTriage}
+          ${solution}
           ${confirmed}
           ${engEsc}
         </div>
@@ -692,6 +697,7 @@
       if (issue.has_investigation) badges.push({text: '✓ Investigated', cls: ''});
       if (issue.has_internal_notes) badges.push({text: '✓ Notes', cls: ''});
       if (issue.has_jira_message) badges.push({text: '✓ Draft', cls: ''});
+      if (issue.has_solution) badges.push({text: '✓ Solution', cls: 'solution'});
       if (issue.status === 'Escalated to Engineering') badges.push({text: '📋 Escalated', cls: 'escalated'});
       badgesEl.innerHTML = badges.length > 0
         ? badges.map(b => `<span class="detail-badge${b.cls ? ' ' + b.cls : ''}">${escHtml(b.text)}</span>`).join('')
