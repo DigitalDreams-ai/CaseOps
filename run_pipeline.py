@@ -349,29 +349,29 @@ def process_active_issues_parallel(active: list[dict[str, str]], batch_size: int
                 "run", "jira-salesforce-fix-pipeline",
                 key,
             ]
-            print(f"    → {key}", flush=True)
+            print(f"    > {key}", flush=True)
             try:
                 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 processes.append((key, p))
             except Exception as e:
-                print(f"    ✗ {key} failed to start: {str(e)[:80]}", flush=True)
+                print(f"    [FAIL] {key} failed to start: {str(e)[:80]}", flush=True)
                 failed += 1
 
         for key, p in processes:
             try:
                 stdout, stderr = p.communicate(timeout=600)
                 if p.returncode == 0:
-                    print(f"    ✓ {key} completed", flush=True)
+                    print(f"    [OK] {key} completed", flush=True)
                     completed += 1
                 else:
-                    print(f"    ✗ {key} failed (exit {p.returncode})", flush=True)
+                    print(f"    [FAIL] {key} failed (exit {p.returncode})", flush=True)
                     failed += 1
             except subprocess.TimeoutExpired:
                 p.kill()
-                print(f"    ✗ {key} timeout", flush=True)
+                print(f"    [TIMEOUT] {key}", flush=True)
                 failed += 1
             except Exception as e:
-                print(f"    ✗ {key} error: {str(e)[:80]}", flush=True)
+                print(f"    [ERROR] {key}: {str(e)[:80]}", flush=True)
                 failed += 1
 
     print(f"\n  Step 8 complete: {completed} succeeded, {failed} failed out of {total} issues")
