@@ -123,17 +123,21 @@ def main() -> int:
 
 Analyze this Salesforce support issue and produce three outputs.
 
-### Output A — Investigation Record (Issue Understanding section)
+### Output A — Investigation Record (Issue Understanding + Salesforce Problem sections)
 
-Fill in the following template's Issue Understanding and Salesforce Problem sections with observations from the Jira summary:
-- Observed Behavior: what the customer reported seeing
-- Expected Behavior: what should happen instead
-- Acceptance Criteria: acceptance criteria from the issue if present
-- Attachments Or Evidence: any attachments or key evidence mentioned
-- Unknowns: what information is still needed to resolve this
-- Confirmed Facts: technical facts established during investigation
-- Hypotheses: potential root causes under investigation
-- Likely Affected Metadata: Salesforce components/fields potentially involved
+Fill in **ALL** subsections below by extracting or inferring from the Jira summary. Every section must have content—no section should be left blank. Use the Jira summary to populate:
+
+**Issue Understanding:**
+- Observed Behavior: what the customer reported seeing / what is broken / what does not work
+- Expected Behavior: what should happen instead / the desired outcome
+- Acceptance Criteria: acceptance criteria or requirements from the issue if present; if none listed, infer from context
+- Attachments Or Evidence: any attachments or key evidence mentioned; if none, note "None provided"
+- Unknowns: what information is still needed / ambiguities or gaps in the issue description; if none, note "N/A"
+
+**Salesforce Problem:**
+- Confirmed Facts: facts about the org, the field/object involved, the feature, the limitation, or the gap (do not leave blank)
+- Hypotheses: potential root causes or likely explanations for the issue; if already clear, state the known cause
+- Likely Affected Metadata: Salesforce components/fields/objects involved; reference the types and names from the Jira summary
 
 ```markdown
 {investigation_template}
