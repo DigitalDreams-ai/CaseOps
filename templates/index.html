@@ -36,7 +36,7 @@
         <button type="button" class="sort-pill" data-sort="status" onclick="setSort('status')">Status<span class="sort-pill-dir" aria-hidden="true"></span></button>
         <button type="button" class="sort-pill" data-sort="priority" onclick="setSort('priority')" title="Remaining time until due date (end of due day UTC). No due date sorts last.">Priority<span class="sort-pill-dir" aria-hidden="true"></span></button>
       </div>
-      <input id="filter-input" type="search" placeholder="Filter by key or summary…" oninput="filterIssues(this.value)">
+      <input id="filter-input" type="search" placeholder="Filter by key or summary…" oninput="debounceFilter(this.value)">
     </div>
     <div id="issue-list">
       <div style="padding:20px 14px;color:#6e7681;font-size:12px;">Loading...</div>
@@ -45,8 +45,9 @@
 
   <!-- Main panel -->
   <div id="main">
-    <div id="detail-header">
-      <div id="detail-title" style="color:#6e7681;">Select an issue</div>
+    <div id="detail-header" style="display:none;">
+      <div id="detail-title"></div>
+      <div id="detail-badges"></div>
       <div id="detail-meta"></div>
     </div>
     <div id="detail-actions" style="display:none"></div>
@@ -166,10 +167,14 @@
   let eventSource = null;
   const activeRuns = new Set();
   let currentSort = 'number';
+
+  let cachedMessages = null;
+  let loadIssuesInProgress = false;
   /** false = descending (first click on a sort key); true = ascending (second click on same key). */
   let sortAscending = false;
   let cachedIssues = [];
   let runToastTimer = null;
+  let filterDebounceTimer = null;
   const SESSION_ACTIVE_ISSUE = 'caseops.activeIssueKey';
   const SESSION_ACTIVE_TAB = 'caseops.activeTabId';
 
@@ -248,10 +253,14 @@
 
   // ── SSE stream (persistent) ────────────────────────────────
 
+  let streamRetries = 0;
+  const MAX_STREAM_RETRIES = 5;
+
   function initStream() {
     if (eventSource) return;
     eventSource = new EventSource('/api/stream');
     eventSource.onmessage = e => {
+      streamRetries = 0; // reset on successful message
       const msg = e.data;
       if (msg.startsWith('__done__|')) {
         const runKey = msg.slice(9);
@@ -295,15 +304,26 @@
         }
       }
     };
-    // On error the browser auto-reconnects; don't force close.
-    eventSource.onerror = () => {};
+    eventSource.onerror = () => {
+      eventSource.close();
+      eventSource = null;
+      if (streamRetries < MAX_STREAM_RETRIES) {
+        streamRetries++;
+        const delay = Math.min(1000 * Math.pow(2, streamRetries - 1), 10000);
+        logLine(`SSE stream error. Reconnecting in ${delay}ms...`, 'warn', '__global__');
+        setTimeout(initStream, delay);
+      } else {
+        logLine('SSE stream failed. Manual refresh may be needed.', 'err', '__global__');
+      }
+    };
   }
 
   function updateStatus() {
     const n = activeRuns.size;
-    document.getElementById('status-dot').classList.toggle('active', n > 0);
-    document.getElementById('status-text').textContent =
-      n === 0 ? 'Idle' : n === 1 ? 'Running...' : `Running (${n})`;
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    if (dot) dot.classList.toggle('active', n > 0);
+    if (text) text.textContent = n === 0 ? 'Idle' : n === 1 ? 'Running...' : `Running (${n})`;
   }
 
   // Disable/enable the action buttons for a specific issue key.
@@ -326,12 +346,18 @@
   // ── Issue list ─────────────────────────────────────────────
 
   async function loadIssues() {
-    const res = await fetch('/api/issues');
-    cachedIssues = await res.json();
-    updateDashboard(cachedIssues);
-    renderOverviewPanels(cachedIssues);
-    const q = document.getElementById('filter-input').value;
-    renderIssueList(q ? cachedIssues.filter(i => matchesFilter(i, q)) : cachedIssues);
+    if (loadIssuesInProgress) return;
+    loadIssuesInProgress = true;
+    try {
+      const res = await fetch('/api/issues');
+      cachedIssues = await res.json();
+      updateDashboard(cachedIssues);
+      renderOverviewPanels(cachedIssues);
+      const q = document.getElementById('filter-input').value;
+      renderIssueList(q ? cachedIssues.filter(i => matchesFilter(i, q)) : cachedIssues);
+    } finally {
+      loadIssuesInProgress = false;
+    }
   }
 
   function updateDashboard(issues) {
@@ -475,6 +501,11 @@
     return issue.key.toLowerCase().includes(q) || issue.summary.toLowerCase().includes(q);
   }
 
+  function debounceFilter(q) {
+    if (filterDebounceTimer) clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = setTimeout(() => filterIssues(q), 300);
+  }
+
   function filterIssues(q) {
     const filtered = q ? cachedIssues.filter(i => matchesFilter(i, q)) : cachedIssues;
     renderIssueList(filtered);
@@ -542,6 +573,7 @@
     const closed    = sortedGroup(issues.filter(i => i.disposition === 'closed'));
 
     const el = document.getElementById('issue-list');
+    if (!el) return;
     el.innerHTML = '';
 
     if (issues.length === 0) {
@@ -651,12 +683,28 @@
     const titleEl = document.getElementById('detail-title');
     if (titleEl) {
       titleEl.textContent = `${issue.key} — ${issue.summary}`;
-      titleEl.style.color = '';
     }
+
+    const badgesEl = document.getElementById('detail-badges');
+    if (badgesEl) {
+      const badges = [];
+      if (issue.has_jira_summary) badges.push({text: '✓ Synced', cls: ''});
+      if (issue.has_investigation) badges.push({text: '✓ Investigated', cls: ''});
+      if (issue.has_internal_notes) badges.push({text: '✓ Notes', cls: ''});
+      if (issue.has_jira_message) badges.push({text: '✓ Draft', cls: ''});
+      if (issue.status === 'Escalated to Engineering') badges.push({text: '📋 Escalated', cls: 'escalated'});
+      badgesEl.innerHTML = badges.length > 0
+        ? badges.map(b => `<span class="detail-badge${b.cls ? ' ' + b.cls : ''}">${escHtml(b.text)}</span>`).join('')
+        : '';
+    }
+
     const metaEl = document.getElementById('detail-meta');
     if (metaEl) {
       metaEl.textContent = `Status: ${issue.status}   |   Updated: ${issue.updated || '—'}`;
     }
+
+    const headerEl = document.getElementById('detail-header');
+    if (headerEl) headerEl.style.display = 'block';
 
     // actions
     const actionsEl = document.getElementById('detail-actions');
@@ -686,7 +734,7 @@
       <span id="message-status" style="font-size:12px;"></span>
       <div class="spacer"></div>
       ${jiraLink}
-      <button class="btn" onclick="copyPrompt(${JSON.stringify(issue.claude_prompt)})">Copy Claude Prompt</button>
+      <button class="btn" onclick="copyFullPrompt('${key}')">Copy Claude Prompt</button>
     `;
 
     // tabs
@@ -953,14 +1001,19 @@
   async function loadCannedMessages(key, status) {
     let sel = document.getElementById('message-select');
     if (!sel) return;
-    sel.innerHTML = '<option value="">Loading…</option>';
+
     try {
-      const res = await fetch(`/api/canned-messages`);
-      const data = await res.json();
+      if (!cachedMessages) {
+        sel.innerHTML = '<option value="">Loading…</option>';
+        const res = await fetch(`/api/canned-messages`);
+        cachedMessages = await res.json();
+      }
+
       if (activeKey !== key) return;
       sel = document.getElementById('message-select');
       const btnCurrent = document.getElementById('message-btn');
       if (!sel) return;
+      const data = cachedMessages;
       if (!res.ok) throw new Error(data.error || 'Failed');
 
       // Filter messages based on status
@@ -1028,46 +1081,52 @@
 
       // Auto-transition to In Progress if sent message was Initial Response
       if (message_id === 'initial-response') {
-        try {
-          const transRes = await fetch(`/api/issue/${key}/transitions`);
-          const transitions = await transRes.json();
-          if (activeKey !== key) {
-            await loadIssues();
-            return;
-          }
-          const inProgressTrans = transitions.find(t => t.to_status && t.to_status.toLowerCase() === 'in progress');
-          if (inProgressTrans) {
-            const transRes2 = await fetch(`/api/issue/${key}/transition`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ transition_id: inProgressTrans.id, new_status: inProgressTrans.to_status }),
-            });
-            const transData = await transRes2.json();
-            if (activeKey !== key) {
-              await loadIssues();
-              return;
-            }
-            if (transRes2.ok) {
-              if (statusEl) {
-                statusEl.style.color = '#3fb950';
-                statusEl.textContent = '✓ Sent & Transitioned to In Progress';
+        // Wait 2 seconds for Jira automation to process the "Waiting for customer" status change
+        setTimeout(() => {
+          if (activeKey !== key) return;
+          try {
+            (async () => {
+              const transRes = await fetch(`/api/issue/${key}/transitions`);
+              const transitions = await transRes.json();
+              if (activeKey !== key) {
+                await loadIssues();
+                return;
               }
-              const meta = document.getElementById('detail-meta');
-              if (meta) {
-                const oldText = meta.textContent;
-                const newText = oldText.replace(/Status: [^|]+/, `Status: ${inProgressTrans.to_status}`);
-                meta.textContent = newText;
+              const inProgressTrans = transitions.find(t => t.to_status && t.to_status.toLowerCase() === 'in progress');
+              if (inProgressTrans) {
+                const transRes2 = await fetch(`/api/issue/${key}/transition`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ transition_id: inProgressTrans.id, new_status: inProgressTrans.to_status }),
+                });
+                const transData = await transRes2.json();
+                if (activeKey !== key) {
+                  await loadIssues();
+                  return;
+                }
+                if (transRes2.ok) {
+                  if (statusEl) {
+                    statusEl.style.color = '#3fb950';
+                    statusEl.textContent = '✓ Sent & Transitioned to In Progress';
+                  }
+                  const meta = document.getElementById('detail-meta');
+                  if (meta) {
+                    const oldText = meta.textContent;
+                    const newText = oldText.replace(/Status: [^|]+/, `Status: ${inProgressTrans.to_status}`);
+                    meta.textContent = newText;
+                  }
+                  await loadIssues();
+                } else {
+                  if (statusEl) statusEl.textContent = '✓ Sent';
+                }
+              } else {
+                if (statusEl) statusEl.textContent = '✓ Sent';
               }
-              await loadIssues();
-            } else {
-              if (statusEl) statusEl.textContent = '✓ Sent';
-            }
-          } else {
+            })();
+          } catch(transErr) {
             if (statusEl) statusEl.textContent = '✓ Sent';
           }
-        } catch(transErr) {
-          if (statusEl) statusEl.textContent = '✓ Sent';
-        }
+        }, 2000);
       }
     } catch(e) {
       if (activeKey === key) {
@@ -1271,6 +1330,7 @@
 
   function _appendLogDOM(text, cls) {
     const el = document.getElementById('log-output');
+    if (!el) return;
     const line = document.createElement('div');
     if (cls) line.className = `log-${cls}`;
     line.textContent = text;
@@ -1308,12 +1368,30 @@
 
   // ── Clipboard ─────────────────────────────────────────────
 
-  function copyPrompt(text) {
-    navigator.clipboard.writeText(text).then(() => {
-      logLine('Claude prompt copied to clipboard.', 'ok');
-    }).catch(() => {
-      logLine('Clipboard write failed. Check browser permissions.', 'err');
-    });
+  async function copyFullPrompt(key) {
+    try {
+      const files = ['investigation', 'internal_notes', 'jira_message'];
+      const parts = [];
+
+      for (const ftype of files) {
+        try {
+          const res = await fetch(`/api/issue/${key}/file/${ftype}`);
+          const data = await res.json();
+          if (data.raw) {
+            parts.push(`## ${ftype.replace(/_/g, ' ').toUpperCase()}\n\n${data.raw}`);
+          }
+        } catch (_) {}
+      }
+
+      const prompt = parts.length > 0
+        ? `Process ${key} through jira-salesforce-fix-pipeline skill.\n\n${parts.join('\n\n---\n\n')}`
+        : `Process ${key} through jira-salesforce-fix-pipeline skill.`;
+
+      await navigator.clipboard.writeText(prompt);
+      logLine('Full Claude prompt copied to clipboard.', 'ok');
+    } catch (e) {
+      logLine('Clipboard write failed: ' + e.message, 'err');
+    }
   }
 
   // ── Instruction panel ─────────────────────────────────────
@@ -1350,10 +1428,7 @@
     });
 
     const ctxEl = document.getElementById('instruction-context');
-    ctxEl.innerHTML =
-      `<span class="ctx-chip">${escHtml(issue.key)}</span>` +
-      `<span class="ctx-chip">${escHtml(issue.status)}</span>` +
-      chips.map(c => `<span class="ctx-chip ${c.cls}">${escHtml(c.label)}</span>`).join('');
+    ctxEl.innerHTML = '';
 
     // Update send button disabled state
     document.getElementById('send-claude-btn').disabled = activeRuns.has(issue.key);
