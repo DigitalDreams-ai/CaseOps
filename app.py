@@ -1002,8 +1002,16 @@ def api_status():
 
 @app.get("/api/pipeline-log/<key>")
 def api_pipeline_log(key: str):
-    """JSONL-backed history for global runs (__global__) or a Jira issue key."""
-    return jsonify({"entries": _read_pipeline_log_entries(key)})
+    """JSONL-backed history for global runs (__global__) or a Jira issue key.
+
+    Query params:
+      tail=N  Return only the last N entries (optional, default all).
+    """
+    entries = _read_pipeline_log_entries(key)
+    tail = request.args.get("tail", type=int)
+    if tail and tail > 0:
+        entries = entries[-tail:]
+    return jsonify({"entries": entries})
 
 
 @app.post("/api/pipeline-log/clear")

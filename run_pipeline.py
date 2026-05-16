@@ -345,13 +345,18 @@ def process_active_issues_parallel(active: list[dict[str, str]], batch_size: int
             key = issue["Key"]
             cmd = [
                 sys.executable,
-                "-m", "claude",
-                "run", "jira-salesforce-fix-pipeline",
-                key,
+                str(PROJECT_ROOT / "step8_agent.py"),
+                "--key", key,
             ]
             print(f"    > {key}", flush=True)
             try:
-                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                p = subprocess.Popen(
+                    cmd,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
                 processes.append((key, p))
             except Exception as e:
                 print(f"    [FAIL] {key} failed to start: {str(e)[:80]}", flush=True)
@@ -364,7 +369,8 @@ def process_active_issues_parallel(active: list[dict[str, str]], batch_size: int
                     print(f"    [OK] {key} completed", flush=True)
                     completed += 1
                 else:
-                    print(f"    [FAIL] {key} failed (exit {p.returncode})", flush=True)
+                    err_msg = (stderr or stdout or "unknown error")[:120]
+                    print(f"    [FAIL] {key} (exit {p.returncode}): {err_msg}", flush=True)
                     failed += 1
             except subprocess.TimeoutExpired:
                 p.kill()

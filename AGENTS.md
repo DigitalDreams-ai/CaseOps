@@ -123,23 +123,16 @@ Use `skills-ref validate ./skills/<skill-name>` if the tool is available, but do
 <claude-mem-context>
 # Memory Context
 
-# [CaseOps] recent context, 2026-05-12 12:29pm MST
+# [CaseOps] recent context, 2026-05-15 4:52pm MST
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 50 obs (20,695t read) | 463,214t work | 96% savings
+Stats: 50 obs (21,542t read) | 453,353t work | 95% savings
 
 ### May 8, 2026
-662 10:51a 🔵 HEAL-33505 Human Ask Packet: Waiting for Sandbox Record Link or Production Confirmation
-663 " 🔵 HEAL-33505 Active Blockers: Cross-Org Record Mismatch
-664 " 🔵 HEAL-33505 Fix Proposal Blocked: Two Gates Failed Out of 12
-665 10:52a 🔵 HEAL-33505 MCP Request Contract: Local Metadata Search Returned No Matches
-666 " 🔵 HEAL-33505 Agent Discovery Draft File Absent from Output Directory
-667 " 🔵 Opportunity Describe Against Sandbox Org: No "Order Notes" Field or trackHistory Entries Found
-668 " 🔵 Agent Reasoning Draft Schema: Required Fields and Blocker Contract
-669 " 🔵 Wide Repo Search Confirms Zero Local Metadata for Order Notes or Field History
+669 10:52a 🔵 Wide Repo Search Confirms Zero Local Metadata for Order Notes or Field History
 670 " 🔵 HEAL-33505 Issue Brief: Salesforce Investigation Failed, Org Mismatch Confirmed
 671 " 🔵 Opportunity Describe: Zero Fields Match Order, Note, History, or Hist in Sandbox Org
 672 " 🔵 HEAL-33505 Salesforce Investigation: Exact Query Failure — Production Record Queried Against Sandbox
@@ -183,6 +176,14 @@ Stats: 50 obs (20,695t read) | 463,214t work | 96% savings
 1042 " ✅ sfdx-project.json Updated: Name Added, API Version Bumped to 66.0
 1043 " 🔵 CaseOps Project Structure: Flask GUI + Jira Sync + Agent Skills + Salesforce SFDX
 1044 " 🟣 5-Skill CaseOps Agent Skills Pack Committed to Repository
+1045 12:29p 🔵 Salesforce Sharing Rule for Round Robin Assignment Object
+### May 15, 2026
+1810 4:06p 🔵 HEAL-33647: Shopify→Salesforce Address Mismatch Root Cause Traced to External Connector Layer
+1812 " ✅ HEAL-33647: Customer-Facing Jira Reply and Engineering Handoff Artifacts Prepared
+1813 4:07p 🔵 HEAL-33647: Patient_Patient Apex Action Cleared; Root Cause Narrowed to External TenX API Write-Back Path
+1814 4:09p ✅ HEAL-33647: Internal Notes Updated With Confirmed Evidence Block and Revised Deployment Guidance
+1818 " ✅ HEAL-33647: Jira Message Draft Updated to Reflect Patient_Patient Clearance and Revised Engineering Steps
+1836 4:30p 🔵 HEAL-33647 Investigation: Salesforce Account Address and Shopify ID Context
 
-Access 463k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 453k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

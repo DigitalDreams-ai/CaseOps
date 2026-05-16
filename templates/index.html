@@ -923,8 +923,9 @@
       sel = document.getElementById('transition-select');
       if (!sel) return;
       if (!res.ok) throw new Error(data.error || 'Failed');
+      const transitions = Array.isArray(data) ? data : data.entries || [];
       sel.innerHTML = '<option value="">Change status…</option>' +
-        data.map(t => `<option value="${escHtml(t.id)}" data-status="${escHtml(t.to_status)}">${escHtml(t.name)}</option>`).join('');
+        transitions.map(t => `<option value="${escHtml(t.id)}" data-status="${escHtml(t.to_status)}">${escHtml(t.name)}</option>`).join('');
       sel.onchange = () => {
         const b = document.getElementById('transition-btn');
         if (b) b.disabled = !sel.value;
@@ -1290,9 +1291,10 @@
 
   // Per-key log buffers. Key is run_key (issue key or '__global__').
   const logBuffers = {};
+  const LOG_BUFFER_CAP = 500;
 
   function _logBuf(key) {
-    if (!logBuffers[key]) logBuffers[key] = [];
+    if (!logBuffers[key]) logBuffers[key] = {lines: [], truncated: false};
     return logBuffers[key];
   }
 
@@ -1307,7 +1309,7 @@
 
   async function loadPipelineHistory(key, expectedIssueSeq) {
     try {
-      const res = await fetch('/api/pipeline-log/' + encodeURIComponent(key));
+      const res = await fetch('/api/pipeline-log/' + encodeURIComponent(key) + '?tail=500');
       if (!res.ok) return;
       const data = await res.json();
       if (
@@ -1317,13 +1319,18 @@
         return;
       }
       const entries = data.entries || [];
-      const buf = [];
+      const lines = [];
+      let truncated = false;
       for (const e of entries) {
         if (e.kind === 'done') continue;
         const text = e.text != null ? String(e.text) : '';
-        buf.push({ text, cls: inferLogCls(text) });
+        lines.push({ text, cls: inferLogCls(text) });
       }
-      logBuffers[key] = buf;
+      // If we requested ?tail=500 and got 500, assume there are more
+      if (lines.length >= 500) {
+        truncated = true;
+      }
+      logBuffers[key] = {lines, truncated};
       if (key === (activeKey || '__global__')) renderLogForKey(key);
     } catch (_) {}
   }
@@ -1341,7 +1348,13 @@
   function logLine(text, cls, forKey) {
     const key = forKey !== undefined ? forKey : (activeKey || '__global__');
     const effCls = cls !== undefined ? cls : inferLogCls(text);
-    _logBuf(key).push({text, cls: effCls});
+    const buf = _logBuf(key);
+    buf.lines.push({text, cls: effCls});
+    // Cap buffer to prevent memory bloat; mark as truncated when capping
+    if (buf.lines.length > LOG_BUFFER_CAP) {
+      buf.lines.shift();
+      buf.truncated = true;
+    }
     const viewing = key === (activeKey || '__global__');
     if (viewing) _appendLogDOM(text, effCls);
   }
@@ -1349,14 +1362,20 @@
   function renderLogForKey(key) {
     const el = document.getElementById('log-output');
     el.innerHTML = '';
-    _logBuf(key).forEach(({text, cls}) => _appendLogDOM(text, cls));
+    const buf = _logBuf(key);
+    if (buf.truncated) {
+      const notice = document.createElement('div');
+      notice.className = 'log-warn';
+      notice.textContent = '... (earlier logs truncated, scroll to see latest)';
+      el.appendChild(notice);
+    }
+    buf.lines.forEach(({text, cls}) => _appendLogDOM(text, cls));
   }
 
   async function clearLog() {
     const key = activeKey || '__global__';
-    delete logBuffers[key];
+    logBuffers[key] = {lines: [], truncated: false};
     document.getElementById('log-output').innerHTML = '';
-    renderLogForKey(key);
     try {
       await fetch('/api/pipeline-log/clear', {
         method: 'POST',
