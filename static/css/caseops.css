@@ -619,6 +619,14 @@ a:hover {
   background: var(--color-bg);
 }
 
+#log-pane.collapsed {
+  height: auto;
+}
+
+#log-pane.collapsed #log-output {
+  display: none;
+}
+
 #log-resize-handle {
   height: 4px;
   cursor: row-resize;
