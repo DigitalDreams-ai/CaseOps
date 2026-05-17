@@ -1,17 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Modern briefcase icon -->
-  <!-- Main body -->
-  <path d="M 12 24 L 12 48 C 12 54 16 58 22 58 L 42 58 C 48 58 52 54 52 48 L 52 24"
+  <!-- Abstract flowing shape representing automation & solving -->
+
+  <!-- Main curved form (cyan) -->
+  <path d="M 32 12 Q 48 20 48 32 Q 48 44 32 52 Q 16 44 16 32 Q 16 20 32 12"
         fill="none" stroke="#00d9ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- Top edge -->
-  <line x1="12" y1="24" x2="52" y2="24" stroke="#00d9ff" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Inner flow line (shows motion/automation) -->
+  <path d="M 32 18 Q 42 26 42 32 Q 42 38 32 44"
+        fill="none" stroke="#00ff88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- Handle (minimal curve) -->
-  <path d="M 20 24 Q 32 12 44 24"
-        fill="none" stroke="#00d9ff" stroke-width="2.5" stroke-linecap="round"/>
-
-  <!-- Checkmark (solving cases) -->
-  <path d="M 24 38 L 28 42 L 40 30"
-        fill="none" stroke="#00ff88" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Central dot (focus point) -->
+  <circle cx="32" cy="32" r="2.5" fill="#00d9ff"/>
 </svg>
