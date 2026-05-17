@@ -55,9 +55,9 @@ a:hover {
 }
 
 #topbar-logo {
-  width: 20px;
-  height: 20px;
-  filter: drop-shadow(0 0 3px rgba(0, 217, 255, 0.4));
+  width: 24px;
+  height: 24px;
+  filter: drop-shadow(0 0 3px rgba(0, 217, 255, 0.5));
   flex-shrink: 0;
 }
 
