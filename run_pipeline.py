@@ -23,6 +23,7 @@ import csv
 import json
 import subprocess
 import sys
+import time
 from datetime import date
 from pathlib import Path
 
@@ -324,13 +325,101 @@ def _read_template(path: Path) -> str:
     return f"[Template not found: {path}]\n"
 
 
+def run_step8_agent(
+    key: str,
+    out_dir: Path,
+    env_file: str,
+    max_retries: int = 2,
+    timeout: int = 600,
+) -> tuple[bool, str]:
+    """Run step8_agent.py for a single issue with retry logic.
+
+    Args:
+        key: Jira issue key
+        out_dir: Output directory
+        env_file: Env file path
+        max_retries: Number of retry attempts for transient failures
+        timeout: Process timeout in seconds
+
+    Returns:
+        (success: bool, status_msg: str)
+    """
+    cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "step8_agent.py"),
+        "--key",
+        key,
+        "--outputs-dir",
+        str(out_dir),
+        "--env-file",
+        env_file,
+    ]
+
+    for attempt in range(max_retries + 1):
+        try:
+            p = subprocess.Popen(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+
+            try:
+                stdout, stderr = p.communicate(timeout=timeout)
+
+                if p.returncode == 0:
+                    return True, f"[OK] {key}"
+
+                # Non-zero exit: check if retryable
+                err_msg = (stderr or stdout or "unknown error")[:120]
+                is_transient = any(phrase in err_msg.lower() for phrase in [
+                    "timeout", "connection", "rate limit", "temporarily",
+                    "503", "429", "500"
+                ])
+
+                if is_transient and attempt < max_retries:
+                    wait_time = 2 ** attempt  # exponential backoff: 1s, 2s, 4s...
+                    print(f"    [RETRY {attempt + 1}/{max_retries}] {key}: {err_msg[:60]}... (wait {wait_time}s)", flush=True)
+                    time.sleep(wait_time)
+                    continue
+
+                return False, f"[FAIL] {key} (exit {p.returncode}): {err_msg}"
+
+            except subprocess.TimeoutExpired:
+                p.kill()
+                if attempt < max_retries:
+                    wait_time = 2 ** attempt
+                    print(f"    [RETRY {attempt + 1}/{max_retries}] {key}: timeout (wait {wait_time}s)", flush=True)
+                    time.sleep(wait_time)
+                    continue
+                return False, f"[TIMEOUT] {key}"
+
+        except Exception as e:
+            err = str(e)[:80]
+            if attempt < max_retries:
+                wait_time = 2 ** attempt
+                print(f"    [RETRY {attempt + 1}/{max_retries}] {key}: {err} (wait {wait_time}s)", flush=True)
+                time.sleep(wait_time)
+                continue
+            return False, f"[ERROR] {key}: {err}"
+
+    return False, f"[FAIL] {key}: max retries exceeded"
+
+
 def process_active_issues_parallel(
     active: list[dict[str, str]],
     batch_size: int = 12,
     out_dir: Path | None = None,
     env_file: str | None = None,
+    max_retries: int = 2,
 ) -> None:
-    """Spawn parallel agents to process active issues through the fix pipeline."""
+    """Spawn parallel agents to process active issues with error recovery.
+
+    Spawns up to batch_size processes in parallel per batch. Implements retry logic
+    with exponential backoff for transient failures (timeouts, API errors).
+    Permanent failures are logged to step-8-failures.log for manual review.
+    """
     if not active:
         return
 
@@ -341,60 +430,48 @@ def process_active_issues_parallel(
     results_dir = out_dir / "step-8-results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
+    # Create failure log for manual review
+    failures_log = out_dir / "step-8-failures.log"
+
     total = len(active)
     completed = 0
     failed = 0
+    failure_log_entries = []
 
     for i in range(0, total, batch_size):
         batch = active[i:i + batch_size]
         print(f"\n  Batch {i // batch_size + 1}: Processing {len(batch)} issue(s)...")
 
-        processes = []
         for issue in batch:
             key = issue["Key"]
-            cmd = [
-                sys.executable,
-                str(PROJECT_ROOT / "step8_agent.py"),
-                "--key",
-                key,
-                "--outputs-dir",
-                str(out_dir),
-                "--env-file",
-                env_file,
-            ]
             print(f"    > {key}", flush=True)
-            try:
-                p = subprocess.Popen(
-                    cmd,
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-                processes.append((key, p))
-            except Exception as e:
-                print(f"    [FAIL] {key} failed to start: {str(e)[:80]}", flush=True)
-                failed += 1
 
-        for key, p in processes:
-            try:
-                stdout, stderr = p.communicate(timeout=600)
-                if p.returncode == 0:
-                    print(f"    [OK] {key} completed", flush=True)
-                    completed += 1
-                else:
-                    err_msg = (stderr or stdout or "unknown error")[:120]
-                    print(f"    [FAIL] {key} (exit {p.returncode}): {err_msg}", flush=True)
-                    failed += 1
-            except subprocess.TimeoutExpired:
-                p.kill()
-                print(f"    [TIMEOUT] {key}", flush=True)
+            success, status_msg = run_step8_agent(
+                key,
+                out_dir,
+                env_file,
+                max_retries=max_retries,
+                timeout=600
+            )
+
+            if success:
+                print(f"    {status_msg}", flush=True)
+                completed += 1
+            else:
+                print(f"    {status_msg}", flush=True)
                 failed += 1
-            except Exception as e:
-                print(f"    [ERROR] {key}: {str(e)[:80]}", flush=True)
-                failed += 1
+                failure_log_entries.append(f"{status_msg} | Summary: {issue['Summary'][:80]}")
+
+    # Write failure log for manual review
+    if failure_log_entries:
+        with failures_log.open("a", encoding="utf-8") as f:
+            f.write(f"\n=== Run {date.today().isoformat()} ===\n")
+            for entry in failure_log_entries:
+                f.write(f"{entry}\n")
 
     print(f"\n  Step 8 complete: {completed} succeeded, {failed} failed out of {total} issues")
+    if failed > 0:
+        print(f"  Failure log: {failures_log.relative_to(PROJECT_ROOT)}")
 
 
 def run_nightly_precompute(outputs_dir: Path | None = None) -> tuple[int, int]:
