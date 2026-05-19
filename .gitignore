@@ -66,6 +66,7 @@ outputs/jira/
 outputs/production-metadata/
 outputs/sandbox-metadata/
 outputs/confidence-flags/
+outputs/deployment-validation/
 
 # Case work tracked on the work branch only
 outputs/investigations/

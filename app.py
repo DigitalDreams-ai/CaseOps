@@ -1328,6 +1328,48 @@ def api_confidence_flag(key: str):
     return jsonify({"confidence": "none", "investigation_tokens": 0})
 
 
+@app.get("/api/issue/<key>/deployment-status")
+def api_deployment_status(key: str):
+    """Return deployment validation status for an issue.
+
+    Returns {"status": "validated"|"pending"|"failed"|"none"}
+    """
+    validation_dir = OUTPUTS / "deployment-validation"
+    for status in ("validated", "pending", "failed"):
+        flag_file = validation_dir / f"{key}.{status}"
+        if flag_file.exists():
+            return jsonify({"status": status})
+    return jsonify({"status": "none"})
+
+
+@app.post("/api/issue/<key>/deployment-status")
+def set_deployment_status(key: str):
+    """Set deployment validation status for an issue.
+
+    Expects JSON: {"status": "validated"|"pending"|"failed"}
+    """
+    try:
+        data = request.get_json() or {}
+        status = data.get("status", "").lower()
+
+        if status not in ("validated", "pending", "failed"):
+            return jsonify({"error": f"Invalid status: {status}"}), 400
+
+        validation_dir = OUTPUTS / "deployment-validation"
+        validation_dir.mkdir(parents=True, exist_ok=True)
+
+        for s in ("validated", "pending", "failed"):
+            flag_file = validation_dir / f"{key}.{s}"
+            flag_file.unlink(missing_ok=True)
+
+        new_flag = validation_dir / f"{key}.{status}"
+        new_flag.write_text("", encoding="utf-8")
+
+        return jsonify({"status": status, "message": f"Deployment status updated to {status}"})
+    except Exception as e:
+        return jsonify({"error": str(e)[:200]}), 500
+
+
 @app.get("/files/attachments/<key>/<path:filename>")
 def serve_attachment(key: str, filename: str):
     att_dir = OUTPUTS / "jira" / "attachments" / key

@@ -721,6 +721,28 @@
           }
         })
         .catch(() => { /* non-fatal: badge simply won't appear */ });
+
+      // Load deployment validation status and show badge
+      fetch(`/api/issue/${key}/deployment-status`)
+        .then(r => r.json())
+        .then(ds => {
+          if (ds.status !== 'none') {
+            const badge = document.createElement('span');
+            const statusConfig = {
+              validated: { text: '✓ Validated', css: 'background:#28a745;color:#fff;', title: 'Deployed to Production & customer confirmed fixed' },
+              pending: { text: '⏳ Pending', css: 'background:#17a2b8;color:#fff;', title: 'Sandbox tested, awaiting Production promotion' },
+              failed: { text: '✗ Failed', css: 'background:#dc3545;color:#fff;', title: 'Failed testing; marked for re-investigation' }
+            };
+            const config = statusConfig[ds.status] || { text: ds.status, css: '', title: '' };
+            badge.className = `detail-badge deployment-${ds.status}`;
+            badge.title = config.title;
+            badge.textContent = config.text;
+            badge.style.cssText = config.css + 'cursor:pointer;';
+            badge.onclick = () => showDeploymentStatusDialog(key, ds.status);
+            badgesEl.appendChild(badge);
+          }
+        })
+        .catch(() => { /* non-fatal: badge simply won't appear */ });
     }
 
     const metaEl = document.getElementById('detail-meta');
@@ -1483,6 +1505,43 @@
       event.preventDefault();
       sendInstruction();
     }
+  }
+
+  function showDeploymentStatusDialog(key, currentStatus) {
+    const statuses = [
+      { value: 'validated', label: '✓ Validated — Deployed to Production & customer confirmed fixed' },
+      { value: 'pending', label: '⏳ Pending — Sandbox tested, awaiting Production promotion' },
+      { value: 'failed', label: '✗ Failed — Failed testing; marked for re-investigation' }
+    ];
+
+    const message = `Current status: ${currentStatus || 'none'}\n\nSelect new status:`;
+    const options = statuses.map((s, i) => `${i + 1}. ${s.label}`).join('\n');
+    const choice = prompt(`${message}\n\n${options}\n\nEnter number (1-3) or 0 to cancel:`, '0');
+
+    if (choice === '0' || choice === null) return;
+
+    const index = parseInt(choice) - 1;
+    if (index < 0 || index >= statuses.length) {
+      alert('Invalid choice');
+      return;
+    }
+
+    const newStatus = statuses[index].value;
+    fetch(`/api/issue/${key}/deployment-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          alert(`Error: ${data.error}`);
+        } else {
+          alert(`Deployment status updated to: ${newStatus}`);
+          location.reload();
+        }
+      })
+      .catch(err => alert(`Update failed: ${err.message}`));
   }
 
   async function sendInstruction() {
