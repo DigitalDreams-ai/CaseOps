@@ -93,6 +93,8 @@ docs/
 !.claude/skills/
 !.claude/skills/jira-salesforce-fix-pipeline/
 !.claude/skills/jira-salesforce-fix-pipeline/SKILL.md
+!.claude/plans/
+!.claude/plans/*.md
 .playwright-mcp/
 
 # OS files
