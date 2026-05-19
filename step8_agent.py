@@ -137,6 +137,30 @@ def main() -> int:
 
 Analyze this Salesforce support issue and produce three outputs.
 
+### MANDATORY: Due Diligence for New or Modified Items
+
+**Before recommending ANY implementation, you MUST:**
+
+1. **Identify similar existing items** in the org (fields, objects, list views, components, etc.)
+   - Search for items with similar names, purposes, or domains
+   - Example: if creating a new field, find similar existing fields
+
+2. **Investigate their current configuration:**
+   - FLS permissions: Read-only? Read-Write? Hidden from profile X?
+   - Layout placement: Which layouts? What position/order?
+   - Record type availability: All record types or specific ones?
+   - Any other relevant settings (formula, validation, default values, etc.)
+
+3. **Document your findings** in the "Similar Items Analysis" section of the investigation
+
+4. **Ensure consistency:** Your proposed implementation must match their configuration
+   - New field gets same FLS permissions as similar existing fields
+   - New field added to same layouts in similar positions
+   - New field available on same record types
+   - Rationale: Consistency prevents future support issues and improves UX
+
+5. **If you cannot find similar items,** state that explicitly and explain your chosen config
+
 ### Output A — Investigation Record (Issue Understanding + Salesforce Problem sections)
 
 Fill in **ALL** subsections below by extracting or inferring from the Jira summary. Every section must have content—no section should be left blank. Use the Jira summary to populate:
@@ -149,9 +173,10 @@ Fill in **ALL** subsections below by extracting or inferring from the Jira summa
 - Unknowns: what information is still needed / ambiguities or gaps in the issue description; if none, note "N/A"
 
 **Salesforce Problem:**
-- Confirmed Facts: facts about the org, the field/object involved, the feature, the limitation, or the gap (do not leave blank)
+- Confirmed Facts: facts about the org, the field/object involved, the feature, the limitation, or the gap (do not leave blank) — **must include "Matching Configuration" subsection stating what similar items have**
 - Hypotheses: potential root causes or likely explanations for the issue; if already clear, state the known cause
 - Likely Affected Metadata: Salesforce components/fields/objects involved; reference the types and names from the Jira summary
+- **Similar Items Analysis: document similar existing items, their config, and your plan to match them**
 
 ```markdown
 {investigation_template}

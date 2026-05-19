@@ -38,9 +38,30 @@
 
 ### Confirmed Facts
 
+**Matching Configuration (for new/modified items):**
+- Similar existing items found: [List item names and types]
+- Their FLS permissions: [Read-only / Read-Write / Hidden]
+- Their layout placement: [List layouts and field order]
+- Their record type availability: [List applicable record types or "All"]
+- New item will match: [Confirm you will apply same config]
+
 ### Hypotheses
 
 ### Likely Affected Metadata
+
+### Similar Items Analysis
+
+**Due diligence check — before implementation:**
+- [ ] Searched for similar existing items (fields, objects, list views, components, etc.)
+- [ ] Found: [List what exists: e.g., "Contact_Email__c field on Account", "Status picklist on Case"]
+- [ ] Documented their config: FLS, layouts, record types, field order
+- [ ] Confirmed new item will use same permissions/placement/availability
+- [ ] Rationale: [Why this config makes sense for consistency]
+
+**Similar items found:**
+| Item Name | Type | FLS | Layouts | Record Types | Notes |
+| --- | --- | --- | --- | --- | --- |
+| [example] | Field | Read-Write | [list] | [list] | Used for similar purpose |
 
 ## Escalation Decision (early flag)
 
