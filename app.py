@@ -866,10 +866,16 @@ def _sla_remaining_ms(due_str: str) -> int | None:
 def index():
     issues = _read_manifest()
     has_manifest = _manifest_path().exists()
+
+    # Count open issues (not closed/resolved/canceled/escalated)
+    closed_statuses = {"closed", "resolved", "canceled", "cancelled", "escalated to engineering"}
+    open_count = sum(1 for issue in issues if issue.get("Status", "").lower() not in closed_statuses)
+
     return render_template(
         "index.html",
         issues=issues,
         has_manifest=has_manifest,
+        open_count=open_count,
         workspace=app.config.get("WORKSPACE", "default"),
     )
 
