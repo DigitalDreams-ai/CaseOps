@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Step 8: Non-interactive agent for diagnosis, escalation gate, internal notes, Jira message.
 
-Per issue: load context (Jira summary + investigation), call Claude,
-parse response (---INTERNAL-NOTES---, ---JIRA-MESSAGE---), write outputs.
+Per issue: load context (Jira summary + investigation), call Claude with structured outputs,
+parse JSON response, write outputs.
 
 Usage:
     python step8_agent.py --key HEAL-33150
@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -176,20 +177,17 @@ Fill in the appropriate block (Confirmed Fix OR Engineering Escalation — delet
 
 ## Response Format
 
-Return exactly:
-```
----INVESTIGATION---
-<filled investigation record markdown here>
----INTERNAL-NOTES---
-<filled internal notes markdown here>
----JIRA-MESSAGE---
-<filled jira message markdown here>
-```
+Return a JSON object with the following structure:
+{{
+  "investigation": "<filled investigation record markdown here>",
+  "internal_notes": "<filled internal notes markdown here>",
+  "jira_message": "<filled jira message markdown here>"
+}}
 
-Do NOT include any other text before or after these markers.
+All three fields must be present and non-empty.
 """
 
-    # Call Claude
+    # Call Claude with structured outputs
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         print(f"  [{key}] ERROR: ANTHROPIC_API_KEY not set", file=sys.stderr)
@@ -199,56 +197,61 @@ Do NOT include any other text before or after these markers.
     max_tokens = int(os.environ.get("CASEOPS_ANTHROPIC_MAX_TOKENS", "16384"))
     max_tokens = min(max(max_tokens, 256), 64000)  # Clamp to [256, 64000]
 
+    response_schema = {
+        "type": "object",
+        "properties": {
+            "investigation": {
+                "type": "string",
+                "description": "Filled investigation record markdown",
+            },
+            "internal_notes": {
+                "type": "string",
+                "description": "Filled internal notes markdown",
+            },
+            "jira_message": {
+                "type": "string",
+                "description": "Filled jira message markdown",
+            },
+        },
+        "required": ["investigation", "internal_notes", "jira_message"],
+    }
+
     try:
         client = Anthropic(api_key=api_key)
         message = client.messages.create(
             model=model,
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "case_analysis",
+                    "schema": response_schema,
+                    "strict": True,
+                },
+            },
         )
         response_text = message.content[0].text
     except Exception as e:
         print(f"  [{key}] ERROR: API call failed: {str(e)[:200]}", file=sys.stderr)
         return 1
 
-    # Parse response
-    if ("---INVESTIGATION---" not in response_text or
-        "---INTERNAL-NOTES---" not in response_text or
-        "---JIRA-MESSAGE---" not in response_text):
-        print(
-            f"  [{key}] ERROR: response missing required markers",
-            file=sys.stderr,
-        )
-        return 1
-
+    # Parse JSON response
     try:
-        before, sep1, after_marker1 = response_text.partition("---INVESTIGATION---")
-        if not sep1:
-            raise ValueError("---INVESTIGATION--- marker not found")
-
-        # Everything between INVESTIGATION and INTERNAL-NOTES
-        investigation_part, sep2, after_marker2 = after_marker1.partition("---INTERNAL-NOTES---")
-        if not sep2:
-            raise ValueError("---INTERNAL-NOTES--- marker not found")
-
-        # Everything between INTERNAL-NOTES and JIRA-MESSAGE
-        internal_notes_part, sep3, after_marker3 = after_marker2.partition("---JIRA-MESSAGE---")
-        if not sep3:
-            raise ValueError("---JIRA-MESSAGE--- marker not found")
-
-        # Everything after JIRA-MESSAGE until next marker or end
-        jira_message_part = after_marker3.split("---")[0]  # Stop at next marker if exists
-
-        investigation_text = strip_markdown_fences(investigation_part)
-        internal_notes = strip_markdown_fences(internal_notes_part)
-        jira_message = strip_markdown_fences(jira_message_part)
+        response_data = json.loads(response_text)
+        investigation_text = response_data.get("investigation", "").strip()
+        internal_notes = response_data.get("internal_notes", "").strip()
+        jira_message = response_data.get("jira_message", "").strip()
 
         if not investigation_text or not internal_notes or not jira_message:
             print(
-                f"  [{key}] ERROR: parsed sections are empty",
+                f"  [{key}] ERROR: JSON response missing required fields",
                 file=sys.stderr,
             )
             return 1
+    except json.JSONDecodeError as e:
+        print(f"  [{key}] ERROR: response is not valid JSON: {str(e)[:200]}", file=sys.stderr)
+        return 1
     except Exception as e:
         print(f"  [{key}] ERROR: response parsing failed: {str(e)[:200]}", file=sys.stderr)
         return 1
