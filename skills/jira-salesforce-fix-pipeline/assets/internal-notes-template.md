@@ -1,10 +1,6 @@
 # Internal Notes
 
-## Jira Issue
-
-- Key:
-- Summary:
-- Reporter:
+**Reference:** See `outputs/investigations/<KEY>.md` for full problem analysis, Salesforce configuration, and similar items analysis.
 
 ## Root Cause
 

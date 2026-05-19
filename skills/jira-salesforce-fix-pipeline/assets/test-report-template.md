@@ -1,39 +1,58 @@
-# Sandbox Test Report
+# Test Report
 
-## Jira Issue
+**Reference:** See `outputs/internal-notes/<KEY>.md` for solution details and implementation changes.
 
-- Key:
-- Summary:
+## Test Environment
 
-## Target Sandbox
+- Sandbox: 
+- Metadata deployed: (link to deployment/validation output)
+- Date tested:
 
-- Org alias/name:
+## Test Cases
 
-## Deployment
+### Test Case 1: [Description]
 
-- Command:
-- Result:
+**Steps:**
+1. [Step 1]
+2. [Step 2]
+3. [Observe: expected result]
 
-## Jira Acceptance Criteria
+**Result:** ✓ Pass / ✗ Fail
 
-## Tests
+**Notes:** (any observations, edge cases, anomalies)
 
-| Test | Expected | Actual | Result |
+### Test Case 2: [Description]
+
+**Steps:**
+1. [Step 1]
+2. [Step 2]
+3. [Observe: expected result]
+
+**Result:** ✓ Pass / ✗ Fail
+
+**Notes:**
+
+## Overall Test Summary
+
+- Total test cases: 
+- Passed: 
+- Failed:
+- Blocked:
+
+## Issues Found During Testing
+
+| Issue | Severity | Status | Resolution |
 | --- | --- | --- | --- |
 
-## Evidence
+## Validation Against Acceptance Criteria
 
-## Fixed?
+(From Investigation: did the fix meet all acceptance criteria?)
 
-## Production deployment state (required)
+| Criterion | Met? | Evidence |
+| --- | --- | --- |
 
-This report reflects **Sandbox** validation only unless you explicitly note otherwise.
+## Sign-Off
 
-- **Metadata under test — in Production before this fix?:** Yes / No / Partial — (evidence: Step 5 / SOQL / describe.)
-- **After Sandbox deploy — same metadata in Production?:** Yes / No / Not yet deployed / Unknown.
-- **Production metadata deploy required for users/customers to get this fix?:** **Yes — Gearset (or standard promote)** / **No** / **N/A**.
-- **Explicit note:** The CaseOps pipeline does **not** deploy to Production unless the operator explicitly requests it.
-
-## Failure Details
-
-## Next Step
+- Tested by: (CaseOps AI agent + operator verification)
+- Date:
+- Ready for Production promotion: ✓ Yes / ✗ No (blockers: [list])
