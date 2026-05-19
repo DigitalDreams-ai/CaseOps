@@ -714,6 +714,7 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
         f"| `outputs/investigations/{key}.md` | Investigation record (issue understanding, Salesforce problem, similar items analysis) | After diagnosis, before drafting notes |\n"
         f"| `outputs/internal-notes/{key}.md` | Internal notes for operator (root cause, escalation decision, fix notes) | When you've diagnosed the issue |\n"
         f"| `outputs/jira-messages/{key}.md` | Customer-facing Jira message (confirmed fix OR engineering escalation) | When ready to respond to customer |\n"
+        f"| `outputs/test-reports/{key}.md` | Test cases, results, and fix validation | After testing the fix in Sandbox |\n"
         f"| `outputs/engineering-escalations/{key}.md` | Engineering handoff (if escalating) | When escalating to Engineering team |\n"
         f"\n"
         f"**Update guidance:**\n"
