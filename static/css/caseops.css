@@ -369,8 +369,9 @@ a:hover {
   border-radius: 4px;
   font-size: 12px;
   font-family: inherit;
-  resize: none;
-  max-height: 60px;
+  resize: vertical;
+  min-height: 60px;
+  max-height: 300px;
 }
 
 #instruction-input:focus {

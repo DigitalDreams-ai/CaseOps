@@ -55,7 +55,7 @@
     <div id="instruction-panel">
       <div id="instruction-context"></div>
       <div id="instruction-row">
-        <textarea id="instruction-input" placeholder="Instruct Claude on what to do next…&#10;e.g. &quot;Draft the Jira message based on the investigation&quot;"></textarea>
+        <textarea id="instruction-input" placeholder="Instruct Claude on what to do next…&#10;e.g. &quot;Draft the Jira message based on the investigation&quot;" onkeydown="handleInstructionKeydown(event)"></textarea>
         <button id="send-claude-btn" class="btn primary" onclick="sendInstruction()">Send to Claude</button>
       </div>
     </div>
@@ -1476,6 +1476,13 @@
 
     // Update send button disabled state
     document.getElementById('send-claude-btn').disabled = activeRuns.has(issue.key);
+  }
+
+  function handleInstructionKeydown(event) {
+    if (event.key === 'Enter' && event.ctrlKey) {
+      event.preventDefault();
+      sendInstruction();
+    }
   }
 
   async function sendInstruction() {
