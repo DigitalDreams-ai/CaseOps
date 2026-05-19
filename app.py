@@ -730,6 +730,12 @@ def _read_manifest() -> list[dict[str, str]]:
         return list(csv.DictReader(f))
 
 
+def _count_open_issues(issues: list[dict[str, str]]) -> int:
+    """Count issues not in closed/resolved/escalated states."""
+    closed_statuses = {"closed", "resolved", "canceled", "cancelled", "escalated to engineering"}
+    return sum(1 for issue in issues if issue.get("Status", "").lower() not in closed_statuses)
+
+
 def _disposition(status: str) -> str:
     s = status.lower()
     if s in CLOSED_STATUSES:
@@ -868,8 +874,7 @@ def index():
     has_manifest = _manifest_path().exists()
 
     # Count open issues (not closed/resolved/canceled/escalated)
-    closed_statuses = {"closed", "resolved", "canceled", "cancelled", "escalated to engineering"}
-    open_count = sum(1 for issue in issues if issue.get("Status", "").lower() not in closed_statuses)
+    open_count = _count_open_issues(issues)
 
     return render_template(
         "index.html",
