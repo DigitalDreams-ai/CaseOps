@@ -65,6 +65,7 @@ caseops/output/
 outputs/jira/
 outputs/production-metadata/
 outputs/sandbox-metadata/
+outputs/confidence-flags/
 
 # Case work tracked on the work branch only
 outputs/investigations/
