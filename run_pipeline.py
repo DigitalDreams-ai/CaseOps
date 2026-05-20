@@ -333,13 +333,14 @@ def run_4_skills_for_issue(
     timeout: int = 300,
     error_log_path: Path | None = None,
 ) -> tuple[bool, str]:
-    """Run all 4 pipeline skills for a single issue.
+    """Run all 4+ pipeline skills for a single issue.
 
     Skills run sequentially (not parallel):
     1. investigation_finalization_agent.py (Step 5B)
     2. notes_and_escalation_agent.py (Step 8B)
-    3. jira_response_drafting.py (Step 9) — if exists
+    3. solution_planning_agent.py (Week 1 Skill)
     4. test_report_agent.py (Step 8D)
+    5. jira_response_drafting.py (Step 9) — if exists
 
     Each skill is idempotent: skips if output already exists.
 
@@ -357,6 +358,7 @@ def run_4_skills_for_issue(
     skills = [
         ("Investigation", PROJECT_ROOT / "investigation_finalization_agent.py"),
         ("Notes", PROJECT_ROOT / "notes_and_escalation_agent.py"),
+        ("Solution Plan", PROJECT_ROOT / "solution_planning_agent.py"),
         ("Test Report", PROJECT_ROOT / "test_report_agent.py"),
     ]
 
