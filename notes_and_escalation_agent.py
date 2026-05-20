@@ -125,7 +125,7 @@ Fill in the internal notes template. Focus on:
 
 ### Output B — Engineering Handoff (if escalating only)
 
-If escalating: Internal Notes gets brief "reason + evidence", and full handoff details go in engineering-escalations/{KEY}.md.
+If escalating: Internal Notes gets brief "reason + evidence", and full handoff details go in engineering-escalations/<KEY>.md.
 
 Fill the detailed engineering handoff template below (if escalating):
 
