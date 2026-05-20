@@ -7,6 +7,28 @@
 
 ---
 
+## ⚠️ PRODUCTION SAFETY — CRITICAL CONSTRAINT
+
+**MANDATORY RULE:**
+> CaseOps has ZERO authority to write, edit, change, upsert, insert, or delete anything in Production.
+> 
+> - Production access is read-only by default (investigation only)
+> - Sandbox access is full CRUD (authorized for testing only)
+> - CaseOps can PROPOSE Production changes via promotion plans
+> - **ONLY Sean can authorize Production changes by explicitly requesting execution**
+> - Promotion plans are proposals; they do NOT auto-execute
+> - Any Production change requires a separate explicit user request: "go ahead and deploy this"
+
+**Code Audit Required:**
+Before deploying any skill, verify:
+- [ ] Zero `sf deploy` or `sfdx deploy` commands in skill code
+- [ ] Zero Production API writes (all writes go to `outputs/`)
+- [ ] All Production access uses read-only credentials/methods
+- [ ] Promotion plans only write `.md` files, never execute anything
+- [ ] Error logs never imply Production was modified
+
+---
+
 ## I. Core Principles (Non-Negotiable)
 
 ### 1. Constraint-First Design
@@ -17,6 +39,7 @@
 - ✗ Ambiguous contracts (skill output format must be explicitly defined)
 - ✗ Orchestrator logic (keep router dumb; decisions stay in skills)
 - ✗ Untested abstractions (test against real data before generalizing)
+- ✗ **CRITICAL: NEVER auto-write to Production.** Production is read-only by default. Only Sean can authorize Production writes. CaseOps PROPOSES deployments, operator EXECUTES after explicit approval.
 
 ### 2. Decision Boundary Alignment
 Skills exist at **decision points**, not execution boundaries:
@@ -163,46 +186,58 @@ Each skill documents:
 
 ---
 
-### Skill 3: Production Deployment (Step 7)
-**Decision Boundary:** "How do we safely promote Sandbox changes to Production?"
+### Skill 3: Production Promotion Plan (Step 7)
+**Decision Boundary:** "How would we safely promote Sandbox changes to Production? (PROPOSAL ONLY — Sean must explicitly authorize execution)"
+
+**CRITICAL CONSTRAINT:**
+⚠️ **This skill ONLY PROPOSES deployment plans. It NEVER executes any Production changes.**
+- CaseOps has ZERO authority to write to Production
+- Only Sean can authorize Production changes
+- User must explicitly ask ("go ahead and deploy this") before operator executes
+- All Production access is read-only by default (investigation only)
+- Sandbox access is full CRUD (authorized for testing)
 
 **Constraints:**
-- ✗ Don't assume auto-deploy (write promotion plan, operator executes)
-- ✗ Don't skip validation (include pre-deploy verification)
+- ✗ NEVER execute Production change without explicit user request
+- ✗ Don't skip validation (include pre-deploy verification steps)
 - ✗ Don't ignore org-specific deployment method (respect `CASEOPS_DEPLOY_METHOD`)
 - ✗ Don't forget rollback (always include undo steps)
+- ✗ Don't assume auto-anything (write plan, operator executes after user approval)
 
 **Input Contract:**
 - `outputs/internal-notes/{KEY}.md` (required, has deployment plan)
 - `outputs/solution-plans/{KEY}.md` (required, affected components)
-- `outputs/test-reports/{KEY}.md` (required, validation proof)
+- `outputs/test-reports/{KEY}.md` (required, validation proof in Sandbox)
 
 **Output Contract:**
 ```json
 {
-  "deploy_plan": "markdown with sections:
-    - Pre-Deployment Checklist (verify prod state before change)
-    - Deployment Steps (concrete CLI or Gearset commands)
-    - Validation Steps (post-deploy smoke test)
-    - Rollback Plan (revert if validation fails)
-    - Sign-Off Criteria (when is production 'good'?)
-    - Operator Confirmation Needed? (Yes/No with reason)"
+  "promotion_plan": "markdown with sections:
+    - Summary (what metadata will change in Production)
+    - Pre-Deployment Checklist (verify current Production state)
+    - Promotion Steps (exact CLI/Gearset commands — operator will execute)
+    - Validation Steps (post-deploy smoke test — operator will run)
+    - Rollback Plan (if validation fails, revert with these steps)
+    - Risk Assessment (what could break?)
+    - Sign-Off Criteria (how do we know Production is good?)
+    - EXPLICIT: 'Awaiting Sean's authorization to proceed. Do not execute without explicit approval.'"
 }
 ```
 
-**File:** `outputs/deploy-plans/{KEY}.md`
+**File:** `outputs/promotion-plans/{KEY}.md` (named explicitly to avoid confusion with deploy-plans)
 
 **Staging:**
-1. Unit test: generate deploy plan for HEAL-33066 (price book—simple)
-2. Integration: operator follows plan, reports success/blockers
-3. Batch: 3 real production deployments
-4. Metric: zero rollbacks, zero unplanned Production changes
+1. Unit test: generate promotion plan for HEAL-33066 (price book—simple)
+2. Integration: operator reviews plan, confirms with Sean before executing
+3. Batch: 3 real production promotions (after Sean approves each)
+4. Metric: zero unplanned changes, zero Production impact without approval
 
 **Quality Gate:**
-- ✓ Steps are concrete (not "deploy via Gearset"; say which package + which orgs)
-- ✓ Validation is testable (not "looks good"; say "verify field exists + has correct FLS")
-- ✓ Rollback is documented
-- ✓ Operator confirmation required IF high-risk
+- ✓ Steps are concrete (exact Gearset package ID or exact CLI command)
+- ✓ Validation is testable (not "looks good"; exact checks: "verify field exists + FLS matches")
+- ✓ Rollback is documented and tested
+- ✓ Explicitly states "requires Sean's authorization"
+- ✓ Zero auto-execution code paths
 
 ---
 
@@ -215,7 +250,7 @@ Investigation → Notes → Test Report → (Optional Jira Response)
 
 New flow (when 3 skills added):
 ```
-Investigation → Notes → Escalation Gate → Solution Planning → Deploy Plan → Test Report → Jira Response
+Investigation → Notes → Escalation Gate → Solution Planning → Promotion Plan (PROPOSAL) → Test Report → Jira Response
 ```
 
 **Orchestrator stays dumb:**
@@ -223,9 +258,9 @@ Investigation → Notes → Escalation Gate → Solution Planning → Deploy Pla
 skills = [
   ("investigation", investigation_finalization_agent.py),
   ("notes", notes_and_escalation_agent.py),
-  ("escalation", escalation_gate_agent.py),           # NEW
-  ("solution_plan", solution_planning_agent.py),      # NEW
-  ("deploy_plan", production_deployment_agent.py),    # NEW
+  ("escalation", escalation_gate_agent.py),              # NEW
+  ("solution_plan", solution_planning_agent.py),         # NEW
+  ("promotion_plan", production_promotion_agent.py),     # NEW (PROPOSAL ONLY)
   ("test_report", test_report_agent.py),
   ("jira_response", jira_response_drafting.py),
 ]
@@ -234,6 +269,8 @@ for skill_name, script in skills:
 ```
 
 No conditional logic. No branching. Router only loops.
+
+⚠️ **CRITICAL:** Skill 7 (promotion_plan) ONLY WRITES PROPOSAL PLANS. It does NOT execute any Production changes. Sean must explicitly authorize execution in a separate request.
 
 ---
 
@@ -341,13 +378,14 @@ Log to: `outputs/audit-log.jsonl` (one entry per decision)
 
 | Risk | Mitigation |
 |------|-----------|
+| **CRITICAL: Accidental Production write** | NO skill has Production write capability. Promotion plan is proposal only. Sean must explicitly authorize any Production change in a separate request. Code audit required to verify zero auto-write paths. |
 | Skill timeout (API slow) | Exponential backoff retry; if 2 fails, log + continue batch |
 | Malformed output (JSON parse error) | Catch parse error, log details, skip issue, operator reviews later |
 | Skill contradicts investigation | Quality gate: escalation gate explicitly checks consistency |
 | Orchestrator becomes complex | Keep it dumb—no conditional logic, just loop |
 | Too many commits | One skill = one commit; group related tests in single commit |
 | Operator doesn't trust AI decisions | Audit trail + evidence always included; gate checks exist |
-| Production deploy goes wrong | Pre-deploy validation + post-deploy validation + rollback plan |
+| Promotion plan gets auto-executed | CANNOT HAPPEN: skill only writes file, never executes. Execution requires separate explicit user request. Audit: grep codebase for "sf deploy" or "sfdx deploy" in any skill—should be ZERO hits. |
 
 ### Rollback Procedure
 If skill produces bad output:
