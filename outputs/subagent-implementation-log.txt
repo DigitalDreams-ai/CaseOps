@@ -1,0 +1,161 @@
+=== Week 3: Production Promotion Plan Skill Implementation ===
+Date: 2026-05-19
+Status: COMPLETE
+
+CONSTRAINT: ZERO auto-execution, proposal-only, requires explicit Sean approval
+
+============================================================
+STEP 1: Create Agent Skeleton
+============================================================
+Status: COMPLETE
+File: production_promotion_plan_agent.py
+- Copied investigation_finalization_agent.py as template
+- Updated docstring and I/O paths
+- Output path: outputs/promotion-plans/{KEY}.md
+- Idempotent: skips if output exists
+
+============================================================
+STEP 2: Implement Promotion Planning (Proposal-Only)
+============================================================
+Status: COMPLETE
+
+Features Implemented:
+  [✓] Read: solution-plans/{KEY}.md (required, affected components)
+  [✓] Read: test-reports/{KEY}.md (required, validation proof)
+  [✓] Read: internal-notes/{KEY}.md (optional, deployment context)
+  [✓] Write: promotion-plans/{KEY}.md (proposal only, never executes)
+  [✓] Idempotence: skip if promotion plan exists
+
+Prompt Structure (6 sections):
+  [✓] 1. Summary — what metadata will change in Production
+  [✓] 2. Pre-Deployment Checklist — verify current Production state (read-only CLI commands)
+  [✓] 3. Promotion Steps — EXACT CLI commands (not vague, not Gearset)
+  [✓] 4. Post-Deployment Validation Steps — how to verify in Production post-deploy
+  [✓] 5. Rollback Plan — exact steps if needed
+  [✓] 6. Sign-Off Criteria — when safe to declare complete
+
+Safety Guarantee:
+  [✓] CRITICAL: "Awaiting Sean's authorization. Do not execute without approval." on every plan
+  [✓] No subprocess/os.system execution code
+  [✓] No Production write capability
+  [✓] All steps are concrete (exact CLI, not vague)
+
+============================================================
+STEP 3: Unit Testing (3 Cases)
+============================================================
+Status: COMPLETE
+
+Test Case 1: HEAL-33066 (Simple — price book, no code)
+  EXECUTION: python production_promotion_plan_agent.py --key HEAL-33066
+  RESULT: ✓ OK - Output file created (20,587 bytes)
+  [✓] Starts with "⚠️ Awaiting Sean's explicit authorization..."
+  [✓] Deploy steps concrete (Setup UI + CLI verification)
+  [✓] Rollback plan documented
+  [✓] Sign-off criteria measurable
+
+Test Case 2: HEAL-33150 (Moderate — email routing, metadata + flow)
+  EXECUTION: python production_promotion_plan_agent.py --key HEAL-33150
+  RESULT: ✓ OK - Output file created (30,741 bytes)
+  [✓] Starts with "⚠️ Awaiting Sean's explicit authorization..."
+  [✓] Deploy steps conditional (3 scenarios with exact steps)
+  [✓] Pre-deployment verification concrete
+  [✓] Rollback plan detailed per scenario
+  [✓] Engineering blocker clearly noted
+
+Test Case 3: HEAL-33040 (Complex — data sync)
+  Status: BLOCKED (no solution plan — escalated to Engineering)
+  This is correct behavior.
+
+============================================================
+STEP 4-5: Integration & Batch Testing
+============================================================
+Status: COMPLETE
+
+2/2 Real Issues Processed:
+
+HEAL-33066: ✓ SUCCESS
+  File: outputs/promotion-plans/HEAL-33066.md (20,587 bytes)
+  Safety statement: ✓ Present
+  Readability: ✓ Excellent
+
+HEAL-33150: ✓ SUCCESS
+  File: outputs/promotion-plans/HEAL-33150.md (30,741 bytes)
+  Safety statement: ✓ Present
+  Readability: ✓ Excellent (with Engineering blocker noted)
+
+Batch Success Rate: 2/2 (100%)
+
+============================================================
+STEP 6: CRITICAL SAFETY AUDIT
+============================================================
+Status: COMPLETE - ALL PASSED
+
+Grep Verification:
+  [✓] grep -E "subprocess|os.system|call\(|popen|exec\(" → 0 matches
+  [✓] Zero sf deploy execution code
+  [✓] Zero sfdx deploy execution code
+  [✓] Zero write operations to Production
+  [✓] All outputs start with safety statement
+
+Safety Checks:
+  [✓] No subprocess.run() in agent code
+  [✓] No os.system() calls
+  [✓] No auto-deployment capability
+  [✓] Output is pure markdown (no executable code)
+  [✓] Idempotence enforced via exists() check
+
+AUDIT RESULT: SAFE FOR PRODUCTION USE
+
+============================================================
+STEP 7: Idempotence Verification
+============================================================
+Status: COMPLETE
+
+Test: Re-run HEAL-33066 (should skip)
+  [✓] Command output: "promotion plan already exists, skipping"
+  [✓] File unchanged (timestamp identical)
+  [✓] Idempotence working correctly
+
+============================================================
+CHECKPOINT: ALL REQUIREMENTS COMPLETE
+============================================================
+
+[✓] Agent created and runs without errors
+[✓] Zero auto-execution capability (safety audit passed)
+[✓] All 2 outputs start with safety statement
+[✓] Deploy steps are concrete (not vague, not "use Gearset")
+[✓] 2/2 batch test success
+[✓] Safety audit passed (zero Production writes verified)
+[✓] Idempotence verified
+[✓] Code follows existing patterns
+
+READY FOR GIT COMMIT
+
+============================================================
+Implementation Notes
+============================================================
+
+Key Decisions:
+1. Proposal-only design means agent NEVER calls sf deploy, sfdx deploy, or equivalent
+2. Agent reads solution plan + test report to understand what to promote
+3. Output includes exact CLI commands so operator can execute manually
+4. Safety statement "Awaiting Sean's authorization..." on EVERY plan
+5. Idempotent implementation skips if promotion-plans/{KEY}.md already exists
+6. Supports 3 deployment methods (sf-project-deploy, sf-cli-retrieve-deploy, manual)
+
+Safety Guarantees Verified:
+- Zero subprocess execution patterns
+- Zero Production write operations
+- All outputs markdown-only
+- Explicit authorization requirement on every plan
+- Code audit passed (grep + manual review)
+
+Tested Against Real Issues:
+- HEAL-33066: Simple case (price book, data-only changes)
+- HEAL-33150: Moderate case (email routing with 3 possible scenarios)
+- Both produce clear, actionable promotion plans
+
+Status: COMPLETE AND SAFE
+Date: 2026-05-19
+
+============================================================
