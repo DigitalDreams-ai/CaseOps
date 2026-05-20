@@ -331,6 +331,7 @@ def run_4_skills_for_issue(
     env_file: str,
     max_retries: int = 2,
     timeout: int = 300,
+    error_log_path: Path | None = None,
 ) -> tuple[bool, str]:
     """Run all 4 pipeline skills for a single issue.
 
@@ -348,6 +349,7 @@ def run_4_skills_for_issue(
         env_file: Env file path
         max_retries: Number of retry attempts for transient failures
         timeout: Process timeout in seconds per skill
+        error_log_path: Optional path to log permanent errors
 
     Returns:
         (success: bool, status_msg: str)
@@ -357,6 +359,11 @@ def run_4_skills_for_issue(
         ("Notes", PROJECT_ROOT / "notes_and_escalation_agent.py"),
         ("Test Report", PROJECT_ROOT / "test_report_agent.py"),
     ]
+
+    # Add jira_response skill if available
+    jira_response = PROJECT_ROOT / "jira_response_drafting.py"
+    if jira_response.exists():
+        skills.append(("Jira Response", jira_response))
 
     for skill_name, skill_script in skills:
         if not skill_script.exists():
@@ -402,7 +409,11 @@ def run_4_skills_for_issue(
                         time.sleep(wait_time)
                         continue
 
-                    return False, f"[FAIL] {key}: {skill_name} skill failed: {err_msg}"
+                    error_msg = f"[FAIL] {key}: {skill_name} skill failed: {err_msg}"
+                    if error_log_path:
+                        with error_log_path.open("a", encoding="utf-8") as f:
+                            f.write(f"{error_msg}\n")
+                    return False, error_msg
 
                 except subprocess.TimeoutExpired:
                     p.kill()
@@ -411,7 +422,11 @@ def run_4_skills_for_issue(
                         print(f"      [RETRY {skill_name}] {key}: timeout (wait {wait_time}s)", flush=True)
                         time.sleep(wait_time)
                         continue
-                    return False, f"[TIMEOUT] {key}: {skill_name} skill"
+                    error_msg = f"[TIMEOUT] {key}: {skill_name} skill"
+                    if error_log_path:
+                        with error_log_path.open("a", encoding="utf-8") as f:
+                            f.write(f"{error_msg}\n")
+                    return False, error_msg
 
             except Exception as e:
                 err = str(e)[:80]
@@ -420,11 +435,19 @@ def run_4_skills_for_issue(
                     print(f"      [RETRY {skill_name}] {key}: {err} (wait {wait_time}s)", flush=True)
                     time.sleep(wait_time)
                     continue
-                return False, f"[ERROR] {key}: {skill_name} skill: {err}"
+                error_msg = f"[ERROR] {key}: {skill_name} skill: {err}"
+                if error_log_path:
+                    with error_log_path.open("a", encoding="utf-8") as f:
+                        f.write(f"{error_msg}\n")
+                return False, error_msg
 
         else:
             # Max retries exceeded for this skill
-            return False, f"[FAIL] {key}: {skill_name} skill max retries exceeded"
+            error_msg = f"[FAIL] {key}: {skill_name} skill max retries exceeded"
+            if error_log_path:
+                with error_log_path.open("a", encoding="utf-8") as f:
+                    f.write(f"{error_msg}\n")
+            return False, error_msg
 
     return True, f"[OK] {key}"
 
@@ -558,7 +581,8 @@ def process_active_issues_parallel(
                 out_dir,
                 env_file,
                 max_retries=max_retries,
-                timeout=300
+                timeout=300,
+                error_log_path=failures_log
             )
 
             if success:
