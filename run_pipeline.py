@@ -325,7 +325,7 @@ def _read_template(path: Path) -> str:
     return f"[Template not found: {path}]\n"
 
 
-def run_4_skills_for_issue(
+def run_7_skills_for_issue(
     key: str,
     out_dir: Path,
     env_file: str,
@@ -333,14 +333,16 @@ def run_4_skills_for_issue(
     timeout: int = 300,
     error_log_path: Path | None = None,
 ) -> tuple[bool, str]:
-    """Run all 4+ pipeline skills for a single issue.
+    """Run all 7 pipeline skills for a single issue.
 
     Skills run sequentially (not parallel):
-    1. investigation_finalization_agent.py (Step 5B)
-    2. notes_and_escalation_agent.py (Step 8B)
-    3. solution_planning_agent.py (Week 1 Skill)
-    4. test_report_agent.py (Step 8D)
-    5. jira_response_drafting.py (Step 9) — if exists
+    1. investigation_finalization_agent.py (Phase 2 - Investigation)
+    2. notes_and_escalation_agent.py (Phase 3 - Notes & Escalation)
+    3. solution_planning_agent.py (Week 1 - Solution Planning)
+    4. escalation_gate_agent.py (Week 2 - Escalation Gate)
+    5. test_report_agent.py (Phase 4 - Test Report) [moved before Promotion Plan due to dependency]
+    6. production_promotion_plan_agent.py (Week 3 - Promotion Plan PROPOSAL) [requires test report]
+    7. jira_response_drafting.py (Pre-existing - Jira Response)
 
     Each skill is idempotent: skips if output already exists.
 
@@ -359,7 +361,9 @@ def run_4_skills_for_issue(
         ("Investigation", PROJECT_ROOT / "investigation_finalization_agent.py"),
         ("Notes", PROJECT_ROOT / "notes_and_escalation_agent.py"),
         ("Solution Plan", PROJECT_ROOT / "solution_planning_agent.py"),
+        ("Escalation Gate", PROJECT_ROOT / "escalation_gate_agent.py"),
         ("Test Report", PROJECT_ROOT / "test_report_agent.py"),
+        ("Promotion Plan", PROJECT_ROOT / "production_promotion_plan_agent.py"),
     ]
 
     # Add jira_response skill if available
@@ -452,6 +456,29 @@ def run_4_skills_for_issue(
             return False, error_msg
 
     return True, f"[OK] {key}"
+
+
+def run_4_skills_for_issue(
+    key: str,
+    out_dir: Path,
+    env_file: str,
+    max_retries: int = 2,
+    timeout: int = 300,
+    error_log_path: Path | None = None,
+) -> tuple[bool, str]:
+    """DEPRECATED: Backward-compatibility alias for run_7_skills_for_issue().
+
+    Use run_7_skills_for_issue() instead. This alias exists to avoid
+    breaking any external code that references the old function name.
+    """
+    return run_7_skills_for_issue(
+        key,
+        out_dir,
+        env_file,
+        max_retries=max_retries,
+        timeout=timeout,
+        error_log_path=error_log_path,
+    )
 
 
 def run_step8_agent(
@@ -578,7 +605,7 @@ def process_active_issues_parallel(
             key = issue["Key"]
             print(f"    > {key}", flush=True)
 
-            success, status_msg = run_4_skills_for_issue(
+            success, status_msg = run_7_skills_for_issue(
                 key,
                 out_dir,
                 env_file,
