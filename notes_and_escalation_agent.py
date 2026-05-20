@@ -114,10 +114,10 @@ Analyze the investigation and decide: solve in Sandbox or escalate to Engineerin
 ### Output A — Internal Notes
 
 Fill in the internal notes template. Focus on:
-1. Root cause (from investigation analysis)
-2. Solution path (Sandbox fix) OR escalation (engineering required)
-3. Production vs Sandbox deployment plan
-4. Engineering handoff details (if escalating)
+1. Root cause (NEW diagnosis: WHY is this happening or resolved? NOT a replay of Investigation findings. Be terse.)
+2. Decision: Support-Resolvable OR Escalate to Engineering (with confidence + evidence)
+3. Actions Taken (if resolvable) OR Engineering Handoff details (if escalating)
+4. Production vs Sandbox deployment clarity (required)
 
 ```markdown
 {internal_notes_template}
@@ -125,13 +125,15 @@ Fill in the internal notes template. Focus on:
 
 ### Output B — Engineering Handoff (if escalating only)
 
-If you decide Engineering is required, fill this template with detailed handoff:
+If escalating: Internal Notes gets brief "reason + evidence", and full handoff details go in engineering-escalations/{KEY}.md.
+
+Fill the detailed engineering handoff template below (if escalating):
 
 ```markdown
 {engineering_handoff_template}
 ```
 
-If NOT escalating, leave engineering_handoff empty string.
+If NOT escalating (support-resolvable), leave engineering_handoff empty string.
 
 ---
 

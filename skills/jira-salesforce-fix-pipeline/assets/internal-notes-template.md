@@ -1,40 +1,57 @@
-# Internal Notes
+# Internal Notes — [ISSUE KEY]
 
-**Reference:** See `outputs/investigations/<KEY>.md` for full problem analysis, Salesforce configuration, and similar items analysis.
+**Reference:** See `outputs/investigations/<KEY>.md` for full problem diagnosis, Salesforce configuration, and similar items analysis.
+
+---
+
+## Status
+
+[One-line summary: what is the current state of this issue?]
 
 ## Root Cause
 
-## Solution Or Escalation
+[Why is this happening (if defect) or why is it resolved (if completed)? Diagnosis only — not a replay of what happened in Investigation. Be terse.]
 
-## Production vs deployment (required)
+## Decision
 
-**Rule:** Never state or imply that Production was changed by this pipeline unless the operator explicitly deployed. Sandbox validation does **not** mean Production has the new metadata.
+**Support-Resolvable** OR **Escalate to Engineering**
 
-- **Verified in Production (read-only):** (What we confirmed exists or does not exist in Production.)
-- **Changed or created only in Sandbox:** (Metadata/components deployed/tested in Sandbox only.)
-- **Production metadata deploy required?** **Yes** — promote via Gearset (or org standard) / **No** — solution uses what is already in Production / **N/A** — no metadata change.
-- **Operator action:** (Concrete next step, e.g. “Package Permission Set `Foo` in Gearset from Sandbox → Production” vs “Assign existing permission set in Production — no deploy”.)
+[Confidence level + key evidence for this decision.]
 
-## Engineering Handoff
+---
 
-- Required?:
-- Reason:
+## If Support-Resolvable: Actions Taken
+
+[What was done to resolve. Include:]
+- [Action 1 with ID/date if applicable]
+- [Action 2]
+- [Approvals/sign-offs if applicable]
+
+## If Escalating: Engineering Handoff
+
+- Reason for escalation:
 - Affected metadata/component:
-- Potential fix:
+- Reproduction steps (terse, as reference to Investigation):
+- Proposed approach:
 - Evidence:
-- Reproduction details:
 
-## Metadata Or Code Changed
+---
 
-## Sandbox Deployment
+## Production vs Sandbox (required)
 
-- Sandbox:
-- Deployment result:
+**Rule:** Never state or imply Production was changed unless the operator explicitly deployed. Sandbox validation ≠ Production has the change.
 
-## Testing Performed
+- **Verified in Production (read-only):** [What exists or doesn't exist in Prod]
+- **Changed/created in Sandbox only:** [What was tested in Sandbox]
+- **Production deployment required?** [Yes — exact steps / No — uses existing Prod config / N/A]
+- **Operator action:** [Concrete next step for operator]
 
-## Result
+---
 
-## Risks Or Follow-Up
+## Risks
 
-## Remaining Actions
+[Brief list of operational or technical risks, if any. One line per risk.]
+
+## Next Action
+
+[What operator does immediately.]
