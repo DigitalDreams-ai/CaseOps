@@ -325,6 +325,110 @@ def _read_template(path: Path) -> str:
     return f"[Template not found: {path}]\n"
 
 
+def run_4_skills_for_issue(
+    key: str,
+    out_dir: Path,
+    env_file: str,
+    max_retries: int = 2,
+    timeout: int = 300,
+) -> tuple[bool, str]:
+    """Run all 4 pipeline skills for a single issue.
+
+    Skills run sequentially (not parallel):
+    1. investigation_finalization_agent.py (Step 5B)
+    2. notes_and_escalation_agent.py (Step 8B)
+    3. jira_response_drafting.py (Step 9) — if exists
+    4. test_report_agent.py (Step 8D)
+
+    Each skill is idempotent: skips if output already exists.
+
+    Args:
+        key: Jira issue key
+        out_dir: Output directory
+        env_file: Env file path
+        max_retries: Number of retry attempts for transient failures
+        timeout: Process timeout in seconds per skill
+
+    Returns:
+        (success: bool, status_msg: str)
+    """
+    skills = [
+        ("Investigation", PROJECT_ROOT / "investigation_finalization_agent.py"),
+        ("Notes", PROJECT_ROOT / "notes_and_escalation_agent.py"),
+        ("Test Report", PROJECT_ROOT / "test_report_agent.py"),
+    ]
+
+    for skill_name, skill_script in skills:
+        if not skill_script.exists():
+            return False, f"[ERROR] {key}: {skill_name} skill not found at {skill_script}"
+
+        cmd = [
+            sys.executable,
+            str(skill_script),
+            "--key",
+            key,
+            "--outputs-dir",
+            str(out_dir),
+            "--env-file",
+            env_file,
+        ]
+
+        for attempt in range(max_retries + 1):
+            try:
+                p = subprocess.Popen(
+                    cmd,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+
+                try:
+                    stdout, stderr = p.communicate(timeout=timeout)
+
+                    if p.returncode == 0:
+                        break  # Success, move to next skill
+
+                    # Non-zero exit: check if retryable
+                    err_msg = (stderr or stdout or "unknown error")[:120]
+                    is_transient = any(phrase in err_msg.lower() for phrase in [
+                        "timeout", "connection", "rate limit", "temporarily",
+                        "503", "429", "500"
+                    ])
+
+                    if is_transient and attempt < max_retries:
+                        wait_time = 2 ** attempt
+                        print(f"      [RETRY {skill_name}] {key} (wait {wait_time}s)", flush=True)
+                        time.sleep(wait_time)
+                        continue
+
+                    return False, f"[FAIL] {key}: {skill_name} skill failed: {err_msg}"
+
+                except subprocess.TimeoutExpired:
+                    p.kill()
+                    if attempt < max_retries:
+                        wait_time = 2 ** attempt
+                        print(f"      [RETRY {skill_name}] {key}: timeout (wait {wait_time}s)", flush=True)
+                        time.sleep(wait_time)
+                        continue
+                    return False, f"[TIMEOUT] {key}: {skill_name} skill"
+
+            except Exception as e:
+                err = str(e)[:80]
+                if attempt < max_retries:
+                    wait_time = 2 ** attempt
+                    print(f"      [RETRY {skill_name}] {key}: {err} (wait {wait_time}s)", flush=True)
+                    time.sleep(wait_time)
+                    continue
+                return False, f"[ERROR] {key}: {skill_name} skill: {err}"
+
+        else:
+            # Max retries exceeded for this skill
+            return False, f"[FAIL] {key}: {skill_name} skill max retries exceeded"
+
+    return True, f"[OK] {key}"
+
+
 def run_step8_agent(
     key: str,
     out_dir: Path,
@@ -332,7 +436,10 @@ def run_step8_agent(
     max_retries: int = 2,
     timeout: int = 600,
 ) -> tuple[bool, str]:
-    """Run step8_agent.py for a single issue with retry logic.
+    """DEPRECATED: Run step8_agent.py for a single issue with retry logic.
+
+    This function is deprecated. Use run_4_skills_for_issue() instead,
+    which calls the modular skills pipeline.
 
     Args:
         key: Jira issue key
@@ -431,7 +538,7 @@ def process_active_issues_parallel(
     results_dir.mkdir(parents=True, exist_ok=True)
 
     # Create failure log for manual review
-    failures_log = out_dir / "step-8-failures.log"
+    failures_log = out_dir / "skill-pipeline-failures.log"
 
     total = len(active)
     completed = 0
@@ -440,18 +547,18 @@ def process_active_issues_parallel(
 
     for i in range(0, total, batch_size):
         batch = active[i:i + batch_size]
-        print(f"\n  Batch {i // batch_size + 1}: Processing {len(batch)} issue(s)...")
+        print(f"\n  Batch {i // batch_size + 1}: Processing {len(batch)} issue(s) through 4-skill pipeline...")
 
         for issue in batch:
             key = issue["Key"]
             print(f"    > {key}", flush=True)
 
-            success, status_msg = run_step8_agent(
+            success, status_msg = run_4_skills_for_issue(
                 key,
                 out_dir,
                 env_file,
                 max_retries=max_retries,
-                timeout=600
+                timeout=300
             )
 
             if success:
@@ -469,7 +576,7 @@ def process_active_issues_parallel(
             for entry in failure_log_entries:
                 f.write(f"{entry}\n")
 
-    print(f"\n  Step 8 complete: {completed} succeeded, {failed} failed out of {total} issues")
+    print(f"\n  Pipeline complete: {completed} succeeded, {failed} failed out of {total} issues")
     if failed > 0:
         print(f"  Failure log: {failures_log.relative_to(PROJECT_ROOT)}")
 
