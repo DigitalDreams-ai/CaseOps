@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Opportunity_Superhuman_Protocol_Shopify</fullName>
+    <columns>OPPORTUNITY.NAME</columns>
+    <columns>ACCOUNT.NAME</columns>
+    <columns>OPPORTUNITY.STAGE_NAME</columns>
+    <columns>Opportunity_Status__c</columns>
+    <columns>Amount__c</columns>
+    <columns>OPPORTUNITY.CLOSE_DATE</columns>
+    <columns>OPPORTUNITY.RECORDTYPE</columns>
+    <columns>CORE.USERS.ALIAS</columns>
+    <columns>First_Shipping_Date__c</columns>
+    <columns>First_Tracking_Num__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Opportunity_Status__c</field>
+        <operation>equals</operation>
+        <value>Order Pending</value>
+    </filters>
+    <filters>
+        <field>OPPORTUNITY.RECORDTYPE</field>
+        <operation>equals</operation>
+        <value>Opportunity.Superhuman_Protocol</value>
+    </filters>
+    <filters>
+        <field>Transaction_Source__c</field>
+        <operation>equals</operation>
+        <value>Store</value>
+    </filters>
+    <label>Opportunity Superhuman Protocol Shopify</label>
+</ListView>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Vendor_Name__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <label>Vendor Name</label>
+    <lookupFilter>
+        <active>true</active>
+        <booleanFilter>(1 OR 2 OR 3) AND (4 OR 5)</booleanFilter>
+        <filterItems>
+            <field>Account.RecordTypeId</field>
+            <operation>equals</operation>
+            <value>Lab Account Record Type</value>
+        </filterItems>
+        <filterItems>
+            <field>Account.RecordTypeId</field>
+            <operation>equals</operation>
+            <value>Affiliate Doctor Account Record Type</value>
+        </filterItems>
+        <filterItems>
+            <field>Account.RecordTypeId</field>
+            <operation>equals</operation>
+            <value>Pharmacy Account Record Type</value>
+        </filterItems>
+        <filterItems>
+            <field>Account.Company_Legal_Name__c</field>
+            <operation>notEqual</operation>
+            <value>HealthGAINS</value>
+        </filterItems>
+        <filterItems>
+            <field>Account.Company_Legal_Name__c</field>
+            <operation>notEqual</operation>
+            <value>Healthgains</value>
+        </filterItems>
+        <isOptional>false</isOptional>
+    </lookupFilter>
+    <referenceTo>Account</referenceTo>
+    <relationshipLabel>Orders (Vendor)</relationshipLabel>
+    <relationshipName>Orders1</relationshipName>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <type>Lookup</type>
+</CustomField>

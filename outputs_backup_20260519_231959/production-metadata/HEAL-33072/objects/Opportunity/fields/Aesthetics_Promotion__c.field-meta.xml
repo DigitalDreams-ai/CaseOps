@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Aesthetics_Promotion__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <label>Aesthetics Promotion</label>
+    <lookupFilter>
+        <active>true</active>
+        <filterItems>
+            <field>Promotions__c.Promotion_Status__c</field>
+            <operation>equals</operation>
+            <value>Active</value>
+        </filterItems>
+        <filterItems>
+            <field>Promotions__c.Aesthetics_Promotion_Lookup__c</field>
+            <operation>equals</operation>
+            <value>True</value>
+        </filterItems>
+        <isOptional>false</isOptional>
+    </lookupFilter>
+    <referenceTo>Promotions__c</referenceTo>
+    <relationshipLabel>Opportunities (Aesthetics Promotion)</relationshipLabel>
+    <relationshipName>Opportunities1</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

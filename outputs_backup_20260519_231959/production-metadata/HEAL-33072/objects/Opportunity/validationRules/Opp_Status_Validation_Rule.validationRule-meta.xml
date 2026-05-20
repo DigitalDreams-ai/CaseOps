@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Opp_Status_Validation_Rule</fullName>
+    <active>true</active>
+    <errorConditionFormula>AND(ISPICKVAL(StageName,&apos;Closed Won&apos;), ISBLANK(TEXT( Opportunity_Status__c)))</errorConditionFormula>
+    <errorDisplayField>Opportunity_Status__c</errorDisplayField>
+    <errorMessage>Opportunity Status is Required</errorMessage>
+</ValidationRule>

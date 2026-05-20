@@ -1,0 +1,48 @@
+{"ts": "2026-05-19T01:58:08.839173+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "-- Step 1: Syncing from Jira ------------------------------"}
+{"ts": "2026-05-19T01:58:08.981360+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "Connecting to https://10xhealthsystem.atlassian.net..."}
+{"ts": "2026-05-19T01:58:08.982864+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "JQL: assignee = \"sbingham@10xhealthsystem.com\" AND statusCategory != Done ORDER BY created ASC"}
+{"ts": "2026-05-19T01:58:09.668529+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "Found 1 issue(s). Syncing..."}
+{"ts": "2026-05-19T01:58:09.670587+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "[1/1] HEAL-33505 - fetching..."}
+{"ts": "2026-05-19T01:58:10.145962+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "[1/1] HEAL-33505 - In Progress: Is there a way for \"Opportunity Field History\" to capture ac"}
+{"ts": "2026-05-19T01:58:10.147030+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "[1/1] HEAL-33505 - fetching comments, changelog, worklogs..."}
+{"ts": "2026-05-19T01:58:11.051606+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "[1/1] HEAL-33505 - downloading attachments..."}
+{"ts": "2026-05-19T01:58:11.052608+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "[1/1] HEAL-33505 - fetching forms..."}
+{"ts": "2026-05-19T01:58:14.126717+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "[1/1] HEAL-33505 - written (2 comments, 0 attachments, 1 forms)"}
+{"ts": "2026-05-19T01:58:14.129756+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "Synced 1 issue(s) into C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira"}
+{"ts": "2026-05-19T01:58:14.159804+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "Manifest merged: 45 total issue(s)."}
+{"ts": "2026-05-19T01:58:14.161329+00:00", "run_key": "HEAL-33505", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:14.162835+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "-- Step 2: Triaging issues --------------------------------"}
+{"ts": "2026-05-19T01:58:14.168368+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "  Total synced:             1"}
+{"ts": "2026-05-19T01:58:14.169877+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "  Closed / Resolved / Canceled: 0"}
+{"ts": "2026-05-19T01:58:14.171523+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "  Escalated to Engineering: 0"}
+{"ts": "2026-05-19T01:58:14.172525+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "  Active (needs processing): 1"}
+{"ts": "2026-05-19T01:58:14.174030+00:00", "run_key": "HEAL-33505", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:14.174533+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "-- Step 3: Archiving Closed / Resolved / Canceled --------"}
+{"ts": "2026-05-19T01:58:14.176054+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-19T01:58:14.177081+00:00", "run_key": "HEAL-33505", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:14.178600+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "-- Step 4: Archiving pre-escalated issues ------------------"}
+{"ts": "2026-05-19T01:58:14.180106+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-19T01:58:14.180106+00:00", "run_key": "HEAL-33505", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:14.181626+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "-- Step 5: Scaffolding investigation records ---------------"}
+{"ts": "2026-05-19T01:58:14.182651+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "  [exists ] HEAL-33505  ->  outputs\\investigations\\HEAL-33505.md"}
+{"ts": "2026-05-19T01:58:14.182651+00:00", "run_key": "HEAL-33505", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:14.184684+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "-- Step 6: Updating dated summary --------------------------"}
+{"ts": "2026-05-19T01:58:14.185347+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "  outputs\\issue-summary-2026-05-18.md"}
+{"ts": "2026-05-19T01:58:14.186862+00:00", "run_key": "HEAL-33505", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:14.186862+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "-- Step 7: Handoff to AI reasoning ------------------------"}
+{"ts": "2026-05-19T01:58:14.189126+00:00", "run_key": "HEAL-33505", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:14.189126+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "  1 active issue(s) ready for processing:"}
+{"ts": "2026-05-19T01:58:14.200275+00:00", "run_key": "HEAL-33505", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:14.200275+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "    HEAL-33505  In Progress"}
+{"ts": "2026-05-19T01:58:14.202465+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "      Is there a way for \"Opportunity Field History\" to capture activity on \"O"}
+{"ts": "2026-05-19T01:58:14.202974+00:00", "run_key": "HEAL-33505", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:14.204486+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "-- Step 8: Processing active issues in parallel -----------"}
+{"ts": "2026-05-19T01:58:14.204486+00:00", "run_key": "HEAL-33505", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:14.206530+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "  Batch 1: Processing 1 issue(s)..."}
+{"ts": "2026-05-19T01:58:14.207044+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "    > HEAL-33505"}
+{"ts": "2026-05-19T01:58:15.579877+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "    [OK] HEAL-33505 completed"}
+{"ts": "2026-05-19T01:58:15.581390+00:00", "run_key": "HEAL-33505", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:15.582895+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "  Step 8 complete: 1 succeeded, 0 failed out of 1 issues"}
+{"ts": "2026-05-19T01:58:15.593742+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "-- exit code 0 --"}
+{"ts": "2026-05-19T01:58:15.595249+00:00", "run_key": "HEAL-33505", "kind": "line", "text": "Done: HEAL-33505"}
+{"ts": "2026-05-19T01:58:15.595249+00:00", "run_key": "HEAL-33505", "kind": "done", "text": ""}

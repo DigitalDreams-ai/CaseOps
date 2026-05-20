@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AVA_SFCLOUD__Calculate_Tax__c</fullName>
+    <defaultValue>false</defaultValue>
+    <deprecated>false</deprecated>
+    <description>Triggers AvaTax to show the calculated tax.</description>
+    <inlineHelpText>Triggers AvaTax to show the calculated tax.</inlineHelpText>
+    <label>Calculate Tax</label>
+    <trackHistory>false</trackHistory>
+    <type>Checkbox</type>
+</CustomField>

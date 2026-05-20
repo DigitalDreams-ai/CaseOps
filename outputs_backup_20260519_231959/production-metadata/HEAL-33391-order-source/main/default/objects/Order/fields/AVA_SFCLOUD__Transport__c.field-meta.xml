@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AVA_SFCLOUD__Transport__c</fullName>
+    <deprecated>false</deprecated>
+    <inlineHelpText>This specifies who is responsible for transport of the goods on the transaction</inlineHelpText>
+    <label>Transport</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetName>AVA_SFCLOUD__Avalara_Transport</valueSetName>
+    </valueSet>
+</CustomField>

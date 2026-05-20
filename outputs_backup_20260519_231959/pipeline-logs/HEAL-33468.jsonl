@@ -1,0 +1,37 @@
+{"ts": "2026-05-18T22:22:02.362203+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "-- Step 1: Syncing from Jira ------------------------------"}
+{"ts": "2026-05-18T22:22:02.515186+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "Connecting to https://10xhealthsystem.atlassian.net..."}
+{"ts": "2026-05-18T22:22:02.516696+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "JQL: assignee = \"sbingham@10xhealthsystem.com\" AND statusCategory != Done ORDER BY created ASC"}
+{"ts": "2026-05-18T22:22:03.404132+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "Found 1 issue(s). Syncing..."}
+{"ts": "2026-05-18T22:22:03.405153+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "[1/1] HEAL-33468 - fetching..."}
+{"ts": "2026-05-18T22:22:03.697169+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "[1/1] HEAL-33468 - Resolved: Wellvi Submission error"}
+{"ts": "2026-05-18T22:22:03.698680+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "[1/1] HEAL-33468 - fetching comments, changelog, worklogs..."}
+{"ts": "2026-05-18T22:22:05.027709+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "[1/1] HEAL-33468 - downloading attachments..."}
+{"ts": "2026-05-18T22:22:05.028212+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "[1/1] HEAL-33468 - fetching forms..."}
+{"ts": "2026-05-18T22:22:08.146403+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "[1/1] HEAL-33468 - written (2 comments, 0 attachments, 1 forms)"}
+{"ts": "2026-05-18T22:22:08.150529+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "Synced 1 issue(s) into C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira"}
+{"ts": "2026-05-18T22:22:08.188225+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "Manifest merged: 44 total issue(s)."}
+{"ts": "2026-05-18T22:22:08.189743+00:00", "run_key": "HEAL-33468", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:22:08.189743+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "-- Step 2: Triaging issues --------------------------------"}
+{"ts": "2026-05-18T22:22:08.197856+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "  Total synced:             1"}
+{"ts": "2026-05-18T22:22:08.199945+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "  Closed / Resolved / Canceled: 1"}
+{"ts": "2026-05-18T22:22:08.199945+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "  Escalated to Engineering: 0"}
+{"ts": "2026-05-18T22:22:08.202746+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "  Active (needs processing): 0"}
+{"ts": "2026-05-18T22:22:08.203255+00:00", "run_key": "HEAL-33468", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:22:08.204771+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "-- Step 3: Archiving Closed / Resolved / Canceled --------"}
+{"ts": "2026-05-18T22:22:08.213331+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "  HEAL-33468  ->  outputs\\closed-resolved\\HEAL-33468.md"}
+{"ts": "2026-05-18T22:22:08.214333+00:00", "run_key": "HEAL-33468", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:22:08.214836+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "-- Step 4: Archiving pre-escalated issues ------------------"}
+{"ts": "2026-05-18T22:22:08.216356+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-18T22:22:08.216356+00:00", "run_key": "HEAL-33468", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:22:08.217872+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "-- Step 5: Scaffolding investigation records ---------------"}
+{"ts": "2026-05-18T22:22:08.217872+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-18T22:22:08.217872+00:00", "run_key": "HEAL-33468", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:22:08.220185+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "-- Step 6: Updating dated summary --------------------------"}
+{"ts": "2026-05-18T22:22:08.222226+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "  outputs\\issue-summary-2026-05-18.md"}
+{"ts": "2026-05-18T22:22:08.222738+00:00", "run_key": "HEAL-33468", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:22:08.224259+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "-- Step 7: Handoff to AI reasoning ------------------------"}
+{"ts": "2026-05-18T22:22:08.225280+00:00", "run_key": "HEAL-33468", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:22:08.225280+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "  No active issues to process."}
+{"ts": "2026-05-18T22:22:08.229805+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "-- exit code 0 --"}
+{"ts": "2026-05-18T22:22:08.229805+00:00", "run_key": "HEAL-33468", "kind": "line", "text": "Done: HEAL-33468"}
+{"ts": "2026-05-18T22:22:08.231854+00:00", "run_key": "HEAL-33468", "kind": "done", "text": ""}

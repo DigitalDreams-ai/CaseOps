@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>Opportunity.Main_Practitioner__c</members>
+        <members>Opportunity.Patient_Billing_State_Filter__c</members>
+        <name>CustomField</name>
+    </types>
+    <types>
+        <members>Opportunity_Same_As_On_Account</members>
+        <members>Record_Trigger_Opportunity_Create_Update_Same_As_Account_Billing_Or_Shipping_Add</members>
+        <name>Flow</name>
+    </types>
+    <types>
+        <members>Mya_s_Reports/Avg_Days_to_Scheduled_Clarity_Calls</members>
+        <members>Mya_s_Reports/Avg_Days_to_Scheduled_NEW</members>
+        <members>Mya_s_Reports/Avg_Days_to_Scheduled_PepEx</members>
+        <name>Report</name>
+    </types>
+    <version>66.0</version>
+</Package>

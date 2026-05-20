@@ -1,0 +1,274 @@
+{"ts": "2026-05-15T19:23:01.524415+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 1: Syncing from Jira ------------------------------"}
+{"ts": "2026-05-15T19:23:01.706593+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Connecting to https://10xhealthsystem.atlassian.net..."}
+{"ts": "2026-05-15T19:23:01.707096+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "JQL: assignee = \"sbingham@10xhealthsystem.com\" AND statusCategory != Done ORDER BY created ASC"}
+{"ts": "2026-05-15T19:23:02.631424+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Found 1 issue(s). Syncing..."}
+{"ts": "2026-05-15T19:23:02.631424+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - fetching..."}
+{"ts": "2026-05-15T19:23:03.153884+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - Waiting for support: Shipping Address Mismatch - Shopify vs Salesforce"}
+{"ts": "2026-05-15T19:23:03.153884+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - fetching comments, changelog, worklogs..."}
+{"ts": "2026-05-15T19:23:04.531594+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - downloading attachments..."}
+{"ts": "2026-05-15T19:23:04.533108+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - fetching forms..."}
+{"ts": "2026-05-15T19:23:08.889919+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - written (5 comments, 0 attachments, 1 forms)"}
+{"ts": "2026-05-15T19:23:08.892951+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Synced 1 issue(s) into C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira"}
+{"ts": "2026-05-15T19:23:08.931472+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Manifest merged: 44 total issue(s)."}
+{"ts": "2026-05-15T19:23:08.932984+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-15T19:23:08.932984+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 2: Triaging issues --------------------------------"}
+{"ts": "2026-05-15T19:23:08.942037+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Total synced:             1"}
+{"ts": "2026-05-15T19:23:08.943552+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Closed / Resolved / Canceled: 0"}
+{"ts": "2026-05-15T19:23:08.945070+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Escalated to Engineering: 0"}
+{"ts": "2026-05-15T19:23:08.946589+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Active (needs processing): 1"}
+{"ts": "2026-05-15T19:23:08.946589+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-15T19:23:08.948106+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 3: Archiving Closed / Resolved / Canceled --------"}
+{"ts": "2026-05-15T19:23:08.948106+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-15T19:23:08.950339+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-15T19:23:08.950850+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 4: Archiving pre-escalated issues ------------------"}
+{"ts": "2026-05-15T19:23:08.952385+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-15T19:23:08.952385+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-15T19:23:08.953904+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 5: Scaffolding investigation records ---------------"}
+{"ts": "2026-05-15T19:23:08.958441+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  [created] HEAL-33647  ->  outputs\\investigations\\HEAL-33647.md"}
+{"ts": "2026-05-15T19:23:08.959443+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-15T19:23:08.959946+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 6: Updating dated summary --------------------------"}
+{"ts": "2026-05-15T19:23:08.974417+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  outputs\\issue-summary-2026-05-15.md"}
+{"ts": "2026-05-15T19:23:08.974417+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-15T19:23:08.975937+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 7: Handoff to AI reasoning ------------------------"}
+{"ts": "2026-05-15T19:23:08.977843+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-15T19:23:08.977843+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  1 active issue(s) ready for processing:"}
+{"ts": "2026-05-15T19:23:08.979898+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-15T19:23:08.980409+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "    HEAL-33647  Waiting for support"}
+{"ts": "2026-05-15T19:23:08.981928+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "      Shipping Address Mismatch - Shopify vs Salesforce"}
+{"ts": "2026-05-15T19:23:08.981928+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-15T19:23:08.983637+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Ask your AI agent:"}
+{"ts": "2026-05-15T19:23:08.983637+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  \"Process my active Jira issues through the fix pipeline.\""}
+{"ts": "2026-05-15T19:23:08.985177+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-15T19:23:08.986701+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  The jira-salesforce-fix-pipeline skill will handle diagnosis,"}
+{"ts": "2026-05-15T19:23:08.988224+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  escalation gate, implementation, deploy/test, and response drafting."}
+{"ts": "2026-05-15T19:23:08.999947+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- exit code 0 --"}
+{"ts": "2026-05-15T19:23:09.002983+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Handing off to Claude --"}
+{"ts": "2026-05-15T19:23:09.008569+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "CaseOps LLM: Claude Code CLI (CASEOPS_LLM_AUTH=claude_code; ANTHROPIC_API_KEY omitted)."}
+{"ts": "2026-05-15T19:23:31.312850+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Reading the CaseOps fix pipeline playbook for HEAL-33647."}
+{"ts": "2026-05-15T19:23:31.530404+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:23:31.730844+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:23:42.311906+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Let me check the current state of this issue by reading the existing investigation and summary files."}
+{"ts": "2026-05-15T19:23:42.761436+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:23:42.949540+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira\\summary\\HEA"}
+{"ts": "2026-05-15T19:23:51.170093+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Checking the manifest to confirm current status of HEAL-33647."}
+{"ts": "2026-05-15T19:23:51.768405+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira\\manifest.cs"}
+{"ts": "2026-05-15T19:24:00.093095+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Now I'll read the sub-agent prompts to execute Step 3 (analyze the issue)."}
+{"ts": "2026-05-15T19:24:00.427603+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:24:08.746124+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Spawning Step 3 sub-agent to analyze HEAL-33647."}
+{"ts": "2026-05-15T19:24:10.603204+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Agent]"}
+{"ts": "2026-05-15T19:24:12.240372+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira\\summary\\HEA"}
+{"ts": "2026-05-15T19:24:12.482951+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:24:36.682653+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Write] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:24:38.394114+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Bash] Test-Path \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\inves"}
+{"ts": "2026-05-15T19:24:52.374921+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[PowerShell] Test-Path \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\inves"}
+{"ts": "2026-05-15T19:25:14.234014+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Write] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:25:16.125140+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[PowerShell] Test-Path \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\inves"}
+{"ts": "2026-05-15T19:25:21.618681+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:25:30.053387+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:25:36.098748+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:25:44.519457+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:25:52.046637+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:25:58.698146+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:26:04.058076+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:26:12.804391+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:26:22.160898+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:26:28.105921+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:26:36.110881+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:26:51.798628+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Step 3 complete. Now proceeding to Step 4 — determining the Salesforce problem and solution. Let me read the raw issue data for more context."}
+{"ts": "2026-05-15T19:26:51.948048+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira\\raw\\HEAL-33"}
+{"ts": "2026-05-15T19:27:08.093033+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "**Step 4 — Problem Hypothesis & Solution:**"}
+{"ts": "2026-05-15T19:27:08.094553+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "**Hypothesis:** Shopify-Salesforce integration (likely a flow, Apex, or third-party connector) is incorrectly mapping or overwriting the Shipping Address field with Billing Address data during customer sync. Symptom occurs at order sync time, affecting at least this customer — unclear if systemic."}
+{"ts": "2026-05-15T19:27:08.094553+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "**Smallest Viable Fix:** "}
+{"ts": "2026-05-15T19:27:08.096071+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "1. Identify integration type (Apex flow, third-party connector, native API integration)"}
+{"ts": "2026-05-15T19:27:08.097885+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "2. Locate field-mapping logic and fix address assignment"}
+{"ts": "2026-05-15T19:27:08.097885+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "3. Perform RCA query to identify affected customers"}
+{"ts": "2026-05-15T19:27:08.099674+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "4. Correct this customer's shipping address"}
+{"ts": "2026-05-15T19:27:08.099674+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "**Likely Requires:** Engineering (automation/integration logic fix) + possible data correction. Now spawning Step 5 to investigate Production metadata."}
+{"ts": "2026-05-15T19:27:08.952579+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:27:19.235660+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Agent]"}
+{"ts": "2026-05-15T19:27:20.974721+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:27:29.966485+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\.env.jira"}
+{"ts": "2026-05-15T19:27:37.869395+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Grep] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps"}
+{"ts": "2026-05-15T19:27:38.681443+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Grep] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps"}
+{"ts": "2026-05-15T19:27:38.684487+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Glob] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps"}
+{"ts": "2026-05-15T19:27:45.241214+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Bash] find \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\" -type f \\( -name "}
+{"ts": "2026-05-15T19:27:51.047134+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[PowerShell] Get-ChildItem -Path \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\for"}
+{"ts": "2026-05-15T19:27:53.978410+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[PowerShell] Get-ChildItem -Path \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\for"}
+{"ts": "2026-05-15T19:28:00.238779+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\force-app\\main\\default\\c"}
+{"ts": "2026-05-15T19:28:00.699807+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\force-app\\main\\default\\c"}
+{"ts": "2026-05-15T19:28:00.992761+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Grep] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\force-app\\main\\default\\c"}
+{"ts": "2026-05-15T19:28:08.193019+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\force-app\\main\\default\\f"}
+{"ts": "2026-05-15T19:28:16.097948+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Bash] cd \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\" && find . -type f \\"}
+{"ts": "2026-05-15T19:28:24.958031+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\.sfdx\\tools\\soqlMetadata"}
+{"ts": "2026-05-15T19:28:32.679940+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Bash] cd \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\" && grep -i \"Billing"}
+{"ts": "2026-05-15T19:28:38.537027+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[PowerShell] Get-ChildItem -Path \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\for"}
+{"ts": "2026-05-15T19:28:44.733137+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[PowerShell] Get-ChildItem -Path \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\for"}
+{"ts": "2026-05-15T19:28:47.181182+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[PowerShell] Get-ChildItem -Path \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\for"}
+{"ts": "2026-05-15T19:28:52.597076+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[PowerShell] Test-Path \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\force-app\\mai"}
+{"ts": "2026-05-15T19:28:56.689500+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Bash] cd \"C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\" && find . -type f \\"}
+{"ts": "2026-05-15T19:29:08.940629+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\production-metad"}
+{"ts": "2026-05-15T19:29:17.123328+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\production-metad"}
+{"ts": "2026-05-15T19:29:30.723104+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:29:45.122653+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:30:01.639200+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "**Step 5 Complete.** Production metadata shows Salesforce flows are correct — issue is external to Salesforce, in the Shopify connector or custom Apex integration layer."}
+{"ts": "2026-05-15T19:30:01.639715+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "**Step 6 — Engineering Escalation Decision:**"}
+{"ts": "2026-05-15T19:30:01.641269+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "**ESCALATE TO ENGINEERING** ✓"}
+{"ts": "2026-05-15T19:30:01.641269+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Reason: Fix requires debugging/fixing the custom Apex `Patient_Patient` action or external Shopify connector field mappings. This is integration/automation logic outside Support scope. Salesforce-side flows are verified correct."}
+{"ts": "2026-05-15T19:30:01.643026+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Spawning Step 9 sub-agent to draft the Engineering handoff and internal notes."}
+{"ts": "2026-05-15T19:30:02.157530+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:30:12.532724+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:30:22.245590+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Now creating the Engineering handoff file based on Step 5-6 findings."}
+{"ts": "2026-05-15T19:30:34.295933+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Write] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\engineering-esca"}
+{"ts": "2026-05-15T19:30:48.362660+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Agent]"}
+{"ts": "2026-05-15T19:30:50.014862+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Skill]"}
+{"ts": "2026-05-15T19:30:54.269878+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:30:54.502957+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:31:01.799395+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:31:09.161388+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\engineering-esca"}
+{"ts": "2026-05-15T19:31:09.234232+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:31:16.094538+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira\\summary\\HEA"}
+{"ts": "2026-05-15T19:31:28.922533+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Write] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\internal-notes\\H"}
+{"ts": "2026-05-15T19:31:46.206939+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Write] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira-messages\\HE"}
+{"ts": "2026-05-15T19:31:57.729362+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Updating investigation record with findings and escalation decision."}
+{"ts": "2026-05-15T19:31:58.209862+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:32:11.294344+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-15T19:32:15.414436+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Now creating the dated summary (Step 10) using the template."}
+{"ts": "2026-05-15T19:32:15.896642+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:32:31.628211+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Write] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\issue-summary-20"}
+{"ts": "2026-05-15T19:32:33.121586+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Glob]"}
+{"ts": "2026-05-15T19:32:38.398330+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\issue-summary-20"}
+{"ts": "2026-05-15T19:32:46.335190+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\issue-summary-20"}
+{"ts": "2026-05-15T19:32:54.039984+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\issue-summary-20"}
+{"ts": "2026-05-15T19:33:03.286934+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\issue-summary-20"}
+{"ts": "2026-05-15T19:33:07.988151+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Reading the internal notes and Jira message drafts to report completion (Step 11)."}
+{"ts": "2026-05-15T19:33:08.230066+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\internal-notes\\H"}
+{"ts": "2026-05-15T19:33:08.449856+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira-messages\\HE"}
+{"ts": "2026-05-15T19:33:17.144525+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-15T19:33:37.018209+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "---"}
+{"ts": "2026-05-15T19:33:37.019542+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "## **Step 11 — Pipeline Complete**"}
+{"ts": "2026-05-15T19:33:37.021062+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "**HEAL-33647 Execution Summary:**"}
+{"ts": "2026-05-15T19:33:37.021062+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "### Jira Issue"}
+{"ts": "2026-05-15T19:33:37.022751+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Key:** HEAL-33647"}
+{"ts": "2026-05-15T19:33:37.024273+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Summary:** Shipping Address Mismatch - Shopify vs Salesforce"}
+{"ts": "2026-05-15T19:33:37.024273+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Status:** Waiting for support"}
+{"ts": "2026-05-15T19:33:37.025812+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Reporter:** Nathaniel Cooper"}
+{"ts": "2026-05-15T19:33:37.025812+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "### Root Cause"}
+{"ts": "2026-05-15T19:33:37.025812+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "**Shopify-Salesforce integration field mapping error** (external connector or custom Apex). Customer's shipping address was overwritten with billing address during sync. Salesforce flows (`Autolaunch_Account_Sync_To_External_Systems`) verified correct — issue is in external integration layer (custom Apex `Patient_Patient` action or Shopify connector configuration)."}
+{"ts": "2026-05-15T19:33:37.029236+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "### Solution / Escalation Status"}
+{"ts": "2026-05-15T19:33:37.029740+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "**ESCALATED TO ENGINEERING** ✓"}
+{"ts": "2026-05-15T19:33:37.029740+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Reason: Fix requires debugging/fixing custom Apex action or external Shopify connector field mappings. Scope may be systemic (affects multiple customers if bug is in connector)."}
+{"ts": "2026-05-15T19:33:37.031254+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "### Production vs Sandbox"}
+{"ts": "2026-05-15T19:33:37.031254+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "| Aspect | Status |"}
+{"ts": "2026-05-15T19:33:37.032767+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "| --- | --- |"}
+{"ts": "2026-05-15T19:33:37.034287+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "| **What Production has** | Active flows `Record_Trigger_Account_Account_Sync_To_External_Systems` and `Autolaunch_Account_Sync_To_External_Systems` (verified CORRECT). Custom Apex `Patient_Patient` action (unaudited). External Shopify connector active. Account 001Ql00000xapgPIAQ has corrupted address data. |"}
+{"ts": "2026-05-15T19:33:37.034287+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "| **Sandbox-only changes** | None (escalated to Engineering; no Support-owned fix). |"}
+{"ts": "2026-05-15T19:33:37.035824+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "| **Production metadata deploy required?** | **Yes — Gearset** (once Engineering fixes Apex or connector and validates in Sandbox). This pipeline does NOT deploy to Production. |"}
+{"ts": "2026-05-15T19:33:37.035824+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "| **Operator next step** | Hand off to Engineering team. They audit connector/Apex, scope impact, fix, and deploy via Gearset. |"}
+{"ts": "2026-05-15T19:33:37.038089+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "### Files Changed / Artifacts"}
+{"ts": "2026-05-15T19:33:37.038089+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Investigation:** `outputs/investigations/HEAL-33647.md` ✓ (Production metadata, root cause hypothesis, escalation decision)"}
+{"ts": "2026-05-15T19:33:37.039846+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Engineering Handoff:** `outputs/engineering-escalations/HEAL-33647.md` ✓ (reproduction steps, RCA strategy, scope assessment)"}
+{"ts": "2026-05-15T19:33:37.041372+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Internal Notes:** `outputs/internal-notes/HEAL-33647.md` ✓ (Sean's escalation memo)"}
+{"ts": "2026-05-15T19:33:37.041372+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Jira Message Draft:** `outputs/jira-messages/HEAL-33647.md` ✓ (customer-facing + internal sections)"}
+{"ts": "2026-05-15T19:33:37.042890+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Dated Summary:** `outputs/issue-summary-2026-05-15.md` ✓ (updated with HEAL-33647 escalation)"}
+{"ts": "2026-05-15T19:33:37.044419+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "### Tests & Validation"}
+{"ts": "2026-05-15T19:33:37.044419+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Sandbox deployment:** N/A (Engineering escalation)"}
+{"ts": "2026-05-15T19:33:37.045961+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Production verification:** Read-only audit confirmed Salesforce flows correct; root cause external"}
+{"ts": "2026-05-15T19:33:37.046992+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- **Acceptance criteria:** Not applicable (escalated; Engineering will validate)"}
+{"ts": "2026-05-15T19:33:37.046992+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "### Next Steps"}
+{"ts": "2026-05-15T19:33:37.048510+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "1. Engineering reviews handoff in `outputs/engineering-escalations/HEAL-33647.md`"}
+{"ts": "2026-05-15T19:33:37.050029+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "2. Engineering audits Shopify connector field mappings (Zapier, Make, MuleSoft, or native app)"}
+{"ts": "2026-05-15T19:33:37.050029+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "3. Engineering reviews Apex `Patient_Patient` action source code"}
+{"ts": "2026-05-15T19:33:37.051550+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "4. Engineering scopes impact via RCA query (accounts with `TRIG_SHOPIFY_SYNC__c = true`)"}
+{"ts": "2026-05-15T19:33:37.051550+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "5. Once root cause identified, Engineering fixes in Sandbox, tests, and coordinates Gearset deploy to Production"}
+{"ts": "2026-05-15T19:33:37.053393+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "6. Support updates customer (Nathaniel Cooper) via Jira message draft"}
+{"ts": "2026-05-15T19:33:37.054395+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "### Open Risks / Follow-up"}
+{"ts": "2026-05-15T19:33:37.054395+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- Issue may be **systemic** (if connector bug, affects all Shopify-synced accounts)"}
+{"ts": "2026-05-15T19:33:37.055921+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- Scope TBD — Engineering RCA query required"}
+{"ts": "2026-05-15T19:33:37.055921+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "- No Customer corrections made pending Engineering fix"}
+{"ts": "2026-05-15T19:33:37.058510+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "**Pipeline quality checklist:** ✅ All items verified."}
+{"ts": "2026-05-15T19:33:39.751493+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- success --"}
+{"ts": "2026-05-15T19:33:40.057312+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Done: HEAL-33647"}
+{"ts": "2026-05-15T19:33:40.058818+00:00", "run_key": "HEAL-33647", "kind": "done", "text": ""}
+{"ts": "2026-05-15T23:59:52.769395+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 1: Syncing from Jira ------------------------------"}
+{"ts": "2026-05-15T23:59:52.940775+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Connecting to https://10xhealthsystem.atlassian.net..."}
+{"ts": "2026-05-15T23:59:52.940775+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "JQL: assignee = \"sbingham@10xhealthsystem.com\" AND statusCategory != Done ORDER BY created ASC"}
+{"ts": "2026-05-15T23:59:53.912720+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Found 1 issue(s). Syncing..."}
+{"ts": "2026-05-15T23:59:53.912720+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - fetching..."}
+{"ts": "2026-05-15T23:59:54.550765+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - Waiting for customer: Shipping Address Mismatch - Shopify vs Salesforce"}
+{"ts": "2026-05-15T23:59:54.552277+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - fetching comments, changelog, worklogs..."}
+{"ts": "2026-05-15T23:59:56.214877+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - downloading attachments..."}
+{"ts": "2026-05-15T23:59:56.215381+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - fetching forms..."}
+{"ts": "2026-05-16T00:00:01.159171+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - written (8 comments, 0 attachments, 1 forms)"}
+{"ts": "2026-05-16T00:00:01.163732+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Synced 1 issue(s) into C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira"}
+{"ts": "2026-05-16T00:00:01.245272+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Manifest merged: 44 total issue(s)."}
+{"ts": "2026-05-16T00:00:01.246792+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-16T00:00:01.248517+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 2: Triaging issues --------------------------------"}
+{"ts": "2026-05-16T00:00:01.265465+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Total synced:             1"}
+{"ts": "2026-05-16T00:00:01.266987+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Closed / Resolved / Canceled: 0"}
+{"ts": "2026-05-16T00:00:01.268507+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Escalated to Engineering: 0"}
+{"ts": "2026-05-16T00:00:01.268507+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Active (needs processing): 1"}
+{"ts": "2026-05-16T00:00:01.270550+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-16T00:00:01.271060+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 3: Archiving Closed / Resolved / Canceled --------"}
+{"ts": "2026-05-16T00:00:01.272577+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-16T00:00:01.274123+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-16T00:00:01.275676+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 4: Archiving pre-escalated issues ------------------"}
+{"ts": "2026-05-16T00:00:01.276190+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-16T00:00:01.277708+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-16T00:00:01.277708+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 5: Scaffolding investigation records ---------------"}
+{"ts": "2026-05-16T00:00:01.279396+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  [exists ] HEAL-33647  ->  outputs\\investigations\\HEAL-33647.md"}
+{"ts": "2026-05-16T00:00:01.280903+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-16T00:00:01.280903+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 6: Updating dated summary --------------------------"}
+{"ts": "2026-05-16T00:00:01.282417+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  outputs\\issue-summary-2026-05-15.md"}
+{"ts": "2026-05-16T00:00:01.283933+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-16T00:00:01.285439+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 7: Handoff to AI reasoning ------------------------"}
+{"ts": "2026-05-16T00:00:01.286963+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-16T00:00:01.288470+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  1 active issue(s) ready for processing:"}
+{"ts": "2026-05-16T00:00:01.290506+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-16T00:00:01.291018+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "    HEAL-33647  Waiting for customer"}
+{"ts": "2026-05-16T00:00:01.292539+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "      Shipping Address Mismatch - Shopify vs Salesforce"}
+{"ts": "2026-05-16T00:00:01.292539+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-16T00:00:01.295312+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Ask your AI agent:"}
+{"ts": "2026-05-16T00:00:01.296839+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  \"Process my active Jira issues through the fix pipeline.\""}
+{"ts": "2026-05-16T00:00:01.298361+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-16T00:00:01.298361+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  The jira-salesforce-fix-pipeline skill will handle diagnosis,"}
+{"ts": "2026-05-16T00:00:01.300928+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  escalation gate, implementation, deploy/test, and response drafting."}
+{"ts": "2026-05-16T00:00:01.302444+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- exit code 0 --"}
+{"ts": "2026-05-16T00:00:01.305469+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Done: HEAL-33647"}
+{"ts": "2026-05-16T00:00:01.305469+00:00", "run_key": "HEAL-33647", "kind": "done", "text": ""}
+{"ts": "2026-05-19T20:15:36.635439+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 1: Syncing from Jira ------------------------------"}
+{"ts": "2026-05-19T20:15:36.780621+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Connecting to https://10xhealthsystem.atlassian.net..."}
+{"ts": "2026-05-19T20:15:36.780621+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "JQL: assignee = \"sbingham@10xhealthsystem.com\" AND statusCategory != Done ORDER BY created ASC"}
+{"ts": "2026-05-19T20:15:37.732793+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Found 1 issue(s). Syncing..."}
+{"ts": "2026-05-19T20:15:37.734827+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - fetching..."}
+{"ts": "2026-05-19T20:15:38.248987+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - Resolved: Shipping Address Mismatch - Shopify vs Salesforce"}
+{"ts": "2026-05-19T20:15:38.248987+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - fetching comments, changelog, worklogs..."}
+{"ts": "2026-05-19T20:15:39.688674+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - downloading attachments..."}
+{"ts": "2026-05-19T20:15:39.688674+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - fetching forms..."}
+{"ts": "2026-05-19T20:15:44.120373+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "[1/1] HEAL-33647 - written (8 comments, 0 attachments, 1 forms)"}
+{"ts": "2026-05-19T20:15:44.123944+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Synced 1 issue(s) into C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira"}
+{"ts": "2026-05-19T20:15:44.153785+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Manifest merged: 45 total issue(s)."}
+{"ts": "2026-05-19T20:15:44.155289+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-19T20:15:44.155289+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 2: Triaging issues --------------------------------"}
+{"ts": "2026-05-19T20:15:44.165399+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Total synced:             1"}
+{"ts": "2026-05-19T20:15:44.166412+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Closed / Resolved / Canceled: 1"}
+{"ts": "2026-05-19T20:15:44.167435+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Escalated to Engineering: 0"}
+{"ts": "2026-05-19T20:15:44.167946+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  Active (needs processing): 0"}
+{"ts": "2026-05-19T20:15:44.167946+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-19T20:15:44.169460+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 3: Archiving Closed / Resolved / Canceled --------"}
+{"ts": "2026-05-19T20:15:44.184961+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  HEAL-33647  ->  outputs\\closed-resolved\\HEAL-33647.md"}
+{"ts": "2026-05-19T20:15:44.185464+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-19T20:15:44.186466+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 4: Archiving pre-escalated issues ------------------"}
+{"ts": "2026-05-19T20:15:44.187482+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-19T20:15:44.187994+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-19T20:15:44.189509+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 5: Scaffolding investigation records ---------------"}
+{"ts": "2026-05-19T20:15:44.190531+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-19T20:15:44.190531+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-19T20:15:44.192042+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 6: Updating dated summary --------------------------"}
+{"ts": "2026-05-19T20:15:44.192042+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  outputs\\issue-summary-2026-05-19.md"}
+{"ts": "2026-05-19T20:15:44.193554+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-19T20:15:44.195235+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- Step 7: Handoff to AI reasoning ------------------------"}
+{"ts": "2026-05-19T20:15:44.195235+00:00", "run_key": "HEAL-33647", "kind": "line", "text": ""}
+{"ts": "2026-05-19T20:15:44.196724+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "  No active issues to process."}
+{"ts": "2026-05-19T20:15:44.200297+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "-- exit code 0 --"}
+{"ts": "2026-05-19T20:15:44.201811+00:00", "run_key": "HEAL-33647", "kind": "line", "text": "Done: HEAL-33647"}
+{"ts": "2026-05-19T20:15:44.201811+00:00", "run_key": "HEAL-33647", "kind": "done", "text": ""}

@@ -1,0 +1,215 @@
+{"ts": "2026-05-18T16:43:57.185017+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 1: Syncing from Jira ------------------------------"}
+{"ts": "2026-05-18T16:43:57.383884+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Connecting to https://10xhealthsystem.atlassian.net..."}
+{"ts": "2026-05-18T16:43:57.385389+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "JQL: assignee = \"sbingham@10xhealthsystem.com\" AND statusCategory != Done ORDER BY created ASC"}
+{"ts": "2026-05-18T16:43:58.324620+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Found 1 issue(s). Syncing..."}
+{"ts": "2026-05-18T16:43:58.325124+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - fetching..."}
+{"ts": "2026-05-18T16:43:58.794731+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - In Progress: Salesforce- Lab Order error (J. O'Connell)"}
+{"ts": "2026-05-18T16:43:58.795235+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - fetching comments, changelog, worklogs..."}
+{"ts": "2026-05-18T16:44:00.205262+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - downloading attachments..."}
+{"ts": "2026-05-18T16:44:01.989225+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - fetching forms..."}
+{"ts": "2026-05-18T16:44:05.460915+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - written (3 comments, 2 attachments, 1 forms)"}
+{"ts": "2026-05-18T16:44:05.463446+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Synced 1 issue(s) into C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira"}
+{"ts": "2026-05-18T16:44:05.497941+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Manifest merged: 44 total issue(s)."}
+{"ts": "2026-05-18T16:44:05.499360+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T16:44:05.499360+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 2: Triaging issues --------------------------------"}
+{"ts": "2026-05-18T16:44:05.512100+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Total synced:             1"}
+{"ts": "2026-05-18T16:44:05.513621+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Closed / Resolved / Canceled: 0"}
+{"ts": "2026-05-18T16:44:05.514625+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Escalated to Engineering: 0"}
+{"ts": "2026-05-18T16:44:05.515129+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Active (needs processing): 1"}
+{"ts": "2026-05-18T16:44:05.516639+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T16:44:05.517153+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 3: Archiving Closed / Resolved / Canceled --------"}
+{"ts": "2026-05-18T16:44:05.517750+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-18T16:44:05.519271+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T16:44:05.519271+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 4: Archiving pre-escalated issues ------------------"}
+{"ts": "2026-05-18T16:44:05.520805+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-18T16:44:05.522322+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T16:44:05.522322+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 5: Scaffolding investigation records ---------------"}
+{"ts": "2026-05-18T16:44:05.523834+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  [exists ] HEAL-33616  ->  outputs\\investigations\\HEAL-33616.md"}
+{"ts": "2026-05-18T16:44:05.524837+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T16:44:05.525340+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 6: Updating dated summary --------------------------"}
+{"ts": "2026-05-18T16:44:05.525340+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  outputs\\issue-summary-2026-05-18.md"}
+{"ts": "2026-05-18T16:44:05.527876+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T16:44:05.527876+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 7: Handoff to AI reasoning ------------------------"}
+{"ts": "2026-05-18T16:44:05.529387+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T16:44:05.529387+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  1 active issue(s) ready for processing:"}
+{"ts": "2026-05-18T16:44:05.530906+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T16:44:05.532424+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "    HEAL-33616  In Progress"}
+{"ts": "2026-05-18T16:44:05.532424+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "      Salesforce- Lab Order error (J. O'Connell)"}
+{"ts": "2026-05-18T16:44:05.534028+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T16:44:05.535077+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 8: Processing active issues in parallel -----------"}
+{"ts": "2026-05-18T16:44:05.535077+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T16:44:05.536631+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Batch 1: Processing 1 issue(s)..."}
+{"ts": "2026-05-18T16:44:05.537668+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "    > HEAL-33616"}
+{"ts": "2026-05-18T16:44:07.933892+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "    [OK] HEAL-33616 completed"}
+{"ts": "2026-05-18T16:44:07.935400+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T16:44:07.936911+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Step 8 complete: 1 succeeded, 0 failed out of 1 issues"}
+{"ts": "2026-05-18T16:44:07.958511+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- exit code 0 --"}
+{"ts": "2026-05-18T16:44:07.960536+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Handing off to Claude --"}
+{"ts": "2026-05-18T16:44:07.967715+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "CaseOps LLM: Claude Code CLI (CASEOPS_LLM_AUTH=claude_code; ANTHROPIC_API_KEY omitted)."}
+{"ts": "2026-05-18T16:44:35.547974+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Reading playbook and workflow to execute HEAL-33616 pipeline."}
+{"ts": "2026-05-18T16:44:35.757967+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-18T16:44:35.967856+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-18T16:44:36.384902+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira\\summary\\HEA"}
+{"ts": "2026-05-18T16:44:36.492282+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-18T16:44:51.777140+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Reading existing outputs for HEAL-33616 to check completion status."}
+{"ts": "2026-05-18T16:44:52.069133+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\internal-notes\\H"}
+{"ts": "2026-05-18T16:44:52.482328+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira-messages\\HE"}
+{"ts": "2026-05-18T16:44:52.494478+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Glob]"}
+{"ts": "2026-05-18T16:45:04.065864+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Issue already in escalation flow. Creating Engineering handoff file per workflow Step 6, then update dated summary. Let me check the handoff template first."}
+{"ts": "2026-05-18T16:45:04.717262+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-18T16:45:04.921283+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira\\attachments"}
+{"ts": "2026-05-18T16:45:11.252343+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Glob]"}
+{"ts": "2026-05-18T16:45:16.219900+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Reading error screenshots to extract exact error messages for Engineering handoff."}
+{"ts": "2026-05-18T16:45:16.462239+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira\\attachments"}
+{"ts": "2026-05-18T16:45:16.754356+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira\\attachments"}
+{"ts": "2026-05-18T16:45:27.497238+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Critical finding: Error is not about height/weight — it's **\"Please insert a category or a product!\"** (error code 400). Both records show identical error. This narrows root cause significantly."}
+{"ts": "2026-05-18T16:45:27.499277+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Creating Engineering handoff with exact error, then dated summary."}
+{"ts": "2026-05-18T16:45:48.368826+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Write] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\engineering-esca"}
+{"ts": "2026-05-18T16:45:53.533635+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Glob]"}
+{"ts": "2026-05-18T16:45:58.809337+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\issue-summary-20"}
+{"ts": "2026-05-18T16:45:59.075464+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-18T16:46:08.213998+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Updating dated summary to add HEAL-33616 escalation."}
+{"ts": "2026-05-18T16:46:09.933386+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\issue-summary-20"}
+{"ts": "2026-05-18T16:46:13.213393+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\issue-summary-20"}
+{"ts": "2026-05-18T16:46:18.061213+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\issue-summary-20"}
+{"ts": "2026-05-18T16:46:28.787364+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-18T16:46:40.403544+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\investigations\\H"}
+{"ts": "2026-05-18T16:46:48.140945+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira-messages\\HE"}
+{"ts": "2026-05-18T16:47:00.072595+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Edit] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\internal-notes\\H"}
+{"ts": "2026-05-18T16:47:05.665856+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[Read] C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\skills\\jira-salesforce-f"}
+{"ts": "2026-05-18T16:47:34.148344+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "**Step 11: Report status**"}
+{"ts": "2026-05-18T16:47:34.148344+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "---"}
+{"ts": "2026-05-18T16:47:34.149849+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "## HEAL-33616 — Lab Order Update Error"}
+{"ts": "2026-05-18T16:47:34.149849+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "**Issue:** Salesforce- Lab Order error (J. O'Connell)  "}
+{"ts": "2026-05-18T16:47:34.151360+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "**Status:** Escalated to Engineering"}
+{"ts": "2026-05-18T16:47:34.152363+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "### Root Cause (Confirmed)"}
+{"ts": "2026-05-18T16:47:34.152867+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Error message: **\"Please insert a category or a product!\"** (error code 400)"}
+{"ts": "2026-05-18T16:47:34.154380+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "The \"Update Order\" feature on `Lab_Order__c` is failing because required `Category` or `Product` fields are missing or not being passed to the external lab API. **This is NOT a height/weight validation issue** — the user's original symptom (attempting to update height/weight) is actually a secondary detail. The core problem is the order submission requires category/product data that the two affected records appear to lack."}
+{"ts": "2026-05-18T16:47:34.154380+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "### Affected Records"}
+{"ts": "2026-05-18T16:47:34.155892+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "- `a47Ql000000O2NFIA0` — J. O'Connell Lab Order (primary, 2026-05-13)"}
+{"ts": "2026-05-18T16:47:34.157404+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "- `a47Ql000000M5gzIAC` — Second Lab Order (2026-05-14)  "}
+{"ts": "2026-05-18T16:47:34.157404+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Both records preserved in error state; not re-submitted."}
+{"ts": "2026-05-18T16:47:34.158917+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "### Solution"}
+{"ts": "2026-05-18T16:47:34.159961+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Engineering must:"}
+{"ts": "2026-05-18T16:47:34.159961+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "1. Inspect the affected records to confirm whether `Category__c` and `Product__c` are null or empty."}
+{"ts": "2026-05-18T16:47:34.161473+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "2. Review the \"Update Order\" Flow/Apex code to identify whether it's missing validation, auto-population logic, or correct field mapping to the external API."}
+{"ts": "2026-05-18T16:47:34.162979+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "3. Implement fix in Sandbox (data correction vs. code/Flow fix depends on root cause analysis)."}
+{"ts": "2026-05-18T16:47:34.162979+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "4. Validate on equivalent test records in Sandbox before promoting to Production."}
+{"ts": "2026-05-18T16:47:34.164492+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "### Production vs Sandbox"}
+{"ts": "2026-05-18T16:47:34.164492+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "| Question | Answer |"}
+{"ts": "2026-05-18T16:47:34.166008+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "|---|---|"}
+{"ts": "2026-05-18T16:47:34.166008+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "| **What exists in Production?** | \"Update Order\" feature actively throwing this error on two Lab Order records. Automation (Flow/Apex) is deployed and live. |"}
+{"ts": "2026-05-18T16:47:34.167527+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "| **What is Sandbox-only?** | No changes made yet. Engineering will implement fix in Sandbox for testing. |"}
+{"ts": "2026-05-18T16:47:34.169049+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "| **Production deploy required?** | **Yes — via Gearset** (anticipated) if code/Flow fix is needed. If only data correction, apply directly in Production after Engineering confirms approach. |"}
+{"ts": "2026-05-18T16:47:34.169049+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "### Artifacts"}
+{"ts": "2026-05-18T16:47:34.170585+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "- **Engineering handoff:** `outputs/engineering-escalations/HEAL-33616.md` (problem, reproduction, potential fixes, evidence)"}
+{"ts": "2026-05-18T16:47:34.172102+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "- **Investigation:** `outputs/investigations/HEAL-33616.md` (confirmed root cause, affected metadata)"}
+{"ts": "2026-05-18T16:47:34.172102+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "- **Internal notes:** `outputs/internal-notes/HEAL-33616.md` (escalation tracking)"}
+{"ts": "2026-05-18T16:47:34.173614+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "- **Jira message draft:** `outputs/jira-messages/HEAL-33616.md` (ready to post to Jennifer Lara Ramirez)"}
+{"ts": "2026-05-18T16:47:34.173614+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "- **Jira summary:** `outputs/jira/summary/HEAL-33616.md`"}
+{"ts": "2026-05-18T16:47:34.175130+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "- **Dated summary:** `outputs/issue-summary-2026-05-18.md` (today's rollup)"}
+{"ts": "2026-05-18T16:47:34.175130+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "### Next Steps"}
+{"ts": "2026-05-18T16:47:34.176643+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "1. **Immediate:** Share Engineering handoff with Engineering team — they own the code-level investigation and fix."}
+{"ts": "2026-05-18T16:47:34.178150+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "2. **Engineering:** Review the exact error screenshots and trace category/product handling in Update Order Flow/Apex."}
+{"ts": "2026-05-18T16:47:34.178150+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "3. **Operator (after Engineering fix):** Deploy corrected Flow/Apex to Production via Gearset, or apply data correction if approved."}
+{"ts": "2026-05-18T16:47:34.179657+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "4. **Verification:** Jennifer Lara Ramirez tests both affected records after fix is in Production. Re-submit the orders to confirm resolution."}
+{"ts": "2026-05-18T16:47:34.179657+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "**Jira message is ready:** `outputs/jira-messages/HEAL-33616.md` — post when Engineering handoff is given to team."}
+{"ts": "2026-05-18T16:47:36.678310+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- success --"}
+{"ts": "2026-05-18T16:47:36.969867+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Done: HEAL-33616"}
+{"ts": "2026-05-18T16:47:36.969867+00:00", "run_key": "HEAL-33616", "kind": "done", "text": ""}
+{"ts": "2026-05-18T22:12:48.953082+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 1: Syncing from Jira ------------------------------"}
+{"ts": "2026-05-18T22:12:49.107930+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Connecting to https://10xhealthsystem.atlassian.net..."}
+{"ts": "2026-05-18T22:12:49.113379+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "JQL: assignee = \"sbingham@10xhealthsystem.com\" AND statusCategory != Done ORDER BY created ASC"}
+{"ts": "2026-05-18T22:12:50.024616+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Found 1 issue(s). Syncing..."}
+{"ts": "2026-05-18T22:12:50.026130+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - fetching..."}
+{"ts": "2026-05-18T22:12:50.310834+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - In Progress: Salesforce- Lab Order error (J. O'Connell)"}
+{"ts": "2026-05-18T22:12:50.312344+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - fetching comments, changelog, worklogs..."}
+{"ts": "2026-05-18T22:12:51.729697+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - downloading attachments..."}
+{"ts": "2026-05-18T22:12:53.472726+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - fetching forms..."}
+{"ts": "2026-05-18T22:12:57.724606+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - written (3 comments, 2 attachments, 1 forms)"}
+{"ts": "2026-05-18T22:12:57.727802+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Synced 1 issue(s) into C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira"}
+{"ts": "2026-05-18T22:12:57.757515+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Manifest merged: 44 total issue(s)."}
+{"ts": "2026-05-18T22:12:57.760270+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:12:57.760774+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 2: Triaging issues --------------------------------"}
+{"ts": "2026-05-18T22:12:57.777574+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Total synced:             1"}
+{"ts": "2026-05-18T22:12:57.782624+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Closed / Resolved / Canceled: 0"}
+{"ts": "2026-05-18T22:12:57.783142+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Escalated to Engineering: 0"}
+{"ts": "2026-05-18T22:12:57.784659+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Active (needs processing): 1"}
+{"ts": "2026-05-18T22:12:57.784659+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:12:57.786184+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 3: Archiving Closed / Resolved / Canceled --------"}
+{"ts": "2026-05-18T22:12:57.787697+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-18T22:12:57.789313+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:12:57.790315+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 4: Archiving pre-escalated issues ------------------"}
+{"ts": "2026-05-18T22:12:57.790818+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-18T22:12:57.792335+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:12:57.792335+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 5: Scaffolding investigation records ---------------"}
+{"ts": "2026-05-18T22:12:57.792335+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  [exists ] HEAL-33616  ->  outputs\\investigations\\HEAL-33616.md"}
+{"ts": "2026-05-18T22:12:57.794768+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:12:57.796295+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 6: Updating dated summary --------------------------"}
+{"ts": "2026-05-18T22:12:57.796295+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  outputs\\issue-summary-2026-05-18.md"}
+{"ts": "2026-05-18T22:12:57.797824+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:12:57.812503+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 7: Handoff to AI reasoning ------------------------"}
+{"ts": "2026-05-18T22:12:57.814018+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:12:57.815044+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  1 active issue(s) ready for processing:"}
+{"ts": "2026-05-18T22:12:57.815044+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:12:57.816550+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "    HEAL-33616  In Progress"}
+{"ts": "2026-05-18T22:12:57.816550+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "      Salesforce- Lab Order error (J. O'Connell)"}
+{"ts": "2026-05-18T22:12:57.819497+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:12:57.820516+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 8: Processing active issues in parallel -----------"}
+{"ts": "2026-05-18T22:12:57.820516+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:12:57.822028+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Batch 1: Processing 1 issue(s)..."}
+{"ts": "2026-05-18T22:12:57.823052+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "    > HEAL-33616"}
+{"ts": "2026-05-18T22:12:59.902823+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "    [OK] HEAL-33616 completed"}
+{"ts": "2026-05-18T22:12:59.903333+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-18T22:12:59.904837+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Step 8 complete: 1 succeeded, 0 failed out of 1 issues"}
+{"ts": "2026-05-18T22:12:59.918190+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- exit code 0 --"}
+{"ts": "2026-05-18T22:12:59.919216+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Done: HEAL-33616"}
+{"ts": "2026-05-18T22:12:59.920727+00:00", "run_key": "HEAL-33616", "kind": "done", "text": ""}
+{"ts": "2026-05-19T01:58:13.844363+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 1: Syncing from Jira ------------------------------"}
+{"ts": "2026-05-19T01:58:14.001510+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Connecting to https://10xhealthsystem.atlassian.net..."}
+{"ts": "2026-05-19T01:58:14.003015+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "JQL: assignee = \"sbingham@10xhealthsystem.com\" AND statusCategory != Done ORDER BY created ASC"}
+{"ts": "2026-05-19T01:58:14.898120+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Found 1 issue(s). Syncing..."}
+{"ts": "2026-05-19T01:58:14.898120+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - fetching..."}
+{"ts": "2026-05-19T01:58:15.204829+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - In Progress: Salesforce- Lab Order error (J. O'Connell)"}
+{"ts": "2026-05-19T01:58:15.205342+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - fetching comments, changelog, worklogs..."}
+{"ts": "2026-05-19T01:58:15.988593+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - downloading attachments..."}
+{"ts": "2026-05-19T01:58:17.625290+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - fetching forms..."}
+{"ts": "2026-05-19T01:58:20.476632+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "[1/1] HEAL-33616 - written (3 comments, 2 attachments, 1 forms)"}
+{"ts": "2026-05-19T01:58:20.479696+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Synced 1 issue(s) into C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira"}
+{"ts": "2026-05-19T01:58:20.509742+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Manifest merged: 45 total issue(s)."}
+{"ts": "2026-05-19T01:58:20.511264+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:20.512266+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 2: Triaging issues --------------------------------"}
+{"ts": "2026-05-19T01:58:20.522973+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Total synced:             1"}
+{"ts": "2026-05-19T01:58:20.522973+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Closed / Resolved / Canceled: 0"}
+{"ts": "2026-05-19T01:58:20.524486+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Escalated to Engineering: 0"}
+{"ts": "2026-05-19T01:58:20.524486+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Active (needs processing): 1"}
+{"ts": "2026-05-19T01:58:20.526516+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:20.527026+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 3: Archiving Closed / Resolved / Canceled --------"}
+{"ts": "2026-05-19T01:58:20.528543+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-19T01:58:20.530050+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:20.530050+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 4: Archiving pre-escalated issues ------------------"}
+{"ts": "2026-05-19T01:58:20.531573+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-19T01:58:20.533079+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:20.533079+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 5: Scaffolding investigation records ---------------"}
+{"ts": "2026-05-19T01:58:20.534589+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  [exists ] HEAL-33616  ->  outputs\\investigations\\HEAL-33616.md"}
+{"ts": "2026-05-19T01:58:20.536114+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:20.536630+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 6: Updating dated summary --------------------------"}
+{"ts": "2026-05-19T01:58:20.537147+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  outputs\\issue-summary-2026-05-18.md"}
+{"ts": "2026-05-19T01:58:20.538661+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:20.540180+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 7: Handoff to AI reasoning ------------------------"}
+{"ts": "2026-05-19T01:58:20.540180+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:20.541695+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  1 active issue(s) ready for processing:"}
+{"ts": "2026-05-19T01:58:20.542739+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:20.542739+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "    HEAL-33616  In Progress"}
+{"ts": "2026-05-19T01:58:20.544769+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "      Salesforce- Lab Order error (J. O'Connell)"}
+{"ts": "2026-05-19T01:58:20.545461+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:20.546464+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- Step 8: Processing active issues in parallel -----------"}
+{"ts": "2026-05-19T01:58:20.547488+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:20.547993+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Batch 1: Processing 1 issue(s)..."}
+{"ts": "2026-05-19T01:58:20.549505+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "    > HEAL-33616"}
+{"ts": "2026-05-19T01:58:21.988367+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "    [OK] HEAL-33616 completed"}
+{"ts": "2026-05-19T01:58:21.989881+00:00", "run_key": "HEAL-33616", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:21.992416+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "  Step 8 complete: 1 succeeded, 0 failed out of 1 issues"}
+{"ts": "2026-05-19T01:58:22.009743+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "-- exit code 0 --"}
+{"ts": "2026-05-19T01:58:22.012261+00:00", "run_key": "HEAL-33616", "kind": "line", "text": "Done: HEAL-33616"}
+{"ts": "2026-05-19T01:58:22.012765+00:00", "run_key": "HEAL-33616", "kind": "done", "text": ""}

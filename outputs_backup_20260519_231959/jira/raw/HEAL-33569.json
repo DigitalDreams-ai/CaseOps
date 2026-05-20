@@ -1,0 +1,4397 @@
+{
+  "issue": {
+    "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations,customfield_10010.requestTypePractice",
+    "id": "77001",
+    "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/77001",
+    "key": "HEAL-33569",
+    "fields": {
+      "summary": "SF - Access to Generate Supplement Order",
+      "created": "2026-05-11T16:04:28.059-0400",
+      "customfield_10194": null,
+      "customfield_10195": null,
+      "description": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hi Sean,"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Could you please grant me access to the Generate Supplement Order inside Opportunities? I can see and click the generate button, but it doesn't let me proceed, and I’m encountering an error. I’ve attached the screenshot of the error and also the button that I need access to for reference. This request has been approved by Danielle. Thank you!"
+              }
+            ]
+          }
+        ]
+      },
+      "customfield_10032": [],
+      "reporter": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A7ac66b46-86be-41aa-aedf-46330fa4a6ec",
+        "accountId": "712020:7ac66b46-86be-41aa-aedf-46330fa4a6ec",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+          "24x24": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+          "16x16": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+          "32x32": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png"
+        },
+        "displayName": "Marianne Sallo",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "customfield_10010": {
+        "_links": {
+          "jiraRest": "https://10xhealthsystem.atlassian.net/rest/api/2/issue/77001",
+          "web": "https://10xhealthsystem.atlassian.net/servicedesk/customer/portal/1/HEAL-33569",
+          "agent": "https://10xhealthsystem.atlassian.net/browse/HEAL-33569",
+          "self": "https://10xhealthsystem.atlassian.net/rest/servicedeskapi/request/77001"
+        },
+        "requestType": {
+          "_expands": [
+            "field"
+          ],
+          "id": "22",
+          "_links": {
+            "self": "https://10xhealthsystem.atlassian.net/rest/servicedeskapi/servicedesk/1/requesttype/22"
+          },
+          "name": "General Help Desk Request",
+          "description": "Submit a Request or report and issue; fields below are based upon your selection.",
+          "helpText": "",
+          "defaultName": "General Help Desk Request",
+          "issueTypeId": "10003",
+          "serviceDeskId": "1",
+          "portalId": "1",
+          "groupIds": [
+            "4"
+          ],
+          "icon": {
+            "id": "10547",
+            "_links": {
+              "iconUrls": {
+                "48x48": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10547?size=large",
+                "24x24": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10547?size=small",
+                "16x16": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10547?size=xsmall",
+                "32x32": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10547?size=medium"
+              }
+            }
+          }
+        },
+        "currentStatus": {
+          "status": "In Progress",
+          "statusCategory": "INDETERMINATE",
+          "statusDate": {
+            "iso8601": "2026-05-12T13:50:04-0400",
+            "jira": "2026-05-12T13:50:04.931-0400",
+            "friendly": "12/May/26 1:50 PM",
+            "epochMillis": 1778608204931
+          }
+        }
+      },
+      "priority": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/priority/3",
+        "iconUrl": "https://10xhealthsystem.atlassian.net/images/icons/priorities/medium_new.svg",
+        "name": "Medium",
+        "id": "3"
+      },
+      "attachment": [
+        {
+          "self": "https://10xhealthsystem.atlassian.net/rest/api/3/attachment/46392",
+          "id": "46392",
+          "filename": "image (99).png",
+          "author": {
+            "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A7ac66b46-86be-41aa-aedf-46330fa4a6ec",
+            "accountId": "712020:7ac66b46-86be-41aa-aedf-46330fa4a6ec",
+            "avatarUrls": {
+              "48x48": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+              "24x24": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+              "16x16": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+              "32x32": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png"
+            },
+            "displayName": "Marianne Sallo",
+            "active": true,
+            "timeZone": "America/New_York",
+            "accountType": "atlassian"
+          },
+          "created": "2026-05-11T15:56:09.780-0400",
+          "size": 26007,
+          "mimeType": "image/png",
+          "content": "https://10xhealthsystem.atlassian.net/rest/api/3/attachment/content/46392",
+          "thumbnail": "https://10xhealthsystem.atlassian.net/rest/api/3/attachment/thumbnail/46392"
+        },
+        {
+          "self": "https://10xhealthsystem.atlassian.net/rest/api/3/attachment/46393",
+          "id": "46393",
+          "filename": "Screenshot 2026-05-11 160118.png",
+          "author": {
+            "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A7ac66b46-86be-41aa-aedf-46330fa4a6ec",
+            "accountId": "712020:7ac66b46-86be-41aa-aedf-46330fa4a6ec",
+            "avatarUrls": {
+              "48x48": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+              "24x24": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+              "16x16": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+              "32x32": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png"
+            },
+            "displayName": "Marianne Sallo",
+            "active": true,
+            "timeZone": "America/New_York",
+            "accountType": "atlassian"
+          },
+          "created": "2026-05-11T16:02:31.716-0400",
+          "size": 28303,
+          "mimeType": "image/png",
+          "content": "https://10xhealthsystem.atlassian.net/rest/api/3/attachment/content/46393",
+          "thumbnail": "https://10xhealthsystem.atlassian.net/rest/api/3/attachment/thumbnail/46393"
+        }
+      ],
+      "duedate": null,
+      "assignee": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "updated": "2026-05-12T13:50:04.931-0400",
+      "status": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/status/3",
+        "description": "This work item is being actively worked on at the moment by the assignee.",
+        "iconUrl": "https://10xhealthsystem.atlassian.net/images/icons/statuses/inprogress.png",
+        "name": "In Progress",
+        "id": "3",
+        "statusCategory": {
+          "self": "https://10xhealthsystem.atlassian.net/rest/api/3/statuscategory/4",
+          "id": 4,
+          "key": "indeterminate",
+          "colorName": "yellow",
+          "name": "In Progress"
+        }
+      }
+    }
+  },
+  "comments": [
+    {
+      "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/77001/comment/114978",
+      "id": "114978",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab069c302-e5a1-4902-beef-c42e45309360",
+        "accountId": "712020:b069c302-e5a1-4902-beef-c42e45309360",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png"
+        },
+        "displayName": "Ray Godfrey Emerson Guevarra",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello Marianne Sallo ,"
+              }
+            ],
+            "attrs": {
+              "localId": "1b67debefd40"
+            }
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "We have assigned your request HEAL-33569 to an appropriate Help Desk team member. They will reach out to you shortly with an update.  "
+              }
+            ],
+            "attrs": {
+              "localId": "0ea50e5b162a"
+            }
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": " "
+              }
+            ],
+            "attrs": {
+              "localId": "1b67debefd40"
+            }
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Best regards,"
+              }
+            ],
+            "attrs": {
+              "localId": "fb9506b8e63d"
+            }
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Ray Godfrey Emerson Guevarra"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Tier 1 Technical Support",
+                "marks": [
+                  {
+                    "type": "em"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "10X",
+                "marks": [
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " Health Help Desk Support"
+              }
+            ],
+            "attrs": {
+              "localId": "9eaa1b373d8c"
+            }
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab069c302-e5a1-4902-beef-c42e45309360",
+        "accountId": "712020:b069c302-e5a1-4902-beef-c42e45309360",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png"
+        },
+        "displayName": "Ray Godfrey Emerson Guevarra",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-11T16:17:05.121-0400",
+      "updated": "2026-05-11T16:17:05.121-0400",
+      "jsdPublic": true
+    },
+    {
+      "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/77001/comment/115079",
+      "id": "115079",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hi Marianne Sallo, "
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "The issue HEAL-33569 has been assigned to me. I’m taking a look now and will keep you updated as I make progress."
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Let me know if there’s any additional context that might help.  "
+              }
+            ],
+            "attrs": {
+              "localId": "d0e6543f8b1b"
+            }
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thank you,"
+              }
+            ],
+            "attrs": {
+              "localId": "a0a854ec925a"
+            }
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Sean Bingham"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Salesforce Administrator",
+                "marks": [
+                  {
+                    "type": "em"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "10X Health Help Desk Support"
+              }
+            ],
+            "attrs": {
+              "localId": "d30f46912d59"
+            }
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-12T13:50:01.975-0400",
+      "updated": "2026-05-12T13:50:01.975-0400",
+      "jsdPublic": true
+    }
+  ],
+  "changelog": [
+    {
+      "id": "328873",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-05-11T16:04:31.044-0400",
+      "items": [
+        {
+          "field": "Date/Time Created",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10521",
+          "from": null,
+          "fromString": null,
+          "to": "2026-05-11T16:04:00-0400",
+          "toString": "11/May/26 4:04 PM"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "328874",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-05-11T16:04:31.120-0400",
+      "items": [
+        {
+          "field": "Impact",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10004",
+          "from": null,
+          "fromString": null,
+          "to": "10003",
+          "toString": "Minor / Localized"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "328875",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-05-11T16:04:31.348-0400",
+      "items": [
+        {
+          "field": "Urgency",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10037",
+          "from": null,
+          "fromString": null,
+          "to": "10022",
+          "toString": "Medium"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "328883",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab069c302-e5a1-4902-beef-c42e45309360",
+        "accountId": "712020:b069c302-e5a1-4902-beef-c42e45309360",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png"
+        },
+        "displayName": "Ray Godfrey Emerson Guevarra",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-11T16:16:51.556-0400",
+      "items": [
+        {
+          "field": "assignee",
+          "fieldtype": "jira",
+          "fieldId": "assignee",
+          "from": null,
+          "fromString": null,
+          "to": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+          "toString": "Sean Bingham",
+          "tmpFromAccountId": null,
+          "tmpToAccountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff"
+        }
+      ]
+    },
+    {
+      "id": "328884",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab069c302-e5a1-4902-beef-c42e45309360",
+        "accountId": "712020:b069c302-e5a1-4902-beef-c42e45309360",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png"
+        },
+        "displayName": "Ray Godfrey Emerson Guevarra",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-11T16:16:54.686-0400",
+      "items": [
+        {
+          "field": "Tier",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10064",
+          "from": null,
+          "fromString": null,
+          "to": "10111",
+          "toString": "Tier 2"
+        }
+      ]
+    },
+    {
+      "id": "328885",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab069c302-e5a1-4902-beef-c42e45309360",
+        "accountId": "712020:b069c302-e5a1-4902-beef-c42e45309360",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/399e4888974dfe93399cf67cd177ccce?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRG-0.png"
+        },
+        "displayName": "Ray Godfrey Emerson Guevarra",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-11T16:16:57.013-0400",
+      "items": [
+        {
+          "field": "Team",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10065",
+          "from": null,
+          "fromString": null,
+          "to": "10114",
+          "toString": "Tech Team"
+        }
+      ]
+    },
+    {
+      "id": "328887",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-05-11T16:17:36.945-0400",
+      "items": [
+        {
+          "field": "Ticket Priority",
+          "fieldtype": "custom",
+          "fieldId": "customfield_11701",
+          "from": null,
+          "fromString": null,
+          "to": "12148",
+          "toString": "Medium"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "328888",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-05-11T16:17:43.771-0400",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10001",
+          "fromString": "Waiting for support",
+          "to": "10002",
+          "toString": "Waiting for customer"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "329140",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-12T13:50:04.931-0400",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10002",
+          "fromString": "Waiting for customer",
+          "to": "3",
+          "toString": "In Progress"
+        }
+      ]
+    }
+  ],
+  "worklogs": [],
+  "attachments": [
+    {
+      "id": "46392",
+      "filename": "image (99).png",
+      "mimeType": "image/png",
+      "size": 26007,
+      "created": "2026-05-11T15:56:09.780-0400",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A7ac66b46-86be-41aa-aedf-46330fa4a6ec",
+        "accountId": "712020:7ac66b46-86be-41aa-aedf-46330fa4a6ec",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+          "24x24": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+          "16x16": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+          "32x32": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png"
+        },
+        "displayName": "Marianne Sallo",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "content": "https://10xhealthsystem.atlassian.net/rest/api/3/attachment/content/46392",
+      "thumbnail": "https://10xhealthsystem.atlassian.net/rest/api/3/attachment/thumbnail/46392",
+      "localPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/attachments/HEAL-33569/46392-image (99).png"
+    },
+    {
+      "id": "46393",
+      "filename": "Screenshot 2026-05-11 160118.png",
+      "mimeType": "image/png",
+      "size": 28303,
+      "created": "2026-05-11T16:02:31.716-0400",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A7ac66b46-86be-41aa-aedf-46330fa4a6ec",
+        "accountId": "712020:7ac66b46-86be-41aa-aedf-46330fa4a6ec",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+          "24x24": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+          "16x16": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png",
+          "32x32": "https://secure.gravatar.com/avatar/d81153dd7e95f486c2efb9d09670872c?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FMS-2.png"
+        },
+        "displayName": "Marianne Sallo",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "content": "https://10xhealthsystem.atlassian.net/rest/api/3/attachment/content/46393",
+      "thumbnail": "https://10xhealthsystem.atlassian.net/rest/api/3/attachment/thumbnail/46393",
+      "localPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/attachments/HEAL-33569/46393-Screenshot 2026-05-11 160118.png"
+    }
+  ],
+  "forms": [
+    {
+      "scope": "issue",
+      "index": {
+        "id": "8f05ea14-fed8-4e3d-99b6-141ab4c4d96d",
+        "formTemplate": {
+          "id": "f060f56e-e420-41a5-ad44-7ab78faad80a"
+        },
+        "internal": false,
+        "submitted": true,
+        "lock": false,
+        "name": "Help Desk Requests",
+        "updated": "2026-05-11T20:04:27.650Z"
+      },
+      "form": {
+        "id": "8f05ea14-fed8-4e3d-99b6-141ab4c4d96d",
+        "updated": "2026-05-11T20:04:27.650Z",
+        "design": {
+          "conditions": {
+            "66": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "1": [
+                      "12791"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "1",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "12791"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "5"
+                ],
+                "t": "sh"
+              }
+            },
+            "77": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "75": [
+                      "12612"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "75",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "12612"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "3"
+                ],
+                "t": "sh"
+              }
+            },
+            "22": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "21": [
+                      "1"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "21",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "1"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "9"
+                ],
+                "t": "sh"
+              }
+            },
+            "13": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "1": [
+                      "12792"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "1",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "12792"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "8"
+                ],
+                "t": "sh"
+              }
+            },
+            "82": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "39": [
+                      "12866",
+                      "12868",
+                      "12870:12871",
+                      "12826:12838",
+                      "12839:12846",
+                      "12849:12861",
+                      "12862:12865"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "39",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "12866",
+                          "12868",
+                          "12870:12871",
+                          "12826:12838",
+                          "12839:12846",
+                          "12849:12861",
+                          "12862:12865"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "6"
+                ],
+                "t": "sh"
+              }
+            },
+            "25": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "21": [
+                      "2"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "21",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "2"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "11"
+                ],
+                "t": "sh"
+              }
+            },
+            "31": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "1": [
+                      "12793"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "1",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "12793"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "12"
+                ],
+                "t": "sh"
+              }
+            },
+            "53": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "1": [
+                      "12790",
+                      "12791"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "1",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "12790",
+                          "12791"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "1"
+                ],
+                "t": "sh"
+              }
+            },
+            "73": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "1": [
+                      "12791"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "1",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "12791"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "7"
+                ],
+                "t": "sh"
+              }
+            },
+            "78": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "1": [
+                      "12790"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "1",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "12790"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "4"
+                ],
+                "t": "sh"
+              }
+            },
+            "2": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "1": [
+                      "12790"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "1",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "12790"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "2"
+                ],
+                "t": "sh"
+              }
+            },
+            "38": {
+              "i": {
+                "co": {
+                  "cIds": {
+                    "23": [
+                      "1"
+                    ]
+                  }
+                },
+                "operator": "OR",
+                "groups": [
+                  {
+                    "operator": "AND",
+                    "checks": [
+                      {
+                        "fieldId": "23",
+                        "type": "SOME_OF",
+                        "constraint": [
+                          "1"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "o": {
+                "sIds": [
+                  "10"
+                ],
+                "t": "sh"
+              }
+            }
+          },
+          "layout": [
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": []
+                },
+                {
+                  "type": "panel",
+                  "attrs": {
+                    "panelType": "error"
+                  },
+                  "content": [
+                    {
+                      "type": "heading",
+                      "attrs": {
+                        "level": 3,
+                        "localId": "e98aa945-150a-43af-8526-7c209b0d4ca7"
+                      },
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "Select the correct type before filling in anything else. ",
+                          "marks": [
+                            {
+                              "type": "strong"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "text": "Your choice determines which fields appear–– choosing the wrong type means your request may be misrouted or missing required information.",
+                          "marks": [
+                            {
+                              "type": "em"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "heading",
+                      "attrs": {
+                        "level": 3,
+                        "localId": "c42200ce-3bb0-4e07-bfa6-bdc4d81adb2d"
+                      },
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "Customer Operations:",
+                          "marks": [
+                            {
+                              "type": "strong"
+                            },
+                            {
+                              "type": "textColor",
+                              "attrs": {
+                                "color": "#bf2600"
+                              }
+                            },
+                            {
+                              "type": "underline"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "text": " Issues affecting customers or daily ops–– SF Account/Opp, Patient Portal, Reporting Data, etc."
+                        }
+                      ]
+                    },
+                    {
+                      "type": "heading",
+                      "attrs": {
+                        "level": 3,
+                        "localId": "caf1944d-4861-4637-976b-81830fc5ae65"
+                      },
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "IT Support:",
+                          "marks": [
+                            {
+                              "type": "strong"
+                            },
+                            {
+                              "type": "textColor",
+                              "attrs": {
+                                "color": "#bf2600"
+                              }
+                            },
+                            {
+                              "type": "underline"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "text": " Internal staff system or software help–– Login Issues, Database Sync, Application Errors, etc."
+                        }
+                      ]
+                    },
+                    {
+                      "type": "heading",
+                      "attrs": {
+                        "level": 3,
+                        "localId": "50e94fdf-6b22-4a5d-bed9-d91990c9e972"
+                      },
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "Hardware Request/Repair:",
+                          "marks": [
+                            {
+                              "type": "strong"
+                            },
+                            {
+                              "type": "textColor",
+                              "attrs": {
+                                "color": "#bf2600"
+                              }
+                            },
+                            {
+                              "type": "underline"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "text": " ",
+                          "marks": [
+                            {
+                              "type": "textColor",
+                              "attrs": {
+                                "color": "#bf2600"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "text": "New, replacement or troubleshooting for physical equipment–– Laptop, keyboard, printer, etc."
+                        }
+                      ]
+                    },
+                    {
+                      "type": "heading",
+                      "attrs": {
+                        "level": 3,
+                        "localId": "951f47ca-761e-45df-a148-49e2d2ed0d30"
+                      },
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "Report a security concern:",
+                          "marks": [
+                            {
+                              "type": "strong"
+                            },
+                            {
+                              "type": "textColor",
+                              "attrs": {
+                                "color": "#bf2600"
+                              }
+                            },
+                            {
+                              "type": "underline"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "text": " Suspicious activity, lost or stolen hardware, unauthorized access, phishing"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 1
+                    },
+                    "layout": "default",
+                    "localId": "343046ef-3cc4-42ce-9f97-17abd5c13d29"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 3
+                    },
+                    "layout": "default",
+                    "localId": "aea34c60-e899-489c-a4f3-85d3555ed516"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 4
+                    },
+                    "layout": "default",
+                    "localId": "e2338ea2-c37c-4bad-b650-338e4f4e83ec"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 5
+                    },
+                    "layout": "default",
+                    "localId": "e16bf33a-59e3-4230-b599-36b65a85d7be"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 51
+                    },
+                    "layout": "default",
+                    "localId": "7bd4e4a7-0df8-494b-99d2-98597f1166bb"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 52
+                    },
+                    "layout": "default",
+                    "localId": "58092b91-fda4-453d-8e94-ca255d9b8410"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 75
+                    },
+                    "layout": "default",
+                    "localId": "4f4fcb6a-9357-4d79-afa7-638f661c7dfa"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 76
+                    },
+                    "layout": "default",
+                    "localId": "33067301-8ae7-4005-9991-14f6e4c54286"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 9
+                    },
+                    "layout": "default",
+                    "localId": "5e135b8c-e447-47d6-9d3d-20e6e082d4db"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 10
+                    },
+                    "layout": "default",
+                    "localId": "2e0eb3bf-9b3b-4b64-9fb9-d773cb051d06"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 11
+                    },
+                    "layout": "default",
+                    "localId": "4300dba6-8487-479e-aecc-5e989b9324c1"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 39
+                    },
+                    "layout": "default",
+                    "localId": "b391fd2d-293a-491b-b14a-fc121bef61f8"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 72
+                    },
+                    "layout": "default",
+                    "localId": "a5d1889e-d8db-48ef-aa43-6b1d34766458"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 42
+                    },
+                    "layout": "default",
+                    "localId": "4ed49e7c-c869-4112-afae-3470d42d4969"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 43
+                    },
+                    "layout": "default",
+                    "localId": "ae5b6bcb-b54d-4c81-9c34-f981d781a0f9"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 45
+                    },
+                    "layout": "default",
+                    "localId": "8c400d51-f466-49e0-8e6e-338bef297bc7"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 46
+                    },
+                    "layout": "default",
+                    "localId": "d4dc9688-8040-46aa-ac43-70bc231c6060"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 47
+                    },
+                    "layout": "default",
+                    "localId": "952a2864-5b39-4041-a020-89bfa1cedd44"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 79
+                    },
+                    "text": "",
+                    "layout": "default",
+                    "localId": "8458f31a-658f-48e0-8a79-5d387f30a378"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 48
+                    },
+                    "layout": "default",
+                    "localId": "6bcb7379-f460-4b90-8d3c-9365bc5244fc"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 49
+                    },
+                    "layout": "default",
+                    "localId": "c566bd29-d7ac-4f24-817c-38b9b19a2965"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "content": []
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": []
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 14
+                    },
+                    "layout": "default",
+                    "localId": "fd43a776-14c6-48a4-a35f-702ce51a753f"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 81
+                    },
+                    "text": "",
+                    "layout": "default",
+                    "localId": "f51de674-7fdd-4329-a8c1-6347a73de948"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 17
+                    },
+                    "layout": "default",
+                    "localId": "d0a66b12-bf7c-4141-b906-dd5e41e3852c"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 21
+                    },
+                    "layout": "default",
+                    "localId": "ce91d4e0-dc67-4af8-86f8-f62047b3910a"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 23
+                    },
+                    "layout": "default",
+                    "localId": "253cbe34-96a4-44b7-823b-d54c6a750a3c"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 37
+                    },
+                    "layout": "default",
+                    "localId": "6939732b-fed5-4581-968d-f526c8785550"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 24
+                    },
+                    "layout": "default",
+                    "localId": "c0034b40-181b-447e-a72d-73e18785e4c0"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 26
+                    },
+                    "layout": "default",
+                    "localId": "ca7fad38-14a9-4a93-9416-c6469de5c1cf"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 27
+                    },
+                    "layout": "default",
+                    "localId": "af845f03-f875-4dde-a8f3-3505b7ea3b8f"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 28
+                    },
+                    "layout": "default",
+                    "localId": "4a0fa55f-1345-4eb4-8c36-4f99458d1e5f"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 29
+                    },
+                    "layout": "default",
+                    "localId": "5c6599da-b77e-4055-b44b-ce3955873ed3"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 30
+                    },
+                    "layout": "default",
+                    "localId": "976ab2b3-b7d3-486d-ae5e-c1567cd320d7"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 32
+                    },
+                    "layout": "default",
+                    "localId": "fcb6d19a-ac1e-4ebc-83f2-8506cd3d89f4"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 33
+                    },
+                    "layout": "default",
+                    "localId": "1dcbdaa4-6bad-4f44-9baa-154dbca6db96"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 34
+                    },
+                    "layout": "default",
+                    "localId": "537367ec-6f5f-4cd8-b70b-3dbc00013f0a"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 35
+                    },
+                    "layout": "default",
+                    "localId": "7524ef76-ed46-43ca-a1e4-2a596ef72c99"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 36
+                    },
+                    "layout": "default",
+                    "localId": "802bec21-76f9-426f-aae6-40af501d93e2"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 80
+                    },
+                    "text": "",
+                    "layout": "default",
+                    "localId": "1cb09c23-3f16-433c-aed8-a243444207ad"
+                  }
+                }
+              ]
+            }
+          ],
+          "questions": {
+            "51": {
+              "choices": [
+                {
+                  "id": "12075",
+                  "label": "My work is not affected"
+                },
+                {
+                  "id": "12076",
+                  "label": "I can continue with a workaround"
+                },
+                {
+                  "id": "12077",
+                  "label": "I am completely blocked"
+                }
+              ],
+              "description": "",
+              "jiraField": "customfield_11668",
+              "label": "How does this impact your work?",
+              "questionKey": "",
+              "type": "cd",
+              "validation": {
+                "rq": true
+              }
+            },
+            "23": {
+              "choices": [
+                {
+                  "id": "1",
+                  "label": "Yes",
+                  "other": false
+                },
+                {
+                  "id": "2",
+                  "label": "No",
+                  "other": false
+                },
+                {
+                  "id": "3",
+                  "label": "Unsure",
+                  "other": false
+                }
+              ],
+              "description": "If this request is not pre-approved or you are unsure, please change your response to the previous question and proceed with steps for a Hardware Repair request.",
+              "label": "Has this request been approved by an IT staff member?",
+              "questionKey": "",
+              "type": "cs",
+              "validation": {
+                "rq": true
+              }
+            },
+            "4": {
+              "choices": [
+                {
+                  "id": "10478",
+                  "label": "Clinical"
+                },
+                {
+                  "id": "10477",
+                  "label": "Accounting"
+                },
+                {
+                  "id": "10479",
+                  "label": "Customer Support"
+                },
+                {
+                  "id": "10480",
+                  "label": "Finance"
+                },
+                {
+                  "id": "10481",
+                  "label": "Legal"
+                },
+                {
+                  "id": "10482",
+                  "label": "Marketing"
+                },
+                {
+                  "id": "10483",
+                  "label": "Operations"
+                },
+                {
+                  "id": "10484",
+                  "label": "Supply Chain"
+                },
+                {
+                  "id": "10485",
+                  "label": "Technology"
+                },
+                {
+                  "id": "10486",
+                  "label": "Wellness"
+                }
+              ],
+              "description": "Select YOUR Department",
+              "jiraField": "customfield_10158",
+              "label": "Department",
+              "questionKey": "",
+              "type": "cd",
+              "validation": {
+                "rq": true
+              }
+            },
+            "33": {
+              "choices": [],
+              "description": "",
+              "label": "Description of Concern",
+              "questionKey": "",
+              "type": "tl",
+              "validation": {
+                "rq": true
+              }
+            },
+            "46": {
+              "choices": [
+                {
+                  "id": "1",
+                  "label": "Password Reset/MFA/Login Assistance",
+                  "other": false
+                },
+                {
+                  "id": "2",
+                  "label": "Update License",
+                  "other": false
+                },
+                {
+                  "id": "3",
+                  "label": "Configuration Change",
+                  "other": false
+                },
+                {
+                  "id": "4",
+                  "label": "Troubleshooting",
+                  "other": false
+                },
+                {
+                  "id": "5",
+                  "label": "Setup Assistance",
+                  "other": false
+                }
+              ],
+              "description": "",
+              "label": "Type of Assistance Needed:",
+              "questionKey": "",
+              "type": "cd",
+              "validation": {
+                "rq": true
+              }
+            },
+            "10": {
+              "description": "",
+              "jiraField": "description",
+              "label": "Description",
+              "questionKey": "",
+              "type": "rt",
+              "validation": {
+                "rq": true
+              }
+            },
+            "43": {
+              "choices": [],
+              "description": "",
+              "label": "Please provide a Screenshot / Attachment that helps to identify your issue to expedite resolution:",
+              "questionKey": "",
+              "type": "at",
+              "validation": {
+                "rq": false
+              }
+            },
+            "32": {
+              "choices": [],
+              "description": "",
+              "label": "Date Time Security Concern Detected",
+              "questionKey": "",
+              "type": "dt",
+              "validation": {
+                "rq": true
+              }
+            },
+            "80": {
+              "choices": [],
+              "description": "",
+              "label": "Screenshots/Attachments",
+              "questionKey": "",
+              "type": "at",
+              "validation": {
+                "rq": false
+              }
+            },
+            "47": {
+              "choices": [],
+              "description": "Copy/Paste Error Message (if available)",
+              "label": "Error Message ",
+              "questionKey": "",
+              "type": "tl",
+              "validation": {
+                "rq": false
+              }
+            },
+            "27": {
+              "choices": [],
+              "description": "",
+              "label": "When did the issue start? (Approximately)",
+              "questionKey": "",
+              "type": "da",
+              "validation": {
+                "rq": true
+              }
+            },
+            "81": {
+              "choices": [],
+              "description": "",
+              "label": "Request Description",
+              "questionKey": "",
+              "type": "tl",
+              "validation": {
+                "rq": false
+              }
+            },
+            "30": {
+              "choices": [],
+              "description": "",
+              "label": "Description of Issue",
+              "questionKey": "",
+              "type": "rt",
+              "validation": {
+                "rq": true
+              }
+            },
+            "29": {
+              "choices": [
+                {
+                  "id": "1",
+                  "label": "Not powering on",
+                  "other": false
+                },
+                {
+                  "id": "2",
+                  "label": "Physical damage",
+                  "other": false
+                },
+                {
+                  "id": "3",
+                  "label": "Performance issue",
+                  "other": false
+                },
+                {
+                  "id": "4",
+                  "label": "Peripheral not working",
+                  "other": false
+                },
+                {
+                  "id": "5",
+                  "label": "Other",
+                  "other": false
+                }
+              ],
+              "description": "",
+              "label": "Issue type",
+              "questionKey": "",
+              "type": "cd",
+              "validation": {
+                "rq": true
+              }
+            },
+            "3": {
+              "description": "Summarize your issue. Do not include any full names (use: X. Lastname) or sensitive data.",
+              "jiraField": "summary",
+              "label": "Subject",
+              "questionKey": "",
+              "type": "tl",
+              "validation": {
+                "rq": true
+              }
+            },
+            "52": {
+              "choices": [
+                {
+                  "id": "12072",
+                  "label": "Only me or one record"
+                },
+                {
+                  "id": "12073",
+                  "label": "A small team or multiple records"
+                },
+                {
+                  "id": "12074",
+                  "label": "Multiple teams, departments, or large numbers of records"
+                }
+              ],
+              "description": "",
+              "jiraField": "customfield_11667",
+              "label": "How many people or records are affected?",
+              "questionKey": "",
+              "type": "cd",
+              "validation": {
+                "rq": true
+              }
+            },
+            "28": {
+              "choices": [
+                {
+                  "id": "1",
+                  "label": "Yes",
+                  "other": false
+                },
+                {
+                  "id": "2",
+                  "label": "No",
+                  "other": false
+                }
+              ],
+              "description": "",
+              "label": "Is the device still usable?",
+              "questionKey": "",
+              "type": "cs",
+              "validation": {
+                "rq": true
+              }
+            },
+            "45": {
+              "choices": [],
+              "description": "",
+              "label": "If 'Other', describe:",
+              "questionKey": "",
+              "type": "ts",
+              "validation": {
+                "rq": false
+              }
+            },
+            "34": {
+              "choices": [
+                {
+                  "id": "1",
+                  "label": "Suspicious Activity",
+                  "other": false
+                },
+                {
+                  "id": "2",
+                  "label": "Phishing Attempt",
+                  "other": false
+                },
+                {
+                  "id": "3",
+                  "label": "Unauthorized Access",
+                  "other": false
+                },
+                {
+                  "id": "4",
+                  "label": "Unusual System Behavior",
+                  "other": false
+                },
+                {
+                  "id": "5",
+                  "label": "Lost/Stolen Property",
+                  "other": false
+                },
+                {
+                  "id": "6",
+                  "label": "Other",
+                  "other": false
+                }
+              ],
+              "description": "",
+              "label": "Type of Security Concern",
+              "questionKey": "",
+              "type": "cd",
+              "validation": {
+                "rq": true
+              }
+            },
+            "11": {
+              "choices": [],
+              "description": "",
+              "label": "Attachments",
+              "questionKey": "",
+              "type": "at",
+              "validation": {
+                "rq": false
+              }
+            },
+            "9": {
+              "choices": [],
+              "description": "Please link only one record here, add secondary links to the Description field.",
+              "label": "Record Link",
+              "questionKey": "",
+              "type": "tu",
+              "validation": {
+                "rq": true
+              }
+            },
+            "26": {
+              "choices": [],
+              "description": "",
+              "label": "Asset Tag or Serial Number, if available",
+              "questionKey": "",
+              "type": "ts",
+              "validation": {
+                "rq": false
+              }
+            },
+            "37": {
+              "choices": [],
+              "description": "",
+              "label": "If 'Yes', which IT Staff Approved?",
+              "questionKey": "",
+              "type": "ts",
+              "validation": {
+                "rq": false
+              }
+            },
+            "24": {
+              "choices": [],
+              "description": "Full shipping address, including Apt/Suite/Building # + City, State, and Zip Code",
+              "label": "Shipping Address",
+              "questionKey": "",
+              "type": "tl",
+              "validation": {
+                "rq": false
+              }
+            },
+            "35": {
+              "choices": [],
+              "description": "",
+              "label": "Affected Asset:",
+              "questionKey": "",
+              "type": "ts",
+              "validation": {
+                "rq": false
+              }
+            },
+            "79": {
+              "choices": [],
+              "description": "",
+              "label": "Additional Details",
+              "questionKey": "",
+              "type": "rt",
+              "validation": {
+                "rq": false
+              }
+            },
+            "5": {
+              "description": "Select users you would like to visibility of this ticket.",
+              "jiraField": "customfield_10032",
+              "label": "Stakeholders/Watchers",
+              "questionKey": "",
+              "type": "um",
+              "validation": {
+                "rq": false
+              }
+            },
+            "72": {
+              "choices": [],
+              "description": "",
+              "label": "Describe License Request, Software to be Installed or 'Other':",
+              "questionKey": "",
+              "type": "ts",
+              "validation": {
+                "rq": true
+              }
+            },
+            "48": {
+              "choices": [
+                {
+                  "id": "1",
+                  "label": "Laptop (Mac)",
+                  "other": false
+                },
+                {
+                  "id": "2",
+                  "label": "Laptop (PC)",
+                  "other": false
+                },
+                {
+                  "id": "3",
+                  "label": "Desktop (Mac)",
+                  "other": false
+                },
+                {
+                  "id": "4",
+                  "label": "Desktop (PC)",
+                  "other": false
+                },
+                {
+                  "id": "5",
+                  "label": "Mobile Device/iPad/Tablet/POS/Phone",
+                  "other": false
+                }
+              ],
+              "description": "",
+              "label": "Device Type:",
+              "questionKey": "",
+              "type": "cd",
+              "validation": {
+                "rq": false
+              }
+            },
+            "21": {
+              "description": "",
+              "jiraField": "customfield_11841",
+              "label": "Hardware Request Type",
+              "questionKey": "",
+              "type": "cs",
+              "validation": {
+                "rq": true
+              }
+            },
+            "76": {
+              "choices": [],
+              "description": "",
+              "label": "Other Issue Description",
+              "questionKey": "",
+              "type": "tl",
+              "validation": {
+                "rq": true
+              }
+            },
+            "49": {
+              "choices": [
+                {
+                  "id": "1",
+                  "label": "Office- PIMA (Scottsdale)",
+                  "other": false
+                },
+                {
+                  "id": "2",
+                  "label": "Clinic- Scottsdale",
+                  "other": false
+                },
+                {
+                  "id": "3",
+                  "label": "Office- Aventura/HQ",
+                  "other": false
+                },
+                {
+                  "id": "4",
+                  "label": "Clinic- Beverly Hills",
+                  "other": false
+                },
+                {
+                  "id": "5",
+                  "label": "Clinic- Las Vegas",
+                  "other": false
+                },
+                {
+                  "id": "6",
+                  "label": "Remote",
+                  "other": false
+                }
+              ],
+              "description": "",
+              "label": "Location",
+              "questionKey": "",
+              "type": "cs",
+              "validation": {
+                "rq": false
+              }
+            },
+            "36": {
+              "choices": [],
+              "description": "Have you done anything to contain or investigate the concern? ",
+              "label": "Immediate action taken:",
+              "questionKey": "",
+              "type": "tl",
+              "validation": {
+                "rq": true
+              }
+            },
+            "1": {
+              "choices": [
+                {
+                  "id": "12790",
+                  "label": "Customer / Operations "
+                },
+                {
+                  "id": "12791",
+                  "label": "IT Support"
+                },
+                {
+                  "id": "12792",
+                  "label": "Hardware Request or Repair"
+                },
+                {
+                  "id": "12793",
+                  "label": "Report a Security Concern"
+                }
+              ],
+              "description": "Choose the option that best matches what you need help with. See info panel above ^",
+              "jiraField": "customfield_11808",
+              "label": "Which type of request are you submitting?",
+              "questionKey": "",
+              "type": "cs",
+              "validation": {
+                "rq": true
+              }
+            },
+            "39": {
+              "description": "",
+              "jiraField": "customfield_11842",
+              "label": "IT Request Type & Application",
+              "questionKey": "",
+              "type": "cc",
+              "validation": {
+                "rq": true
+              }
+            },
+            "17": {
+              "choices": [
+                {
+                  "id": "1",
+                  "label": "10X HQ (Aventura)",
+                  "other": false
+                },
+                {
+                  "id": "2",
+                  "label": "Scottsdale (PIMA Office)",
+                  "other": false
+                },
+                {
+                  "id": "3",
+                  "label": "Scottsdale (Clinic)",
+                  "other": false
+                },
+                {
+                  "id": "4",
+                  "label": "Beverly Hills Clinic",
+                  "other": false
+                },
+                {
+                  "id": "5",
+                  "label": "Las Vegas Clinic",
+                  "other": false
+                },
+                {
+                  "id": "6",
+                  "label": "Remote/WFH",
+                  "other": false
+                }
+              ],
+              "description": "Where are you/the device located?",
+              "label": "Location",
+              "questionKey": "",
+              "type": "cs",
+              "validation": {
+                "rq": true
+              }
+            },
+            "14": {
+              "choices": [
+                {
+                  "id": "1",
+                  "label": "Cell Phone/Mobile Device (iPad, Tablet)",
+                  "other": false
+                },
+                {
+                  "id": "2",
+                  "label": "Desk Phone",
+                  "other": false
+                },
+                {
+                  "id": "12",
+                  "label": "Desktop (Mac)",
+                  "other": false
+                },
+                {
+                  "id": "13",
+                  "label": "Desktop (PC)",
+                  "other": false
+                },
+                {
+                  "id": "3",
+                  "label": "Keyboard",
+                  "other": false
+                },
+                {
+                  "id": "4",
+                  "label": "Laptop (Mac)",
+                  "other": false
+                },
+                {
+                  "id": "5",
+                  "label": "Laptop (PC)",
+                  "other": false
+                },
+                {
+                  "id": "6",
+                  "label": "Monitor",
+                  "other": false
+                },
+                {
+                  "id": "7",
+                  "label": "Mouse",
+                  "other": false
+                },
+                {
+                  "id": "8",
+                  "label": "Printer",
+                  "other": false
+                },
+                {
+                  "id": "9",
+                  "label": "POS Kiosk",
+                  "other": false
+                },
+                {
+                  "id": "10",
+                  "label": "TV",
+                  "other": false
+                },
+                {
+                  "id": "11",
+                  "label": "Other",
+                  "other": false
+                }
+              ],
+              "description": "Select the type of device you need assistance with",
+              "label": "Device Type",
+              "questionKey": "",
+              "type": "cd",
+              "validation": {
+                "rq": true
+              }
+            },
+            "42": {
+              "choices": [],
+              "description": "",
+              "label": "Description of Request or Issue:",
+              "questionKey": "",
+              "type": "tl",
+              "validation": {
+                "rq": true
+              }
+            },
+            "75": {
+              "choices": [
+                {
+                  "id": "12507",
+                  "label": "Dr Chrono- Lab Orders",
+                  "children": [
+                    {
+                      "id": "12508",
+                      "label": "Lab Requisition Issue"
+                    },
+                    {
+                      "id": "12509",
+                      "label": "Lab Results Issue"
+                    },
+                    {
+                      "id": "12510",
+                      "label": "Other Lab Order Issue"
+                    }
+                  ]
+                },
+                {
+                  "id": "12511",
+                  "label": "Dr Chrono- System/Software",
+                  "children": [
+                    {
+                      "id": "12512",
+                      "label": "BUG/Defect"
+                    },
+                    {
+                      "id": "12513",
+                      "label": "Error Message"
+                    },
+                    {
+                      "id": "12514",
+                      "label": "Outage/Performance Issue"
+                    },
+                    {
+                      "id": "12515",
+                      "label": "Feature/Configuration Issue"
+                    },
+                    {
+                      "id": "12516",
+                      "label": "Other System Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12517",
+                  "label": "Dr Chrono- Login/Access/Account",
+                  "children": [
+                    {
+                      "id": "12518",
+                      "label": "Password/Login Issue"
+                    },
+                    {
+                      "id": "12519",
+                      "label": "Account Modification"
+                    },
+                    {
+                      "id": "12520",
+                      "label": "Other Access/Account Issue"
+                    }
+                  ]
+                },
+                {
+                  "id": "12521",
+                  "label": "Dr Chrono- Patients/Providers",
+                  "children": [
+                    {
+                      "id": "12522",
+                      "label": "Patient Sync Issues"
+                    },
+                    {
+                      "id": "12523",
+                      "label": "Documents Issues"
+                    },
+                    {
+                      "id": "12524",
+                      "label": "Appointments Issues"
+                    },
+                    {
+                      "id": "12525",
+                      "label": "Demographics Issue"
+                    },
+                    {
+                      "id": "12526",
+                      "label": "Other Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12527",
+                  "label": "Patient Portal- MGT",
+                  "children": [
+                    {
+                      "id": "12528",
+                      "label": "Missing Results"
+                    },
+                    {
+                      "id": "12529",
+                      "label": "Incorrect Results"
+                    },
+                    {
+                      "id": "12530",
+                      "label": "Issue with Results"
+                    }
+                  ]
+                },
+                {
+                  "id": "12531",
+                  "label": "Patient Portal- PGT",
+                  "children": [
+                    {
+                      "id": "12532",
+                      "label": "Missing Results"
+                    },
+                    {
+                      "id": "12533",
+                      "label": "Incorrect Results"
+                    },
+                    {
+                      "id": "12534",
+                      "label": "Issue with Results"
+                    }
+                  ]
+                },
+                {
+                  "id": "12535",
+                  "label": "Patient Portal- GHT",
+                  "children": [
+                    {
+                      "id": "12536",
+                      "label": "Missing Results"
+                    },
+                    {
+                      "id": "12537",
+                      "label": "Incorrect Results"
+                    },
+                    {
+                      "id": "12538",
+                      "label": "Issue with Results"
+                    }
+                  ]
+                },
+                {
+                  "id": "12539",
+                  "label": "Patient Portal- Blood Test Results",
+                  "children": [
+                    {
+                      "id": "12540",
+                      "label": "Missing Results"
+                    },
+                    {
+                      "id": "12541",
+                      "label": "Incorrect Results"
+                    },
+                    {
+                      "id": "12542",
+                      "label": "Issue with Results"
+                    }
+                  ]
+                },
+                {
+                  "id": "12543",
+                  "label": "Patient Portal- Agreements/Consents",
+                  "children": [
+                    {
+                      "id": "12544",
+                      "label": "Missing Agreement/Consent"
+                    },
+                    {
+                      "id": "12545",
+                      "label": "Patient unable to consent"
+                    },
+                    {
+                      "id": "12546",
+                      "label": "Other"
+                    }
+                  ]
+                },
+                {
+                  "id": "12547",
+                  "label": "Patient Portal- Login",
+                  "children": [
+                    {
+                      "id": "12548",
+                      "label": "Login Error"
+                    },
+                    {
+                      "id": "12549",
+                      "label": "Incorrect Demographics"
+                    },
+                    {
+                      "id": "12550",
+                      "label": "Security Code Issues"
+                    },
+                    {
+                      "id": "12551",
+                      "label": "Other Login Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12552",
+                  "label": "Patient Portal- Kit Registration",
+                  "children": [
+                    {
+                      "id": "12553",
+                      "label": "Unable to Register"
+                    },
+                    {
+                      "id": "12554",
+                      "label": "Incorrect Registration"
+                    },
+                    {
+                      "id": "12555",
+                      "label": "Other Kit Registration Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12556",
+                  "label": "Patient Portal- Site Performance",
+                  "children": [
+                    {
+                      "id": "12557",
+                      "label": "BUG/Defect"
+                    },
+                    {
+                      "id": "12558",
+                      "label": "Outage"
+                    },
+                    {
+                      "id": "12559",
+                      "label": "Other Performance Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12560",
+                  "label": "Salesforce- Customer Accounts",
+                  "children": [
+                    {
+                      "id": "12561",
+                      "label": "Duplicate Accounts"
+                    },
+                    {
+                      "id": "12562",
+                      "label": "Update Account"
+                    },
+                    {
+                      "id": "12563",
+                      "label": "Deactivate Account"
+                    },
+                    {
+                      "id": "12564",
+                      "label": "Related Account/Relationships"
+                    },
+                    {
+                      "id": "12726",
+                      "label": "Patient Agreements"
+                    },
+                    {
+                      "id": "12565",
+                      "label": "Other Account Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12566",
+                  "label": "Salesforce- Employee Accounts",
+                  "children": [
+                    {
+                      "id": "12567",
+                      "label": "Missing Employee Account"
+                    },
+                    {
+                      "id": "12568",
+                      "label": "Update Employee Account"
+                    },
+                    {
+                      "id": "12569",
+                      "label": "Other Employe Account Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12570",
+                  "label": "Salesforce- Opportunities",
+                  "children": [
+                    {
+                      "id": "12571",
+                      "label": "Missing Opportunity"
+                    },
+                    {
+                      "id": "12572",
+                      "label": "Update Opportunity"
+                    },
+                    {
+                      "id": "12573",
+                      "label": "Opportunity Error"
+                    },
+                    {
+                      "id": "12574",
+                      "label": "Other Opportunity Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12575",
+                  "label": "Salesforce- Lab Orders",
+                  "children": [
+                    {
+                      "id": "12576",
+                      "label": "Lab Order Error"
+                    },
+                    {
+                      "id": "12577",
+                      "label": "Request Kit Registration"
+                    },
+                    {
+                      "id": "12578",
+                      "label": "Update Lab Order"
+                    },
+                    {
+                      "id": "12579",
+                      "label": "Cancel Lab Order"
+                    },
+                    {
+                      "id": "12580",
+                      "label": "Reship/Reorder"
+                    },
+                    {
+                      "id": "12581",
+                      "label": "Other Lab Order Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12582",
+                  "label": "Salesforce- Transactions",
+                  "children": [
+                    {
+                      "id": "12583",
+                      "label": "Duplicate Transactions"
+                    },
+                    {
+                      "id": "12584",
+                      "label": "Transaction Errors"
+                    },
+                    {
+                      "id": "12585",
+                      "label": "Other Transaction Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12586",
+                  "label": "Salesforce- Reports/Dashboards",
+                  "children": [
+                    {
+                      "id": "12587",
+                      "label": "Update Report/Dashboard"
+                    },
+                    {
+                      "id": "12588",
+                      "label": "Grant/Revoke Access"
+                    },
+                    {
+                      "id": "12589",
+                      "label": "Help with Existing Report/Dashboard"
+                    },
+                    {
+                      "id": "12590",
+                      "label": "Help with New Report/Dashboard"
+                    },
+                    {
+                      "id": "12591",
+                      "label": "Other Report/Dashboard Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12592",
+                  "label": "Salesforce- Other",
+                  "children": [
+                    {
+                      "id": "12593",
+                      "label": "Other Salesforce Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12594",
+                  "label": "Lacore/ShipStation",
+                  "children": [
+                    {
+                      "id": "12595",
+                      "label": "Sync Issues"
+                    },
+                    {
+                      "id": "12596",
+                      "label": "Missing Supplement Order"
+                    },
+                    {
+                      "id": "12597",
+                      "label": "Order Errors"
+                    },
+                    {
+                      "id": "12598",
+                      "label": "Order Update"
+                    },
+                    {
+                      "id": "12599",
+                      "label": "Other Lacore/ShipStation Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12600",
+                  "label": "SMS Magic",
+                  "children": [
+                    {
+                      "id": "12601",
+                      "label": "Access Issue"
+                    },
+                    {
+                      "id": "12602",
+                      "label": "BUG/Defect"
+                    },
+                    {
+                      "id": "12603",
+                      "label": "Technical Issue"
+                    },
+                    {
+                      "id": "12604",
+                      "label": "Other SMS Magic Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12605",
+                  "label": "Shopify/POS- Login/Access",
+                  "children": [
+                    {
+                      "id": "12606",
+                      "label": "Unable to Login"
+                    },
+                    {
+                      "id": "12607",
+                      "label": "Other Access Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12608",
+                  "label": "Shopify- Orders",
+                  "children": [
+                    {
+                      "id": "12609",
+                      "label": "Order not synced"
+                    },
+                    {
+                      "id": "12610",
+                      "label": "Order Refunded"
+                    },
+                    {
+                      "id": "12611",
+                      "label": "Other Order Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12646",
+                  "label": "Confluence/Jira",
+                  "children": [
+                    {
+                      "id": "12650",
+                      "label": "Confluence Space Access"
+                    },
+                    {
+                      "id": "12651",
+                      "label": "Confluence Space Permissions"
+                    },
+                    {
+                      "id": "12724",
+                      "label": "Jira Access"
+                    },
+                    {
+                      "id": "12725",
+                      "label": "Other Jira Issues"
+                    },
+                    {
+                      "id": "12652",
+                      "label": "Other Confluence Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "12612",
+                  "label": "Other Issues",
+                  "children": [
+                    {
+                      "id": "12613",
+                      "label": "Other Issues"
+                    }
+                  ]
+                }
+              ],
+              "description": "Salesforce, Dr. Chrono, Shopify, etc.",
+              "jiraField": "customfield_11775",
+              "label": "System/Category",
+              "questionKey": "",
+              "type": "cc",
+              "validation": {
+                "rq": true
+              }
+            }
+          },
+          "sections": {
+            "12": {
+              "sectionType": "b",
+              "name": "Report a Security Concern",
+              "conditions": [
+                "31"
+              ]
+            },
+            "8": {
+              "sectionType": "b",
+              "name": "Hardware Request/Repair",
+              "conditions": [
+                "13"
+              ]
+            },
+            "4": {
+              "sectionType": "b",
+              "name": "Customer / Operations Support II",
+              "conditions": [
+                "78"
+              ]
+            },
+            "5": {
+              "sectionType": "b",
+              "name": "IT Support",
+              "conditions": [
+                "66"
+              ]
+            },
+            "10": {
+              "sectionType": "b",
+              "name": "Hardware approved for procurement.",
+              "conditions": [
+                "38"
+              ]
+            },
+            "2": {
+              "sectionType": "b",
+              "name": "Customer / Operations Support",
+              "conditions": [
+                "2"
+              ]
+            },
+            "7": {
+              "sectionType": "b",
+              "name": "IT Support II",
+              "conditions": [
+                "73"
+              ]
+            },
+            "3": {
+              "sectionType": "b",
+              "name": "Other Issue",
+              "conditions": [
+                "77"
+              ]
+            },
+            "11": {
+              "sectionType": "b",
+              "name": "Hardware Repairs/Troubleshooting",
+              "conditions": [
+                "25"
+              ]
+            },
+            "9": {
+              "sectionType": "b",
+              "name": "New Hardware request:",
+              "conditions": [
+                "22"
+              ]
+            },
+            "6": {
+              "sectionType": "b",
+              "name": "Request Type Explanation",
+              "conditions": [
+                "82"
+              ]
+            },
+            "1": {
+              "sectionType": "b",
+              "name": "Impact/Urgency Fields",
+              "conditions": [
+                "53"
+              ]
+            }
+          },
+          "settings": {
+            "name": "Help Desk Requests",
+            "submit": {
+              "lock": false,
+              "pdf": false
+            }
+          }
+        },
+        "state": {
+          "visibility": "e",
+          "status": "s",
+          "answers": {
+            "51": {
+              "text": "",
+              "choices": [
+                "12076"
+              ]
+            },
+            "4": {
+              "text": "",
+              "choices": [
+                "10485"
+              ]
+            },
+            "5": {
+              "users": []
+            },
+            "10": {
+              "adf": {
+                "version": 1,
+                "type": "doc",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Hi Sean,"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Could you please grant me access to the Generate Supplement Order inside Opportunities? I can see and click the generate button, but it doesn't let me proceed, and I’m encountering an error. I’ve attached the screenshot of the error and also the button that I need access to for reference. This request has been approved by Danielle. Thank you!"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "1": {
+              "text": "",
+              "choices": [
+                "12790"
+              ]
+            },
+            "75": {
+              "choices": [
+                "12586:12588"
+              ]
+            },
+            "3": {
+              "text": "SF - Access to Generate Supplement Order"
+            },
+            "52": {
+              "text": "",
+              "choices": [
+                "12072"
+              ]
+            },
+            "11": {
+              "files": [
+                {
+                  "id": "eb39d53e-cc62-4c3b-b194-a246ad179b1c"
+                },
+                {
+                  "id": "07c43744-8f8b-4f9d-a341-89eb6765d390"
+                }
+              ]
+            },
+            "9": {
+              "text": "https://10xhealth.lightning.force.com/lightning/o/Opportunity/list?filterName=__Recent"
+            }
+          }
+        }
+      },
+      "answers": [
+        {
+          "label": "Attachments",
+          "answer": "eb39d53e-cc62-4c3b-b194-a246ad179b1c, 07c43744-8f8b-4f9d-a341-89eb6765d390"
+        },
+        {
+          "label": "Stakeholders/Watchers",
+          "fieldKey": "customfield_10032",
+          "answer": ""
+        },
+        {
+          "label": "Subject",
+          "fieldKey": "summary",
+          "answer": "SF - Access to Generate Supplement Order"
+        },
+        {
+          "label": "Description",
+          "fieldKey": "description",
+          "answer": "Hi Sean,\nCould you please grant me access to the Generate Supplement Order inside Opportunities? I can see and click the generate button, but it doesn't let me proceed, and I’m encountering an error. I’ve attached the screenshot of the error and also the button that I need access to for reference. This request has been approved by Danielle. Thank you!"
+        },
+        {
+          "label": "Department",
+          "fieldKey": "customfield_10158",
+          "answer": "Technology",
+          "choice": "10485"
+        },
+        {
+          "label": "How does this impact your work?",
+          "fieldKey": "customfield_11668",
+          "answer": "I can continue with a workaround",
+          "choice": "12076"
+        },
+        {
+          "label": "How many people or records are affected?",
+          "fieldKey": "customfield_11667",
+          "answer": "Only me or one record",
+          "choice": "12072"
+        },
+        {
+          "label": "System/Category",
+          "fieldKey": "customfield_11775",
+          "answer": "Salesforce- Reports/Dashboards - Grant/Revoke Access",
+          "choice": "12586:12588"
+        },
+        {
+          "label": "Which type of request are you submitting?",
+          "fieldKey": "customfield_11808",
+          "answer": "Customer / Operations ",
+          "choice": "12790"
+        },
+        {
+          "label": "Record Link",
+          "answer": "https://10xhealth.lightning.force.com/lightning/o/Opportunity/list?filterName=__Recent"
+        }
+      ],
+      "externalData": {
+        "fields": {
+          "51": {
+            "choices": [
+              {
+                "id": "12075",
+                "name": "My work is not affected"
+              },
+              {
+                "id": "12076",
+                "name": "I can continue with a workaround"
+              },
+              {
+                "id": "12077",
+                "name": "I am completely blocked"
+              }
+            ],
+            "jiraField": {
+              "id": "customfield_11668",
+              "configId": "11908",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:select",
+              "type": "option"
+            },
+            "answer": {
+              "choices": [
+                {
+                  "id": "12076",
+                  "name": "I can continue with a workaround"
+                }
+              ]
+            }
+          },
+          "4": {
+            "choices": [
+              {
+                "id": "10478",
+                "name": "Clinical"
+              },
+              {
+                "id": "10477",
+                "name": "Accounting"
+              },
+              {
+                "id": "10479",
+                "name": "Customer Support"
+              },
+              {
+                "id": "10480",
+                "name": "Finance"
+              },
+              {
+                "id": "10481",
+                "name": "Legal"
+              },
+              {
+                "id": "10482",
+                "name": "Marketing"
+              },
+              {
+                "id": "10483",
+                "name": "Operations"
+              },
+              {
+                "id": "10484",
+                "name": "Supply Chain"
+              },
+              {
+                "id": "10485",
+                "name": "Technology"
+              },
+              {
+                "id": "10486",
+                "name": "Wellness"
+              }
+            ],
+            "jiraField": {
+              "id": "customfield_10158",
+              "configId": "10266",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:select",
+              "type": "option"
+            },
+            "answer": {
+              "choices": [
+                {
+                  "id": "10485",
+                  "name": "Technology"
+                }
+              ]
+            }
+          },
+          "5": {
+            "jiraField": {
+              "id": "customfield_10032",
+              "configId": "10132",
+              "custom": "com.atlassian.servicedesk:sd-request-participants",
+              "type": "array"
+            },
+            "answer": {
+              "users": []
+            }
+          },
+          "10": {
+            "jiraField": {
+              "id": "description",
+              "system": "description",
+              "type": "string"
+            },
+            "answer": {
+              "adf": {
+                "type": "doc",
+                "version": 1,
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Hi Sean,"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Could you please grant me access to the Generate Supplement Order inside Opportunities? I can see and click the generate button, but it doesn't let me proceed, and I’m encountering an error. I’ve attached the screenshot of the error and also the button that I need access to for reference. This request has been approved by Danielle. Thank you!"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "21": {
+            "choices": [
+              {
+                "id": "12824",
+                "name": "Request for new hardware"
+              },
+              {
+                "id": "12825",
+                "name": "Repair/Troubleshooting for existing hardware"
+              }
+            ],
+            "jiraField": {
+              "id": "customfield_11841",
+              "configId": "12081",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:radiobuttons",
+              "type": "option"
+            },
+            "answer": {}
+          },
+          "75": {
+            "choices": [
+              {
+                "id": "12507",
+                "name": "Dr Chrono- Lab Orders",
+                "children": [
+                  {
+                    "id": "12508",
+                    "name": "Lab Requisition Issue"
+                  },
+                  {
+                    "id": "12509",
+                    "name": "Lab Results Issue"
+                  },
+                  {
+                    "id": "12510",
+                    "name": "Other Lab Order Issue"
+                  }
+                ]
+              },
+              {
+                "id": "12511",
+                "name": "Dr Chrono- System/Software",
+                "children": [
+                  {
+                    "id": "12512",
+                    "name": "BUG/Defect"
+                  },
+                  {
+                    "id": "12513",
+                    "name": "Error Message"
+                  },
+                  {
+                    "id": "12514",
+                    "name": "Outage/Performance Issue"
+                  },
+                  {
+                    "id": "12515",
+                    "name": "Feature/Configuration Issue"
+                  },
+                  {
+                    "id": "12516",
+                    "name": "Other System Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12517",
+                "name": "Dr Chrono- Login/Access/Account",
+                "children": [
+                  {
+                    "id": "12518",
+                    "name": "Password/Login Issue"
+                  },
+                  {
+                    "id": "12519",
+                    "name": "Account Modification"
+                  },
+                  {
+                    "id": "12520",
+                    "name": "Other Access/Account Issue"
+                  }
+                ]
+              },
+              {
+                "id": "12521",
+                "name": "Dr Chrono- Patients/Providers",
+                "children": [
+                  {
+                    "id": "12522",
+                    "name": "Patient Sync Issues"
+                  },
+                  {
+                    "id": "12523",
+                    "name": "Documents Issues"
+                  },
+                  {
+                    "id": "12524",
+                    "name": "Appointments Issues"
+                  },
+                  {
+                    "id": "12525",
+                    "name": "Demographics Issue"
+                  },
+                  {
+                    "id": "12526",
+                    "name": "Other Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12527",
+                "name": "Patient Portal- MGT",
+                "children": [
+                  {
+                    "id": "12528",
+                    "name": "Missing Results"
+                  },
+                  {
+                    "id": "12529",
+                    "name": "Incorrect Results"
+                  },
+                  {
+                    "id": "12530",
+                    "name": "Issue with Results"
+                  }
+                ]
+              },
+              {
+                "id": "12531",
+                "name": "Patient Portal- PGT",
+                "children": [
+                  {
+                    "id": "12532",
+                    "name": "Missing Results"
+                  },
+                  {
+                    "id": "12533",
+                    "name": "Incorrect Results"
+                  },
+                  {
+                    "id": "12534",
+                    "name": "Issue with Results"
+                  }
+                ]
+              },
+              {
+                "id": "12535",
+                "name": "Patient Portal- GHT",
+                "children": [
+                  {
+                    "id": "12536",
+                    "name": "Missing Results"
+                  },
+                  {
+                    "id": "12537",
+                    "name": "Incorrect Results"
+                  },
+                  {
+                    "id": "12538",
+                    "name": "Issue with Results"
+                  }
+                ]
+              },
+              {
+                "id": "12539",
+                "name": "Patient Portal- Blood Test Results",
+                "children": [
+                  {
+                    "id": "12540",
+                    "name": "Missing Results"
+                  },
+                  {
+                    "id": "12541",
+                    "name": "Incorrect Results"
+                  },
+                  {
+                    "id": "12542",
+                    "name": "Issue with Results"
+                  }
+                ]
+              },
+              {
+                "id": "12543",
+                "name": "Patient Portal- Agreements/Consents",
+                "children": [
+                  {
+                    "id": "12544",
+                    "name": "Missing Agreement/Consent"
+                  },
+                  {
+                    "id": "12545",
+                    "name": "Patient unable to consent"
+                  },
+                  {
+                    "id": "12546",
+                    "name": "Other"
+                  }
+                ]
+              },
+              {
+                "id": "12547",
+                "name": "Patient Portal- Login",
+                "children": [
+                  {
+                    "id": "12548",
+                    "name": "Login Error"
+                  },
+                  {
+                    "id": "12549",
+                    "name": "Incorrect Demographics"
+                  },
+                  {
+                    "id": "12550",
+                    "name": "Security Code Issues"
+                  },
+                  {
+                    "id": "12551",
+                    "name": "Other Login Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12552",
+                "name": "Patient Portal- Kit Registration",
+                "children": [
+                  {
+                    "id": "12553",
+                    "name": "Unable to Register"
+                  },
+                  {
+                    "id": "12554",
+                    "name": "Incorrect Registration"
+                  },
+                  {
+                    "id": "12555",
+                    "name": "Other Kit Registration Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12556",
+                "name": "Patient Portal- Site Performance",
+                "children": [
+                  {
+                    "id": "12557",
+                    "name": "BUG/Defect"
+                  },
+                  {
+                    "id": "12558",
+                    "name": "Outage"
+                  },
+                  {
+                    "id": "12559",
+                    "name": "Other Performance Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12560",
+                "name": "Salesforce- Customer Accounts",
+                "children": [
+                  {
+                    "id": "12561",
+                    "name": "Duplicate Accounts"
+                  },
+                  {
+                    "id": "12562",
+                    "name": "Update Account"
+                  },
+                  {
+                    "id": "12563",
+                    "name": "Deactivate Account"
+                  },
+                  {
+                    "id": "12564",
+                    "name": "Related Account/Relationships"
+                  },
+                  {
+                    "id": "12726",
+                    "name": "Patient Agreements"
+                  },
+                  {
+                    "id": "12565",
+                    "name": "Other Account Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12566",
+                "name": "Salesforce- Employee Accounts",
+                "children": [
+                  {
+                    "id": "12567",
+                    "name": "Missing Employee Account"
+                  },
+                  {
+                    "id": "12568",
+                    "name": "Update Employee Account"
+                  },
+                  {
+                    "id": "12569",
+                    "name": "Other Employe Account Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12570",
+                "name": "Salesforce- Opportunities",
+                "children": [
+                  {
+                    "id": "12571",
+                    "name": "Missing Opportunity"
+                  },
+                  {
+                    "id": "12572",
+                    "name": "Update Opportunity"
+                  },
+                  {
+                    "id": "12573",
+                    "name": "Opportunity Error"
+                  },
+                  {
+                    "id": "12574",
+                    "name": "Other Opportunity Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12575",
+                "name": "Salesforce- Lab Orders",
+                "children": [
+                  {
+                    "id": "12576",
+                    "name": "Lab Order Error"
+                  },
+                  {
+                    "id": "12577",
+                    "name": "Request Kit Registration"
+                  },
+                  {
+                    "id": "12578",
+                    "name": "Update Lab Order"
+                  },
+                  {
+                    "id": "12579",
+                    "name": "Cancel Lab Order"
+                  },
+                  {
+                    "id": "12580",
+                    "name": "Reship/Reorder"
+                  },
+                  {
+                    "id": "12581",
+                    "name": "Other Lab Order Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12582",
+                "name": "Salesforce- Transactions",
+                "children": [
+                  {
+                    "id": "12583",
+                    "name": "Duplicate Transactions"
+                  },
+                  {
+                    "id": "12584",
+                    "name": "Transaction Errors"
+                  },
+                  {
+                    "id": "12585",
+                    "name": "Other Transaction Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12586",
+                "name": "Salesforce- Reports/Dashboards",
+                "children": [
+                  {
+                    "id": "12587",
+                    "name": "Update Report/Dashboard"
+                  },
+                  {
+                    "id": "12588",
+                    "name": "Grant/Revoke Access"
+                  },
+                  {
+                    "id": "12589",
+                    "name": "Help with Existing Report/Dashboard"
+                  },
+                  {
+                    "id": "12590",
+                    "name": "Help with New Report/Dashboard"
+                  },
+                  {
+                    "id": "12591",
+                    "name": "Other Report/Dashboard Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12592",
+                "name": "Salesforce- Other",
+                "children": [
+                  {
+                    "id": "12593",
+                    "name": "Other Salesforce Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12594",
+                "name": "Lacore/ShipStation",
+                "children": [
+                  {
+                    "id": "12595",
+                    "name": "Sync Issues"
+                  },
+                  {
+                    "id": "12596",
+                    "name": "Missing Supplement Order"
+                  },
+                  {
+                    "id": "12597",
+                    "name": "Order Errors"
+                  },
+                  {
+                    "id": "12598",
+                    "name": "Order Update"
+                  },
+                  {
+                    "id": "12599",
+                    "name": "Other Lacore/ShipStation Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12600",
+                "name": "SMS Magic",
+                "children": [
+                  {
+                    "id": "12601",
+                    "name": "Access Issue"
+                  },
+                  {
+                    "id": "12602",
+                    "name": "BUG/Defect"
+                  },
+                  {
+                    "id": "12603",
+                    "name": "Technical Issue"
+                  },
+                  {
+                    "id": "12604",
+                    "name": "Other SMS Magic Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12605",
+                "name": "Shopify/POS- Login/Access",
+                "children": [
+                  {
+                    "id": "12606",
+                    "name": "Unable to Login"
+                  },
+                  {
+                    "id": "12607",
+                    "name": "Other Access Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12608",
+                "name": "Shopify- Orders",
+                "children": [
+                  {
+                    "id": "12609",
+                    "name": "Order not synced"
+                  },
+                  {
+                    "id": "12610",
+                    "name": "Order Refunded"
+                  },
+                  {
+                    "id": "12611",
+                    "name": "Other Order Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12646",
+                "name": "Confluence/Jira",
+                "children": [
+                  {
+                    "id": "12650",
+                    "name": "Confluence Space Access"
+                  },
+                  {
+                    "id": "12651",
+                    "name": "Confluence Space Permissions"
+                  },
+                  {
+                    "id": "12724",
+                    "name": "Jira Access"
+                  },
+                  {
+                    "id": "12725",
+                    "name": "Other Jira Issues"
+                  },
+                  {
+                    "id": "12652",
+                    "name": "Other Confluence Issues"
+                  }
+                ]
+              },
+              {
+                "id": "12612",
+                "name": "Other Issues",
+                "children": [
+                  {
+                    "id": "12613",
+                    "name": "Other Issues"
+                  }
+                ]
+              }
+            ],
+            "jiraField": {
+              "id": "customfield_11775",
+              "configId": "12015",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:cascadingselect",
+              "type": "option-with-child"
+            },
+            "answer": {
+              "choices": [
+                {
+                  "id": "12586:12588",
+                  "name": "Salesforce- Reports/Dashboards - Grant/Revoke Access"
+                }
+              ]
+            }
+          },
+          "3": {
+            "jiraField": {
+              "id": "summary",
+              "system": "summary",
+              "type": "string"
+            },
+            "answer": {
+              "text": "SF - Access to Generate Supplement Order"
+            }
+          },
+          "52": {
+            "choices": [
+              {
+                "id": "12072",
+                "name": "Only me or one record"
+              },
+              {
+                "id": "12073",
+                "name": "A small team or multiple records"
+              },
+              {
+                "id": "12074",
+                "name": "Multiple teams, departments, or large numbers of records"
+              }
+            ],
+            "jiraField": {
+              "id": "customfield_11667",
+              "configId": "11907",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:select",
+              "type": "option"
+            },
+            "answer": {
+              "choices": [
+                {
+                  "id": "12072",
+                  "name": "Only me or one record"
+                }
+              ]
+            }
+          },
+          "1": {
+            "choices": [
+              {
+                "id": "12790",
+                "name": "Customer / Operations "
+              },
+              {
+                "id": "12791",
+                "name": "IT Support"
+              },
+              {
+                "id": "12792",
+                "name": "Hardware Request or Repair"
+              },
+              {
+                "id": "12793",
+                "name": "Report a Security Concern"
+              }
+            ],
+            "jiraField": {
+              "id": "customfield_11808",
+              "configId": "12048",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:radiobuttons",
+              "type": "option"
+            },
+            "answer": {
+              "choices": [
+                {
+                  "id": "12790",
+                  "name": "Customer / Operations "
+                }
+              ]
+            }
+          },
+          "39": {
+            "choices": [
+              {
+                "id": "12826",
+                "name": "Trouble Signing In",
+                "children": [
+                  {
+                    "id": "12827",
+                    "name": "Alloware"
+                  },
+                  {
+                    "id": "12828",
+                    "name": "Asana"
+                  },
+                  {
+                    "id": "12829",
+                    "name": "Azure/Dev Ops (ADO)"
+                  },
+                  {
+                    "id": "12830",
+                    "name": "DocGen"
+                  },
+                  {
+                    "id": "12831",
+                    "name": "GitHub"
+                  },
+                  {
+                    "id": "12832",
+                    "name": "Microsoft 365 (Outlook, Excel, OneDrive, etc.)"
+                  },
+                  {
+                    "id": "12833",
+                    "name": "QuickBooks/DBSync"
+                  },
+                  {
+                    "id": "12834",
+                    "name": "Scribe"
+                  },
+                  {
+                    "id": "12835",
+                    "name": "Slack"
+                  },
+                  {
+                    "id": "12836",
+                    "name": "Vonage"
+                  },
+                  {
+                    "id": "12837",
+                    "name": "Zoom"
+                  },
+                  {
+                    "id": "12838",
+                    "name": "Other"
+                  }
+                ]
+              },
+              {
+                "id": "12839",
+                "name": "MFA Issues",
+                "children": [
+                  {
+                    "id": "12840",
+                    "name": "Alloware"
+                  },
+                  {
+                    "id": "12841",
+                    "name": "Asana"
+                  },
+                  {
+                    "id": "12842",
+                    "name": "Azure/Dev Ops (ADO)"
+                  },
+                  {
+                    "id": "12843",
+                    "name": "Microsoft 365 (Outlook, Excel, OneDrive, etc.)"
+                  },
+                  {
+                    "id": "12844",
+                    "name": "Slack"
+                  },
+                  {
+                    "id": "12845",
+                    "name": "Zoom"
+                  },
+                  {
+                    "id": "12846",
+                    "name": "Other"
+                  }
+                ]
+              },
+              {
+                "id": "12847",
+                "name": "Microsoft 365 (Outlook, Excel, OneDrive, etc.)",
+                "children": [
+                  {
+                    "id": "12848",
+                    "name": "Microsoft 365 (Outlook, Excel, OneDrive, etc.)"
+                  }
+                ]
+              },
+              {
+                "id": "12849",
+                "name": "SSO Login Issues",
+                "children": [
+                  {
+                    "id": "12850",
+                    "name": "Alloware"
+                  },
+                  {
+                    "id": "12851",
+                    "name": "Asana"
+                  },
+                  {
+                    "id": "12852",
+                    "name": "Azure/DevOps (ADO)"
+                  },
+                  {
+                    "id": "12853",
+                    "name": "DocGen"
+                  },
+                  {
+                    "id": "12854",
+                    "name": "GitHub"
+                  },
+                  {
+                    "id": "12855",
+                    "name": "Microsoft 365 (Outlook, Excel, OneDrive, etc.)"
+                  },
+                  {
+                    "id": "12856",
+                    "name": "QuickBooks/DBSync"
+                  },
+                  {
+                    "id": "12857",
+                    "name": "Scribe"
+                  },
+                  {
+                    "id": "12858",
+                    "name": "Slack"
+                  },
+                  {
+                    "id": "12859",
+                    "name": "Vonage"
+                  },
+                  {
+                    "id": "12860",
+                    "name": "Zoom"
+                  },
+                  {
+                    "id": "12861",
+                    "name": "Other"
+                  }
+                ]
+              },
+              {
+                "id": "12862",
+                "name": "Database Sync Issues",
+                "children": [
+                  {
+                    "id": "12863",
+                    "name": "QuickBooks/DBSync"
+                  },
+                  {
+                    "id": "12864",
+                    "name": "Azure"
+                  },
+                  {
+                    "id": "12865",
+                    "name": "Other"
+                  }
+                ]
+              },
+              {
+                "id": "12866",
+                "name": "Licensing Update/Request",
+                "children": [
+                  {
+                    "id": "12867",
+                    "name": "Describe below"
+                  }
+                ]
+              },
+              {
+                "id": "12868",
+                "name": "Software Installation",
+                "children": [
+                  {
+                    "id": "12869",
+                    "name": "Describe below"
+                  }
+                ]
+              },
+              {
+                "id": "12870",
+                "name": "Other",
+                "children": [
+                  {
+                    "id": "12871",
+                    "name": "Other"
+                  }
+                ]
+              }
+            ],
+            "jiraField": {
+              "id": "customfield_11842",
+              "configId": "12082",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:cascadingselect",
+              "type": "option-with-child"
+            },
+            "answer": {}
+          }
+        }
+      },
+      "attachmentMetadata": {
+        "fields": {
+          "11": [
+            {
+              "attachmentId": 46392,
+              "id": "eb39d53e-cc62-4c3b-b194-a246ad179b1c",
+              "name": "image (99).png",
+              "creationDate": 1778529369780,
+              "size": 26007,
+              "type": "image/png"
+            },
+            {
+              "attachmentId": 46393,
+              "id": "07c43744-8f8b-4f9d-a341-89eb6765d390",
+              "name": "Screenshot 2026-05-11 160118.png",
+              "creationDate": 1778529751716,
+              "size": 28303,
+              "type": "image/png"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "fieldNames": {
+    "summary": "Summary",
+    "status": "Status",
+    "priority": "Priority",
+    "duedate": "Due date",
+    "assignee": "Assignee",
+    "reporter": "Reporter",
+    "description": "Description",
+    "created": "Created",
+    "updated": "Updated",
+    "attachment": "Attachment",
+    "customfield_10010": "Request Type",
+    "customfield_10032": "Request participants",
+    "customfield_10194": "Summary",
+    "customfield_10195": "Description"
+  },
+  "fieldMapPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/field-map.json",
+  "cloudId": "9fb9876a-39bd-4ca8-93e6-30f1ac1ecc84",
+  "syncedAt": "2026-05-20T05:17:31+00:00"
+}

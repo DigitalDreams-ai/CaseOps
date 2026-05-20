@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>VIP_Opportunities_to_process</fullName>
+    <columns>ACCOUNT.NAME</columns>
+    <columns>OPPORTUNITY.NAME</columns>
+    <columns>OPPORTUNITY.RECORDTYPE</columns>
+    <columns>OPPORTUNITY.STAGE_NAME</columns>
+    <columns>OPPORTUNITY.CREATED_DATE</columns>
+    <columns>OPPORTUNITY.CLOSE_DATE</columns>
+    <columns>OPPORTUNITY.AMOUNT</columns>
+    <columns>Transaction_Type__c</columns>
+    <columns>Credit_Card__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>VIP_Opportunity__c</field>
+        <operation>equals</operation>
+        <value>1</value>
+    </filters>
+    <filters>
+        <field>OPPORTUNITY.STAGE_NAME</field>
+        <operation>equals</operation>
+        <value>New,New Purchase,Open</value>
+    </filters>
+    <label>VIP Opportunities to process</label>
+    <sharedTo>
+        <roleAndSubordinates>CFO_New</roleAndSubordinates>
+    </sharedTo>
+</ListView>

@@ -1,0 +1,48 @@
+{"ts": "2026-05-19T01:58:05.684531+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "-- Step 1: Syncing from Jira ------------------------------"}
+{"ts": "2026-05-19T01:58:05.842176+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "Connecting to https://10xhealthsystem.atlassian.net..."}
+{"ts": "2026-05-19T01:58:05.842176+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "JQL: assignee = \"sbingham@10xhealthsystem.com\" AND statusCategory != Done ORDER BY created ASC"}
+{"ts": "2026-05-19T01:58:06.774981+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "Found 1 issue(s). Syncing..."}
+{"ts": "2026-05-19T01:58:06.774981+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "[1/1] HEAL-33391 - fetching..."}
+{"ts": "2026-05-19T01:58:07.266261+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "[1/1] HEAL-33391 - In Progress: Need access to view all orders in SF"}
+{"ts": "2026-05-19T01:58:07.267287+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "[1/1] HEAL-33391 - fetching comments, changelog, worklogs..."}
+{"ts": "2026-05-19T01:58:08.653072+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "[1/1] HEAL-33391 - downloading attachments..."}
+{"ts": "2026-05-19T01:58:09.381306+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "[1/1] HEAL-33391 - fetching forms..."}
+{"ts": "2026-05-19T01:58:12.278521+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "[1/1] HEAL-33391 - written (4 comments, 1 attachments, 1 forms)"}
+{"ts": "2026-05-19T01:58:12.282542+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "Synced 1 issue(s) into C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira"}
+{"ts": "2026-05-19T01:58:12.314745+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "Manifest merged: 45 total issue(s)."}
+{"ts": "2026-05-19T01:58:12.314745+00:00", "run_key": "HEAL-33391", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:12.316774+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "-- Step 2: Triaging issues --------------------------------"}
+{"ts": "2026-05-19T01:58:12.325898+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "  Total synced:             1"}
+{"ts": "2026-05-19T01:58:12.326423+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "  Closed / Resolved / Canceled: 0"}
+{"ts": "2026-05-19T01:58:12.327167+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "  Escalated to Engineering: 0"}
+{"ts": "2026-05-19T01:58:12.328690+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "  Active (needs processing): 1"}
+{"ts": "2026-05-19T01:58:12.328690+00:00", "run_key": "HEAL-33391", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:12.328690+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "-- Step 3: Archiving Closed / Resolved / Canceled --------"}
+{"ts": "2026-05-19T01:58:12.331175+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-19T01:58:12.331175+00:00", "run_key": "HEAL-33391", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:12.332692+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "-- Step 4: Archiving pre-escalated issues ------------------"}
+{"ts": "2026-05-19T01:58:12.332692+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-19T01:58:12.332692+00:00", "run_key": "HEAL-33391", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:12.334836+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "-- Step 5: Scaffolding investigation records ---------------"}
+{"ts": "2026-05-19T01:58:12.334836+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "  [exists ] HEAL-33391  ->  outputs\\investigations\\HEAL-33391.md"}
+{"ts": "2026-05-19T01:58:12.336882+00:00", "run_key": "HEAL-33391", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:12.337403+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "-- Step 6: Updating dated summary --------------------------"}
+{"ts": "2026-05-19T01:58:12.338908+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "  outputs\\issue-summary-2026-05-18.md"}
+{"ts": "2026-05-19T01:58:12.339910+00:00", "run_key": "HEAL-33391", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:12.340414+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "-- Step 7: Handoff to AI reasoning ------------------------"}
+{"ts": "2026-05-19T01:58:12.340414+00:00", "run_key": "HEAL-33391", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:12.341924+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "  1 active issue(s) ready for processing:"}
+{"ts": "2026-05-19T01:58:12.343050+00:00", "run_key": "HEAL-33391", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:12.343050+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "    HEAL-33391  In Progress"}
+{"ts": "2026-05-19T01:58:12.344563+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "      Need access to view all orders in SF"}
+{"ts": "2026-05-19T01:58:12.344563+00:00", "run_key": "HEAL-33391", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:12.347105+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "-- Step 8: Processing active issues in parallel -----------"}
+{"ts": "2026-05-19T01:58:12.347105+00:00", "run_key": "HEAL-33391", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:12.348626+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "  Batch 1: Processing 1 issue(s)..."}
+{"ts": "2026-05-19T01:58:12.349629+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "    > HEAL-33391"}
+{"ts": "2026-05-19T01:58:13.830510+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "    [OK] HEAL-33391 completed"}
+{"ts": "2026-05-19T01:58:13.830510+00:00", "run_key": "HEAL-33391", "kind": "line", "text": ""}
+{"ts": "2026-05-19T01:58:13.832158+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "  Step 8 complete: 1 succeeded, 0 failed out of 1 issues"}
+{"ts": "2026-05-19T01:58:13.842851+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "-- exit code 0 --"}
+{"ts": "2026-05-19T01:58:13.844363+00:00", "run_key": "HEAL-33391", "kind": "line", "text": "Done: HEAL-33391"}
+{"ts": "2026-05-19T01:58:13.845883+00:00", "run_key": "HEAL-33391", "kind": "done", "text": ""}

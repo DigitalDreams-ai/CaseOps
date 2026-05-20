@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WebLink xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AVA_SFCLOUD__Order_Validate_Shipping_Address</fullName>
+    <availability>online</availability>
+    <displayType>button</displayType>
+    <encodingKey>UTF-8</encodingKey>
+    <height>600</height>
+    <linkType>url</linkType>
+    <masterLabel>Validate Shipping Address</masterLabel>
+    <openType>noSidebar</openType>
+    <protected>false</protected>
+    <url>/apex/AVA_MAPPER__addressValidation?id={!Order.Id}&amp;sType=SFConfig&amp;adrType=Shipping&amp;objectAPIName=AVA_SFCLOUD__AvaTax_Mapping__c&amp;fieldAPIName=AVA_SFCLOUD__Field_Mapping__c</url>
+</WebLink>

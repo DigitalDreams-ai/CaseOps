@@ -1,0 +1,7 @@
+{
+  "lastRunAt": "2026-05-20T05:18:12+00:00",
+  "newestUpdated": "2026-05-19T16:08:32.153-0400",
+  "newestCreated": "2026-05-18T10:10:42.062-0400",
+  "lastJql": "assignee = \"sbingham@10xhealthsystem.com\" AND statusCategory != Done ORDER BY created ASC",
+  "lastIssueCount": 33
+}

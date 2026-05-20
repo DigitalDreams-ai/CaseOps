@@ -139,14 +139,18 @@ If NOT escalating (support-resolvable), leave engineering_handoff empty string.
 
 ## Response Format
 
-Return ONLY a JSON code block with two fields (no preamble or explanation):
+Return ONLY a JSON code block with two fields (no preamble or explanation).
+
+**CRITICAL: Output MUST be valid JSON. Escape all special characters. Do not truncate.**
 
 ```json
 {{
-  "internal_notes": "<filled markdown here>",
+  "internal_notes": "<filled markdown here — escape quotes and backslashes>",
   "engineering_handoff": "<filled markdown if escalating, else empty string>"
 }}
 ```
+
+If investigation is incomplete/thin (mostly templates), output brief notes saying "Awaiting customer response" or "Insufficient data to diagnose" — do NOT attempt deep analysis with sparse data.
 """
 
     # Call Claude
@@ -170,6 +174,7 @@ Return ONLY a JSON code block with two fields (no preamble or explanation):
     except Exception as e:
         print(f"  [{key}] ERROR: API call failed: {str(e)[:200]}", file=sys.stderr)
         return 1
+
 
     # Parse response (extract JSON from code blocks if needed)
     try:

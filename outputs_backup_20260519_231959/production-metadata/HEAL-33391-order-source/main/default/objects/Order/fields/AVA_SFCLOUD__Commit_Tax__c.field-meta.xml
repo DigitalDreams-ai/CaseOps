@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AVA_SFCLOUD__Commit_Tax__c</fullName>
+    <defaultValue>false</defaultValue>
+    <deprecated>false</deprecated>
+    <description>If checked, performs the automatic tax calculation and passes the document as &quot;Committed&quot; on the AvaTax.</description>
+    <inlineHelpText>If checked, performs the automatic tax calculation and passes the document as &quot;Committed&quot; on the AvaTax.</inlineHelpText>
+    <label>Commit Tax</label>
+    <trackHistory>false</trackHistory>
+    <type>Checkbox</type>
+</CustomField>

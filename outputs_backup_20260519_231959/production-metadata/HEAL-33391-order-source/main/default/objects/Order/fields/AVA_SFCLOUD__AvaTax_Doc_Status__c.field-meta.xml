@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AVA_SFCLOUD__AvaTax_Doc_Status__c</fullName>
+    <deprecated>false</deprecated>
+    <description>Temporary = Not Saved to Avalara AvaTax
+Saved = Saved but not Posted/Committed to Avalara AvaTax
+Committed = Saved and Committed to Avalara AvaTax</description>
+    <encryptionScheme>None</encryptionScheme>
+    <externalId>false</externalId>
+    <inlineHelpText>Temporary = Not Saved to Avalara AvaTax
+Saved = Saved but not Posted/Committed to Avalara AvaTax
+Committed = Saved and Committed to Avalara AvaTax
+(Do not edit this field value)</inlineHelpText>
+    <label>AvaTax Doc Status</label>
+    <length>50</length>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

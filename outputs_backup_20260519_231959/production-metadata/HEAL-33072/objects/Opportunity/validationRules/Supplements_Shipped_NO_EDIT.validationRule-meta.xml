@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Supplements_Shipped_NO_EDIT</fullName>
+    <active>true</active>
+    <description>This VR will prevent users from editing Genetic Testing Opps that are in a Supplements Shipped stage
+
+Operations, New Operations
+System Administrator, HG SysAdmin
+Finance, New Finance</description>
+    <errorConditionFormula>AND(
+ISPICKVAL(PRIORVALUE(StageName),&quot;Supplements Shipped&quot;),
+NOT($Profile.Id = &quot;00e0b000001nOvW&quot;),
+NOT($Profile.Id = &quot;00e5a0000018d9a&quot;),
+NOT($Profile.Id = &quot;00e0b000001iU5h&quot;),
+NOT($Profile.Id = &quot;00e5a000001OuCRAA0&quot;),
+NOT($Profile.Id = &quot;00e0b000001nOvl&quot;),
+NOT($Profile.Id = &quot;00e5a0000018d9G&quot;)
+)</errorConditionFormula>
+    <errorMessage>You Can Not Edit This Opportunity Supplements Have Been Shipped.</errorMessage>
+</ValidationRule>

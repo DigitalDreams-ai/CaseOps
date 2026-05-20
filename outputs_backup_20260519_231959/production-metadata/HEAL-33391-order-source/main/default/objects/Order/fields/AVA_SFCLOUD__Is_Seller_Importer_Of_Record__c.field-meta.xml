@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AVA_SFCLOUD__Is_Seller_Importer_Of_Record__c</fullName>
+    <defaultValue>false</defaultValue>
+    <deprecated>false</deprecated>
+    <description>If checked, Seller is responsible for any import taxes and fees</description>
+    <inlineHelpText>If checked, Seller is responsible for any import taxes and fees</inlineHelpText>
+    <label>Is Seller Importer Of Record</label>
+    <trackHistory>false</trackHistory>
+    <type>Checkbox</type>
+</CustomField>
