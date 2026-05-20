@@ -31,12 +31,36 @@
 
 ## Root Cause
 
+[From investigation: why is this artifact broken? What is wrong with it?]
+
+## Problem Location (from Step 6 investigation)
+
+**Required — Support must identify before escalating.**
+
+### Problem Type
+[data / component / config / integration / access / setting / process]
+
+### Specific Artifact
+- **Name:** [exact name from Production]
+- **API Name (if applicable):** [API name]
+- **Type:** [Apex class / Flow / Validation Rule / Permission Set / Field / Org Setting / etc.]
+
+### Location in Production
+[Setup path or code path: e.g., "Setup > Object Manager > Order > Fields > ShipToCity", or "Apex class: Namespace.ClassName", or "Flow: Wellvi_eSubmit_Flow"]
+
+### Failure Point
+[Where in the flow it breaks. Example: "SOQL SELECT clause at line 45 does not include ShipToCity field."]
+
 ## Affected Component
 
-- Metadata/code component:
-- Element/rule/process, if applicable:
+- Metadata/code component: [Same as artifact identified above]
+- Element/rule/process, if applicable: [Specific element within the component]
 
 ## Potential Fix
+
+[Plain description of what likely needs to change. Do NOT ask Engineering to discover the component. Be specific: 
+- "Update Email-to-Case routing address for Cx record type to enable Thread ID matching" 
+- NOT "Identify and audit Email-to-Case routing addresses"]
 
 ## Production / deploy context (required)
 

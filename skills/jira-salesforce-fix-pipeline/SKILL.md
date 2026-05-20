@@ -12,7 +12,7 @@ After this skill activates, read **`references/workflow.md`** end-to-end. It is 
 
 Supporting references (load when doing the step they support):
 
-- **`references/sub-agent-prompts.md`** — copy-paste Agent-tool prompts for Steps **3, 5, 8, and 9**.
+- **`references/sub-agent-prompts.md`** — copy-paste Agent-tool prompts for Steps **3, 5, 6, 9, and 10**.
 - **`references/safety-policy.md`** — Production read-only, Sandbox allowlist, Jira and data rules.
 - **`references/quality-checklist.md`** — gates before you declare a run complete.
 

@@ -63,3 +63,35 @@
 | --- | --- | --- | --- | --- | --- |
 | [example] | Field | Read-Write | [list] | [list] | Used for similar purpose |
 
+---
+
+## Problem Location (Step 6 — filled after Production metadata drilling)
+
+### Problem Type
+
+[Select one: data / component / config / integration / access / setting / process]
+
+**Explanation:**
+
+### Specific Artifact
+
+- **Name:** [exact name from Production]
+- **API Name (if applicable):** [API name]
+- **Type:** [Apex class / Flow / Validation Rule / Permission Set / Field / Org Setting / etc.]
+
+### Location in Production
+
+[Setup path or code path: e.g., "Setup > Object Manager > Order > Fields > ShipToCity", or "Apex class: Namespace.ClassName", or "Flow: Wellvi_eSubmit_Flow in folder /Integrations"]
+
+### Failure Point (where in the flow it breaks)
+
+[Describe where the problem occurs: at data read, at field mapping, at validation check, at API call, at permission enforcement, etc.]
+
+**Example:** "SOQL SELECT clause in WellviPayloadBuilder.constructPayload() (line 45) does not include ShipToCity field, so null value is sent to Wellvi API."
+
+### Root Cause
+
+[Why is this artifact broken? What is wrong with it?]
+
+**Example:** "Email-to-Case routing address for Cx record type is not set to Thread ID matching mode. Replies matching on Case ID instead of thread token, causing orphaned cases or discarded replies."
+
