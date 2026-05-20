@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Investigation Finalization Agent (Skill Step 5B).
+"""Notes and Escalation Agent (Skill Step 8B).
 
-Analyzes Salesforce support issue and produces investigation record only.
-Focuses on problem diagnosis: issue understanding, Salesforce configuration,
-similar items analysis. Does NOT produce solution plan or internal notes.
+Analyzes investigation record and produces internal notes + engineering escalation.
+Focuses on root cause diagnosis, solution vs escalation decision, deployment plan.
 
 Usage:
-    python investigation_finalization_agent.py --key HEAL-33150
+    python notes_and_escalation_agent.py --key HEAL-33150
 """
 
 from __future__ import annotations
@@ -40,7 +39,7 @@ def load_env(env_file: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Investigation Finalization: analyze issue and produce investigation record."
+        description="Notes and Escalation: analyze investigation and produce internal notes + escalation."
     )
     parser.add_argument("--key", required=True, help="Jira issue key (e.g., HEAL-33150)")
     parser.add_argument(
@@ -57,64 +56,93 @@ def main() -> int:
 
     key = args.key.strip()
     outputs_dir = Path(args.outputs_dir)
-    jira_dir = outputs_dir / "jira"
 
     # Load env
     load_env(Path(args.env_file))
 
     # Check if already processed (idempotent)
-    investigation_path = outputs_dir / "investigations" / f"{key}.md"
-    if investigation_path.exists():
-        print(f"  [{key}] already investigated, skipping")
+    internal_notes_path = outputs_dir / "internal-notes" / f"{key}.md"
+    if internal_notes_path.exists():
+        print(f"  [{key}] already has notes, skipping")
         return 0
 
-    # Read context
+    # Read inputs
+    investigation_path = outputs_dir / "investigations" / f"{key}.md"
+    jira_dir = outputs_dir / "jira"
     jira_summary_path = jira_dir / "summary" / f"{key}.md"
+
+    if not investigation_path.exists():
+        print(
+            f"  [{key}] ERROR: investigation not found at {investigation_path}",
+            file=sys.stderr,
+        )
+        return 1
 
     if not jira_summary_path.exists():
         print(f"  [{key}] ERROR: jira summary not found at {jira_summary_path}", file=sys.stderr)
         return 1
 
+    investigation = investigation_path.read_text(encoding="utf-8")
     jira_summary = jira_summary_path.read_text(encoding="utf-8")
 
-    # Load template
+    # Load templates
     template_dir = PROJECT_ROOT / "skills" / "jira-salesforce-fix-pipeline" / "assets"
-    investigation_template = (template_dir / "investigation-record-template.md").read_text(
+    internal_notes_template = (template_dir / "internal-notes-template.md").read_text(
+        encoding="utf-8"
+    )
+    engineering_handoff_template = (template_dir / "engineering-handoff-template.md").read_text(
         encoding="utf-8"
     )
 
-    # Build prompt (focused on investigation only)
-    prompt = f"""You are CaseOps investigation analyst.
+    # Build prompt
+    prompt = f"""You are CaseOps support analyst and decision maker.
 
 ## Issue: {key}
 
 ### Jira Summary
 {jira_summary}
 
+### Investigation Record (completed analysis)
+{investigation}
+
 ---
 
-## Task: Produce Investigation Record Only
+## Task: Produce Internal Notes + Escalation Decision
 
-Analyze this issue and fill the investigation template. Focus on:
-1. Issue understanding (what customer reported, what should happen)
-2. Salesforce problem analysis (confirmed facts, similar items, configuration)
-3. Due diligence (find similar existing items, document their config)
+Analyze the investigation and decide: solve in Sandbox or escalate to Engineering?
 
-DO NOT include: escalation decision, solution plan, deployment steps, testing, or iterations.
+### Output A — Internal Notes
+
+Fill in the internal notes template. Focus on:
+1. Root cause (from investigation analysis)
+2. Solution path (Sandbox fix) OR escalation (engineering required)
+3. Production vs Sandbox deployment plan
+4. Engineering handoff details (if escalating)
 
 ```markdown
-{investigation_template}
+{internal_notes_template}
 ```
+
+### Output B — Engineering Handoff (if escalating only)
+
+If you decide Engineering is required, fill this template with detailed handoff:
+
+```markdown
+{engineering_handoff_template}
+```
+
+If NOT escalating, leave engineering_handoff empty string.
 
 ---
 
 ## Response Format
 
-Return ONLY a JSON code block with one field (no preamble or explanation):
+Return ONLY a JSON code block with two fields (no preamble or explanation):
 
 ```json
 {{
-  "investigation": "<filled markdown here>"
+  "internal_notes": "<filled markdown here>",
+  "engineering_handoff": "<filled markdown if escalating, else empty string>"
 }}
 ```
 """
@@ -155,19 +183,29 @@ Return ONLY a JSON code block with one field (no preamble or explanation):
             else:
                 raise json.JSONDecodeError("No JSON found", response_text, 0)
 
-        investigation_text = response_data.get("investigation", "").strip()
-        if not investigation_text:
-            print(f"  [{key}] ERROR: investigation field empty", file=sys.stderr)
+        internal_notes_text = response_data.get("internal_notes", "").strip()
+        engineering_handoff_text = response_data.get("engineering_handoff", "").strip()
+
+        if not internal_notes_text:
+            print(f"  [{key}] ERROR: internal_notes field empty", file=sys.stderr)
             return 1
     except json.JSONDecodeError as e:
         print(f"  [{key}] ERROR: invalid JSON: {str(e)[:200]}", file=sys.stderr)
         return 1
 
-    # Write output
+    # Write outputs
     try:
-        investigation_path.parent.mkdir(parents=True, exist_ok=True)
-        investigation_path.write_text(investigation_text, encoding="utf-8")
-        print(f"  [{key}] OK: investigation written")
+        internal_notes_path.parent.mkdir(parents=True, exist_ok=True)
+        internal_notes_path.write_text(internal_notes_text, encoding="utf-8")
+
+        # Write engineering handoff only if escalating
+        if engineering_handoff_text:
+            eng_escalations_path = outputs_dir / "engineering-escalations" / f"{key}.md"
+            eng_escalations_path.parent.mkdir(parents=True, exist_ok=True)
+            eng_escalations_path.write_text(engineering_handoff_text, encoding="utf-8")
+            print(f"  [{key}] OK: notes + engineering escalation written")
+        else:
+            print(f"  [{key}] OK: notes written (no escalation)")
     except Exception as e:
         print(f"  [{key}] ERROR: write failed: {str(e)[:200]}", file=sys.stderr)
         return 1
