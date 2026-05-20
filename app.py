@@ -1088,8 +1088,9 @@ def api_stream():
             except queue.Empty:
                 yield ": heartbeat\n\n"
                 continue
-            safe = msg.replace("\n", " ")
-            yield f"data: {safe}\n\n"
+            for line in msg.split("\n"):
+                yield f"data: {line}\n"
+            yield "\n"
 
     return Response(
         stream_with_context(generate()),
