@@ -1,0 +1,220 @@
+{
+  "status": 0,
+  "result": {
+    "records": [
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/0000000qQdFQKddAIH"
+        },
+        "ParentId": "0PS5a0000001NPoGAM",
+        "Field": "Case.Supplement_Inquiry__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": false
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097G5oEIAS"
+        },
+        "ParentId": "0PS5a0000005ma9GAA",
+        "Field": "Case.Supplement_Inquiry__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097H6qoIAC"
+        },
+        "ParentId": "0PS5a000000GZQ4GAO",
+        "Field": "Case.Supplement_Inquiry__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": false
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/0000000tOzZy23mAIB"
+        },
+        "ParentId": "0PSEa000006xsybOAA",
+        "Field": "Case.Supplement_Inquiry__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": false
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097H6tBIAS"
+        },
+        "ParentId": "0PSRh0000003qA9OAI",
+        "Field": "Case.Supplement_Inquiry__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": false
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097G0v3IAC"
+        },
+        "ParentId": "0PSRh0000007mJFOAY",
+        "Field": "Case.Supplement_Inquiry__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097H6rIIAS"
+        },
+        "ParentId": "0PSRh0000007mJGOAY",
+        "Field": "Case.Supplement_Inquiry__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097H6rkIAC"
+        },
+        "ParentId": "0PSRh0000007mJHOAY",
+        "Field": "Case.Supplement_Inquiry__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097G0vXIAS"
+        },
+        "ParentId": "0PSRh000000852XOAQ",
+        "Field": "Case.Supplement_Inquiry__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": false
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097G0w2IAC"
+        },
+        "ParentId": "0PSRh000000852YOAQ",
+        "Field": "Case.Supplement_Inquiry__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/0000000dPWimbrHAYQ"
+        },
+        "ParentId": "0PS5a0000001NPoGAM",
+        "Field": "Case.Dispo_Level_1__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": false
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097G5okIAC"
+        },
+        "ParentId": "0PS5a0000005ma9GAA",
+        "Field": "Case.Dispo_Level_1__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097H6qgIAC"
+        },
+        "ParentId": "0PS5a000000GZQ4GAO",
+        "Field": "Case.Dispo_Level_1__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": false
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000092noI6IAI"
+        },
+        "ParentId": "0PSEa000006xsybOAA",
+        "Field": "Case.Dispo_Level_1__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kRh000008lo1cIAA"
+        },
+        "ParentId": "0PSRh0000003qA9OAI",
+        "Field": "Case.Dispo_Level_1__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": false
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kRh000006Mw6pIAC"
+        },
+        "ParentId": "0PSRh00000079D3OAI",
+        "Field": "Case.Dispo_Level_1__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097G0uyIAC"
+        },
+        "ParentId": "0PSRh0000007mJFOAY",
+        "Field": "Case.Dispo_Level_1__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097H6rDIAS"
+        },
+        "ParentId": "0PSRh0000007mJGOAY",
+        "Field": "Case.Dispo_Level_1__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097H6rfIAC"
+        },
+        "ParentId": "0PSRh0000007mJHOAY",
+        "Field": "Case.Dispo_Level_1__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097G0vTIAS"
+        },
+        "ParentId": "0PSRh000000852XOAQ",
+        "Field": "Case.Dispo_Level_1__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": false
+      },
+      {
+        "attributes": {
+          "type": "FieldPermissions",
+          "url": "/services/data/v67.0/sobjects/FieldPermissions/01kEa000097H6qBIAS"
+        },
+        "ParentId": "0PSRh000000852YOAQ",
+        "Field": "Case.Dispo_Level_1__c",
+        "PermissionsRead": true,
+        "PermissionsEdit": true
+      }
+    ],
+    "totalSize": 21,
+    "done": true
+  },
+  "warnings": []
+}
