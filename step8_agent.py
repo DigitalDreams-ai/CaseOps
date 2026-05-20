@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
-"""Step 8: Non-interactive agent for diagnosis, escalation gate, internal notes, Jira message.
+"""DEPRECATED: Step 8 monolithic agent.
 
-Per issue: load context (Jira summary + investigation), call Claude with structured outputs,
-parse JSON response, write outputs.
+This script is DEPRECATED. Use the 4-skill pipeline instead:
+  - investigation_finalization_agent.py (Step 5B)
+  - notes_and_escalation_agent.py (Step 8B)
+  - test_report_agent.py (Step 8D)
+  - (jira_response_drafting.py — Step 9, pre-existing)
 
+run_pipeline.py now calls run_4_skills_for_issue() which orchestrates
+all 4 skills in sequence.
+
+This file is kept for reference/fallback only.
 Usage:
     python step8_agent.py --key HEAL-33150
 """
