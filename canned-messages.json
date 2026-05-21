@@ -1,0 +1,12 @@
+[
+  {
+    "id": "initial-response",
+    "name": "Initial Response",
+    "template": "Hi {{issueReporter}},\n\nIssue `{{issueKey}}` has been assigned to me. I'm taking a look now and will keep you updated as I make progress.\nLet me know if there's any additional context that might help.\n\n[insert signature]"
+  },
+  {
+    "id": "closing-response",
+    "name": "Closing Response",
+    "template": "Hi {{issueReporter}},\n\nIssue `{{issueKey}}` has been completed and the changes are confirmed in Production.\nI have updated this issue as resolved. If anything changes, please let me know.\n\n[insert signature]"
+  }
+]
