@@ -60,6 +60,10 @@ This pipeline is an **orchestrator**. Steps **1, 2, 4, 7, 8, 11, and 12** run in
 
 This skill orchestrates the complete pipeline from issue sync through summary generation. No Python prerequisite is required; the skill handles Steps 1–2 internally via Bash calls.
 
+**CRITICAL: Step Progress Tracking**
+
+Throughout Steps 1–12, you MUST emit step progress lines to stdout in the format `STEP_N identifier` (e.g., `STEP_3 HEAL-33753`). These lines are parsed by the CaseOps GUI in real-time to update the pipeline progress indicator. Without these explicit output lines, the progress indicator will not display.
+
 ### Operator Setup
 
 Before running:
@@ -70,6 +74,8 @@ Before running:
 ### Execution Flow
 
 **Step 1 — Sync from Jira (Orchestrator)**
+
+**Emit to stdout:** `STEP_1 __sync__`
 
 ```bash
 python jira_sync.py --env-file .env.jira
@@ -85,6 +91,8 @@ If sync fails (credentials, network): STOP and fix `.env.jira` or network, then 
 
 **Step 2 — Triage and Route (Orchestrator)**
 
+**Emit to stdout:** `STEP_2 __triage__`
+
 Read `outputs/jira/manifest.csv` and classify every issue:
 
 | Condition | Action |
@@ -97,23 +105,33 @@ Create progress tracking file: `outputs/pipeline-logs/<RUN_DATE>.log`
 
 **Step 3 — Analyze issue (Sub-agent)**
 
-For each active issue, spawn a sub-agent via the Agent tool using the **Step 3 prompt** from `references/sub-agent-prompts.md`. Retain only the ~300-token summary returned.
+For each active issue:
+1. **Emit to stdout:** `STEP_3 <ISSUE_KEY>` (replace <ISSUE_KEY> with the actual key, e.g., `STEP_3 HEAL-33753`)
+2. Spawn a sub-agent via the Agent tool using the **Step 3 prompt** from `references/sub-agent-prompts.md`. Retain only the ~300-token summary returned.
 
 **Step 4 — Synthesize hypothesis (Orchestrator)**
 
-From Step 3 summary, synthesize root cause (one sentence) and smallest viable fix. Document in `outputs/step-4-hypothesis/<KEY>.md` using `assets/step-4-problem-hypothesis-template.md`.
+For each active issue:
+1. **Emit to stdout:** `STEP_4 <ISSUE_KEY>`
+2. From Step 3 summary, synthesize root cause (one sentence) and smallest viable fix. Document in `outputs/step-4-hypothesis/<KEY>.md` using `assets/step-4-problem-hypothesis-template.md`.
 
 **Step 5 — Retrieve metadata (Sub-agent)**
 
-Spawn salesforce-production-metadata-investigation sub-agent using **Step 5 prompt** from `references/sub-agent-prompts.md`. Pass Step 4 hypothesis. Retain summary only.
+For each active issue:
+1. **Emit to stdout:** `STEP_5 <ISSUE_KEY>`
+2. Spawn salesforce-production-metadata-investigation sub-agent using **Step 5 prompt** from `references/sub-agent-prompts.md`. Pass Step 4 hypothesis. Retain summary only.
 
 **Step 6 — Identify problem location (Sub-agent)**
 
-Spawn salesforce-production-metadata-investigation sub-agent (drilling mode) using **Step 6 prompt** from `references/sub-agent-prompts.md`. Identify exact artifact, type, location, failure point. Retain summary only.
+For each active issue:
+1. **Emit to stdout:** `STEP_6 <ISSUE_KEY>`
+2. Spawn salesforce-production-metadata-investigation sub-agent (drilling mode) using **Step 6 prompt** from `references/sub-agent-prompts.md`. Identify exact artifact, type, location, failure point. Retain summary only.
 
 **Step 7 — Escalation gate (Orchestrator)**
 
-Using Step 6 problem location, classify:
+For each active issue:
+1. **Emit to stdout:** `STEP_7 <ISSUE_KEY>`
+2. Using Step 6 problem location, classify:
 
 - **Support-resolvable:** Proceed to Step 8.
 - **Engineering-required:** Create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md`. Skip Steps 8–9, proceed to Step 10.
@@ -122,24 +140,32 @@ Log decision in `outputs/pipeline-logs/<RUN_DATE>.log`.
 
 **Step 8 — Implement (Orchestrator)**
 
-If Support-resolvable, make the fix in Sandbox only (see Step 9 allowlist check). Use Salesforce CLI, web UI, or declarative tools. Never touch Production. Document changed files.
+For Support-resolvable issues:
+1. **Emit to stdout:** `STEP_8 <ISSUE_KEY>`
+2. Make the fix in Sandbox only (see Step 9 allowlist check). Use Salesforce CLI, web UI, or declarative tools. Never touch Production. Document changed files.
 
 **Step 9 — Deploy and test (Sub-agent)**
 
 **Before spawning:** Read `CASEOPS_SANDBOX_TARGET_ORG` from `.env.jira`. If missing or empty, STOP.
 
-Spawn salesforce-sandbox-deploy-test sub-agent using **Step 9 prompt** from `references/sub-agent-prompts.md`. Pass the allowlisted Sandbox org value.
+For each Support-resolvable issue:
+1. **Emit to stdout:** `STEP_9 <ISSUE_KEY>`
+2. Spawn salesforce-sandbox-deploy-test sub-agent using **Step 9 prompt** from `references/sub-agent-prompts.md`. Pass the allowlisted Sandbox org value.
 
 - **On Pass:** Proceed to Step 10.
 - **On Fail:** Revise Step 4 hypothesis, loop back to Step 5–6 if more metadata is needed, re-implement Step 8, re-run Step 9. Record iterations in `outputs/investigations/<KEY>.md`.
 
 **Step 10 — Draft messages (Sub-agent)**
 
-Spawn jira-response-drafting sub-agent using **Step 10 prompt** from `references/sub-agent-prompts.md`. Creates `outputs/jira-messages/<KEY>.md` (customer-facing only) and `outputs/internal-notes/<KEY>.md` (internal diagnosis only).
+For each active issue:
+1. **Emit to stdout:** `STEP_10 <ISSUE_KEY>`
+2. Spawn jira-response-drafting sub-agent using **Step 10 prompt** from `references/sub-agent-prompts.md`. Creates `outputs/jira-messages/<KEY>.md` (customer-facing only) and `outputs/internal-notes/<KEY>.md` (internal diagnosis only).
 
 **Validation checkpoint:** Verify file separation (no [INTERNAL] sections in jira-messages; no customer greetings in internal-notes).
 
 **Step 11 — Generate dated summary (Orchestrator)**
+
+**Emit to stdout:** `STEP_11 __summary__`
 
 After all active issues are processed through Steps 3–10, generate `outputs/issue-summary-YYYY-MM-DD.md` using `assets/issue-summary-template.md`.
 
@@ -176,6 +202,8 @@ After all active issues are processed through Steps 3–10, generate `outputs/is
 **Progress tracking:** Log each issue's final disposition in `outputs/pipeline-logs/<RUN_DATE>.log` as: `END <KEY> disposition=<fixed|escalated|on-hold>`
 
 **Step 12 — Return to user (Orchestrator)**
+
+**Emit to stdout:** `STEP_12 __complete__`
 
 After Step 11 summary is created, generate and present a clear action report:
 
