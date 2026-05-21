@@ -185,6 +185,7 @@
   const selectedIssues = new Set();
   let currentSort = 'number';
   let selectMode = false;
+  const pipelineProgress = {}; // Track step progress per issue: { 'HEAL-123': 4 }
 
   let cachedMessages = null;
   let loadIssuesInProgress = false;
@@ -274,6 +275,22 @@
   let streamRetries = 0;
   const MAX_STREAM_RETRIES = 5;
 
+  function updateStepIndicator(issueKey, step) {
+    pipelineProgress[issueKey] = step;
+    const indicator = document.querySelector(`.issue-indicator[data-key="${issueKey}"]`);
+    if (indicator) {
+      indicator.textContent = step ? `Step ${step}/12` : '';
+    }
+  }
+
+  function clearStepIndicator(issueKey) {
+    delete pipelineProgress[issueKey];
+    const indicator = document.querySelector(`.issue-indicator[data-key="${issueKey}"]`);
+    if (indicator) {
+      indicator.textContent = '';
+    }
+  }
+
   function initStream() {
     if (eventSource) return;
     eventSource = new EventSource('/api/stream');
@@ -284,6 +301,10 @@
         const runKey = msg.slice(9);
         activeRuns.delete(runKey);
         updateStatus();
+        // Clear step indicator for this issue if it's not global
+        if (runKey !== '__global__') {
+          clearStepIndicator(runKey);
+        }
         // Re-enable buttons for this run key
         setIssueRunning(runKey, false);
         // "Done: …" is sent by the server and persisted; avoid duplicate client line.
@@ -317,6 +338,13 @@
           const runKey = msg.slice(0, sep);
           const line   = msg.slice(sep + 1);
           logLine(line, undefined, runKey);
+          // Parse step progress: look for "STEP_N issue_key" pattern
+          const stepMatch = line.match(/STEP_(\d+)\s+(HEAL-\d+)/);
+          if (stepMatch) {
+            const step = parseInt(stepMatch[1], 10);
+            const issueKey = stepMatch[2];
+            updateStepIndicator(issueKey, step);
+          }
         } else {
           logLine(msg);
         }
@@ -656,6 +684,7 @@
             ${engEsc}
           </div>
         </div>
+        <div class="issue-indicator" data-key="${escHtml(issue.key)}"></div>
       `;
       // Checkbox click: toggle without selecting issue
       const checkbox = item.querySelector('.issue-checkbox');
