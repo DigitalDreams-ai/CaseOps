@@ -146,6 +146,20 @@ CONTENT RULES:
 - Production vs Sandbox (if resolved): What was tested, what's the deploy plan
 - Closing: Thank them for what they provided (steps? screenshots? detail?)
 
+VOICE RULES (mandatory — all must pass validation):
+✓ Human, direct tone. No corporate fluff or LLM patterns.
+✓ Short sentences. Avoid em dashes (—) and hyphens as clause punctuation.
+✓ NO "we," "we've," "we're," "us," "let us." Use you/I/neutral facts instead.
+✓ Avoid bullets unless reporter asked for steps. Prefer short paragraphs.
+✓ Specific, concrete thanks when reporter provided good repro, screenshots, or detail.
+✓ No Salesforce IDs, file paths, or admin jargon unless they asked.
+
+VOICE EXAMPLES:
+✗ "We're excited to share the fix with you and we've tested it in Sandbox."
+✓ "I found the issue and tested the fix in Sandbox."
+✗ "Great news — everything is now working correctly — you should see this in Production."
+✓ "I've confirmed the fix works. You'll see this in Production by end of week."
+
 FORBIDDEN IN THIS FILE (hard stop if present):
 ✗ [INTERNAL] section
 ✗ ## [INTERNAL] header
@@ -162,7 +176,14 @@ VALIDATION BEFORE SAVING:
 2. Search for EVERY keyword above and DELETE if found
 3. If any [INTERNAL] section exists, DELETE it entirely
 4. Confirm: would a customer-facing reader understand this without Salesforce admin knowledge?
-5. Only after validation, save to outputs/jira-messages/<KEY>.md
+5. RUN VOICE VALIDATION CHECKLIST (all must be YES):
+   - ✓ No em dashes (—)? YES or STOP and fix.
+   - ✓ No hyphens used as clause punctuation? YES or STOP and fix.
+   - ✓ No "we," "we've," "we're," "us," "let us"? YES or STOP and find/replace.
+   - ✓ Tone is direct and human, not corporate? YES or STOP and rewrite.
+   - ✓ Specific thanks for good repro/screenshots/detail? YES or N/A.
+   - ✓ No unnecessary jargon or admin terms? YES or STOP and simplify.
+6. Only after validation, save to outputs/jira-messages/<KEY>.md
 
 ════════════════════════════════════════════════════════════════════════
 STEP B: SAVE DOCUMENT 1 TO DISK
