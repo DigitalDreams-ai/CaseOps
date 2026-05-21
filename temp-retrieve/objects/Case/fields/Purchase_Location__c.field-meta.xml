@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Purchase_Location__c</fullName>
+    <defaultValue>&quot;Not Specified&quot;</defaultValue>
+    <description>This field is used as a placeholder for the Web Purchase Location field, so that the correct label is visible on the Web Form.</description>
+    <label>Purchase Location</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>10X Health In Clinic</fullName>
+                <default>false</default>
+                <label>10X Health In Clinic</label>
+            </value>
+            <value>
+                <fullName>10X Health Online Store</fullName>
+                <default>false</default>
+                <label>10X Health Online Store</label>
+            </value>
+            <value>
+                <fullName>Amazon</fullName>
+                <default>false</default>
+                <label>Amazon</label>
+            </value>
+            <value>
+                <fullName>Not Specified</fullName>
+                <default>false</default>
+                <label>Not Specified</label>
+            </value>
+            <value>
+                <fullName>Other (Indicated in Details)</fullName>
+                <default>false</default>
+                <label>Other (Indicated in Details)</label>
+            </value>
+            <value>
+                <fullName>TikTok</fullName>
+                <default>false</default>
+                <label>TikTok</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

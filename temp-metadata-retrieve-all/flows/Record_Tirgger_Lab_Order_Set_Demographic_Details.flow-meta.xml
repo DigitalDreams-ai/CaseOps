@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Set_DOB</name>
+        <label>Set DOB</label>
+        <locationX>50</locationX>
+        <locationY>395</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Date_of_Birth__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Record.Patient__r.DateOfBirth__c</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Is_Gender_Null</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Set_First_Name</name>
+        <label>Set First Name</label>
+        <locationX>50</locationX>
+        <locationY>995</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.First_Name__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Record.Patient__r.FirstName</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Is_Last_Name_Null</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Set_Gender</name>
+        <label>Set Gender</label>
+        <locationX>50</locationX>
+        <locationY>695</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Gender__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Record.Patient__r.Gender__c</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Is_First_Name_Null</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Set_Height_Weight</name>
+        <label>Set Height/Weight</label>
+        <locationX>50</locationX>
+        <locationY>1595</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Height__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Record.Patient__r.Height__c</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>$Record.Weight__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Record.Patient__r.Weight__c</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <assignments>
+        <name>Set_Last_Name</name>
+        <label>Set Last Name</label>
+        <locationX>50</locationX>
+        <locationY>1295</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Last_Name__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Record.Patient__r.LastName</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Is_PGT_Supplement_Book_height_weight_null</targetReference>
+        </connector>
+    </assignments>
+    <decisions>
+        <name>Is_DOB_Null</name>
+        <label>Is DOB Null</label>
+        <locationX>182</locationX>
+        <locationY>287</locationY>
+        <defaultConnector>
+            <targetReference>Is_Gender_Null</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>DOB is NOT NULL</defaultConnectorLabel>
+        <rules>
+            <name>DOB_is_NULL</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Date_of_Birth__c</leftValueReference>
+                <operator>IsBlank</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Set_DOB</targetReference>
+            </connector>
+            <label>DOB is NULL</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Is_First_Name_Null</name>
+        <label>Is First Name Null</label>
+        <locationX>182</locationX>
+        <locationY>887</locationY>
+        <defaultConnector>
+            <targetReference>Is_Last_Name_Null</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>First Name is NOT NULL</defaultConnectorLabel>
+        <rules>
+            <name>First_Name_is_NULL</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.First_Name__c</leftValueReference>
+                <operator>IsBlank</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Set_First_Name</targetReference>
+            </connector>
+            <label>First Name is NULL</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Is_Gender_Null</name>
+        <label>Is Gender Null</label>
+        <locationX>182</locationX>
+        <locationY>587</locationY>
+        <defaultConnector>
+            <targetReference>Is_First_Name_Null</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Gender is NOT NULL</defaultConnectorLabel>
+        <rules>
+            <name>Gender_is_NULL</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Gender__c</leftValueReference>
+                <operator>IsBlank</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Set_Gender</targetReference>
+            </connector>
+            <label>Gender is NULL</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Is_Last_Name_Null</name>
+        <label>Is Last Name Null</label>
+        <locationX>182</locationX>
+        <locationY>1187</locationY>
+        <defaultConnector>
+            <targetReference>Is_PGT_Supplement_Book_height_weight_null</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Last Name is NOT NULL</defaultConnectorLabel>
+        <rules>
+            <name>Last_Name_is_NULL</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Last_Name__c</leftValueReference>
+                <operator>IsBlank</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Set_Last_Name</targetReference>
+            </connector>
+            <label>Last Name is NULL</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Is_PGT_Supplement_Book_height_weight_null</name>
+        <label>Is PGT Supplement/Book height weight null</label>
+        <locationX>182</locationX>
+        <locationY>1487</locationY>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>Height_Weight_NULL</name>
+            <conditionLogic>(1 OR 2) AND (3 OR 4)</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Services_Rendered__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Precision Supplements</stringValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Services_Rendered__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Precision Book</stringValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Height__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Weight__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Set_Height_Weight</targetReference>
+            </connector>
+            <label>Height/Weight NULL</label>
+        </rules>
+    </decisions>
+    <description>If any of the demographic details are null we will copy what is on the account.</description>
+    <environments>Default</environments>
+    <interviewLabel>Record Tirgger - Lab Order - Set Demographic Details {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Tirgger - Lab Order - Set Demographic Details</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>56</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Is_DOB_Null</targetReference>
+        </connector>
+        <filterLogic>or</filterLogic>
+        <filters>
+            <field>Date_of_Birth__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Gender__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <filters>
+            <field>First_Name__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Last_Name__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <object>Lab_Order__c</object>
+        <recordTriggerType>Create</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

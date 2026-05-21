@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>allowChanges</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>alternativeText</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>Center</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>imgPath</name>
+                    <value>{[devName:X10X_Health_System_logo12]}</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>linkUrl</name>
+                    <value>https://10xhealthsystem.com</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginBottom</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginLeft</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginRight</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginTop</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>objectFit</name>
+                    <value>fill</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>50</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:image</componentName>
+                <identifier>contentbuilder_image33</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>allowChanges</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>linkedToDesignKit</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginBottom</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginLeft</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginRight</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginTop</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>richTextValue</name>
+                    <value>&lt;br /&gt;
+Hi&amp;nbsp;{{{Recipient.FirstName}}},&lt;br /&gt;
+&lt;br /&gt;
+I&amp;rsquo;m {{{Account.Wellness_Advisor__c}}}, your dedicated wellness advisor, and I&amp;rsquo;m happy to provide you with everything you&amp;rsquo;ll need to get started with 10X Health.&lt;br /&gt;
+&lt;br /&gt;
+I understand that you have shown interest in the 10X Superhuman Protocol and I wanted to follow up with you. The Superhuman Protocol is a patented 3-step protocol that harnesses the power of magnetism, oxygen, and light to tackle age-related issues and promote overall well-being.&lt;br /&gt;
+&lt;br /&gt;
+Here&amp;#39;s a quick overview of how the Superhuman Protocol works:
+&lt;ul&gt;
+	&lt;li&gt;Step 1: Magnetism - Alkalizes every cell in the body to increase oxygen exchange.&lt;/li&gt;
+	&lt;li&gt;Step 2: Exercise With Oxygen Therapy (EWOT) - Hyper-oxygenates every cell in the body through light exercise and breathing 900 liters of medical-grade oxygen.&lt;/li&gt;
+	&lt;li&gt;Step 3: Red Light Therapy - Promotes circulation, reduces inflammation, and improves brain function and energy levels by driving nitric oxide out of the blood and oxygen into the mitochondria.&lt;/li&gt;
+&lt;/ul&gt;
+The Superhuman Protocol has the potential to transform your life and I am eager to help you achieve your wellness goals.&lt;br /&gt;
+&lt;br /&gt;
+If you have any questions or would like to schedule a call, please don&amp;#39;t hesitate to reply to this email.&amp;nbsp;&lt;br /&gt;
+&lt;br /&gt;
+To your wellness,&lt;br aria-hidden=&quot;true&quot; /&gt;
+&lt;br aria-hidden=&quot;true&quot; /&gt;
+&lt;strong&gt;10&lt;span style=&quot;color:#c0392b;&quot;&gt;X&lt;/span&gt;&amp;nbsp;Health System&amp;nbsp;&lt;/strong&gt;&lt;br aria-hidden=&quot;true&quot; /&gt;
+Main: 305.682.1818&lt;br aria-hidden=&quot;true&quot; /&gt;
+Fax: 786.598.8612&amp;nbsp;&lt;br /&gt;
+&lt;a href=&quot;https://10xhealthsystem.com&quot;&gt;10xhealthsystem.com&lt;/a&gt;&lt;br aria-hidden=&quot;true&quot; /&gt;
+&lt;br aria-hidden=&quot;true&quot; /&gt;
+Disclaimer: This email and any attachments may contain privileged and confidential information and/or protected health information (PHI) intended solely for the use of 10X Health System and any recipient(s) named above. If you are not the recipient, you are hereby notified that any review, dissemination, distribution or duplication of this email message and/or any attachments is strictly prohibited.</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:richText</componentName>
+                <identifier>contentbuilder_richText123</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-8fa266a5-7f91-4fcb-98e8-17d0e351d00d</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columnBody</name>
+                    <value>Facet-8fa266a5-7f91-4fcb-98e8-17d0e351d00d</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnCount</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnIndex</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnSpacer</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>padding</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlign</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>100%</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:column</componentName>
+                <identifier>contentbuilder_column149</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-3855f67d-0265-4829-a4a8-908c22f01709</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>backgroundColor</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-3855f67d-0265-4829-a4a8-908c22f01709</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlignment</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:row</componentName>
+                <identifier>contentbuilder_row129</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>main</name>
+        <type>Region</type>
+    </flexiPageRegions>
+    <masterLabel>X10X_SHP_PRE1</masterLabel>
+    <template>
+        <name>contentpage:defaultEmailTemplatePageTemplate</name>
+        <properties>
+            <name>backgroundColor</name>
+            <value>#E9EAEC</value>
+        </properties>
+        <properties>
+            <name>backgroundImageUrl</name>
+        </properties>
+        <properties>
+            <name>bodyColor</name>
+            <value>#FFFFFF</value>
+        </properties>
+        <properties>
+            <name>paddingBottom</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingLeft</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingRight</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingTop</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>preheader</name>
+        </properties>
+    </template>
+    <type>EmailTemplatePage</type>
+</FlexiPage>

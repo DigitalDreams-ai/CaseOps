@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>58.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <decisions>
+        <name>myRule_1</name>
+        <label>Total Opportunity Amount No Promotion</label>
+        <locationX>248</locationX>
+        <locationY>287</locationY>
+        <defaultConnector>
+            <targetReference>myRule_4</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>FALSE_Total Opportunity Amount No Promotion</defaultConnectorLabel>
+        <rules>
+            <name>TRUE_Total_Opportunity_Amount_No_Promotion</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Opportunity_Refunded__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Aesthetics_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Hormone_Evaluation_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Lab_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Medical_Consultation_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Medication_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Sexual_Wellness_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Genetic_Testing_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>myRule_1_A1</targetReference>
+            </connector>
+            <label>TRUE_Total Opportunity Amount No Promotion</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>myRule_4</name>
+        <label>Total Opportunity Amount With Promotion</label>
+        <locationX>446</locationX>
+        <locationY>395</locationY>
+        <defaultConnectorLabel>FALSE_Total Opportunity Amount With Promotion</defaultConnectorLabel>
+        <rules>
+            <name>TRUE_Total_Opportunity_Amount_With_Promotion</name>
+            <conditionLogic>( 1 AND 2 ) OR 3 OR 4 OR 5 OR 6 OR 7 OR 8 OR 9</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Opportunity_Refunded__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Opportunity_Refunded__c</leftValueReference>
+                <operator>IsChanged</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Aesthetics_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Hormone_Evaluation_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Lab_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Medical_Consultation_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Medication_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Sexual_Wellness_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Genetic_Testing_Promotion__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>myRule_4_A1</targetReference>
+            </connector>
+            <label>TRUE_Total Opportunity Amount With Promotion</label>
+        </rules>
+    </decisions>
+    <description>Migrated from the Opportunity - Total Amount process using multiple criteria.
+Process handles the Total Amount and accounts for Promotions</description>
+    <environments>Default</environments>
+    <formulas>
+        <name>form_currFinalPromotionAmount</name>
+        <dataType>Currency</dataType>
+        <expression>{!$Record.Amount} - 
+IF( ISNULL({!$Record.Aesthetics_Promotion__r.Promotion_Amount__c}), 0, {!$Record.Aesthetics_Promotion__r.Promotion_Amount__c}) -
+
+IF( ISNULL({!$Record.Hormone_Evaluation_Promotion__r.Promotion_Amount__c}), 0, {!$Record.Hormone_Evaluation_Promotion__r.Promotion_Amount__c}) - 
+
+IF( ISNULL({!$Record.Lab_Promotion__r.Promotion_Amount__c}), 0, {!$Record.Lab_Promotion__r.Promotion_Amount__c}) -
+
+IF( ISNULL({!$Record.Medical_Consultation_Promotion__r.Promotion_Amount__c}), 0, {!$Record.Medical_Consultation_Promotion__r.Promotion_Amount__c}) -
+
+IF( ISNULL({!$Record.Medication_Promotion__r.Promotion_Amount__c}), 0,  {!$Record.Medication_Promotion__r.Promotion_Amount__c}) -
+
+IF( ISNULL({!$Record.Genetic_Testing_Promotion__r.Promotion_Amount__c}), 0,  {!$Record.Genetic_Testing_Promotion__r.Promotion_Amount__c}) -
+
+IF( ISNULL({!$Record.Sexual_Wellness_Promotion__r.Promotion_Amount__c}), 0, {!$Record.Sexual_Wellness_Promotion__r.Promotion_Amount__c})</expression>
+        <scale>2</scale>
+    </formulas>
+    <formulas>
+        <name>formula_1_myRule_1_A1_8613171657</name>
+        <dataType>Currency</dataType>
+        <expression>{!$Record.Amount}</expression>
+        <scale>18</scale>
+    </formulas>
+    <label>Opportunity - Total Amount_1</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordUpdates>
+        <name>myRule_1_A1</name>
+        <label>Update Total Amount</label>
+        <locationX>50</locationX>
+        <locationY>395</locationY>
+        <inputAssignments>
+            <field>Amount__c</field>
+            <value>
+                <elementReference>formula_1_myRule_1_A1_8613171657</elementReference>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <recordUpdates>
+        <name>myRule_4_A1</name>
+        <label>Update Total Amount</label>
+        <locationX>314</locationX>
+        <locationY>503</locationY>
+        <inputAssignments>
+            <field>Amount__c</field>
+            <value>
+                <elementReference>form_currFinalPromotionAmount</elementReference>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>122</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>myRule_1</targetReference>
+        </connector>
+        <object>Opportunity</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+    <triggerOrder>130</triggerOrder>
+</Flow>

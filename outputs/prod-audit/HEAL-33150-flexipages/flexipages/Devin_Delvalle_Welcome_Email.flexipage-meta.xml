@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>allowChanges</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>alternativeText</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>Center</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>imgPath</name>
+                    <value>{[devName:X10X_Health_System_logo12]}</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>linkUrl</name>
+                    <value>https://10xhealthsystem.com</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginBottom</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginLeft</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginRight</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginTop</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>objectFit</name>
+                    <value>fill</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>50</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:image</componentName>
+                <identifier>contentbuilder_image</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>allowChanges</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>linkedToDesignKit</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginBottom</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginLeft</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginRight</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginTop</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>richTextValue</name>
+                    <value>&lt;br /&gt;
+&lt;span style=&quot;font-size:14px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;Hi {{{Recipient.FirstName}}},&lt;br /&gt;
+&lt;br /&gt;
+Welcome to 10X Health!&lt;br /&gt;
+&lt;br /&gt;
+My name is&amp;nbsp;Devin Delvalle and I will be your dedicated Wellness Concierge. My role is to help facilitate your growth and success within the 10X Health System. Moving forward, I will be your primary contact and liaison between you and the medical team.&lt;br /&gt;
+&lt;br /&gt;
+I&amp;rsquo;ll check in with you frequently to ensure you are getting the most out of your program and that all of your questions have been addressed and answered.&lt;br /&gt;
+&lt;br /&gt;
+Please take a moment to review the next steps outlined below:&lt;/span&gt;&lt;/span&gt;
+&lt;div style=&quot;text-align: center;&quot;&gt;&amp;nbsp;&lt;/div&gt;
+
+&lt;div&gt;&lt;span style=&quot;font-size:14px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;&lt;strong&gt;1. Review treatment instructions&lt;/strong&gt; - Our medical coordinator will send you an email regarding your medical instructions. If you feel you need further instruction, we can schedule a face-to-face tutorial with a member of our medical team.&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;
+
+&lt;div&gt;&amp;nbsp;&lt;/div&gt;
+
+&lt;div&gt;&lt;span style=&quot;font-size:14px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;&lt;strong&gt;2. Follow-up labs &lt;/strong&gt;- Your next set of lab work will be due 8 weeks after starting your program. This step ensures that your hormones are being optimized and you are feeling your best.&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;
+
+&lt;div&gt;&lt;br /&gt;
+&lt;br /&gt;
+&lt;span style=&quot;font-size:14px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;Feel free to call, text, or email me with questions anytime throughout your journey.&lt;br /&gt;
+&lt;br /&gt;
+Congratulations on taking this big step for you and your health! I look forward to guiding you on your path to a happy, healthier you.&lt;br /&gt;
+&lt;br /&gt;
+Yours in good health,&lt;/span&gt;&lt;/span&gt;&lt;br /&gt;
+&lt;br /&gt;
+&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;Devin Delvalle&lt;br /&gt;
+&lt;br /&gt;
+ddelvalle@10Xhealthsystem.com&lt;/span&gt;&lt;br /&gt;
+&lt;a href=&quot;https://calendly.com/ddelvalle10xhealth&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;https://calendly.com/ddelvalle10xhealth&lt;/span&gt;&lt;/a&gt;&lt;br /&gt;
+&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;&lt;strong&gt;10&lt;span style=&quot;color:#c0392b;&quot;&gt;X&lt;/span&gt; Health System&lt;/strong&gt;&lt;/span&gt;&lt;br /&gt;
+&lt;span style=&quot;font-size:14px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;&lt;a href=&quot;https://10xhealthsystem.com&quot;&gt;10xhealthsystem.com&lt;/a&gt;&lt;/span&gt;&lt;/span&gt;&lt;br /&gt;
+&lt;br /&gt;
+&lt;span style=&quot;font-size:11px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;Disclaimer: This email and any attachments may contain privileged and confidential information and/or protected health information (PHI) intended solely for the use of 10X Health System and any recipient(s) named above. If you are not the recipient, you are hereby notified that any review, dissemination, distribution or duplication of this email message and/or any attachments is strictly prohibited.&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:richText</componentName>
+                <identifier>contentbuilder_richText</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-1d5033c8-6b02-4c15-aad2-1687569d7f36</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columnBody</name>
+                    <value>Facet-1d5033c8-6b02-4c15-aad2-1687569d7f36</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnCount</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnIndex</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnSpacer</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>padding</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlign</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>100%</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:column</componentName>
+                <identifier>contentbuilder_column</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-f5782fe4-a460-487e-93c6-2500f8b0b056</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>backgroundColor</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>backgroundImageUrl</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-f5782fe4-a460-487e-93c6-2500f8b0b056</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlignment</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:row</componentName>
+                <identifier>contentbuilder_row</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>main</name>
+        <type>Region</type>
+    </flexiPageRegions>
+    <masterLabel>Devin_Delvalle_Welcome_Email</masterLabel>
+    <template>
+        <name>contentpage:defaultEmailTemplatePageTemplate</name>
+        <properties>
+            <name>backgroundColor</name>
+            <value>#E9EAEC</value>
+        </properties>
+        <properties>
+            <name>backgroundImageUrl</name>
+        </properties>
+        <properties>
+            <name>bodyColor</name>
+            <value>#FFFFFF</value>
+        </properties>
+        <properties>
+            <name>paddingBottom</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingLeft</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingRight</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingTop</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>preheader</name>
+        </properties>
+    </template>
+    <type>EmailTemplatePage</type>
+</FlexiPage>

@@ -14,4 +14,4 @@ This folder exists so **Claude Code** can discover a skill named `jira-salesforc
 - **References:** `skills/jira-salesforce-fix-pipeline/references/`
 - **Assets:** `skills/jira-salesforce-fix-pipeline/assets/`
 
-Read `skills/jira-salesforce-fix-pipeline/SKILL.md`, then **`skills/jira-salesforce-fix-pipeline/references/workflow.md`** end-to-end (authoritative steps 1–11). Use `skills/jira-salesforce-fix-pipeline/references/sub-agent-prompts.md` when spawning sub-agents. Execute for the Jira issue key in the current task; do not ask the user which workflow to run — derive next steps from those files and from which `outputs/` artifacts already exist for that key.
+Read `skills/jira-salesforce-fix-pipeline/SKILL.md`, then **`skills/jira-salesforce-fix-pipeline/references/workflow.md`** end-to-end (authoritative steps 1–12). Use `skills/jira-salesforce-fix-pipeline/references/sub-agent-prompts.md` when spawning sub-agents. Execute for the Jira issue key in the current task; do not ask the user which workflow to run — derive next steps from those files and from which `outputs/` artifacts already exist for that key.

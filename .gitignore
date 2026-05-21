@@ -47,7 +47,6 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-outputs/logs/
 logs/skill-runs/*.json
 
 # CaseOps local Jira sync data can contain customer/support content.

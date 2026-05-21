@@ -52,7 +52,7 @@ def main() -> int:
     investigations_dir.mkdir(parents=True, exist_ok=True)
 
     if not args.no_sync:
-        print("-- Step 1: Syncing from Jira ------------------------------")
+        print("-- Setup Stage 1: Syncing from Jira ------")
         result = run_sync(args)
         if result != 0:
             print(
@@ -72,7 +72,7 @@ def main() -> int:
         )
         return 1
 
-    print("-- Step 2: Triaging issues --------------------------------")
+    print("-- Setup Stage 2: Triaging issues --------")
     issues = read_manifest(manifest_path)
 
     # When targeting a single issue, triage only that row
@@ -99,7 +99,7 @@ def main() -> int:
     print()
 
     if not args.dry_run:
-        print("-- Step 3: Archiving Closed / Resolved / Canceled --------")
+        print("-- Setup Stage 3: Archiving Closed/Resolved --------")
         for issue in closed:
             path = archive_closed(issue, jira_dir, closed_dir)
             print(f"  {issue['Key']}  ->  {path.relative_to(PROJECT_ROOT)}")
@@ -107,7 +107,7 @@ def main() -> int:
             print("  (none)")
         print()
 
-        print("-- Step 4: Archiving pre-escalated issues ------------------")
+        print("-- Setup Stage 4: Archiving pre-escalated issues --")
         for issue in escalated:
             path = archive_escalated(issue, jira_dir, escalations_dir)
             print(f"  {issue['Key']}  ->  {path.relative_to(PROJECT_ROOT)}")
@@ -115,7 +115,7 @@ def main() -> int:
             print("  (none)")
         print()
 
-        print("-- Step 5: Scaffolding investigation records ---------------")
+        print("-- Setup Stage 5: Scaffolding investigation records --")
         for issue in active:
             path = scaffold_investigation(issue, investigations_dir)
             status = "created" if path[1] else "exists "
@@ -124,12 +124,12 @@ def main() -> int:
             print("  (none)")
         print()
 
-        print("-- Step 6: Updating dated summary --------------------------")
+        print("-- Setup Stage 6: Updating dated summary ------")
         summary_path = scaffold_summary(issues, closed, escalated, active, out_dir)
         print(f"  {summary_path.relative_to(PROJECT_ROOT)}")
         print()
 
-    print("-- Step 7: Handoff to AI reasoning ------------------------")
+    print("-- AI Workflow: Handoff to jira-salesforce-fix-pipeline --")
     if active:
         print(f"\n  {len(active)} active issue(s) ready for processing:\n")
         for issue in active:
@@ -138,7 +138,7 @@ def main() -> int:
         print()
 
         if not args.dry_run and not args.no_agents:
-            print("-- Step 8: Processing active issues in parallel -----------")
+            print("-- AI Workflow: Processing active issues (deprecated) --")
             process_active_issues_parallel(active, out_dir=out_dir, env_file=args.env_file)
         else:
             print(
@@ -333,18 +333,12 @@ def run_7_skills_for_issue(
     timeout: int = 300,
     error_log_path: Path | None = None,
 ) -> tuple[bool, str]:
-    """Run all 7 pipeline skills for a single issue.
+    """DEPRECATED: This function called old agents.
 
-    Skills run sequentially (not parallel):
-    1. investigation_finalization_agent.py (Phase 2 - Investigation)
-    2. notes_and_escalation_agent.py (Phase 3 - Notes & Escalation)
-    3. solution_planning_agent.py (Week 1 - Solution Planning)
-    4. escalation_gate_agent.py (Week 2 - Escalation Gate)
-    5. test_report_agent.py (Phase 4 - Test Report) [moved before Promotion Plan due to dependency]
-    6. production_promotion_plan_agent.py (Week 3 - Promotion Plan PROPOSAL) [requires test report]
-    7. jira_response_drafting.py (Pre-existing - Jira Response)
+    Investigation files are now populated via Claude Code skill (jira-salesforce-fix-pipeline)
+    using Steps 3, 5, 6 sub-agent prompts from skills/jira-salesforce-fix-pipeline/references/sub-agent-prompts.md.
 
-    Each skill is idempotent: skips if output already exists.
+    User should run: /jira-salesforce-fix-pipeline to process issues through the new workflow.
 
     Args:
         key: Jira issue key
@@ -357,105 +351,11 @@ def run_7_skills_for_issue(
     Returns:
         (success: bool, status_msg: str)
     """
-    skills = [
-        ("Investigation", PROJECT_ROOT / "investigation_finalization_agent.py"),
-        ("Notes", PROJECT_ROOT / "notes_and_escalation_agent.py"),
-        ("Solution Plan", PROJECT_ROOT / "solution_planning_agent.py"),
-        ("Escalation Gate", PROJECT_ROOT / "escalation_gate_agent.py"),
-        ("Test Report", PROJECT_ROOT / "test_report_agent.py"),
-        ("Promotion Plan", PROJECT_ROOT / "production_promotion_plan_agent.py"),
-    ]
-
-    # Add jira_response skill if available
-    jira_response = PROJECT_ROOT / "jira_response_drafting.py"
-    if jira_response.exists():
-        skills.append(("Jira Response", jira_response))
-
-    for skill_name, skill_script in skills:
-        if not skill_script.exists():
-            return False, f"[ERROR] {key}: {skill_name} skill not found at {skill_script}"
-
-        cmd = [
-            sys.executable,
-            str(skill_script),
-            "--key",
-            key,
-            "--outputs-dir",
-            str(out_dir),
-            "--env-file",
-            env_file,
-        ]
-
-        for attempt in range(max_retries + 1):
-            try:
-                p = subprocess.Popen(
-                    cmd,
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-
-                try:
-                    stdout, stderr = p.communicate(timeout=timeout)
-
-                    if p.returncode == 0:
-                        break  # Success, move to next skill
-
-                    # Non-zero exit: check if retryable
-                    err_msg = (stderr or stdout or "unknown error")[:120]
-                    is_transient = any(phrase in err_msg.lower() for phrase in [
-                        "timeout", "connection", "rate limit", "temporarily",
-                        "503", "429", "500"
-                    ])
-
-                    if is_transient and attempt < max_retries:
-                        wait_time = 2 ** attempt
-                        print(f"      [RETRY {skill_name}] {key} (wait {wait_time}s)", flush=True)
-                        time.sleep(wait_time)
-                        continue
-
-                    error_msg = f"[FAIL] {key}: {skill_name} skill failed: {err_msg}"
-                    if error_log_path:
-                        with error_log_path.open("a", encoding="utf-8") as f:
-                            f.write(f"{error_msg}\n")
-                    return False, error_msg
-
-                except subprocess.TimeoutExpired:
-                    p.kill()
-                    if attempt < max_retries:
-                        wait_time = 2 ** attempt
-                        print(f"      [RETRY {skill_name}] {key}: timeout (wait {wait_time}s)", flush=True)
-                        time.sleep(wait_time)
-                        continue
-                    error_msg = f"[TIMEOUT] {key}: {skill_name} skill"
-                    if error_log_path:
-                        with error_log_path.open("a", encoding="utf-8") as f:
-                            f.write(f"{error_msg}\n")
-                    return False, error_msg
-
-            except Exception as e:
-                err = str(e)[:80]
-                if attempt < max_retries:
-                    wait_time = 2 ** attempt
-                    print(f"      [RETRY {skill_name}] {key}: {err} (wait {wait_time}s)", flush=True)
-                    time.sleep(wait_time)
-                    continue
-                error_msg = f"[ERROR] {key}: {skill_name} skill: {err}"
-                if error_log_path:
-                    with error_log_path.open("a", encoding="utf-8") as f:
-                        f.write(f"{error_msg}\n")
-                return False, error_msg
-
-        else:
-            # Max retries exceeded for this skill
-            error_msg = f"[FAIL] {key}: {skill_name} skill max retries exceeded"
-            if error_log_path:
-                with error_log_path.open("a", encoding="utf-8") as f:
-                    f.write(f"{error_msg}\n")
-            return False, error_msg
-
-    return True, f"[OK] {key}"
+    msg = f"[SKIP] {key}: Investigation files must be populated via Claude Code skill (jira-salesforce-fix-pipeline). Run: /jira-salesforce-fix-pipeline"
+    if error_log_path:
+        with error_log_path.open("a", encoding="utf-8") as f:
+            f.write(f"{msg}\n")
+    return False, msg
 
 
 def run_4_skills_for_issue(

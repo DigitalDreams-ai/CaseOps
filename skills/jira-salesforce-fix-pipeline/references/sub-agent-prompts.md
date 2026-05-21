@@ -31,7 +31,7 @@ Return a compact summary (max 400 tokens) containing:
 You are retrieving Salesforce Production metadata for a Jira issue.
 
 Issue key: <KEY>
-Problem hypothesis: <paste the hypothesis from Step 4>
+Problem hypothesis: <paste from outputs/step-4-hypothesis/<KEY>.md OR inline notes from Step 4>
 Investigation record: outputs/investigations/<KEY>.md
 
 Instructions:
@@ -56,7 +56,7 @@ Return a compact summary (max 400 tokens) containing:
 You are drilling down to identify the exact problem location in Salesforce Production.
 
 Issue key: <KEY>
-Problem hypothesis: <paste hypothesis from Step 4>
+Problem hypothesis: <paste from outputs/step-4-hypothesis/<KEY>.md OR inline notes from Step 4>
 Production metadata: <paste the Summary from Step 5>
 Investigation record: outputs/investigations/<KEY>.md
 
@@ -112,56 +112,127 @@ If the sub-agent returns **Fail:** update the hypothesis in Step 4, spawn a new 
 
 ## Step 10 — Draft internal notes and Jira message
 
-```
-You are drafting internal notes and a Jira message for a completed Salesforce issue.
+**CRITICAL: This is the bulletproof Step 10 rewrite (v2) with mandatory file separation and validation checkpoints.**
 
+See also: `references/orchestration-loop-controller.md` for orchestrator-level Step 10 file validation that runs after this sub-agent completes.
+
+```
+CONTEXT:
 Issue key: <KEY>
 Root cause: <from Step 4>
 Fix or escalation: <Support fix description from Step 8, or "Escalated to Engineering">
-Test result: <from Step 9 summary — mandatory for Support path; use "N/A - Engineering escalation" only when Step 7 escalated>
+Test result: <from Step 9 summary>
 Investigation record: outputs/investigations/<KEY>.md
-Test report: outputs/test-reports/<KEY>.md (if exists)
-Engineering handoff: outputs/engineering-escalations/<KEY>.md (if escalated)
 
-## Two-Audience Framework (MANDATORY)
+═══════════════════════════════════════════════════════════════════════
+TASK: Draft and save TWO completely separate documents for TWO audiences
+═══════════════════════════════════════════════════════════════════════
 
-Draft BOTH sections — don't combine them:
+⚠️  FATAL IF COMBINED: If both documents are in one file, customer sees internal diagnosis. This is a STOP rule.
 
-### ## Suggested reply (customer-facing message)
-- Audience: The issue reporter
-- Content: What you found → what it means for them → next step or question
-- Must pass ALL voice rules (see below)
+════════════════════════════════════════════════════════════════════════
+STEP A: DRAFT DOCUMENT 1 (Jira Message — Customer-Facing Only)
+════════════════════════════════════════════════════════════════════════
 
-### ## [INTERNAL] (Sean's internal memo for Jira comment)
-- Audience: Sean only (internal comment, not posted to customer)
-- Content: What it's NOT → where the gap is → why symptom happens → action needed
-- Keep short; full evidence stays in Investigation tab
+AUDIENCE: Issue reporter + stakeholders (public Jira comment)
+TEMPLATE: jira-message-template.md
+OUTPUT FILE: outputs/jira-messages/<KEY>.md
 
-## Voice Rules for Suggested Reply (all must pass)
+CONTENT RULES:
+- Greeting: "Hi [Reporter name],"
+- Problem: What you found, in customer-friendly language (no internal jargon)
+- Root cause: Why it's broken, explained for non-technical stakeholder
+- Solution OR escalation: What happens next
+- Production vs Sandbox (if resolved): What was tested, what's the deploy plan
+- Closing: Thank them for what they provided (steps? screenshots? detail?)
 
-- ✓ No em dash (—) or hyphen as clause punctuation
-- ✓ Brief (summarize, don't replay investigation)
-- ✓ Casual tone (short sentences, no corporate voice)
-- ✓ Specific thanks (thank for *what* they provided: steps, screenshots, clear description)
-- ✓ No bullets unless they asked for steps (prefer sentences)
-- ✓ No internal IDs, file paths, or heavy jargon unless they asked
-- ✓ No "we," "we've," "we're," "us," "let us" (use you/I/neutral facts)
+FORBIDDEN IN THIS FILE (hard stop if present):
+✗ [INTERNAL] section
+✗ ## [INTERNAL] header
+✗ Metadata names or change lists
+✗ Engineering-specific terminology (thread ID, trigger, handler, etc.)
+✗ Test case descriptions
+✗ "Sean" or any internal name
+✗ References to Gearset or Sandbox-only work
+✗ Root cause analysis intended for diagnosis only
+✗ Internal diagnosis details or investigation notes
 
-If any fails: rewrite and re-check the entire draft.
+VALIDATION BEFORE SAVING:
+1. Read the draft you created
+2. Search for EVERY keyword above and DELETE if found
+3. If any [INTERNAL] section exists, DELETE it entirely
+4. Confirm: would a customer-facing reader understand this without Salesforce admin knowledge?
+5. Only after validation, save to outputs/jira-messages/<KEY>.md
 
-## Instructions
+════════════════════════════════════════════════════════════════════════
+STEP B: SAVE DOCUMENT 1 TO DISK
+════════════════════════════════════════════════════════════════════════
 
-1. Use the jira-response-drafting skill (read for two-audience framework details and examples).
-2. Draft **Suggested reply** first — apply voice checklist, pass all rules.
-3. Draft **[INTERNAL]** second — lean root-cause memo.
-4. Fill **Production vs deployment** in both: never imply Production has Sandbox-only metadata; state **Gearset/deploy required** vs **already in Production** vs **N/A**.
-5. Write internal notes to outputs/internal-notes/<KEY>.md.
-6. Write Jira message draft to outputs/jira-messages/<KEY>.md.
+File: outputs/jira-messages/<KEY>.md
+Content: ONLY the customer-facing draft from Step A
+Do NOT save Document 2 content here
+Do NOT include headers, separators, or sections from Document 2
+Do NOT reuse any content when drafting Document 2 (start fresh)
 
-Return a compact summary (max 300 tokens) containing:
+CHECKPOINT: Is outputs/jira-messages/<KEY>.md now saved and contains ZERO internal keywords? YES or STOP.
+
+════════════════════════════════════════════════════════════════════════
+STEP C: DRAFT DOCUMENT 2 (Internal Notes — Internal Diagnosis Only)
+════════════════════════════════════════════════════════════════════════
+
+AUDIENCE: Sean only (internal reference, NOT posted to Jira)
+TEMPLATE: internal-notes-template.md
+OUTPUT FILE: outputs/internal-notes/<KEY>.md
+
+CONTENT RULES:
+- Root cause: Full technical diagnosis (internal detail OK here)
+- Decision: Support-resolved OR Escalate to Engineering
+- Actions: What was done, what needs doing
+- Production vs Sandbox state: Explicit inventory of what exists where
+- Risks: Technical or operational risks
+- Escalation details: If Engineering, what's being handed off
+
+FORBIDDEN IN THIS FILE (hard stop if present):
+✗ Customer greeting (no "Hi [Name],")
+✗ "Thanks" or "Thanks for" phrases
+✗ Suggested reply or Jira comment tone
+✗ "We will..." or "We recommend..." (customer voice)
+✗ Any content that would go in a Jira comment
+
+VALIDATION BEFORE SAVING:
+1. Read the draft you created
+2. Confirm it has root cause diagnosis, decision, actions, state, risks
+3. Confirm ZERO customer-facing greeting or tone
+4. Only after validation, save to outputs/internal-notes/<KEY>.md
+
+════════════════════════════════════════════════════════════════════════
+STEP D: SAVE DOCUMENT 2 TO DISK
+════════════════════════════════════════════════════════════════════════
+
+File: outputs/internal-notes/<KEY>.md
+Content: ONLY the internal diagnosis draft from Step C
+Do NOT save Document 1 content here
+Do NOT reuse customer-facing greeting or tone
+
+════════════════════════════════════════════════════════════════════════
+FINAL CHECKPOINT (MANDATORY)
+════════════════════════════════════════════════════════════════════════
+
+After saving both files, verify:
+1. outputs/jira-messages/<KEY>.md EXISTS and contains customer-facing message only
+2. outputs/jira-messages/<KEY>.md contains ZERO [INTERNAL] sections
+3. outputs/jira-messages/<KEY>.md contains ZERO internal diagnosis keywords
+4. outputs/internal-notes/<KEY>.md EXISTS and contains root cause diagnosis
+5. outputs/internal-notes/<KEY>.md does NOT contain "Hi [Name]," greeting
+
+If any checkpoint fails, STOP and fix before returning.
+
+════════════════════════════════════════════════════════════════════════
+
+Return summary (max 300 tokens):
 - Outcome (fixed/escalated)
-- Suggested reply summary (one sentence showing it passes voice rules)
-- [INTERNAL] summary (one sentence showing structure: what NOT → gap → why → action)
+- DOCUMENT 1 summary (jira-message file, customer-facing tone check)
+- DOCUMENT 2 summary (internal-notes file, decision and action summary)
 - Production deploy? (Gearset / No / N/A)
-- Paths written: outputs/internal-notes/<KEY>.md, outputs/jira-messages/<KEY>.md
+- Paths: outputs/jira-messages/<KEY>.md | outputs/internal-notes/<KEY>.md
 ```

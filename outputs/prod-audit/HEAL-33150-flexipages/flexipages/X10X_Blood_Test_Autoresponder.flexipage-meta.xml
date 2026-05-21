@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>allowChanges</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>alternativeText</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>Center</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>imgPath</name>
+                    <value>{[devName:X10X_Health_System_logo1_1]}</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginBottom</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginLeft</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginRight</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginTop</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>objectFit</name>
+                    <value>fill</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>50</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:image</componentName>
+                <identifier>contentbuilder_image</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-7eb611b5-cfb9-4d45-a0d5-268a245dfc0a</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columnBody</name>
+                    <value>Facet-7eb611b5-cfb9-4d45-a0d5-268a245dfc0a</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnCount</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnIndex</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnSpacer</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>padding</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlign</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>100%</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:column</componentName>
+                <identifier>contentbuilder_column</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-0b66ffa9-2727-4e23-9c6e-d03a18fb2610</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>allowChanges</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>linkedToDesignKit</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginBottom</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginLeft</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginRight</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginTop</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>richTextValue</name>
+                    <value>&lt;p style=&quot;color:#000000; font-family:arial; font-size:16px; font-style:normal; font-variant-ligatures:normal; font-weight:400; text-align:start; white-space:normal; background-color:#ffffff; text-decoration-thickness:initial; text-decoration-style:initial; text-decoration-color:initial; line-height:1.38&quot;&gt;&lt;br /&gt;
+&lt;span style=&quot;font-family:Montserrat, sans-serif; font-variant:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#000000&quot;&gt;&lt;span style=&quot;font-weight:400&quot;&gt;&lt;span style=&quot;font-style:normal&quot;&gt;&lt;span style=&quot;text-decoration:none&quot;&gt;Hi {{{Recipient.FirstName}}},&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p style=&quot;color:#000000; font-family:arial; font-size:16px; font-style:normal; font-variant-ligatures:normal; font-weight:400; text-align:start; white-space:normal; background-color:#ffffff; text-decoration-thickness:initial; text-decoration-style:initial; text-decoration-color:initial; line-height:1.38&quot;&gt;&amp;nbsp;&lt;/p&gt;
+
+&lt;p style=&quot;color:#000000; font-family:arial; font-size:16px; font-style:normal; font-variant-ligatures:normal; font-weight:400; text-align:start; white-space:normal; background-color:#ffffff; text-decoration-thickness:initial; text-decoration-style:initial; text-decoration-color:initial; line-height:1.38&quot;&gt;&lt;span style=&quot;font-family:Montserrat, sans-serif; font-variant:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#000000&quot;&gt;&lt;span style=&quot;font-weight:400&quot;&gt;&lt;span style=&quot;font-style:normal&quot;&gt;&lt;span style=&quot;text-decoration:none&quot;&gt;Congratulations on taking this big step in your personalized, precision wellness journey!&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p style=&quot;color:#000000; font-family:arial; font-size:16px; font-style:normal; font-variant-ligatures:normal; font-weight:400; text-align:start; white-space:normal; background-color:#ffffff; text-decoration-thickness:initial; text-decoration-style:initial; text-decoration-color:initial; line-height:1.38&quot;&gt;&lt;span style=&quot;font-family:Montserrat, sans-serif; font-variant:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#000000&quot;&gt;&lt;span style=&quot;font-weight:400&quot;&gt;&lt;span style=&quot;font-style:normal&quot;&gt;&lt;span style=&quot;text-decoration:none&quot;&gt;We&amp;rsquo;ve received your request for more information about our 10X blood testing and will be reaching out to you shortly to get you started on your 10X Health journey.&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p style=&quot;color:#000000; font-family:arial; font-size:16px; font-style:normal; font-variant-ligatures:normal; font-weight:400; text-align:start; white-space:normal; background-color:#ffffff; text-decoration-thickness:initial; text-decoration-style:initial; text-decoration-color:initial; line-height:1.38&quot;&gt;&lt;span style=&quot;font-family:Montserrat, sans-serif; font-variant:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#000000&quot;&gt;&lt;span style=&quot;font-weight:400&quot;&gt;&lt;span style=&quot;font-style:normal&quot;&gt;&lt;span style=&quot;text-decoration:none&quot;&gt;We&amp;rsquo;re excited for you to get started and look forward to working with you!&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;br /&gt;
+&amp;nbsp;&lt;/p&gt;
+
+&lt;p style=&quot;color:#000000; font-family:arial; font-size:16px; font-style:normal; font-variant-ligatures:normal; font-weight:400; text-align:start; white-space:normal; background-color:#ffffff; text-decoration-thickness:initial; text-decoration-style:initial; text-decoration-color:initial; line-height:1.38&quot;&gt;&lt;span style=&quot;font-family:Montserrat, sans-serif; font-variant:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#000000&quot;&gt;&lt;span style=&quot;font-weight:400&quot;&gt;&lt;span style=&quot;font-style:normal&quot;&gt;&lt;span style=&quot;text-decoration:none&quot;&gt;Yours in good health,&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;div style=&quot;color:#000000; font-family:arial; font-size:16px; font-style:normal; font-variant-ligatures:normal; font-weight:400; text-align:start; white-space:normal; background-color:#ffffff; text-decoration-thickness:initial; text-decoration-style:initial; text-decoration-color:initial&quot;&gt;&lt;span style=&quot;text-size-adjust:auto&quot;&gt;&lt;span style=&quot;font-family:Arial; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#222222&quot;&gt;&lt;span style=&quot;font-weight:700&quot;&gt;10&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;font-family:Arial; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#ff0000&quot;&gt;&lt;span style=&quot;font-weight:700&quot;&gt;X&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;font-family:Arial; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#222222&quot;&gt; Health&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;
+
+&lt;p style=&quot;color:#000000; font-family:arial; font-size:16px; font-style:normal; font-variant-ligatures:normal; font-weight:400; text-align:start; white-space:normal; background-color:#ffffff; text-decoration-thickness:initial; text-decoration-style:initial; text-decoration-color:initial; line-height:1.38&quot;&gt;&amp;nbsp;&lt;/p&gt;
+
+&lt;div style=&quot;color:#000000; font-family:arial; font-size:16px; font-style:normal; font-variant-ligatures:normal; font-weight:400; text-align:start; white-space:normal; background-color:#ffffff; text-decoration-thickness:initial; text-decoration-style:initial; text-decoration-color:initial&quot;&gt;
+&lt;p style=&quot;line-height:1.38; background-color:#ffffff&quot;&gt;&lt;span style=&quot;text-size-adjust:auto&quot;&gt;&lt;span style=&quot;font-family:Arial; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#222222&quot;&gt;&lt;span style=&quot;color:#000000; white-space:normal&quot;&gt;&lt;span style=&quot;text-size-adjust:auto&quot;&gt;&lt;span style=&quot;color:#222222; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;Main: 305.682.1818&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p style=&quot;line-height:1.38; background-color:#ffffff&quot;&gt;&lt;span style=&quot;text-size-adjust:auto&quot;&gt;&lt;span style=&quot;font-family:Arial; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#000000; white-space:normal&quot;&gt;&lt;span style=&quot;color:#222222; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;Fax: 786.598.8612&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/p&gt;
+
+&lt;p style=&quot;line-height:1.38; background-color:#ffffff&quot;&gt;&lt;span style=&quot;text-size-adjust:auto&quot;&gt;&lt;span style=&quot;font-family:Arial; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#000000; white-space:normal&quot;&gt;&lt;a href=&quot;https://10xhealthsystem.com/&quot; style=&quot;text-decoration-line:none&quot;&gt;&lt;span style=&quot;color:#1155cc; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;text-decoration-line:underline&quot;&gt;&lt;span style=&quot;text-decoration-skip-ink:none&quot;&gt;10xhealthsystem.com&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/a&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/p&gt;
+&lt;span style=&quot;text-size-adjust:auto&quot;&gt;&lt;span style=&quot;font-family:Arial; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;color:#000000; white-space:normal&quot;&gt;&lt;font size=&quot;1&quot;&gt;&lt;span style=&quot;background-color:#ffffff; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;&lt;span style=&quot;font-weight:700&quot;&gt;Disclaimer&lt;/span&gt;&lt;/span&gt;&lt;span style=&quot;background-color:#ffffff; font-variant-east-asian:normal; white-space:pre-wrap&quot;&gt;: This email and any attachments may contain privileged and confidential information and/or protected health information (PHI) intended solely for the use of 10X Health System and any recipient(s) named above. If you are not the recipient, you are hereby notified that any review, dissemination, distribution or duplication of this email message and/or any attachments is strictly prohibited.&lt;/span&gt;&lt;/font&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:richText</componentName>
+                <identifier>contentbuilder_richText</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-8286bc82-afb0-4e3b-8283-a4d7d7273005</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columnBody</name>
+                    <value>Facet-8286bc82-afb0-4e3b-8283-a4d7d7273005</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnCount</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnIndex</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnSpacer</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>padding</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlign</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>100%</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:column</componentName>
+                <identifier>contentbuilder_column2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-70d16a7f-fd43-4d5c-9461-46a5da66f377</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>backgroundColor</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>backgroundImagePosition</name>
+                    <value>left_top</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>backgroundImageRepeat</name>
+                    <value>no-repeat</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>backgroundImageSize</name>
+                    <value>cover</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>backgroundImageUrl</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-0b66ffa9-2727-4e23-9c6e-d03a18fb2610</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlignment</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:row</componentName>
+                <identifier>contentbuilder_row</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>backgroundColor</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>backgroundImageUrl</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-70d16a7f-fd43-4d5c-9461-46a5da66f377</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlignment</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:row</componentName>
+                <identifier>contentbuilder_row2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>main</name>
+        <type>Region</type>
+    </flexiPageRegions>
+    <masterLabel>X10X_Blood_Test_Autoresponder</masterLabel>
+    <template>
+        <name>contentpage:defaultEmailTemplatePageTemplate</name>
+        <properties>
+            <name>backgroundColor</name>
+            <value>#E9EAEC</value>
+        </properties>
+        <properties>
+            <name>backgroundImageUrl</name>
+        </properties>
+        <properties>
+            <name>bodyColor</name>
+            <value>#FFFFFF</value>
+        </properties>
+        <properties>
+            <name>paddingBottom</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingLeft</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingRight</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingTop</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>preheader</name>
+        </properties>
+    </template>
+    <type>EmailTemplatePage</type>
+</FlexiPage>

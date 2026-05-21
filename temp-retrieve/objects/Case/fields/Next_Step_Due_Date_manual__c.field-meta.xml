@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Next_Step_Due_Date_manual__c</fullName>
+    <description>This field replaces the Next Step Due Date formula field of the same name. This field has no pre-defined value.</description>
+    <encryptionScheme>None</encryptionScheme>
+    <inlineHelpText>This field captures the due date for the next steps relating to this case.</inlineHelpText>
+    <label>Next Step Due Date</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+</CustomField>

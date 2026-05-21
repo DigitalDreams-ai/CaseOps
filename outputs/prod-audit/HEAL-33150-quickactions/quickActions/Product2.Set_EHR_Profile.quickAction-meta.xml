@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QuickAction xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>This is used when the product is added to set the Profile ID in the API call to the EHR System.</description>
+    <flowDefinition>Screenflow_Product_Set_Profile_Id</flowDefinition>
+    <label>Set EHR Profile</label>
+    <optionsCreateFeedItem>false</optionsCreateFeedItem>
+    <type>Flow</type>
+</QuickAction>

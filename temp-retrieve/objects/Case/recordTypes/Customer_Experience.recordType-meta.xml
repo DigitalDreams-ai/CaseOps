@@ -1,0 +1,1627 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RecordType xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Customer_Experience</fullName>
+    <active>true</active>
+    <businessProcess>Customer Experience Support Process</businessProcess>
+    <label>Customer Experience</label>
+    <picklistValues>
+        <picklist>AVA_MAPPER__Product__c</picklist>
+        <values>
+            <fullName>GC1020</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC1040</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC1060</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC3020</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC3040</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC3060</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC5020</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC5040</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC5060</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Actions__c</picklist>
+        <values>
+            <fullName>Call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Contact Patient</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Good to Schedule</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Review Only</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Case_Resolution_Type__c</picklist>
+        <values>
+            <fullName>Atlas Patient not in SF</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Audit</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Chrono Duplicate</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Chrono Not Synced</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Incorrect Patient Demographic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Med Rec Not Synced</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Migrated to Patient Agreement</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Missing GT Results</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Missing Patient Demographic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Not Found in EHR %28Dr Chrono%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Not found in any system</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Nothing Wrong</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Order to account mismatch</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Other</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Password Request</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Payment Failed</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Payment Received</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Rejected</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Reviewed</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Scheduled</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Collaboration_Resolution__c</picklist>
+        <values>
+            <fullName>Billing</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Customer Success</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Provider Support</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Technical Support</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Wellness Team</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Dispo_Level_1__c</picklist>
+        <values>
+            <fullName>10X Business</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Health App</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Account Data Or Legal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Blood</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Clinic Services</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Echo</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Gut Health</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Health Net</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>MGT</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Medication</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Merchandise</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Mitochondrial Testing</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My Wellness Portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Other Sales Channels</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>PGT</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>PGT%2FSupps %28Novogenia supplier%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>SHP</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Spam</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Supplements</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Dispo_Level_2__c</picklist>
+        <values>
+            <fullName>10x Precision Aminos - Tell me about your product</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Adverse reaction</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Affiliate - interested in becoming</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Affiliate - issue with follower order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Affiliate - issue with personal order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Affiliate - other</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Affiliate - payment questions</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Affiliate - technical issues</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Amazon - Fraudulent Order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Amazon - arrived broken%2Fshipping issue</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Amazon - not happy with product</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Amazon - request refund</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Amazon - request replacement</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Amazon - status of order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Android - code does not work</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Android - request code</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Apple - code does not work</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Apple - request code</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Arrived broken%2Fshipping issue</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Available open roles</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Averse reaction</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>BenefitHub</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Bottle Update</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Broken - does not charge</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Broken - exploded</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Broken - leaks</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can%27t access emailed results</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Cancel clarity call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Cancel protocol review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Cancel provider review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Cannot log into portal %28error 1003%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Cannot log into portal %28errors 8001%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Cannot see minor child%27s results in portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Change shipping address</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Clarity call%2Freport translation request</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Clinic services%2C locations%2C addresses%2C hours</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Critical labs</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Damaged%2Fshipping issue</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Decode</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Delete all my information from all systems</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Delivered with no water in it</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Delivered with water in it</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Did not receive my results - past SLA</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Didn%27t receive medications</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Didn%27t receive printed book</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Discount or campaign question</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Double shipping for same household</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Effectiveness of supplements</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Employment verification</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Exchange request</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Facebook Shop</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Fraudulent Orders</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Fulfillment - Didn%27t receive kit</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Fulfillment - Missing kit</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Google Shop</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GovX</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>HSA%2FFSA - eligibility</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>HSA%2FFSA - issue</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Hard copy of results requested</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>How do I order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>HyperMax Oxygen - inquiry</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I Need to connect with my provider</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I am requesting a copy of my data from your system</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I need site support</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I want to become a part of the Health net</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I want to change by WA%2FWC</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I want to give feedback on my WA%2FWC</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Incorrect charge%2C should have been free</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Ingredient inquiry</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Instagram Shop</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>International availability</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Invoice request</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Kit missing an item%28s%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Logged in and can%27t move forward %28errors 1021%2C 1022%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Medication is damaged</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Medication order is missing an item%28s%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Minor child just turned 18 and results are no longer in portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Navigation or general questions</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Need help collecting sample</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Need lab requisition</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Need to update information on profile - no error code</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Never received OTP - no error code</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>No response needed</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>No results in portal - Can%27t find error codes</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>One Time Order - change shipping address</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>One Time Order - didn%27t receive</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>One Time Order - how to track</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>One Time Order - shipment damaged</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>One Time Order - shipment missing an item%28s%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Order free printed book</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Order has incorrect demographic information</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>PEMF - inquiry</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Parent%2FChild Relationship</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Partnership - issue with personal order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Partnership - issue with their customer order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Partnership - other</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Partnership - want to sell 10X Health products</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Partnership - will 10X sell my products</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Protocol question</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Protocol questions</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Provider did not show for appointment</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Purchase Gut Health kit for in clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Purchase Gut Health kit to be shipped</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Purchase MGT kit for in clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Purchase MGT kit to be shipped</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Purchase PGT kit for in clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Purchase PGT kit to be shipped</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Purchase blood test for LabCorp</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Purchase blood test for in clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Purchase clarity call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Purchase printed book</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Purchase supplements</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Red Light Bed - inquiry</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Red Light Panel - inquiry</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Refund request</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Registration</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Registration - Minor</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Registration - Multiple Registration</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Report contents questions</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Request refund</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Request replacement</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Request warranty claim</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Requesting analysis raw data</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Reschedule clarity call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Reschedule protocol review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Reschedule provider review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Reship - Kit is damaged</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Reship - Kit is unusable</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Results file is corrupt</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Results provided to wrong customer</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Schedule appointment at Aventura clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Schedule appointment at Beverly Hills clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Schedule appointment at Las Vegas clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Schedule appointment at North Miami %28UBS%29 clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Schedule appointment at North Scottsdale clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Schedule clarity call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Schedule protocol review with Concierge</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Schedule provider review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Specimen rejected%2Finvalid</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Status of order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - cancellation</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - creation</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - didn%27t receive</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - how to self-manage</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - how to track</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - item added</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - item removed</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - modification</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - shipment damaged</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - shipment missing an item%28s%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - update address</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Subscription - update payment</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tech issue viewing lab reports %28errors 3001%2C 3003%2C 3004%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tech issue with OTP %28errors 1005%2C 1006%2C 1007%2C 1009%2C 1011%2C 1012%2C 1013%2C 1016%2C 1019%2C 1020%2C 1023%2C 1024%2C 1025%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tech issue with appointments %28errors 4001%2C 4002%2C 4003%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tech issue with kit registration %28errors 2001%2C 2002%2C 2003%2C 2004%2C 2005%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tech issue with privacy policy%2Fconsents %28errors 7001%2C 7002%2C 7003%2C 7004%2C 7005%2C 7006%2C 7007%2C 7009%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tech issue with profile %28errors 5001%2C 5002%2C 5005%2C 5006%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tell me about Health Net</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tell me about the blood test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tell me about the gut health test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tell me about your products</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>The app does not contain any of my results</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>TicTok - Fraudulent Orders</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>TicTok - arrived broken%2Fshipping issue</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>TicTok - request replacement</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>TicTok - status of order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>TicTok- not happy with product</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>TicTok- request refund</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Walmart - arrived broken%2Fshipping issue</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Walmart - not happy with product</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Walmart - request replacement</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Walmart - status of order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Walmart- request refund</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Warranty question</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Warranty scope%2Fregistration</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>When will results be available - within SLA</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>eBay - Fraudulent Orders</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>eBay - arrived broken%2Fshipping issue</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>eBay - not happy with product</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>eBay - request refund</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>eBay - request replacement</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>eBay - status of order</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Dispo_Level_3__c</picklist>
+        <values>
+            <fullName>Escalation</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>FCR</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Send Info</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Transfer</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Inquiry_Category__c</picklist>
+        <values>
+            <fullName>Blood Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Brand Partnerships</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Gut Health Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Legal and Compliance</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Methylation Genetic Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>MyWellness Portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Precision Genetic Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Superhuman Protocol</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Supplements</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Lab_Provider__c</picklist>
+        <values>
+            <fullName>ASC</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Cell Science</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>EmpowerDX</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>TESTLAB</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Origin</picklist>
+        <values>
+            <fullName>Agent</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Chat</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Email</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Phone</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Voice Recognition</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Webform</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Priority</picklist>
+        <values>
+            <fullName>Critical</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>High</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Low</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Medium</fullName>
+            <default>true</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Purchase_Location__c</picklist>
+        <values>
+            <fullName>10X Health In Clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Health Online Store</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Amazon</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Not Specified</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Other %28Indicated in Details%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>TikTok</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Reason</picklist>
+        <values>
+            <fullName>Closed</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Completed</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Invoice Sent</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Medical Review Completed</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Scripts Called In</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Travel Letter Sent</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Root_Cause__c</picklist>
+        <values>
+            <fullName>Carrier - DHL</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Carrier - FedEx</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Carrier - UPS</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Carrier - USPS</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Customer Misunderstanding</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Customs delay</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Data Entry Error</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Data Quality</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Fulfillment - 3PL</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Fulfillment - ASC</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Fulfillment - LaCore</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Fulfillment - Shipstation</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Fulfillment - Shopify</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Marketing</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Product Issue</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Shipping delay</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>System Error</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>System Error - 3PL</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>System Error - ASC</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>System Error - Internal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>System Error - KBMO</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>System Error - LaCore</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>System Error - Novogenia</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>System Error - Shipstation</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>System Error - Shopify</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Training Needed</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Sentiment__c</picklist>
+        <values>
+            <fullName>1 - Very Upset</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>2-  Upset</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>3 - Dissatified</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>4 - Neutral</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>5 - Happy</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Supplement_Inquiry__c</picklist>
+        <values>
+            <fullName>10X ALPHA%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Aminos - Tropical Orange%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Aminos Blend Fruit Punch%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Berberine%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Blood Flow Support</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Calm Tincture 60ml%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Children%27s Multivitamin Gummies %2F Strawberry Watermelon%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Collagen Peptides 30 Serv%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Colostrum 60 serving tub%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Creatine</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Curcumin%2FTurmeric%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X DK CAPSULES 60SERV%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X FOCUS CAPSULES%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Health Lemon-Lime Hydration%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Health Wave Crusher Energy%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Health Wave Crusher Hydration%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Hydration Electrolytes Lemon Lime%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Hydration Electrolytes Strawberry Lemonade%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X MAGNESIUM CAPSULES 60SERV%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X MIC CHROMIUM CAPSULES 60SERV%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Methylene Blue Drops %28Superhuman Energy%29%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Methylene Blue Tablets %28Superhuman Energy%29%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X MoveEase</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X NEURO MEDULLA%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X OPTIMIZE%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X PROBIOTICS CAPSULES 60SERV%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Plant Protein Chocolate v2 %2F 30 servings%C2%A0%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Plant Protein Vanilla v2 %2F 30 servings%C2%A0%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X SLEEP CAPSULES 60SERV%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X TMG Capsules%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X VITAMIN C CAPSULES 60SERV%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X ZINC CAPSULES 60SERV%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Precision Aminos</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Precision Nutrition Supplement%C2%A0</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Precision Weight Management Supplements 10X 5-MTHF%C2%A0</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Survey_Rating__c</picklist>
+        <values>
+            <fullName>Dissatisfied</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Neutral</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Satisfied</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Very Dissatisfied</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Very Satisfied</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Type</picklist>
+        <values>
+            <fullName>Accounts Payable</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Call In Scripts</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Chargeback</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Commissions</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Copy of Labs</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Human Resources</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Instructions</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Letter of Necessity</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Mail Out Needles</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Medical Review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Merchants</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Other</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Patient Information Reconciliation</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Patient Refund</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Payment Record Reconciliation</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Pharmacy</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Sales Receipt %2F Invoice</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>SalesForce</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Schedule Blood Work</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Shipping Information Reconciliation</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Webform_Category__c</picklist>
+        <values>
+            <fullName>Blood Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Brand Partnerships</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Gut Health Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Hydrogen Water Bottle</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Legal and Compliance</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Methylation Genetic Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Mitoscreen</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>MyWellness Portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Other</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Precision Genetic Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Superhuman Protocol</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Supplements</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Work_Group__c</picklist>
+        <values>
+            <fullName>Affiliates</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Clinical</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>HelpDesk</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Legal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Order Processing</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Refund Approver</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Scheduling</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Wellness Adv%2FConc</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+</RecordType>

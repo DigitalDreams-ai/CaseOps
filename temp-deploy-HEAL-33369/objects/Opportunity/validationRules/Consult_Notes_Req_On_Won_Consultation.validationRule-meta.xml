@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Consult_Notes_Req_On_Won_Consultation</fullName>
+    <active>true</active>
+    <errorConditionFormula>AND(
+				NOT($UserRole.Name = &quot;System Administration&quot;),
+				ISBLANK(Consult_Notes__c),
+				RecordType.Name = &quot;Consultation&quot;, 
+				ISPICKVAL(StageName, &quot;Completed&quot;)
+)</errorConditionFormula>
+    <errorDisplayField>Consult_Notes__c</errorDisplayField>
+    <errorMessage>You must enter Consult Notes on Completed Consultation Opportunities</errorMessage>
+</ValidationRule>

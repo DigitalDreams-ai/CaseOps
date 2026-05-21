@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Due_Date_not_blank_on_Escalation</fullName>
+    <active>false</active>
+    <description>The next step due date field must be populated when Dispo 3 is Escalated</description>
+    <errorConditionFormula>AND(
+    TEXT(Dispo_Level_3__c) = &quot;Escalation&quot;,
+    ISBLANK(Next_Step_Due_Date_manual__c )
+)</errorConditionFormula>
+    <errorDisplayField>Next_Step_Due_Date_manual__c</errorDisplayField>
+    <errorMessage>Please fill out Next step Due Date for this case.</errorMessage>
+</ValidationRule>

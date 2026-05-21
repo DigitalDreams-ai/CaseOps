@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>allowChanges</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>alternativeText</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>Center</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>imgPath</name>
+                    <value>{[devName:X10X_Health_System_logo12]}</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>linkUrl</name>
+                    <value>https://10xhealthsystem.com</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginBottom</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginLeft</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginRight</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginTop</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>objectFit</name>
+                    <value>fill</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>50</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:image</componentName>
+                <identifier>contentbuilder_image11</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-1ebd9f84-e30e-42af-9c65-a06ff61ddc73</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columnBody</name>
+                    <value>Facet-1ebd9f84-e30e-42af-9c65-a06ff61ddc73</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnCount</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnIndex</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnSpacer</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>padding</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlign</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>100%</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:column</componentName>
+                <identifier>contentbuilder_column55</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-439af64d-c718-4b04-ab66-fab3c11b58f7</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>allowChanges</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>linkedToDesignKit</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginBottom</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginLeft</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginRight</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginTop</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>richTextValue</name>
+                    <value>&lt;table cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; width=&quot;100%&quot;&gt;
+	&lt;tbody&gt;
+		&lt;tr valign=&quot;top&quot;&gt;
+			&lt;td width=&quot;100%&quot;&gt;
+			&lt;table&gt;
+				&lt;tbody&gt;
+					&lt;tr&gt;
+						&lt;td&gt;
+						&lt;table cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; id=&quot;contentRegion&quot;&gt;
+							&lt;tbody&gt;
+								&lt;tr&gt;
+									&lt;td&gt;Hey {{{Recipient.Name}}},&lt;br /&gt;
+									&lt;br /&gt;
+									Your 10X Gene Test has officially shipped. Generally, it takes 3-7 business days to arrive, but depending on the postal service, give or take a few days.&amp;nbsp;&lt;br /&gt;
+									&lt;br /&gt;
+									Make sure to check your mail, as you&amp;rsquo;ll want to take your test as soon as you can. It&amp;rsquo;s important we get a fast turnaround time so we can analyze and deliver your results as soon as possible.&amp;nbsp;&lt;br /&gt;
+									&lt;br /&gt;
+									Here&amp;rsquo;s what to do next:
+									&lt;ul&gt;
+										&lt;li&gt;&lt;a href=&quot;https://www.10xyourhealth.com/swabkit-genetictest&quot;&gt;Watch this video on how to take your test&lt;/a&gt; &amp;ndash; it&amp;rsquo;s a very easy process, and there are also instructions in the package itself, but we wanted to provide this to you in case you wanted to watch it beforehand.&amp;nbsp;&lt;/li&gt;
+										&lt;li&gt;Once the kit arrives, collect your sample, and ship it back using the return label provided. We will follow up with you via email to keep you posted on the status once your kit is shipped back.&lt;/li&gt;
+									&lt;/ul&gt;
+									It&amp;rsquo;s that simple. Once you do that, our lab team&amp;nbsp;will review your test and provide a&amp;nbsp;comprehensive report&amp;nbsp;of your unique DNA profile, and what you can do to supplement function in areas where you may be deficient.&amp;nbsp;&lt;br /&gt;
+									&lt;br /&gt;
+									You can track your shipment by clicking on this link:&amp;nbsp;&lt;a href=&quot;{{{Opportunity.First_Tracking_URL__c}}}&quot;&gt;{{{Opportunity.First_Tracking_URL__c}}}&lt;/a&gt;&lt;br /&gt;
+									&lt;br /&gt;
+									If you have any questions, please let us know. We are here for you every step of the way.&amp;nbsp;&lt;br /&gt;
+									&lt;br /&gt;
+									To your wellness,&amp;nbsp;&lt;br /&gt;
+									&lt;br /&gt;
+									&lt;strong&gt;10&lt;span style=&quot;color:#c0392b;&quot;&gt;X&lt;/span&gt; Health Team&lt;/strong&gt;&lt;br /&gt;
+									Main: 305.682.1818&lt;br /&gt;
+									Fax: 786.598.8612&lt;br /&gt;
+									&lt;a href=&quot;https://10xhealthsystem.com&quot;&gt;10xhealthsystem.com&lt;/a&gt;&lt;/td&gt;
+								&lt;/tr&gt;
+								&lt;tr&gt;
+									&lt;td&gt;&amp;nbsp;&lt;/td&gt;
+								&lt;/tr&gt;
+							&lt;/tbody&gt;
+						&lt;/table&gt;
+						&lt;/td&gt;
+					&lt;/tr&gt;
+				&lt;/tbody&gt;
+			&lt;/table&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+	&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;table cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; width=&quot;100%&quot;&gt;
+	&lt;tbody&gt;
+		&lt;tr valign=&quot;top&quot;&gt;
+			&lt;td width=&quot;100%&quot;&gt;
+			&lt;table&gt;
+				&lt;tbody&gt;
+					&lt;tr&gt;
+						&lt;td&gt;
+						&lt;table cellpadding=&quot;0&quot; cellspacing=&quot;0&quot; id=&quot;contentRegion&quot;&gt;
+							&lt;tbody&gt;
+								&lt;tr&gt;
+									&lt;td&gt;Disclaimer: This email and any attachments may contain privileged and confidential information and/or protected health information (PHI) intended solely for the use of 10X Health System and any recipient(s) named above. If you are not the recipient, you are hereby notified that any review, dissemination, distribution or duplication of this email message and/or any attachments is strictly prohibited.&lt;/td&gt;
+								&lt;/tr&gt;
+							&lt;/tbody&gt;
+						&lt;/table&gt;
+						&lt;/td&gt;
+					&lt;/tr&gt;
+				&lt;/tbody&gt;
+			&lt;/table&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+	&lt;/tbody&gt;
+&lt;/table&gt;</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:richText</componentName>
+                <identifier>contentbuilder_richText47</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-573cca39-b5f4-4d37-a75f-efd06d3c06aa</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columnBody</name>
+                    <value>Facet-573cca39-b5f4-4d37-a75f-efd06d3c06aa</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnCount</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnIndex</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnSpacer</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>padding</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlign</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>100%</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:column</componentName>
+                <identifier>contentbuilder_column56</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-27881d37-bcc5-47c1-96e1-0d5bf379bd1a</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>backgroundColor</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>backgroundImageUrl</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-439af64d-c718-4b04-ab66-fab3c11b58f7</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlignment</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:row</componentName>
+                <identifier>contentbuilder_row43</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>backgroundColor</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>backgroundImageUrl</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-27881d37-bcc5-47c1-96e1-0d5bf379bd1a</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlignment</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:row</componentName>
+                <identifier>contentbuilder_row44</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>main</name>
+        <type>Region</type>
+    </flexiPageRegions>
+    <masterLabel>Genetic_Test_Has_Shipped_NEW</masterLabel>
+    <template>
+        <name>contentpage:defaultEmailTemplatePageTemplate</name>
+        <properties>
+            <name>backgroundColor</name>
+            <value>#E9EAEC</value>
+        </properties>
+        <properties>
+            <name>backgroundImageUrl</name>
+        </properties>
+        <properties>
+            <name>bodyColor</name>
+            <value>#FFFFFF</value>
+        </properties>
+        <properties>
+            <name>paddingBottom</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingLeft</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingRight</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingTop</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>preheader</name>
+        </properties>
+    </template>
+    <type>EmailTemplatePage</type>
+</FlexiPage>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Set_Metric_Height_and_Weight</name>
+        <label>Set Metric Height and Weight</label>
+        <locationX>176</locationX>
+        <locationY>287</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Patient_Height_cm__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>form_numHeight_cm</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>$Record.Patient_Weight_kg__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>form_numWeight_kg</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <description>This flow will run and set the Metric Height and Weight whenever a Lab Order is created.</description>
+    <environments>Default</environments>
+    <formulas>
+        <name>form_numHeight_cm</name>
+        <dataType>Number</dataType>
+        <expression>ROUND({!$Record.Height__c} * 2.54,2)</expression>
+        <scale>2</scale>
+    </formulas>
+    <formulas>
+        <name>form_numWeight_kg</name>
+        <dataType>Number</dataType>
+        <expression>ROUND( {!$Record.Weight__c}/2.20462,6)</expression>
+        <scale>6</scale>
+    </formulas>
+    <interviewLabel>Record Trigger - Lab Order - Set Metric Height and Weight {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Lab Order - Set Metric Height and Weight</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Set_Metric_Height_and_Weight</targetReference>
+        </connector>
+        <filterLogic>(1 OR 2) AND 3 AND 4</filterLogic>
+        <filters>
+            <field>Patient_Height_cm__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Patient_Weight_kg__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Height__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Weight__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <object>Lab_Order__c</object>
+        <recordTriggerType>Create</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

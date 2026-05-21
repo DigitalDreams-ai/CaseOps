@@ -1,4 +1,8 @@
-# Jira Message Draft
+# Jira Message Draft — [ISSUE KEY]
+
+**CUSTOMER-FACING — POSTED TO JIRA**
+
+This message will be posted as a public comment on the Jira issue. The reporter and stakeholders will see it. For internal-only memo, use `outputs/internal-notes/<KEY>.md` instead.
 
 <!-- Choose the block that matches the outcome. Delete the other. -->
 

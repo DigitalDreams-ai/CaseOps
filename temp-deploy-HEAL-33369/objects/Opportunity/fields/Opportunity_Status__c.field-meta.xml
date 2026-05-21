@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Opportunity_Status__c</fullName>
+    <label>Opportunity Status</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Processing</fullName>
+                <default>false</default>
+                <label>Processing</label>
+            </value>
+            <value>
+                <fullName>Scripts Pending</fullName>
+                <default>false</default>
+                <label>Scripts Pending</label>
+            </value>
+            <value>
+                <fullName>File On Hold</fullName>
+                <default>false</default>
+                <label>File On Hold</label>
+            </value>
+            <value>
+                <fullName>Blood Test Pending</fullName>
+                <default>false</default>
+                <label>Blood Test Pending</label>
+            </value>
+            <value>
+                <fullName>Lab Requisition Sent</fullName>
+                <default>false</default>
+                <label>Lab Requisition Sent</label>
+            </value>
+            <value>
+                <fullName>10X LC Incomplete Labs</fullName>
+                <default>false</default>
+                <label>10X LC Incomplete Labs</label>
+            </value>
+            <value>
+                <fullName>Canceled</fullName>
+                <default>false</default>
+                <label>Canceled</label>
+            </value>
+            <value>
+                <fullName>Office Appointment</fullName>
+                <default>false</default>
+                <label>Office Appointment</label>
+            </value>
+            <value>
+                <fullName>Dead File/PT</fullName>
+                <default>false</default>
+                <label>Dead File/PT</label>
+            </value>
+            <value>
+                <fullName>CC Declined</fullName>
+                <default>false</default>
+                <label>CC Declined</label>
+            </value>
+            <value>
+                <fullName>Order Shipped</fullName>
+                <default>false</default>
+                <label>Order Shipped</label>
+            </value>
+            <value>
+                <fullName>Genetic Test Pending</fullName>
+                <default>false</default>
+                <label>Genetic Test Pending</label>
+            </value>
+            <value>
+                <fullName>Order Pending</fullName>
+                <default>false</default>
+                <label>Order Pending</label>
+            </value>
+            <value>
+                <fullName>Kit Id Missing</fullName>
+                <default>false</default>
+                <label>Kit Id Missing</label>
+            </value>
+            <value>
+                <fullName>Unsupported State</fullName>
+                <default>false</default>
+                <label>Unsupported State</label>
+            </value>
+            <value>
+                <fullName>Lab Provider Missing</fullName>
+                <default>false</default>
+                <label>Lab Provider Missing</label>
+            </value>
+            <value>
+                <fullName>Too Many Lab Requests Attempts</fullName>
+                <default>false</default>
+                <label>Too Many Lab Requests Attempts</label>
+            </value>
+            <value>
+                <fullName>Shipping Address Invalid</fullName>
+                <default>false</default>
+                <label>Shipping Address Invalid</label>
+            </value>
+            <value>
+                <fullName>Patient No Show</fullName>
+                <default>false</default>
+                <label>Patient No Show</label>
+            </value>
+            <value>
+                <fullName>Provider No Show</fullName>
+                <default>false</default>
+                <label>Provider No Show</label>
+            </value>
+            <value>
+                <fullName>Provider Scheduling Conflict</fullName>
+                <default>false</default>
+                <label>Provider Scheduling Conflict</label>
+            </value>
+            <value>
+                <fullName>Patient Request</fullName>
+                <default>false</default>
+                <label>Patient Request</label>
+            </value>
+            <value>
+                <fullName>Provider Terminated</fullName>
+                <default>false</default>
+                <label>Provider Terminated</label>
+            </value>
+            <value>
+                <fullName>License Mismatch</fullName>
+                <default>false</default>
+                <label>License Mismatch</label>
+            </value>
+            <value>
+                <fullName>Checked In</fullName>
+                <default>false</default>
+                <label>Checked In</label>
+            </value>
+            <value>
+                <fullName>In Room</fullName>
+                <default>false</default>
+                <label>In Room</label>
+            </value>
+            <value>
+                <fullName>Confirmed</fullName>
+                <default>false</default>
+                <label>Confirmed</label>
+            </value>
+            <value>
+                <fullName>In Session</fullName>
+                <default>false</default>
+                <label>In Session</label>
+            </value>
+            <value>
+                <fullName>Not Confirmed</fullName>
+                <default>false</default>
+                <label>Not Confirmed</label>
+            </value>
+            <value>
+                <fullName>Rescheduled</fullName>
+                <default>false</default>
+                <label>Rescheduled</label>
+            </value>
+            <value>
+                <fullName>Scheduling Conflict</fullName>
+                <default>false</default>
+                <label>Scheduling Conflict</label>
+            </value>
+            <value>
+                <fullName>Pending Chargeback</fullName>
+                <default>false</default>
+                <label>Pending Chargeback</label>
+            </value>
+            <value>
+                <fullName>Stalled</fullName>
+                <default>false</default>
+                <label>Stalled</label>
+            </value>
+            <value>
+                <fullName>Results Assumed Delivered</fullName>
+                <default>false</default>
+                <label>Results Assumed Delivered</label>
+            </value>
+            <value>
+                <fullName>Abandoned</fullName>
+                <default>false</default>
+                <label>Abandoned</label>
+            </value>
+            <value>
+                <fullName>Unable to Schedule</fullName>
+                <default>false</default>
+                <label>Unable to Schedule</label>
+            </value>
+            <value>
+                <fullName>Archive</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Archive</label>
+            </value>
+            <value>
+                <fullName>Not treatable</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Not treatable</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

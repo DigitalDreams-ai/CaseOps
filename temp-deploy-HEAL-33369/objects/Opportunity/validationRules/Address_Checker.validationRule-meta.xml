@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Address_Checker</fullName>
+    <active>false</active>
+    <description>This VR will check to ensure there is an address associated with the medication Opportunity type.</description>
+    <errorConditionFormula>AND(
+NOT(ISNEW()),
+ISPICKVAL( StageName , &apos;Open&apos;),
+SameAsShippingAddress__c = FALSE,
+SameAsBillingAddress__c = FALSE,
+RecordType.Name = &apos;Medication&apos;
+)</errorConditionFormula>
+    <errorMessage>Update Address on Opportunity</errorMessage>
+</ValidationRule>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WebLink xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AVSFQB__Update_Opportunity_To_QBOE</fullName>
+    <availability>online</availability>
+    <displayType>button</displayType>
+    <linkType>javascript</linkType>
+    <masterLabel>Update Opportunity To QBOE</masterLabel>
+    <openType>onClickJavaScript</openType>
+    <protected>false</protected>
+    <url>var URL=&quot;{!$User.AVSFQB__QBOE_DBSync_Server__c}/qboe.m?sfUrl={!$Api.Partner_Server_URL_320}&amp;pdl=processdefinition_SFQB_OpportunityTo{!Opportunity.AVSFQB__Generate_Object__c}.xml&amp;recordId={!Opportunity.Id}&amp;dbsyncId={!$User.AVSFQB__DBSync_Id__c}&amp;profileName={!$User.AVSFQB__DBSync_Profile__c}&amp;sessionId={!$Api.Session_ID}&amp;dbsyncPasswd={!$User.AVSFQB__DBSync_Passwd__c}&quot;; 
+window.open(URL,&quot;DBSync&quot;,&quot;menubar=0,resizable=0,width=650,height=300&quot;);</url>
+</WebLink>

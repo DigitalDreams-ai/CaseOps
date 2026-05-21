@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Partial_Refund_Needs_a_Refunded_Amount</fullName>
+    <active>true</active>
+    <errorConditionFormula>AND(
+    Opportunity_Partial_Refunded__c, 
+				ISBLANK(Refunded_Amount__c)
+)</errorConditionFormula>
+    <errorDisplayField>Refunded_Amount__c</errorDisplayField>
+    <errorMessage>Please enter in how much we refunded the customer.</errorMessage>
+</ValidationRule>

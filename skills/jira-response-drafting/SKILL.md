@@ -109,14 +109,14 @@ Thanks for reporting.
 ```
 The validation rule was blocking that update. I fixed it in our test environment and confirmed it works.
 
-Production doesn't have the fix yet — your team will need to promote it via Gearset (I can send details if you need them).
+Production doesn't have the fix yet. Your team will need to promote it via Gearset. I can send deployment details if you need them.
 
-The steps you provided made it easy to spot — thanks for that clarity.
+The steps you provided made it easy to spot. Thanks for that clarity.
 ```
 
 **Passes all checks:**
 - ✓ No em dashes, no hyphens as punctuation
-- ✓ Brief (three sentences, one action)
+- ✓ Brief (four sentences, one action)
 - ✓ Casual tone ("made it easy to spot")
 - ✓ Specific thanks ("The steps you provided made it easy to spot")
 - ✓ No bullets, no internal IDs, no jargon

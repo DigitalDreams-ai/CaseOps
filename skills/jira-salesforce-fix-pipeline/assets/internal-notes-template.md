@@ -1,5 +1,9 @@
 # Internal Notes — [ISSUE KEY]
 
+**INTERNAL ONLY — DO NOT POST TO JIRA**
+
+This file is Sean's internal memo. It is NOT posted to the Jira issue or customer. For customer-facing message, use `outputs/jira-messages/<KEY>.md` instead.
+
 **Reference:** See `outputs/investigations/<KEY>.md` for full problem diagnosis, Salesforce configuration, and similar items analysis.
 
 ---

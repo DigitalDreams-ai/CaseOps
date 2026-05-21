@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>61.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <constants>
+        <name>const_txtFlowApiName</name>
+        <dataType>String</dataType>
+        <value>
+            <stringValue>Record_Trigger_Opportunity_Send_Patient_Agreements</stringValue>
+        </value>
+    </constants>
+    <description>Based on the opportunity line items when the Opportunity is Submitted for Approval we will determine what Patient Agreements need to be sent to the patient and send them.</description>
+    <environments>Default</environments>
+    <formulas>
+        <name>bool_DoNotSyncToBiocanic</name>
+        <dataType>Boolean</dataType>
+        <expression>{!$Setup.AutomationControlSettings__c.Do_Not_Sync_to_Biocanic__c}</expression>
+    </formulas>
+    <interviewLabel>Record Trigger - Opportunity - Send Patient Agreements {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Opportunity - Send Patient Agreements</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <doesRequireRecordChangedToMeetCriteria>true</doesRequireRecordChangedToMeetCriteria>
+        <filterLogic>1 OR (2 AND (3 OR 4))</filterLogic>
+        <filters>
+            <field>StageName</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Waiting For Approval</stringValue>
+            </value>
+        </filters>
+        <filters>
+            <field>StageName</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Approved</stringValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Transaction_Source__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Store</stringValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Transaction_Source__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Affiliate</stringValue>
+            </value>
+        </filters>
+        <object>Opportunity</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <scheduledPaths>
+            <name>Delayed_Run</name>
+            <connector>
+                <targetReference>Send_Patient_Agreements</targetReference>
+            </connector>
+            <label>Delayed Run</label>
+            <offsetNumber>1</offsetNumber>
+            <offsetUnit>Minutes</offsetUnit>
+            <timeSource>RecordTriggerEvent</timeSource>
+        </scheduledPaths>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <subflows>
+        <description>This subflow will look through all of the opportunity line items and determine if there is a need to send a Patient Consent form to the patient.</description>
+        <name>Send_Patient_Agreements</name>
+        <label>Send Patient Agreements</label>
+        <locationX>308</locationX>
+        <locationY>276</locationY>
+        <flowName>Autolaunch_Send_Patient_Agreements_Product_Based</flowName>
+        <inputAssignments>
+            <name>rec_Opportunity</name>
+            <value>
+                <elementReference>$Record</elementReference>
+            </value>
+        </inputAssignments>
+    </subflows>
+</Flow>

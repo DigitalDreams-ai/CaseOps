@@ -73,14 +73,26 @@ The orchestrator retains **only** the returned compact summary. Do not read the 
 
 ## Step 4 — Determine the Salesforce problem and solution [ORCHESTRATOR]
 
-From the Step 3 summary, state a Salesforce-specific **problem hypothesis** — confirmed facts separated from symptoms — and define the **smallest viable fix**: what metadata or code changes, why it solves the problem, Sandbox validation plan, rollback, and risks.
+From the Step 3 summary (Issue Understanding), synthesize a Salesforce-specific **problem hypothesis** and define the **smallest viable fix**.
 
-Examples:
+**Output artifact:** Inline notes or `outputs/step-4-hypothesis/<KEY>.md` using `assets/step-4-problem-hypothesis-template.md`.
 
-- Flow condition does not match the expected case record type.
-- Validation rule blocks the intended update.
-- Permission set does not grant required field access.
-- Assignment rule or queue routing condition is incomplete.
+**Must include:**
+- **Confirmed facts** (from Step 3, separated from symptoms)
+- **Root cause hypothesis** (one sentence: what is broken and why)
+- **Smallest viable fix** (exact artifact + specific change + why it solves)
+- **Sandbox validation plan** (test scenario, expected outcome, success criteria)
+- **Rollback plan** (if Sandbox or Production deployment fails)
+- **Risks and constraints** (potential side effects, external dependencies, mitigations)
+- **Production deploy readiness** (Gearset vs manual, rollout timing, monitoring)
+
+**Examples of strong hypotheses:**
+- "Flow condition does not match the expected case record type; Fix: add OR condition for the missing record type."
+- "Validation rule blocks the intended update; Fix: modify rule exception to allow this workflow."
+- "Permission set does not grant required field access; Fix: add field-level Read-Write permission for this field."
+- "Apex integration payload is missing required address fields in JSON structure; Fix: update CMT mappings to emit flat root-level fields instead of nested objects."
+
+**Input to Step 5:** Pass the Step 4 hypothesis (from file or inline) as the "Problem hypothesis" input to Step 5 sub-agent prompt. Steps 5 and 6 will use this to scope metadata retrieval and problem location drilling.
 
 ---
 
@@ -174,11 +186,23 @@ Do **not** conflate “fix confirmed in Sandbox” with “Production is fixed�
 
 ---
 
-## Step 11 — Create or update the dated summary
+## Step 11 — Create or update the dated summary [ORCHESTRATOR — OPTIONAL]
 
-Create or update `outputs/issue-summary-YYYY-MM-DD.md` (today’s date) using `assets/issue-summary-template.md`.
+**When using Claude Code skill** (`/jira-salesforce-fix-pipeline`): This step is typically deferred or run separately. After processing all issues through Steps 1-10, run:
 
-The summary must include:
+```bash
+python run_pipeline.py --no-sync --no-agents
+```
+
+This executes the Python orchestrator’s Steps 11-12 without re-syncing Jira or re-running sub-agents. It rolls up all processed issues into a dated summary.
+
+**When using Python orchestrator** (`run_pipeline.py`): Steps 11-12 execute automatically after all issues complete.
+
+---
+
+**Output artifact:** `outputs/issue-summary-YYYY-MM-DD.md` using `assets/issue-summary-template.md`.
+
+**The summary must include:**
 
 - Total issues in scope.
 - Escalated to Engineering (Jira status) count.
@@ -194,19 +218,31 @@ The summary must include:
 
 ---
 
-## Step 12 — Inform the user
+## Step 12 — Inform the user [ORCHESTRATOR — MANUAL]
 
-Per issue, report:
+After all issues are processed and Step 11 summary is created, report back to stakeholders.
 
-- Jira key and summary
-- Root cause
-- Solution or escalation status
-- **Production vs Sandbox:** what exists in Production (verified read-only) vs Sandbox-only; **Production deploy required?** (Gearset / No / N/A); operator next step
-- Files or metadata changed
-- Sandbox target (if applicable)
-- Tests run and outcome
-- Open risks or follow-up
-- Paths: internal notes, Jira message draft, dated summary
+**When using Claude Code skill** (`/jira-salesforce-fix-pipeline`): Report is generated inline during skill execution. Manually summarize for stakeholders: reference the dated summary file (`outputs/issue-summary-YYYY-MM-DD.md`) and individual Jira message drafts (`outputs/jira-messages/<KEY>.md`).
+
+**When using Python orchestrator** (`run_pipeline.py`): Summary is printed to stdout and written to dated summary file.
+
+---
+
+**What to report per issue:**
+
+- **Jira key and summary**
+- **Root cause** (from Step 4 hypothesis + Step 6 confirmation)
+- **Solution or escalation status** (Support-fixed / Engineering-escalated / On-hold pending customer response)
+- **Production vs Sandbox:** 
+  - What exists in Production (verified read-only)
+  - What is Sandbox-only (after fix deployed)
+  - **Production deploy required?** (Yes — Gearset / No / N/A)
+  - Operator next step (e.g., "Run Gearset to promote to Production", "Deploy via standard change control")
+- **Files or metadata changed** (list of Apex classes, Flows, fields, configs modified)
+- **Sandbox target** (if applicable; reference CASEOPS_SANDBOX_TARGET_ORG)
+- **Tests run and outcome** (from Step 9 test report, if Support-resolvable)
+- **Open risks or follow-up** (known issues, test gaps, manual verification needed)
+- **Paths:** Internal notes (`outputs/internal-notes/<KEY>.md`), Jira message draft (`outputs/jira-messages/<KEY>.md`), dated summary (`outputs/issue-summary-YYYY-MM-DD.md`)
 
 ---
 

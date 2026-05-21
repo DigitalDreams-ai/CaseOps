@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <decisions>
+        <description>No Accounts are find with the matching criteria</description>
+        <name>Are_matching_accounts_found</name>
+        <label>Are matching accounts found?</label>
+        <locationX>176</locationX>
+        <locationY>431</locationY>
+        <defaultConnector>
+            <targetReference>Populate_Matching_Account_c</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>Nomatchingaccounts</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>Query_existing_Accounts_for_a_match</leftValueReference>
+                <operator>EqualTo</operator>
+            </conditions>
+            <label>No matching accounts</label>
+        </rules>
+    </decisions>
+    <description>Populates Matching_Account__c lookup field on Lead record after creation, if one or more matches are found (most recently modified Account if multiple are returned as matching).</description>
+    <environments>Default</environments>
+    <interviewLabel>Record Triggered Flow - Lead - Relate Matching Account {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Triggered Flow - Lead - Relate Matching Account</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordLookups>
+        <description>This step will check existing Accounts for matching name and email, email and DOB, or name and DOB.</description>
+        <name>Query_existing_Accounts_for_a_match</name>
+        <label>Query existing Accounts for a match</label>
+        <locationX>176</locationX>
+        <locationY>323</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Are_matching_accounts_found</targetReference>
+        </connector>
+        <filterLogic>(1 AND (2 AND 3)) OR (4 AND (2 AND 3)) OR (1 AND 4)</filterLogic>
+        <filters>
+            <field>PersonEmail</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.Email</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>FirstName</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.FirstName</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>LastName</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.LastName</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>DateOfBirth__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.Date_Of_Birth__c</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>Account</object>
+        <queriedFields>Id</queriedFields>
+        <sortField>LastModifiedDate</sortField>
+        <sortOrder>Desc</sortOrder>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordUpdates>
+        <description>Populates Matching_Account__c on Lead if one or more matching Accounts are found.</description>
+        <name>Populate_Matching_Account_c</name>
+        <label>Populate Matching_Account__c</label>
+        <locationX>308</locationX>
+        <locationY>539</locationY>
+        <inputAssignments>
+            <field>Matching_Account__c</field>
+            <value>
+                <elementReference>Query_existing_Accounts_for_a_match.Id</elementReference>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Query_existing_Accounts_for_a_match</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Email</field>
+            <operator>NotEqualTo</operator>
+        </filters>
+        <object>Lead</object>
+        <recordTriggerType>Create</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

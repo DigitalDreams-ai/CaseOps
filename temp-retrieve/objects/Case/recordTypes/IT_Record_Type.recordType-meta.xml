@@ -1,0 +1,1080 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RecordType xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IT_Record_Type</fullName>
+    <active>true</active>
+    <businessProcess>IT Support Process</businessProcess>
+    <description>Represent a IT record type</description>
+    <label>IT Record Type</label>
+    <picklistValues>
+        <picklist>AVA_MAPPER__Product__c</picklist>
+        <values>
+            <fullName>GC1020</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC1040</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC1060</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC3020</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC3040</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC3060</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC5020</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC5040</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>GC5060</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Actions__c</picklist>
+        <values>
+            <fullName>Call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Review Only</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Case_Resolution_Type__c</picklist>
+        <values>
+            <fullName>Atlas Patient not in SF</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Chrono Duplicate</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Not found in any system</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Other</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Collaboration_Resolution__c</picklist>
+        <values>
+            <fullName>Billing</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Customer Success</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Provider Support</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Technical Support</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Wellness Team</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Dispo_Level_1__c</picklist>
+        <values>
+            <fullName>Blood Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Gut Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Medication</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Methylation Genetic Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Precision Genetic Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Superhuman Protocol</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Supplements</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Dispo_Level_2__c</picklist>
+        <values>
+            <fullName>Am I able to change my shipping address</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Amazon inquiries</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Are my MGT results ready</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Are my PGT results ready</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Are my results ready</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can I reschedule my PGT Clarity Call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can I reschedule my lab review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can I schedule my Clarity Call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can I take these recommendations with my other medications</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can you Send%2FResend lab requisition</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can you provide me with more information on %27x%27 supplement</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can you send me an invoice</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can you send me an invoice for my PGT purchase</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can you send me an invoice for my purchase</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can you send my MGT results to a new email</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can you send my PGT results to a new email</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can you send my gut health test results to a new email</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can you send my medical recommendations to a new email</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can you send my test results to a new email</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Can you tell me about your products</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Clincal Questions about my protocol %28Out of scope%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Clincal Questions about my protocol %28in scope%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Clinical Questions about my protocol %28In Scope%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Clinical Questions about my results %28Outside of scope%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Collecting credit card information</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Do you ship Superhuman Protocol Internationally%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>How can I track my medications from the pharmacy</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>How do I know that the recommendations are working%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>How do I know that the supplements are working%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>How do I take my protocol</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>How do I use HyperMax Oxygen</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>How do I use the PEMF mat%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>How do I use the red light bed%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>How do I use the red light panels%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>How long should I exercise with HyperMax Oxygen%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>How long will it take for me to receive my results</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I am %27x%27 religion and can not consume %27x%27 do your supplements contain this%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I am a prospective partner wanting more information about your business</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I am an affiliate and I can not purchase</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I am an affiliate and I can not purchase the Gut Health test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I am an affiliate and I can not purchase the test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I am having trouble with my patient agreements</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not get in touch with your affiliate team</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not log in to edit my supplement subscription</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not log into my portal %28DOB Discrepancy%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not log into my portal %28Never received OTP%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not log into my portal %28OTP incorrect%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not log into my portal %28Timed out%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not log into my portal %28email incorrect%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not see my MGT results inside of the portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not see my PGT results inside of the portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not see my guth health test results inside of the portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not see my results inside of the portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can not see my supplement purchase in my shopify account</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I can only order %27x%27 quantity of supplements</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I did not receive my MGT results</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I do not have access to my portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I had my review but I haven%27t heard anything</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I had my review but I haven%27t heard anything from your team</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I have a new address and need to change my shipping address</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I have a question on your T%26C</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I have not heard from my WA</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I have not received my recommendations</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I have questions about my protocol</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I have questions on your T%26C</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I need help scheduling my review%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I need to be scheduled</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I need to be scheduled for my review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I need to manage my subscription</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I need to reschedule my Clarity Call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I need to speak to my WA%2FWC</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I never received my PGT kit</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I never received my kit</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I never received my order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I never received my test kit</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I ordered to %28x%29 country and now I cant place another order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I received the wrong item%28s%29 in my order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I shipped supplements to the wrong address</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I want to add %27x%27 item to my order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I want to be scheduled for a lab redraw</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I want to change my address for my PGT supplements</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I want to place a medication order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I want to place an order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I want to update payment on supplement subscription</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a hard copy of my MGT results</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a hard copy of my PGT results</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a hard copy of my gut health test results</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a hard copy of my results</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a refund for MGT Supplements</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a refund for my MGT</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a refund for my PGT</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a refund for my blood test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a refund for my gut health test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a refund for my medical recommendations %28Meds not received%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a refund for my product</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like a refund for my supplements</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to cancel a visit to your clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to cancel my lab review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to cancel my review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to cancel my review%2F Clarity Call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to purchase a Blood test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to purchase a MGT kit</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to purchase a PGT</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to purchase an MGT clarity call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to purchase an item</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to purchase my medication</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to purchase supplements</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to purchase the gut health test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to reschedule a visit to your clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to reschedule my PGT clarity call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to reschedule my lab review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to reschedule my review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to schedule a PGT clarity call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to schedule a visit to your clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to schedule my lab review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>I would like to schedule my review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My DOB is incorrect on the portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My DOB is incorrect on the portal can you fix it%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My MGT kit is damaged%2Funusable</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My PGT kit is damaged%2Funusable</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My PGT results were not delivered</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My clinical provider didn%27t provide valuable information during our call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My clinical provider didn%27t show up for my call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My clinical provider didn%27t show up for my clarity call</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My height and weight on my account are incorrect%2Fmissing</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My item arrived damaged</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My kit is damaged</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My kit is damaged%2Funusable</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My kit is unusable</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My medication packaging was damaged as well as the contents</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My minor child just turned 18 and his%2Fher results are no longer in my portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My order is missing an item%28s%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My package wasn%27t delivered</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My packaging was damaged as well as the contents</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My packaging was damaged but contents in tact</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My results were not delivered</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My results were not delivered %28unaware of timeframe%2Femail sent%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>My supplement purchase says unfulfilled in my shopify account</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Sending clients tracking information and instructions</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Some items are missing from my order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tell me about my recommended medications</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tell me about the MGT</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tell me about the PGT</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tell me about your SHP products</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tell me about your products</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Tell me about your supplements</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>The status of my order says unfulfilled %28in portal%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>These supplements are not making me feel good %28Refund%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>These supplements are not making me feel good %28overmethylation%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Troubleshooting broken items</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What PEMF settings should I use%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What are the 10X Health Light Bed%27s specs%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What are the HyperMax Oxygen specs%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What are the PEMF mat%27s specs%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What are the package weight and dimensions%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What are the red light panel%27s specs%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What are the wavelengths in the panels and%2For light bed%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What is my tracking number</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What is the status of my MGT</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What is the status of my PGT</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What is the status of my blood test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What is the status of my gut health test results</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What is the warranty%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What settings should I use with the red light bed%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>What settings should I use with the red light panels%3F</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Where is my medication order</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Where is my order</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Dispo_Level_3__c</picklist>
+        <values>
+            <fullName>Escalation</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>FCR</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Send Info</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Transfer</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Inquiry_Category__c</picklist>
+        <values>
+            <fullName>Blood Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Brand Partnerships</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Gut Health Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Legal and Compliance</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Methylation Genetic Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>MyWellness Portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Precision Genetic Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Superhuman Protocol</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Supplements</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Lab_Provider__c</picklist>
+        <values>
+            <fullName>ASC</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Cell Science</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>EmpowerDX</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Origin</picklist>
+        <values>
+            <fullName>Email</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Internal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Phone</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Web</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Priority</picklist>
+        <values>
+            <fullName>High</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Low</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Medium</fullName>
+            <default>true</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Purchase_Location__c</picklist>
+        <values>
+            <fullName>10X Health In Clinic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>10X Health Online Store</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Amazon</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Not Specified</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Other %28Indicated in Details%29</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>TikTok</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Reason</picklist>
+        <values>
+            <fullName>Closed</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Completed</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Root_Cause__c</picklist>
+        <values>
+            <fullName>Customer Misunderstanding</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Data Entry Error</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Product Issue</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>System Error</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Training Needed</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Sentiment__c</picklist>
+        <values>
+            <fullName>1 - Very Upset</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>2</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>2-  Upset</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>3 - Dissatified</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>4 - Neutral</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>5 - Happy</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Supplement_Inquiry__c</picklist>
+        <values>
+            <fullName>Precision Aminos</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Survey_Rating__c</picklist>
+        <values>
+            <fullName>Dissatisfied</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Neutral</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Satisfied</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Very Dissatisfied</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Very Satisfied</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Type</picklist>
+        <values>
+            <fullName>Call In Scripts</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Medical Review</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Other</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Webform_Category__c</picklist>
+        <values>
+            <fullName>Blood Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Brand Partnerships</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Gut Health Test</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Legal and Compliance</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>MyWellness Portal</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Supplements</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>Work_Group__c</picklist>
+        <values>
+            <fullName>HelpDesk</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Refund Approver</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+</RecordType>

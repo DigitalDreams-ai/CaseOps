@@ -631,6 +631,32 @@ def _stream_full_issue(key: str, run_key: str) -> None:
     """
     try:
         _log_emit_line(run_key, f"-- Processing {key} via jira-salesforce-fix-pipeline Skill --")
+
+        # Safety check: CASEOPS_SANDBOX_TARGET_ORG must be set before Step 9
+        sandbox_target = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
+        if not sandbox_target:
+            _log_emit_line(run_key, "ERROR: CASEOPS_SANDBOX_TARGET_ORG not set in .env.jira")
+            _log_emit_line(run_key, "       Step 9 (deploy+test) requires an allowlisted Sandbox org.")
+            _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env.jira and retry.")
+            return
+
+        # Safety check: if claude_code mode, verify `claude` CLI is available
+        if not caseops_llm_auth_uses_anthropic_api_key():
+            try:
+                subprocess.run(["claude", "--version"], capture_output=True, timeout=5, check=True)
+            except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                _log_emit_line(run_key, "ERROR: `claude` CLI not found or not responding")
+                _log_emit_line(run_key, "       CASEOPS_LLM_AUTH=claude_code requires Claude Code installed.")
+                _log_emit_line(run_key, "       Verify: `claude --version` runs, and `claude login` succeeded.")
+                return
+
+        # Safety check: if api_key mode, verify API key is set
+        if caseops_llm_auth_uses_anthropic_api_key():
+            api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+            if not api_key:
+                _log_emit_line(run_key, "WARNING: CASEOPS_LLM_AUTH=api_key but ANTHROPIC_API_KEY not set")
+                _log_emit_line(run_key, "         Sub-agents (Steps 3–10) will not execute. Text-only response only.")
+
         prompt = _build_claude_prompt(
             key,
             "Run the full CaseOps fix pipeline for this issue through completion of investigation, "

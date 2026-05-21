@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Lab_Order__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Links a Lab Order with a Case for Lab Order specific issues that the API will create</description>
+    <label>Lab Order</label>
+    <referenceTo>Lab_Order__c</referenceTo>
+    <relationshipLabel>Cases</relationshipLabel>
+    <relationshipName>Cases</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

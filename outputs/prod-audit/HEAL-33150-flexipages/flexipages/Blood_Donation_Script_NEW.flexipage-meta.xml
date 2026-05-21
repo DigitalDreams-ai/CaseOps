@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>allowChanges</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>alternativeText</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>Center</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>imgPath</name>
+                    <value>{[devName:X10X_Health_System_logo12]}</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>linkUrl</name>
+                    <value>https://10xhealthsystem.com</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginBottom</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginLeft</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginRight</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginTop</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>objectFit</name>
+                    <value>fill</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>50</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:image</componentName>
+                <identifier>contentbuilder_image</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>allowChanges</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>linkedToDesignKit</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginBottom</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginLeft</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginRight</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginTop</name>
+                    <value>0</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>richTextValue</name>
+                    <value>&lt;div style=&quot;text-align:start&quot;&gt;&lt;br /&gt;
+&lt;span style=&quot;font-size:14px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;&lt;span style=&quot;color:#000000;&quot;&gt;&lt;span style=&quot;font-style:normal&quot;&gt;&lt;span style=&quot;font-variant-ligatures:normal&quot;&gt;&lt;span style=&quot;font-weight:400&quot;&gt;&lt;span style=&quot;white-space:normal&quot;&gt;&lt;span style=&quot;text-decoration-thickness:initial&quot;&gt;&lt;span style=&quot;text-decoration-style:initial&quot;&gt;&lt;span style=&quot;text-decoration-color:initial&quot;&gt;Hi &lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;{{{Recipient.FirstName}}},&amp;nbsp;&lt;br /&gt;
+&lt;br /&gt;
+Your provider recommended to donate blood, as discussed during your lab review. Please note that this request is separate from the initial blood draw you had to produce lab results.&lt;br /&gt;
+&lt;br /&gt;
+You may donate at the American Red Cross (download their app and schedule), or you may go to a local facility of your choice that offers &amp;ldquo;therapeutic phlebotomy&amp;rdquo;.&lt;br /&gt;
+&lt;br /&gt;
+Attached is a copy of your signed&lt;strong&gt; 10X Health Therapeutic Phlebotomy Order&lt;/strong&gt; and&lt;strong&gt; 10X Health Blood Donation Approval Form&lt;/strong&gt;.&lt;br /&gt;
+&lt;br /&gt;
+You may provide a printed copy of the &lt;strong&gt;10X Health Therapeutic Phlebotomy&lt;/strong&gt;&amp;nbsp;&lt;strong&gt;Order &lt;/strong&gt;to a diagnostic center near you to authorize the procedure. The &lt;strong&gt;10X Health Blood Donation Approval Form&lt;/strong&gt; must be filled out before leaving the diagnostic center and then sent to our 10X Health team for approval. Please read below the detailed instructions.&lt;br /&gt;
+&lt;br /&gt;
+&lt;u&gt;&lt;strong&gt;Instructions&lt;/strong&gt;&lt;/u&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;br /&gt;
+&amp;nbsp;&lt;/div&gt;
+
+&lt;div style=&quot;text-align: start; margin-left: 40px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;1. You will need to print and provide a copy of the&lt;strong&gt; 10X Health Therapeutic Phlebotomy Order &lt;/strong&gt;&lt;em&gt;and&lt;/em&gt;&lt;strong&gt; 10X Health Blood Donation Approval Form &lt;/strong&gt;(both attached to this email) to the diagnostic center at the time of your blood draw.&lt;/span&gt;&lt;/div&gt;
+
+&lt;div style=&quot;text-align:start&quot;&gt;&amp;nbsp;&lt;/div&gt;
+
+&lt;div style=&quot;text-align: start; margin-left: 40px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;2. Once your blood draw has been completed, you will receive confirmation from the diagnostician of a successful donation.&lt;/span&gt;&lt;/div&gt;
+
+&lt;div style=&quot;text-align:start&quot;&gt;&amp;nbsp;&lt;/div&gt;
+
+&lt;div style=&quot;text-align: start; margin-left: 40px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;3. Before leaving, you must fill out the &lt;strong&gt;10X Health Blood Donation Approval Form&lt;/strong&gt; and you must take a picture of your &lt;strong&gt;Single Donation Record (SDR)&lt;/strong&gt;.&lt;/span&gt;&lt;/div&gt;
+
+&lt;div style=&quot;text-align:start&quot;&gt;&amp;nbsp;&lt;/div&gt;
+
+&lt;div style=&quot;text-align: start; margin-left: 40px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;4. Reply to this email and forward the filled out &lt;strong&gt;10X Health Blood Donation Approval Form&lt;/strong&gt; and a picture of your &lt;strong&gt;Single Donation Record (SDR)&lt;/strong&gt;.&lt;/span&gt;&lt;/div&gt;
+
+&lt;div style=&quot;text-align:start&quot;&gt;&lt;br /&gt;
+&lt;span style=&quot;font-size:14px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;&lt;span style=&quot;color:#000000;&quot;&gt;Once your information has been reviewed and approved, your wellness advisor will contact you regarding ordering.&lt;br /&gt;
+&lt;br /&gt;
+We&amp;#39;re excited to be taking this journey with you and always happy to help! Please don&amp;#39;t hesitate to reach out with any questions or concerns.&lt;br /&gt;
+&lt;br /&gt;
+To your wellness,&amp;nbsp;&lt;/span&gt;&lt;br /&gt;
+&lt;br /&gt;
+&lt;strong&gt;10&lt;span style=&quot;color:#cc0000;&quot;&gt;X&lt;/span&gt;&amp;nbsp;Health System&amp;nbsp;&lt;/strong&gt;&lt;br aria-hidden=&quot;true&quot; /&gt;
+Main: 305.682.1818&lt;br aria-hidden=&quot;true&quot; /&gt;
+Fax: 786.598.8612&lt;br /&gt;
+&lt;a href=&quot;https://10xhealthsystem.com&quot;&gt;10xhealthsystem.com&lt;/a&gt; &amp;nbsp;&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:richText</componentName>
+                <identifier>contentbuilder_richText</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-d91c8ac6-d4e2-4979-a645-646388bcd345</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columnBody</name>
+                    <value>Facet-d91c8ac6-d4e2-4979-a645-646388bcd345</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnCount</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnIndex</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnSpacer</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>padding</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlign</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>100%</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:column</componentName>
+                <identifier>contentbuilder_column</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-572a1607-152c-408a-a7be-bb6db342dc71</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>allowChanges</name>
+                    <value>true</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>linkedToDesignKit</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginBottom</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginLeft</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginRight</name>
+                    <value>10</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>marginTop</name>
+                    <value>15</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>richTextValue</name>
+                    <value>&lt;span style=&quot;font-size:12px;&quot;&gt;&lt;span style=&quot;font-family:Verdana,Arial,Helvetica,sans-serif;&quot;&gt;Disclaimer: This email and any attachments may contain privileged and confidential information and/or protected health information (PHI) intended solely for the use of 10X Health System and any recipient(s) named above. If you are not the recipient, you are hereby notified that any review, dissemination, distribution or duplication of this email message and/or any attachments is strictly prohibited.&lt;/span&gt;&lt;/span&gt;</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:richText</componentName>
+                <identifier>contentbuilder_richText2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-a29911dd-5aca-4781-9aed-08f1440bbb19</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columnBody</name>
+                    <value>Facet-a29911dd-5aca-4781-9aed-08f1440bbb19</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnCount</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnIndex</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columnSpacer</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>padding</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlign</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>width</name>
+                    <value>100%</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:column</componentName>
+                <identifier>contentbuilder_column2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-b2b75364-e5fc-4e4e-a3ae-8bd743bb5f51</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>backgroundColor</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>backgroundImageUrl</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-572a1607-152c-408a-a7be-bb6db342dc71</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlignment</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:row</componentName>
+                <identifier>contentbuilder_row</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>backgroundColor</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>backgroundImageUrl</name>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-b2b75364-e5fc-4e4e-a3ae-8bd743bb5f51</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>verticalAlignment</name>
+                    <value>top</value>
+                </componentInstanceProperties>
+                <componentName>contentbuilder:row</componentName>
+                <identifier>contentbuilder_row2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>main</name>
+        <type>Region</type>
+    </flexiPageRegions>
+    <masterLabel>Blood_Donation_Script_NEW</masterLabel>
+    <template>
+        <name>contentpage:defaultEmailTemplatePageTemplate</name>
+        <properties>
+            <name>backgroundColor</name>
+            <value>#E9EAEC</value>
+        </properties>
+        <properties>
+            <name>backgroundImageUrl</name>
+        </properties>
+        <properties>
+            <name>bodyColor</name>
+            <value>#FFFFFF</value>
+        </properties>
+        <properties>
+            <name>paddingBottom</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingLeft</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingRight</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>paddingTop</name>
+            <value>10</value>
+        </properties>
+        <properties>
+            <name>preheader</name>
+        </properties>
+    </template>
+    <type>EmailTemplatePage</type>
+</FlexiPage>
