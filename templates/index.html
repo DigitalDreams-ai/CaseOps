@@ -185,7 +185,7 @@
   const selectedIssues = new Set();
   let currentSort = 'number';
   let selectMode = false;
-  const pipelineProgress = {}; // Track step progress per issue: { 'HEAL-123': 4 }
+  const pipelineProgress = {}; // Track progress per issue: { 'HEAL-123': 4|'FAILED' }
 
   let cachedMessages = null;
   let loadIssuesInProgress = false;
@@ -279,7 +279,13 @@
     pipelineProgress[issueKey] = step;
     const indicator = document.querySelector(`.issue-indicator[data-key="${issueKey}"]`);
     if (indicator) {
-      indicator.textContent = step ? `Step ${step}/12` : '';
+      if (step === 'FAILED') {
+        indicator.textContent = 'Failed';
+        indicator.classList.add('indicator-failed');
+      } else {
+        indicator.textContent = step ? `${step}/12` : '';
+        indicator.classList.remove('indicator-failed');
+      }
     }
   }
 
@@ -288,7 +294,26 @@
     const indicator = document.querySelector(`.issue-indicator[data-key="${issueKey}"]`);
     if (indicator) {
       indicator.textContent = '';
+      indicator.classList.remove('indicator-failed');
     }
+  }
+
+  function applyStepIndicators() {
+    Object.entries(pipelineProgress).forEach(([issueKey, step]) => {
+      updateStepIndicator(issueKey, step);
+    });
+  }
+
+  function parsePipelineStep(line) {
+    if (!line) return null;
+    const normalized = line.replace(/\*\*/g, '').trim();
+    const marker = normalized.match(/\bSTEP_(\d+)(?:_LOOP)?\b/i);
+    if (marker) return parseInt(marker[1], 10);
+    const range = normalized.match(/\bStep\s+(\d+)\s*[–-]\s*(\d+)\b/i);
+    if (range) return parseInt(range[1], 10);
+    const plain = normalized.match(/\bStep\s+(\d+)\b/i);
+    if (plain) return parseInt(plain[1], 10);
+    return null;
   }
 
   function initStream() {
@@ -301,8 +326,8 @@
         const runKey = msg.slice(9);
         activeRuns.delete(runKey);
         updateStatus();
-        // Clear step indicator for this issue if it's not global
-        if (runKey !== '__global__') {
+        // Successful issue runs stop showing progress; failed runs keep the Failed badge.
+        if (runKey !== '__global__' && pipelineProgress[runKey] !== 'FAILED') {
           clearStepIndicator(runKey);
         }
         // Re-enable buttons for this run key
@@ -338,13 +363,7 @@
           const runKey = msg.slice(0, sep);
           const line   = msg.slice(sep + 1);
           logLine(line, undefined, runKey);
-          // Parse step progress: look for "STEP_N issue_key" pattern
-          const stepMatch = line.match(/STEP_(\d+)\s+(HEAL-\d+)/);
-          if (stepMatch) {
-            const step = parseInt(stepMatch[1], 10);
-            const issueKey = stepMatch[2];
-            updateStepIndicator(issueKey, step);
-          }
+          updateProgressFromLogLine(runKey, line);
         } else {
           logLine(msg);
         }
@@ -631,7 +650,26 @@
     if (escalated.length) renderGroup(el, 'Escalated', escalated);
     if (closed.length)    renderGroup(el, 'Closed / Resolved / Canceled', closed);
 
+    applyStepIndicators();
     updateSortPillIndicators();
+  }
+
+  async function recoverActiveRuns() {
+    try {
+      const res = await fetch('/api/status');
+      if (!res.ok) return;
+      const data = await res.json();
+      const keys = data.active_keys || [];
+      for (const key of keys) {
+        activeRuns.add(key);
+        setIssueRunning(key, true);
+        if (key !== '__global__') {
+          updateStepIndicator(key, pipelineProgress[key] || 1);
+          await loadPipelineHistory(key, undefined, true);
+        }
+      }
+      updateStatus();
+    } catch (_) {}
   }
 
   function renderGroup(container, label, issues) {
@@ -897,34 +935,73 @@
     }
   }
 
+  function orgIdentifierToUrl(orgId) {
+    // Convert org identifier to Salesforce URL
+    // Examples: "10xhealth-sean" → "10xhealth--sean.sandbox.my.salesforce.com"
+    //           "10xhealth" → "10xhealth.my.salesforce.com"
+    if (!orgId) return null;
+    if (orgId.includes('-')) {
+      // Sandbox: replace - with -- and add .sandbox.my.salesforce.com
+      const converted = orgId.replace(/-/g, '--');
+      return `https://${converted}.sandbox.my.salesforce.com`;
+    } else {
+      // Production: just add .my.salesforce.com
+      return `https://${orgId}.my.salesforce.com`;
+    }
+  }
+
   async function linkifySalesforceArtifacts(element) {
-    // Convert sf:// URLs to Salesforce magic links
-    const links = await getMagicLinks();
-    const magicLinkProd = links.prod || '';
-    const magicLinkSandbox = links.sandbox || '';
+    // Convert sf:// URLs to direct Salesforce Setup URLs using org identifiers from .env.jira
+    if (!element) return;
 
-    if (!magicLinkProd && !magicLinkSandbox) return;
+    try {
+      // Fetch org identifiers from .env.jira
+      const response = await fetch('/api/orgs');
+      const orgs = await response.json();
 
-    const magicLink = magicLinkProd || magicLinkSandbox;
+      // Use sandbox by default (where fixes are implemented)
+      const sandboxOrgId = orgs.sandbox || orgs.prod;
+      if (!sandboxOrgId) return; // Can't linkify without org identifier
 
-    // Find all links with sf:// protocol
-    element.querySelectorAll('a[href^="sf://"]').forEach(link => {
-      const href = link.getAttribute('href');
+      const orgUrl = orgIdentifierToUrl(sandboxOrgId);
+      if (!orgUrl) return;
 
-      // Only process raw IDs: sf://id (no slashes in id)
-      // Skip typed format like sf://type/name (frontdoor.jsp doesn't support Setup paths)
-      const match = href.match(/^sf:\/\/([^/]+)$/);
-      if (!match) return;
+      // Map artifact types to Setup search URLs
+      const setupUrlMap = {
+        'permission-set': '/setup/navigate/search/PermissionSet?setupid=PermSets',
+        'profile': '/setup/navigate/search/Profile?setupid=Profile',
+        'flow': '/setup/navigate/search/Flow?setupid=Flows',
+        'field': '/setup/navigate/search/FieldDefinition?setupid=FieldDefinition',
+        'object': '/setup/navigate/search/CustomObject?setupid=CustomObject',
+        'apex-class': '/setup/navigate/search/ApexClass?setupid=ApexClasses',
+        'apex-trigger': '/setup/navigate/search/ApexTrigger?setupid=ApexTrigger',
+        'record-type': '/setup/navigate/search/RecordType?setupid=RecordType',
+        'page-layout': '/setup/navigate/search/PageLayout?setupid=PageLayout',
+        'validation-rule': '/setup/navigate/search/ValidationRule?setupid=ValidationRules',
+      };
 
-      const id = match[1];
+      // Find all links with sf:// protocol
+      // Only linkify raw IDs (sf://id) - typed format (sf://type/name) not supported
+      element.querySelectorAll('a[href^="sf://"]').forEach(link => {
+        const href = link.getAttribute('href');
+        let salesforceUrl = null;
 
-      // Construct Salesforce URL using magic link + retURL
-      const salesforceUrl = magicLink + '&retURL=/' + encodeURIComponent(id);
-      link.setAttribute('href', salesforceUrl);
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
-      link.style.cursor = 'pointer';
-    });
+        // Only process raw ID format: sf://15or18charId
+        // Typed format (sf://type/name) requires IDs that agents don't emit
+        const idMatch = href.match(/^sf:\/\/([a-zA-Z0-9]{15,18})$/);
+        if (idMatch) {
+          const id = idMatch[1];
+          salesforceUrl = orgUrl + '/' + encodeURIComponent(id);
+          link.setAttribute('href', salesforceUrl);
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener noreferrer');
+          link.style.cursor = 'pointer';
+        }
+        // Typed format links remain non-clickable (no href)
+      });
+    } catch (error) {
+      console.error('Failed to linkify Salesforce artifacts:', error);
+    }
   }
 
   async function selectTab(key, ftype, tabEl) {
@@ -1458,6 +1535,7 @@
     }
 
     activeRuns.add(runKey);
+    if (runKey !== '__global__') updateStepIndicator(runKey, 1);
     updateStatus();
     setIssueRunning(runKey, true);
   }
@@ -1517,7 +1595,22 @@
     return undefined;
   }
 
-  async function loadPipelineHistory(key, expectedIssueSeq) {
+  function updateProgressFromLogLine(runKey, line) {
+    const stepMatch = line.match(/STEP_(\d+)(?:_LOOP)?\s+(HEAL-\d+)/i);
+    if (stepMatch) {
+      updateStepIndicator(stepMatch[2], parseInt(stepMatch[1], 10));
+      return;
+    }
+    if (runKey === '__global__') return;
+    if (/^-- exit code [1-9]/.test(line) || /^ERROR:|^ERR:/.test(line)) {
+      updateStepIndicator(runKey, 'FAILED');
+      return;
+    }
+    const step = parsePipelineStep(line);
+    if (step) updateStepIndicator(runKey, step);
+  }
+
+  async function loadPipelineHistory(key, expectedIssueSeq, recoverProgress = false) {
     try {
       const res = await fetch('/api/pipeline-log/' + encodeURIComponent(key) + '?tail=500');
       if (!res.ok) return;
@@ -1535,6 +1628,9 @@
         if (e.kind === 'done') continue;
         const text = e.text != null ? String(e.text) : '';
         lines.push({ text, cls: inferLogCls(text) });
+        if (recoverProgress && activeRuns.has(key)) {
+          updateProgressFromLogLine(key, text);
+        }
       }
       // If we requested ?tail=500 and got 500, assume there are more
       if (lines.length >= 500) {
@@ -1549,7 +1645,8 @@
     const el = document.getElementById('log-output');
     if (!el) return;
     const line = document.createElement('div');
-    if (cls) line.className = `log-${cls}`;
+    const normalizedCls = cls === 'err' ? 'error' : cls;
+    line.className = normalizedCls ? `log-line ${normalizedCls}` : 'log-line';
     line.textContent = text;
     el.appendChild(line);
     el.scrollTop = el.scrollHeight;
@@ -1575,7 +1672,7 @@
     const buf = _logBuf(key);
     if (buf.truncated) {
       const notice = document.createElement('div');
-      notice.className = 'log-warn';
+      notice.className = 'log-line warn';
       notice.textContent = '... (earlier logs truncated, scroll to see latest)';
       el.appendChild(notice);
     }
@@ -1839,6 +1936,7 @@
 
   loadIssues()
     .then(async () => {
+      await recoverActiveRuns();
       await loadPipelineHistory('__global__');
       await restoreIssueFromSession();
       initStream();
