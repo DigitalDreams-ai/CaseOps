@@ -1,61 +1,168 @@
-# Standard-Unlocked
+# CaseOps — Jira-to-Salesforce Support Automation
 
-This repository contains everything you need to realize enterprise-grade Salesforce CICD practices without making an enterprise-grade investment. 
+**CaseOps** is an AI-powered support case automation system that triages Jira issues, diagnoses Salesforce problems, implements fixes in Sandbox, and drafts customer responses.
 
-The included [Github Actions](.github/workflows) provide a standardized (and mostly automated!) framework for building, testing, and delivering solutions in a consistent and repeatable manner. 
+## What It Does
 
-We strongly advocate adhering to a "Release Train" development methodology for Salesforce development. When applied with discipline, this approach consistently balances business demands, development rigor, and the unique constraints of working with Salesforce metadata significantly better than other popular methodologies (Scrum 👀).
+1. **Syncs Jira** → Pulls assigned support issues
+2. **Triages automatically** → Sorts by status (Closed, Escalated, Active)
+3. **Diagnoses Salesforce** → Analyzes Production metadata and logs
+4. **Implements fixes** → Modifies Sandbox metadata only
+5. **Validates in Sandbox** → Deploys and tests changes
+6. **Drafts responses** → Writes internal notes + customer-facing replies
+7. **Escalates to Engineering** → Routes complex issues with full handoffs
 
-## Salesforce Release Train Development Cadence
+All orchestrated by Claude Code via the `jira-salesforce-fix-pipeline` skill. No manual agent management required.
 
-![image](https://github.com/user-attachments/assets/6b7d1dc8-30cb-4740-964e-8cd55f54a847)
-[Image Credit: CumulusCI Documentation](https://cumulusci.readthedocs.io/en/stable/cumulusci-flow.html)
+## Quick Start
 
-## Getting Started
+### 1. Setup
 
-1. Fork this repository.
-2. Make a _new_ Repository in your organization and select your fork as the `Repository Template`
-3. Modify the `name` and `name_managed` fields in [cumulusci.yml](cumulusci.yml)<sup>1</sup>
-4. Follow the [`Initial Setup` instructions](https://github.com/Nimba-Solutions/Standard-Unlocked/blob/main/.github/workflows/README.md#initial-setup) to configure the included CICD for this project.
+```bash
+# Copy and configure credentials
+cp .env.jira.example .env.jira
+# Edit: Jira credentials, org identifiers, magic links (optional)
+```
 
-> [!NOTE]
-> 1. As you explore this project, you may notice a large number of tokens such as     `__PROJECT_LABEL__` and `__PROJECT_NAME__`. These correspond to the `name_managed` and `name` attributes in [cumulusci.yml](cumulusci.yml), and will be automatically exchanged via *token injection* when running CCI commands.
+### 2. Start the GUI
 
-## Development
+```bash
+python app.py
+# Opens: http://localhost:5000
+```
 
-1. [Set up CumulusCI](https://cumulusci.readthedocs.io/en/latest/tutorial.html) in your preferred development environnment.
-2. Run `cci flow run dev_org --org dev` to deploy this project.
-3. Run `cci org browser dev` to open the org in your browser.
-4. Build your solution, periodically run `cci task run retrieve_changes --org dev`, and commit your changes to a `feature/**` branch using your preferred git tooling.
-7. When you're ready, run `git push` to send your changes to GitHub.
-8. Submit a PR.
-9. Monitor for Success/Failure
+### 3. Process Issues
 
-----
+**Option A: GUI Button (Recommended)**
+1. Open http://localhost:5000
+2. Click **"Run Pipeline For This Issue"** on any active issue
+3. Watch real-time progress logs
 
-## Releases
+**Option B: Claude Code CLI**
+```
+/jira-salesforce-fix-pipeline
 
-### [Recommended] Release this project using the Built-in CICD Actions
+Process HEAL-12345 through the full pipeline.
+```
 
-Follow the provided [`Release` instructions](https://github.com/Nimba-Solutions/Standard-Unlocked/blob/main/.github/workflows/README.md#releases).
+## Architecture
 
+```
+┌─────────────────────────────────────────────┐
+│  Flask GUI (app.py)                         │
+│  - Issue dashboard & detail views           │
+│  - Investigation/notes/message editors      │
+│  - Real-time pipeline progress tracking     │
+└─────────────────────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────┐
+│  Python Setup (run_pipeline.py)             │
+│  - Sync Jira                                │
+│  - Triage by status                         │
+│  - Archive Closed/Escalated                 │
+│  - Scaffold investigation records           │
+└─────────────────────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────┐
+│  Claude Skill: jira-salesforce-fix-pipeline │
+│  (Steps 1–12 orchestration)                 │
+│  - Spawns sub-agents for Steps 3,5,6,9,10  │
+│  - Implements fixes in Sandbox (Step 8)     │
+│  - Routes escalations to Engineering       │
+└─────────────────────────────────────────────┘
+```
 
----
+## Configuration (.env.jira)
 
-### [Advanced] Release this project using your CLI
+```env
+# Jira
+JIRA_BASE_URL=https://your-org.atlassian.net
+JIRA_EMAIL=your-email@example.com
+JIRA_API_TOKEN=jira-api-token-here
+CASEOPS_DEFAULT_ASSIGNEE=your-jira-username
 
-#### To release a new `beta` version of this package:
+# Salesforce
+CASEOPS_SANDBOX_TARGET_ORG=10xhealth-sean      # Single writable Sandbox
+CASEOPS_PRODUCTION_READ_ORG=10xhealth           # Production (read-only)
 
-1. Run `git checkout main` to switch to the main branch.
-2. Run `git pull` to download the latest changes from Github.
-3. Run `cci flow run dependencies --org dev` to prepare a scratch org for the process of packaging.
-4. Run `cci flow run release_unlocked_beta --org dev` to release a new beta version of this package.
-5. [Optional] Run `cci org browser dev` to open the org in your browser.
+# Optional: Session URLs for UI investigation (auto-expire)
+CASEOPS_SANDBOX_MAGIC_LINK=https://...
+CASEOPS_PRODUCTION_MAGIC_LINK=https://...
 
-#### To release a new `production` version of this package:
+# LLM Auth (choose one)
+CASEOPS_LLM_AUTH=claude_code   # Use Claude Code CLI
+# OR
+CASEOPS_LLM_AUTH=api_key       # Use Anthropic API
+ANTHROPIC_API_KEY=sk-...
+```
 
-1. Run `git checkout main` to switch to the main branch.
-2. Run `git pull` to download the latest changes from Github.
-3. Run `cci flow run release_unlocked_production --org dev --debug` to release a new beta version of this package.
-4. Run `cci org browser dev` to open the org in your browser.
-5. [OPTIONAL] Run `cci flow run install_prod --org <target-org-alias>` to install the package and _all of its dependencies_ in `<target-org-alias>`.
+## GUI Actions
+
+| Action | What Happens |
+|--------|--------------|
+| **Fetch from Jira** | Full sync (Steps 1–2 setup only) |
+| **Prepare Issues** | Sync + triage + scaffold (no AI) |
+| **Run Pipeline For This Issue** | Full workflow Steps 1–12 (AI-powered) |
+| **Sync This Issue** | Update single issue from Jira |
+| **Auto-Process All** | Full pipeline on all active issues |
+
+## Outputs
+
+After processing, check:
+
+| File | Contents |
+|------|----------|
+| `outputs/investigations/<KEY>.md` | Diagnosis record (issue understanding + metadata findings) |
+| `outputs/internal-notes/<KEY>.md` | Root cause analysis + escalation decision |
+| `outputs/jira-messages/<KEY>.md` | Customer-facing response draft (post to Jira manually) |
+| `outputs/test-reports/<KEY>.md` | Sandbox validation results |
+| `outputs/engineering-escalations/<KEY>.md` | Engineering handoff (if escalated) |
+| `outputs/issue-summary-YYYY-MM-DD.md` | Daily rollup of all processed issues |
+
+## Safety Constraints
+
+✅ **Allowed:**
+- Read Production metadata (diagnosis only)
+- Write/deploy to `CASEOPS_SANDBOX_TARGET_ORG` only
+- Test in Sandbox before promotion
+
+❌ **Forbidden:**
+- Direct Production writes
+- Deploying to other Sandboxes
+- Automatic Jira posting (you review & post manually)
+- Automatic Production promotion (you use Gearset)
+
+## Troubleshooting
+
+**"Sync failed"**
+- Check `.env.jira` Jira credentials
+- Verify network access to `JIRA_BASE_URL`
+
+**"Pipeline stalled"**
+- Check `CASEOPS_SANDBOX_TARGET_ORG` is set and reachable
+- Run: `sf org list` to verify Sandbox authentication
+
+**"Links in investigation are broken"**
+- Only raw Salesforce record IDs (15-18 char alphanumeric) are linkified
+- API names require actual IDs from metadata queries
+
+## Documentation
+
+- **[CASEOPS_QUICKSTART.md](CASEOPS_QUICKSTART.md)** — User guide (setup, usage, workflow)
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — System design & data flow
+- **[API.md](API.md)** — Flask endpoints & webhook reference
+- **[AGENTS.md](AGENTS.md)** — Skill & sub-agent architecture
+- **[WORKSPACES.md](WORKSPACES.md)** — Multi-org setup
+- **[NIGHTLY_SETUP.md](NIGHTLY_SETUP.md)** — Scheduled pipeline
+- **[CLAUDE_LAUNCHER_GUIDE.md](CLAUDE_LAUNCHER_GUIDE.md)** — Claude Code CLI setup
+
+## Recent Changes
+
+- Fixed sync cache clearing for individual issue syncs
+- Added real-time step progress indicators in GUI
+- Improved artifact linkification (ID-based, no magic links)
+- Added `/api/orgs` endpoint for org identifier access
+
+## License
+
+[Include your license here]

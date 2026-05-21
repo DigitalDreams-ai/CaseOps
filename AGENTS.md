@@ -1,189 +1,322 @@
-# AGENTS.md
+# CaseOps Skills Architecture
 
-## Project Purpose
+## Overview
 
-This repo is for building a CaseOps Agent Skills pack, not a custom agent framework.
+CaseOps uses **Claude Code Skills** for AI orchestration. A single skill (`jira-salesforce-fix-pipeline`) orchestrates the entire 12-step pipeline, spawning sub-agents for specialized steps.
 
-The source of truth is [AGENT_SKILLS_BUILD_SPEC.md](AGENT_SKILLS_BUILD_SPEC.md). Follow that spec when adding folders, scripts, references, assets, or tests.
+## Skill Structure
 
-## Agent Skills Standard
-
-Skills must follow the Agent Skills format:
-
-- Each skill is a folder under `skills/`.
-- Each skill folder must contain `SKILL.md`.
-- `SKILL.md` must start with YAML frontmatter.
-- Frontmatter must include `name` and `description`.
-- `name` must be lowercase kebab-case and match the parent folder name.
-- Prefer the standard folders `scripts/`, `references/`, and `assets/`.
-
-For **Claude Code** in this repo, a thin entrypoint mirrors the skill name under `.claude/skills/jira-salesforce-fix-pipeline/SKILL.md`; it points at the canonical `skills/.../SKILL.md` — edit workflow and prompts under `skills/.../references/` (see `workflow.md`, `sub-agent-prompts.md`).
-
-Do not add a required custom registry or runner unless the user explicitly asks for local helper tooling.
-
-## Implementation Priorities
-
-Build `skills/jira-salesforce-fix-pipeline/` first.
-
-Expected initial files:
-
-```text
+```
 skills/jira-salesforce-fix-pipeline/
-  SKILL.md
-  references/
-    workflow.md
-    sub-agent-prompts.md
-    quality-checklist.md
-    safety-policy.md
-  assets/
-    investigation-record-template.md
-    engineering-handoff-template.md
-    internal-notes-template.md
-    jira-message-template.md
-    issue-summary-template.md
-    test-report-template.md
+├── SKILL.md                    # Orchestrator instructions (canonical)
+├── references/
+│   ├── workflow.md             # Steps 1–12 (authoritative)
+│   ├── sub-agent-prompts.md    # Prompts for Steps 3, 5, 6, 9, 10
+│   ├── safety-policy.md        # Safety constraints
+│   ├── quality-checklist.md    # Pre-completion gates
+│   └── orchestration-loop-controller.md
+└── assets/                     # Markdown templates
+    ├── investigation-record-template.md
+    ├── internal-notes-template.md
+    ├── jira-message-template.md
+    ├── engineering-handoff-template.md
+    ├── issue-summary-template.md
+    ├── test-report-template.md
+    ├── closed-resolved-log-template.md
+    └── step-4-problem-hypothesis-template.md
+
+.claude/skills/jira-salesforce-fix-pipeline/
+└── SKILL.md                    # Entrypoint (symlink to canonical skill)
 ```
 
-## Coding Rules
+## The Skill: jira-salesforce-fix-pipeline
 
-- Keep scripts deterministic and non-interactive.
-- Scripts must support `--help`.
-- Scripts should accept explicit input and output paths.
-- Do not write generated artifacts inside `skills/`.
-- Put retrieved Jira raw data and summaries under `outputs/jira/`.
-- Put investigation records under `outputs/investigations/`.
-- Put Engineering escalation handoffs under `outputs/engineering-escalations/`.
-- Put dated issue rollups under `outputs/issue-summary-YYYY-MM-DD.md`.
-- Put Sandbox test reports under `outputs/test-reports/`.
-- Put internal notes under `outputs/internal-notes/`.
-- Put Jira message drafts under `outputs/jira-messages/`.
-- Append-only pipeline stream history under `outputs/pipeline-logs/` (JSONL per run key; gitignored).
-- Do not store credentials or sensitive production data in this repo.
-- Keep Salesforce integrations read-only until the user explicitly approves write/deploy behavior.
-- **Never modify Profile permissions** (Salesforce Profile metadata or profile-level FLS / app visibility / tab settings). Prefer permission-set changes; if the issue requires profile edits, escalate to Engineering or an admin.
-- In investigations, notes, Jira drafts, and rollups: **always** separate **Sandbox-validated** work from **Production**—state whether **Gearset (or deploy) to Production** is required vs **metadata already in Production** vs **N/A**. Do not imply Production was updated unless the operator explicitly deployed.
-- Escalate to Engineering instead of implementing when the solution requires changing Apex/code, flows, approval processes, validation rules, or other business-critical automation.
-- For Engineering escalations, produce a simple handoff: issue summary, root cause, affected metadata, proposed fix, validation evidence, and any records needed to reproduce.
+### Invocation
 
-## CaseOps GUI + LLM (API vs Claude Code / Chrome Dev / Salesforce magic link)
+**Via Claude Code GUI:**
+```
+/jira-salesforce-fix-pipeline
 
-A committed template **[`.env.jira.example`](.env.jira.example)** lists **`CASEOPS_LLM_AUTH`** and other common keys—copy it to **`.env.jira`** and edit (your real `.env.jira` is gitignored).
-
-When the Flask app runs an LLM step (**Run Pipeline For This Issue** after `run_pipeline.py`, or **Send to Claude**), **`CASEOPS_LLM_AUTH`** selects the **backend**:
-
-- **`api_key` (default):** CaseOps calls the **Anthropic Messages API** with **`ANTHROPIC_API_KEY`** (install **`pip install anthropic`**). This is **text-only**: no filesystem, shell, browser, or Claude Code skills. The prompt explains limits; use this to avoid **Claude Code subscription / CLI** limits when a single-turn answer is enough.
-- **`claude_code`:** CaseOps spawns the **`claude`** CLI with **`ANTHROPIC_API_KEY` omitted** so **Claude Code** uses **subscription / `claude login`**, including **tools** and full playbook execution in the repo.
-
-Environment variables can steer **Claude Code** browser automation toward **Chrome Dev** and **Salesforce magic links** (those apply to **`claude_code`** runs, not to API-only turns):
-
-Add to **`.env.jira`** (gitignored; never commit):
-
-| Variable | Purpose |
-| -------- | ------- |
-| `CASEOPS_LLM_AUTH` | **`api_key`**: Anthropic **Messages API** + `ANTHROPIC_API_KEY` (see `requirements.txt`). **`claude_code`**: **`claude`** subprocess with API key **omitted** (subscription / login). Aliases for `claude_code`: `claude`, `subscription`, `max`. |
-| `CASEOPS_ANTHROPIC_MODEL` | Optional. Model id for **API** mode (default `claude-sonnet-4-20250514`). |
-| `CASEOPS_ANTHROPIC_MAX_TOKENS` | Optional. Max output tokens for **API** mode (default `16384`, capped). |
-| `CASEOPS_CLAUDE_BROWSER` | Full path to **Chrome Dev** `chrome.exe` (Windows), or the `Google Chrome Dev` binary on macOS/Linux. Passed to the **`claude` subprocess** as `BROWSER` and `CLAUDE_CODE_CHROME_PATH` ( **`claude_code`** mode only). |
-| `CASEOPS_SALESFORCE_MAGIC_LINK` | Optional single frontdoor URL when you do not split prod vs sandbox — clarify org and permission limits in chat if you use this. |
-| `CASEOPS_PRODUCTION_MAGIC_LINK` | Production **frontdoor / session** URL. Use **only for read-only** access in Production: investigation, viewing, querying. **No** create/update/delete or deploy to Production. Prompt label uses `CASEOPS_PRODUCTION_READ_ORG`. |
-| `CASEOPS_SANDBOX_MAGIC_LINK` | Sandbox **frontdoor / session** URL. **Full CRUD** is expected in Sandbox: deploy metadata, test, create/edit/delete records as the playbook requires. Prompt label uses `CASEOPS_SANDBOX_TARGET_ORG`. |
-| `CASEOPS_SANDBOX_TARGET_ORG` | **Allowlisted writable org** for the **`salesforce-sandbox-deploy-test`** skill: the only Salesforce username/alias where deploys and mutating ops are permitted on the Support-resolvable path. Must match your CLI target. See **`skills/jira-salesforce-fix-pipeline/references/safety-policy.md`**. |
-
-**Playbook:** On Support-resolvable fixes, **`jira-salesforce-fix-pipeline`** **always** reaches deploy+test via **`salesforce-sandbox-deploy-test`**; that skill may write **only** to **`CASEOPS_SANDBOX_TARGET_ORG`**.
-
-Use a **separate** Salesforce user or permission set for Production session if needed so the Production link truly reflects **read-only** (e.g. View Setup, Read on objects only). Sandbox session should use a user with normal dev/test permissions.
-
-Injected into the **CaseOps LLM user prompt** for **`claude_code`** runs they configure the CLI; in **`api_key`** mode the same text is included but **no browser tool** runs—treat links as reference only. **These URLs are as sensitive as passwords** while valid—never commit, ticket, or screenshot them.
-
-Example (Windows paths vary; prefer splitting prod vs sandbox):
-
-```env
-CASEOPS_LLM_AUTH=api_key
-CASEOPS_CLAUDE_BROWSER=C:\Program Files\Google\Chrome Dev\Application\chrome.exe
-CASEOPS_PRODUCTION_MAGIC_LINK=https://...
-CASEOPS_SANDBOX_MAGIC_LINK=https://...
+Process HEAL-12345 through the full pipeline.
 ```
 
-Use **`GET /api/status`**: `caseops_llm_auth` is `api_key` or `claude_code`; `caseops_llm_backend` is `anthropic_messages_api` or `claude_code_cli`.
+**Via CaseOps GUI Button:**
+```
+Click "Run Pipeline For This Issue" on issue card
+→ Backend invokes _stream_full_issue() 
+→ Runs Claude Code CLI with skill
+```
 
-**Note:** **Full Triage** / **Full Run** only run `run_pipeline.py` (no LLM). Configure `.env.jira` for Claude Code **interactively** in a terminal as needed; for IDE-only runs, set the equivalent in Claude Code `settings.json` → `env` if needed.
+### Orchestrator Pattern
 
-## Validation
+The skill is **not** a headless agent — it's a long-form Claude Code prompt with tool access. It:
 
-When adding or changing a skill:
+1. Reads SKILL.md and references/ for instructions
+2. Executes Steps 1–2 and 4, 7, 8, 11–12 directly (Bash, Salesforce CLI, file ops)
+3. Spawns **sub-agents** for Steps 3, 5, 6, 9, 10 (via `Agent` tool)
+4. Stitches outputs together
+5. Makes routing decisions (escalate vs fix)
+6. Emits progress lines to stdout (e.g., `STEP_3 HEAL-33753`)
 
-- Confirm `SKILL.md` frontmatter is valid.
-- Confirm the frontmatter `name` matches the folder name.
-- Confirm referenced scripts, references, and assets exist.
-- Add or update tests for deterministic scripts.
+### Step Breakdown
 
-Use `skills-ref validate ./skills/<skill-name>` if the tool is available, but do not require it for basic work.
+| Step | Type | Responsibility |
+|------|------|---|
+| 1 | Orchestrator | Sync from Jira (`python jira_sync.py`) |
+| 2 | Orchestrator | Triage by status (Bash, CSV read) |
+| 3 | **Sub-agent** | Analyze Jira issue (`jira-issue-analysis` skill) |
+| 4 | Orchestrator | Synthesize root cause hypothesis |
+| 5 | **Sub-agent** | Query Production metadata (`salesforce-production-metadata-investigation`) |
+| 6 | **Sub-agent** | Drill down to exact artifact location (metadata drilling) |
+| 7 | Orchestrator | Gate: escalate or support-fix? |
+| 8 | Orchestrator | Implement fix in Sandbox (`sf` CLI, web UI, etc.) |
+| 9 | **Sub-agent** | Deploy & test in Sandbox (`salesforce-sandbox-deploy-test`) |
+| 10 | **Sub-agent** | Draft internal notes + Jira message (`jira-response-drafting`) |
+| 11 | Orchestrator | Generate dated summary (rollup) |
+| 12 | Orchestrator | Return action report to user |
 
+### Sub-Agent Prompts
 
-<claude-mem-context>
-# Memory Context
+Located in `references/sub-agent-prompts.md`:
 
-# [CaseOps] recent context, 2026-05-15 4:52pm MST
+- **Step 3 Prompt** — Issue analysis; returns Issue Understanding section
+- **Step 5 Prompt** — Metadata investigation (flows, fields, validation rules, etc.)
+- **Step 6 Prompt** — Drilling mode: pinpoint exact artifact + failure point
+- **Step 9 Prompt** — Deploy to `CASEOPS_SANDBOX_TARGET_ORG`, run tests, report
+- **Step 10 Prompt** — Draft two separate files: internal notes + customer message
 
-Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
-Format: ID TIME TYPE TITLE
-Fetch details: get_observations([IDs]) | Search: mem-search skill
+Each prompt is:
+- **Fully self-contained** (includes issue key, paths, context, expected output format)
+- **Deterministic** (same input → same output)
+- **Isolated** (no reliance on orchestrator state)
 
-Stats: 50 obs (21,542t read) | 453,353t work | 95% savings
+### Loop Control & Iteration
 
-### May 8, 2026
-669 10:52a 🔵 Wide Repo Search Confirms Zero Local Metadata for Order Notes or Field History
-670 " 🔵 HEAL-33505 Issue Brief: Salesforce Investigation Failed, Org Mismatch Confirmed
-671 " 🔵 Opportunity Describe: Zero Fields Match Order, Note, History, or Hist in Sandbox Org
-672 " 🔵 HEAL-33505 Salesforce Investigation: Exact Query Failure — Production Record Queried Against Sandbox
-673 " 🔵 Opportunity Describe JSON Has Non-Standard Structure: fields Array is Empty at Root Level
-674 " 🔵 Opportunity Describe stdout Field is Not JSON — Contains PowerShell Object (@) Serialization
-675 " 🔵 HEAL-33505 Read Recovery Plan: Org Host Mismatch Confirmed, Fallback Searches Not Run
-676 10:53a 🔵 Opportunity Describe stdout is Pre-Parsed PSCustomObject; Field List Truncated at Depth 3
-677 " 🔴 HEAL-33505 Agent Reasoning Draft Written — precise_blocker Decision
-678 " 🔵 Definitive Confirmation: No Order Notes or History Fields in Sandbox Opportunity Object
-679 " 🔴 HEAL-33505 Repair Attempt 1 Passed Validation — "valid compact draft JSON"
-680 " 🔵 Opportunity Describe Contains Only 10 Fields — This is a Record Query Result, Not a Full sobject Describe
-681 " 🟣 HEAL-33505 Agent Reasoning Draft Written: precise_blocker, High Confidence
-682 10:54a 🟣 HEAL-33505 Reasoning Draft Validated: Schema Compliant, Compact JSON, All Required Keys Present
-714 11:03a 🔵 Agent Discovery Draft Reasoning Task for MOCK-PUBLIC-GROUP
-712 " 🔵 Agent Discovery Task: HEAL-32413 Reasoning Draft Generation
-715 " 🔵 HEAL-32413 Task Artifact: Four Active Blockers on SF Privilege Change Issue
-716 " 🔵 MOCK-PUBLIC-GROUP Agent Task Artifact: Full Evidence Manifest and Output Contract
-718 " 🔵 MOCK-PUBLIC-GROUP MCP Request: Matched Metadata File and Approved Write Scope
-720 " 🔵 HEAL-32413 MCP Request: Adapter Config, Tool Safety Policy, and Metadata Search Hints
-722 11:04a 🔵 Agent Reasoning Draft Schema: Field Types, Enums, and Blocker Structure
-723 " 🔵 Agent Reasoning Draft Schema: Structure and Validation Rules
-724 " 🔵 MOCK-PUBLIC-GROUP Issue Packet: Request Scope Confirmed as Metadata-Only Public Group Creation
-725 " 🔵 HEAL-32413 Root Cause Confirmed: Salesforce Approval Process Lock on Labs Opportunities
-726 " 🔵 MOCK-PUBLIC-GROUP Issue Brief: Fix Target Explicitly Named in relevantFacts
-727 " 🔵 MOCK-PUBLIC-GROUP Salesforce Investigation Result: Single-File Fix Confirmed, No Errors
-728 " 🔵 Salesforce Investigation Failed: Opportunity 006Ql00000ZGu8XIAT Not Found in 10xhealth-sean Org
-729 11:05a 🔵 MOCK-PUBLIC-GROUP Fix Proposal: All 12 Gates Passed, Candidate File Confirmed
-730 " 🔵 Read Recovery Plan: Org Config Anomaly — isSandbox=false Despite Sandbox URL
-731 " 🔵 Production Read Access: Salesforce Context Is Production-Only, Gate 5 Blocked
-732 " 🔵 MOCK-PUBLIC-GROUP Sandbox Work Order: 9/9 Gates Passed, Pending Human Approval in Dry-Run Mode
-733 " 🔵 MOCK-PUBLIC-GROUP Issue State: ready_for_gearset_packet with Sandbox Proof Artifacts Present
-734 " 🔵 Issue Brief: Proposed Approval Process Change Deployment Status Unknown
-756 8:57p 🟣 HEAL-33439 Agent Reasoning Draft Created and Validated
-### May 12, 2026
-1036 11:40a ✅ .gitignore Reorganized and Deduplicated for CaseOps Project
-1037 11:41a 🔵 .gitignore File Contains Near-Complete Duplicate Block
-1038 11:48a 🔄 CaseOps .gitignore reorganized with deduplication and expanded coverage
-1039 12:10p ✅ .gitignore Reorganized and Deduplicated for CaseOps
-1040 12:11p ✅ CaseOps Repository Fully Staged and Committed in 4 Atomic Commits
-1041 " ✅ .gitignore Significantly Expanded Beyond Deduplication
-1042 " ✅ sfdx-project.json Updated: Name Added, API Version Bumped to 66.0
-1043 " 🔵 CaseOps Project Structure: Flask GUI + Jira Sync + Agent Skills + Salesforce SFDX
-1044 " 🟣 5-Skill CaseOps Agent Skills Pack Committed to Repository
-1045 12:29p 🔵 Salesforce Sharing Rule for Round Robin Assignment Object
-### May 15, 2026
-1810 4:06p 🔵 HEAL-33647: Shopify→Salesforce Address Mismatch Root Cause Traced to External Connector Layer
-1812 " ✅ HEAL-33647: Customer-Facing Jira Reply and Engineering Handoff Artifacts Prepared
-1813 4:07p 🔵 HEAL-33647: Patient_Patient Apex Action Cleared; Root Cause Narrowed to External TenX API Write-Back Path
-1814 4:09p ✅ HEAL-33647: Internal Notes Updated With Confirmed Evidence Block and Revised Deployment Guidance
-1818 " ✅ HEAL-33647: Jira Message Draft Updated to Reflect Patient_Patient Clearance and Revised Engineering Steps
-1836 4:30p 🔵 HEAL-33647 Investigation: Salesforce Account Address and Shopify ID Context
+**Standard Flow:**
+```
+Step 3 → Step 4 → Step 5 → Step 6 → Step 7
+         ↓
+      Escalate? ← Yes → Route to Engineering (Step 10 → 12)
+                        |
+                        No (Support-resolvable)
+                        ↓
+                      Step 8 → Step 9 (Deploy & Test)
+                               ↓
+                            Passed? → Step 10 → 11 → 12
+                               ↓
+                               No (Failed)
+                               ↓
+                            Revise hypothesis (Step 4)
+                            Re-investigate (Step 5–6)
+                            Re-implement (Step 8)
+                            Re-test (Step 9)
+```
 
-Access 453k tokens of past work via get_observations([IDs]) or mem-search skill.
-</claude-mem-context>
+**Retry Logic:**
+- On Step 9 deploy failure: Revise Step 4 hypothesis → loop back to Steps 5–6
+- On Step 9 test failure: Same retry loop
+- Max 2–3 iterations before escalation
+
+### Progress Output Format
+
+Must emit to stdout (not just internal log):
+
+```
+STEP_1 __sync__
+Reading jira-sync.py...
+[Bash] python jira_sync.py --env-file .env.jira
+...sync output...
+
+STEP_2 __triage__
+[Read] outputs/jira/manifest.csv
+...triage output...
+
+STEP_3 HEAL-33753
+[Agent] Spawning jira-issue-analysis sub-agent...
+...analysis returns...
+
+STEP_4 HEAL-33753
+Synthesized root cause: ...
+...
+```
+
+GUI parses regex `/STEP_(\d+)\s+(HEAL-\d+)/` from SSE stream → updates indicator in real-time.
+
+## Safety Gates
+
+### Before Step 9 Deployment
+
+**Must verify:**
+- `CASEOPS_SANDBOX_TARGET_ORG` is set in `.env.jira`
+- Org is reachable (`sf org list` includes it)
+- No write to any other org
+- No Production deployments
+
+### Production Read-Only
+
+**Allowed:**
+- Query Production metadata (flows, validation rules, fields, etc.)
+- Use `CASEOPS_PRODUCTION_READ_ORG` for org context
+- Use `CASEOPS_PRODUCTION_MAGIC_LINK` for UI investigation
+
+**Forbidden:**
+- Any write to Production
+- Modifying Production records or metadata
+- Deploying to Production
+
+### Artifact Linkification
+
+All generated artifacts (investigation, notes, messages) include Salesforce links:
+- Format: `sf://15or18-charRecordId`
+- GUI converts to: `https://org/recordId` (direct access)
+- Only raw IDs linkify; typed format (sf://field/Name) is not supported
+
+## Sub-Agent Details
+
+### jira-issue-analysis
+
+**Input:** Jira issue key + full issue JSON
+
+**Output:** ~300-token summary containing:
+- Issue Understanding (what user is asking for, context, impact)
+- Key details from comments, description, attachments
+
+**Stored at:** `outputs/investigations/<KEY>.md` (Issue Understanding section)
+
+### salesforce-production-metadata-investigation
+
+**Input:** Issue Understanding + hypothesis from Step 4
+
+**Output:** ~400-token summary containing:
+- Relevant metadata found (flows, validation rules, fields, etc.)
+- Gaps (what's missing or misconfigured)
+- Potential root causes
+
+**Stored at:** `outputs/investigations/<KEY>.md` (Root Cause section)
+
+### salesforce-sandbox-deploy-test
+
+**Input:** Implementation changes + Sandbox org
+
+**Output:** ~300-token summary containing:
+- Deploy success/failure
+- Test results (did the fix work?)
+- Gearset promotion readiness
+
+**Stored at:** `outputs/test-reports/<KEY>.md`
+
+### jira-response-drafting
+
+**Input:** Full diagnosis + test results
+
+**Output:** Two separate files:
+- `outputs/internal-notes/<KEY>.md` — Root cause + decision (no customer-facing text)
+- `outputs/jira-messages/<KEY>.md` — Customer-friendly response draft
+
+## Orchestrator Best Practices
+
+### Writing Step Prompts
+
+1. **Make it self-contained** — Don't assume sub-agent knows prior steps
+2. **Include acceptance criteria** — What success looks like
+3. **Specify output format** — Markdown sections, tables, code blocks, etc.
+4. **Provide examples** — Sample good vs bad outputs
+5. **Set token budget** — Aim for ~300–500 token summaries (not full context)
+
+### Handling Sub-Agent Outputs
+
+1. **Read the artifact**, not the summary — Summary is compact; full details are in files
+2. **Validate** — Check test-reports before marking success
+3. **Don't nest** — Don't load full investigation into orchestrator; read outputs/ files only
+4. **Summarize for next step** — Pass ~200 tokens to next sub-agent, not full context
+
+### Error Handling
+
+- **Sub-agent timeout** — Log and retry once; if timeout again, escalate
+- **Sub-agent malformed output** — Ask sub-agent to reformat and resubmit
+- **Deployment failure** — Trigger iteration loop (revise hypothesis → re-investigate → re-implement)
+- **Unrecoverable error** — Escalate to Engineering with full diagnostic trail
+
+## Templates (assets/)
+
+All templates live in `assets/` and are loaded by steps:
+
+- **investigation-record-template.md** — Scaffold for Step 3 (Issue Understanding section)
+- **internal-notes-template.md** — Scaffold for Step 10 (internal diagnosis)
+- **jira-message-template.md** — Scaffold for Step 10 (customer message)
+- **engineering-handoff-template.md** — Used for Step 7 escalations
+- **test-report-template.md** — Scaffold for Step 9 test results
+- **issue-summary-template.md** — Used for Step 11 dated rollup
+- **step-4-problem-hypothesis-template.md** — Worksheet for Step 4 hypothesis
+
+## Disallowed Patterns
+
+❌ **Don't:**
+- Call deprecated Python agents (run_7_skills_for_issue, etc.)
+- Hard-code org names; read from `.env.jira`
+- Assume magic links are fresh; they expire
+- Deploy to Production
+- Load full investigation into orchestrator context
+- Process multiple issues in a single Agent call
+
+✅ **Do:**
+- Spawn one sub-agent per step per issue
+- Emit `STEP_N` progress lines to stdout
+- Read artifact files, not summaries
+- Validate test-reports before success claims
+- Use structured templates for output files
+- Batch similar operations (e.g., Steps 5–6 can drill together for same issue)
+
+## Testing Skills Locally
+
+**Test a single step:**
+```bash
+# Test sync (Step 1)
+python jira_sync.py --env-file .env.jira
+
+# Test triage (Step 2)
+python run_pipeline.py --no-sync --dry-run
+
+# Test sub-agent (Step 3)
+# Copy Step 3 prompt from references/sub-agent-prompts.md
+# Invoke via Claude Code: /agent [paste prompt]
+```
+
+**Test full pipeline:**
+```bash
+# Via GUI
+http://localhost:5000
+Click "Run Pipeline For This Issue"
+
+# Via CLI
+/jira-salesforce-fix-pipeline
+Process HEAL-33753 through the pipeline.
+```
+
+## Monitoring & Logs
+
+**Pipeline logs:**
+- Real-time: `http://localhost:5000` → log pane
+- Persistent: `outputs/pipeline-logs/<RUN_ID>.jsonl` (streaming events)
+
+**Check sub-agent execution:**
+```bash
+tail -f outputs/pipeline-logs/HEAL-33753.jsonl | jq '.text'
+# Shows all log lines for issue
+```
+
+**Trace sub-agent activity:**
+- Look for `[Agent]` lines in log
+- Sub-agent output starts with `[Skill]` tag
+- Summaries captured after each sub-agent completes
+
+## Future: Multi-Issue Parallelization
+
+Currently: Process issues **sequentially** (Steps 3–11 for each)
+
+Planned: **Batch processing**
+- Spawn Steps 3, 5, 6 sub-agents for multiple issues in parallel
+- Merge results before proceeding to Step 7+
+- Should reduce 12-issue full run from ~60 min to ~20 min
+
+Architectural change will be transparent to SKILL.md (no prompt changes needed).
