@@ -1017,9 +1017,15 @@ a:hover {
 
 /* ── Bulk selection ───────────────────────────────────────── */
 
+#bulk-action-bar {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
 .bulk-btn {
-  padding: 5px 10px;
-  font-size: 11px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .link-btn {
@@ -1027,13 +1033,15 @@ a:hover {
   border: none;
   color: var(--color-primary);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   padding: 0;
-  text-decoration: underline;
+  text-decoration: none;
+  transition: color 0.15s;
 }
 
 .link-btn:hover {
   color: #58a6ff;
+  text-decoration: underline;
 }
 
 ::-webkit-scrollbar-thumb:hover {
