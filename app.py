@@ -462,6 +462,8 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
 
     If issue_key is provided, parse output for Suggested reply and [INTERNAL] sections
     and save to separate files.
+
+    Falls back to spawning Claude in a new PowerShell window if direct subprocess fails.
     """
     cmd = [
         "claude",
@@ -543,9 +545,56 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
             _log_emit_line(run_key, f"-- exit code {proc.returncode} --")
 
     except FileNotFoundError:
-        _log_emit_line(run_key, "ERROR: 'claude' CLI not found. Is Claude Code installed and on PATH?")
+        _log_emit_line(run_key, "WARNING: 'claude' CLI not found on PATH")
+        _log_emit_line(run_key, "Attempting fallback: launching Claude Code in new window via PowerShell script...")
+        _fallback_launch_claude_window(issue_key, prompt, run_key)
     except Exception as exc:
         _log_emit_line(run_key, f"ERROR: {exc}")
+
+
+def _fallback_launch_claude_window(issue_key: str | None, prompt: str, run_key: str) -> None:
+    """Fallback: spawn Claude Code in a new PowerShell window if direct CLI fails.
+
+    This opens an interactive session so the user can see Claude's reasoning in real-time.
+    The prompt is displayed in the terminal so the user can copy/paste it if needed.
+    """
+    if not issue_key:
+        _log_emit_line(run_key, "ERROR: Cannot use fallback without issue_key")
+        return
+
+    try:
+        # Use PowerShell script launcher if available
+        launcher_script = ROOT / "launch-claude-skill.ps1"
+        if launcher_script.exists():
+            _log_emit_line(run_key, f"Launching Claude Code for {issue_key} in new PowerShell window...")
+            subprocess.Popen(
+                [
+                    "powershell",
+                    "-ExecutionPolicy", "Bypass",
+                    "-File", str(launcher_script),
+                    "-IssueKey", issue_key,
+                ],
+                cwd=str(ROOT),
+            )
+            _log_emit_line(run_key, "New window opened. Check it for Claude's output.")
+            _log_emit_line(run_key, "This window will show only status messages.")
+            return
+
+        # Fallback: print the prompt so user can manually copy/paste into Claude
+        _log_emit_line(run_key, "=== MANUAL LAUNCH INSTRUCTIONS ===")
+        _log_emit_line(run_key, "Claude Code CLI not found and fallback script not available.")
+        _log_emit_line(run_key, "To continue, open a terminal and run:")
+        _log_emit_line(run_key, "")
+        _log_emit_line(run_key, f"claude -p '{prompt[:100]}...'")
+        _log_emit_line(run_key, "")
+        _log_emit_line(run_key, "Or open Claude Code IDE and paste this prompt:")
+        for line in prompt.split("\n")[:10]:
+            _log_emit_line(run_key, f"  {line}")
+        _log_emit_line(run_key, "  ...")
+        _log_emit_line(run_key, "=== END MANUAL INSTRUCTIONS ===")
+
+    except Exception as exc:
+        _log_emit_line(run_key, f"ERROR: Fallback launch failed: {exc}")
 
 
 def _do_stream_claude(prompt: str, run_key: str, issue_key: str | None = None) -> None:
