@@ -1497,6 +1497,15 @@ def serve_issue_rollup(filename: str):
     return send_file(path)
 
 
+@app.get("/api/magic-links")
+def api_magic_links():
+    """Return Salesforce magic links for GUI artifact linkification."""
+    return jsonify({
+        "prod": os.environ.get("CASEOPS_PRODUCTION_MAGIC_LINK", ""),
+        "sandbox": os.environ.get("CASEOPS_SANDBOX_MAGIC_LINK", ""),
+    })
+
+
 if __name__ == "__main__":
     import argparse
 

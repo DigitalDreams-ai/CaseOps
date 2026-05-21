@@ -851,6 +851,66 @@
     await loadPipelineHistory(key, selectIssueSeq);
   }
 
+  let cachedMagicLinks = null;
+
+  async function getMagicLinks() {
+    if (cachedMagicLinks) return cachedMagicLinks;
+    try {
+      const res = await fetch('/api/magic-links');
+      cachedMagicLinks = await res.json();
+      return cachedMagicLinks;
+    } catch {
+      return { prod: '', sandbox: '' };
+    }
+  }
+
+  async function linkifySalesforceArtifacts(element) {
+    // Convert sf:// URLs to Salesforce Setup URLs
+    const links = await getMagicLinks();
+    const magicLinkProd = links.prod || '';
+    const magicLinkSandbox = links.sandbox || '';
+
+    if (!magicLinkProd && !magicLinkSandbox) return; // No magic links configured
+
+    // Map artifact types to Salesforce Setup path patterns
+    const artifactPatterns = {
+      'permission-set': '/setup/navigate/search/SObjectSetupPath?type=PermissionSet&name=',
+      'profile': '/setup/navigate/search/SObjectSetupPath?type=Profile&name=',
+      'flow': '/setup/navigate/search/SObjectSetupPath?type=Flow&name=',
+      'field': '/setup/navigate/search/SObjectSetupPath?type=CustomField&name=',
+      'object': '/setup/navigate/search/SObjectSetupPath?type=CustomObject&name=',
+      'apex-class': '/setup/navigate/search/SObjectSetupPath?type=ApexClass&name=',
+      'apex-trigger': '/setup/navigate/search/SObjectSetupPath?type=ApexTrigger&name=',
+      'record-type': '/setup/navigate/search/SObjectSetupPath?type=RecordType&name=',
+      'page-layout': '/setup/navigate/search/SObjectSetupPath?type=Layout&name=',
+      'validation-rule': '/setup/navigate/search/SObjectSetupPath?type=ValidationRule&name=',
+    };
+
+    // Find all links with sf:// protocol
+    element.querySelectorAll('a[href^="sf://"]').forEach(link => {
+      const href = link.getAttribute('href');
+      const match = href.match(/^sf:\/\/([^/]+)\/(.+)$/);
+      if (!match) return;
+
+      const [, artifactType, artifactName] = match;
+      const pattern = artifactPatterns[artifactType];
+      if (!pattern) return;
+
+      // Default to Prod, fallback to Sandbox
+      const magicLink = magicLinkProd || magicLinkSandbox;
+      if (!magicLink) return;
+
+      // Construct Salesforce URL
+      const decodedName = decodeURIComponent(artifactName);
+      const salesforceUrl = magicLink + pattern + encodeURIComponent(decodedName);
+
+      link.setAttribute('href', salesforceUrl);
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+      link.style.cursor = 'pointer';
+    });
+  }
+
   async function selectTab(key, ftype, tabEl) {
     const seq = ++selectTabSeq;
     activeTab = ftype;
@@ -869,6 +929,9 @@
     if (seq !== selectTabSeq || activeKey !== key) return;
     const area = issueBody;
     area.innerHTML = data.html || '<p class="empty">Empty.</p>';
+
+    // Linkify Salesforce artifacts
+    linkifySalesforceArtifacts(area);
 
     if (ftype === 'jira_summary') {
       await appendAttachments(key, area, seq);
