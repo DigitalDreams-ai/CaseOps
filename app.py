@@ -311,6 +311,8 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
     if cmd and cmd[0] == sys.executable:
         cmd = [cmd[0], "-u"] + cmd[1:]
     try:
+        env = os.environ.copy()
+        env["COLUMNS"] = "999"  # Prevent terminal wrapping in subprocess output
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -320,6 +322,7 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
             errors="replace",
             cwd=str(ROOT),
             bufsize=1,
+            env=env,
         )
         assert proc.stdout
         for line in proc.stdout:

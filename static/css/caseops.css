@@ -710,15 +710,18 @@ a:hover {
 #log-output {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
   padding: 8px 12px;
   font-family: 'Courier New', monospace;
   font-size: 11px;
   line-height: 1.4;
-  white-space: pre-line;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  word-break: break-word;
+  white-space: pre-line !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
 }
 
 .log-line {
