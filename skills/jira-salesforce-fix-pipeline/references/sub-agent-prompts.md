@@ -42,36 +42,11 @@ Instructions:
 4. If additional metadata is discovered to be needed (e.g., during drilling in Step 6), 
    Step 6 will loop back to you with a refined request.
 
-SALESFORCE ARTIFACT LINKING (mandatory):
-When mentioning any Salesforce artifact (Flow, Field, Permission Set, Object, Class, etc.), 
-linkify using markdown syntax so GUI can convert to clickable Salesforce URLs:
-
-FORMAT: [artifact_type: artifact_name](sf://type-lowercase/name-encoded)
-
-EXAMPLES:
-- [Flow: Case_Assign_RoundRobin](sf://flow/Case_Assign_RoundRobin)
-- [Field: Account.Industry__c](sf://field/Account/Industry__c)
-- [Permission Set: Advanced User](sf://permission-set/Advanced%20User)
-- [Apex Class: CaseAssignmentHandler](sf://apex-class/CaseAssignmentHandler)
-- [Object: ServiceResource](sf://object/ServiceResource)
-- [Validation Rule: No_Negative_Amount](sf://validation-rule/No_Negative_Amount)
-
-Rules:
-✓ Linkify EVERY Salesforce artifact mentioned (Flow, Field, Object, Class, trigger, rule, etc.)
-✓ Use artifact name/API name from Production context retrieved (not IDs)
-✓ Encode spaces as %20 in the sf:// URL
-✓ Keep human-readable text in [brackets]
-✓ GUI will detect sf:// and convert to actual Salesforce URL based on org context
-
-ARTIFACT TYPES (use lowercase in sf:// URL):
-permission-set, profile, flow, field, object, apex-class, apex-trigger, record-type, custom-object, page-layout, validation-rule, etc.
-
 Return a compact summary (max 400 tokens) containing:
 - Metadata items retrieved and why
 - Key findings per item
 - Whether each item confirms or rejects the hypothesis
 - Recommended implementation surface (what to change and where)
-- All artifacts linkified as [type: name](sf://id)
 - Path written: outputs/investigations/<KEY>.md
 ```
 
@@ -96,35 +71,11 @@ Instructions:
 4. If additional metadata is needed to complete drilling (e.g., "Found Flow reference, need Flow definition"),
    return request for Step 5 with specific metadata needed. Include the label "REQUEST: Step 5 refinement".
 
-SALESFORCE ARTIFACT LINKING (mandatory):
-When mentioning any Salesforce artifact (Flow, Field, Permission Set, Object, Class, etc.), 
-linkify using markdown syntax so GUI can convert to clickable Salesforce URLs:
-
-FORMAT: [artifact_type: artifact_name](sf://type-lowercase/name-encoded)
-
-EXAMPLES:
-- [Flow: Case_Assign_RoundRobin](sf://flow/Case_Assign_RoundRobin)
-- [Field: Account.Industry__c](sf://field/Account/Industry__c)
-- [Permission Set: Advanced User](sf://permission-set/Advanced%20User)
-- [Apex Class: CaseAssignmentHandler](sf://apex-class/CaseAssignmentHandler)
-- [Validation Rule: No_Negative_Amount](sf://validation-rule/No_Negative_Amount)
-
-Rules:
-✓ Linkify EVERY Salesforce artifact mentioned (Flow, Field, Object, Class, trigger, rule, etc.)
-✓ Use artifact name/API name from Production context (not IDs)
-✓ Encode spaces as %20 in the sf:// URL
-✓ Keep human-readable text in [brackets]
-✓ GUI will detect sf:// and convert to actual Salesforce URL based on org context
-
-ARTIFACT TYPES (use lowercase in sf:// URL):
-permission-set, profile, flow, field, object, apex-class, apex-trigger, record-type, custom-object, page-layout, validation-rule, etc.
-
 Return a compact summary (max 400 tokens) containing:
 - Problem type identified
-- Specific artifact name + location in Production (linkified as [type: name](sf://id))
+- Specific artifact name + location in Production
 - Failure point in the flow
 - Root cause identified (why this artifact is broken)
-- All artifacts linkified
 - If more metadata needed: "REQUEST: Step 5 refinement — need [specific metadata]"
 - Path written: outputs/investigations/<KEY>.md
 ```

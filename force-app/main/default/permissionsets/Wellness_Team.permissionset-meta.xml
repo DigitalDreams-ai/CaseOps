@@ -4152,11 +4152,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Lead.Blood_Interest__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>Lead.Brain_fog_focus_and_memory_issues__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -8473,6 +8468,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>OrderItem.Notes__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>OrderItem.Tracking_Number__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

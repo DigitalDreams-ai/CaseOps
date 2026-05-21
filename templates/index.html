@@ -869,26 +869,12 @@
   }
 
   async function linkifySalesforceArtifacts(element) {
-    // Convert sf:// URLs to Salesforce URLs
+    // Convert sf:// URLs to Salesforce magic links
     const links = await getMagicLinks();
     const magicLinkProd = links.prod || '';
     const magicLinkSandbox = links.sandbox || '';
 
-    if (!magicLinkProd && !magicLinkSandbox) return; // No magic links configured
-
-    // Map artifact types to Salesforce Setup path patterns
-    const artifactPatterns = {
-      'permission-set': '/setup/navigate/search/SObjectSetupPath?type=PermissionSet&name=',
-      'profile': '/setup/navigate/search/SObjectSetupPath?type=Profile&name=',
-      'flow': '/setup/navigate/search/SObjectSetupPath?type=Flow&name=',
-      'field': '/setup/navigate/search/SObjectSetupPath?type=CustomField&name=',
-      'object': '/setup/navigate/search/SObjectSetupPath?type=CustomObject&name=',
-      'apex-class': '/setup/navigate/search/SObjectSetupPath?type=ApexClass&name=',
-      'apex-trigger': '/setup/navigate/search/SObjectSetupPath?type=ApexTrigger&name=',
-      'record-type': '/setup/navigate/search/SObjectSetupPath?type=RecordType&name=',
-      'page-layout': '/setup/navigate/search/SObjectSetupPath?type=Layout&name=',
-      'validation-rule': '/setup/navigate/search/SObjectSetupPath?type=ValidationRule&name=',
-    };
+    if (!magicLinkProd && !magicLinkSandbox) return;
 
     const magicLink = magicLinkProd || magicLinkSandbox;
 
@@ -896,32 +882,19 @@
     element.querySelectorAll('a[href^="sf://"]').forEach(link => {
       const href = link.getAttribute('href');
 
-      // Try typed format first: sf://type/name
-      let typedMatch = href.match(/^sf:\/\/([^/]+)\/(.+)$/);
-      if (typedMatch) {
-        const [, artifactType, artifactName] = typedMatch;
-        const pattern = artifactPatterns[artifactType];
-        if (pattern) {
-          const decodedName = decodeURIComponent(artifactName);
-          const setupPath = pattern + encodeURIComponent(decodedName);
-          const salesforceUrl = magicLink + '&retURL=' + encodeURIComponent(setupPath);
-          link.setAttribute('href', salesforceUrl);
-          link.setAttribute('target', '_blank');
-          link.setAttribute('rel', 'noopener noreferrer');
-          link.style.cursor = 'pointer';
-        }
-      } else {
-        // Raw Salesforce ID format: sf://id
-        const idMatch = href.match(/^sf:\/\/(.+)$/);
-        if (idMatch) {
-          const id = idMatch[1];
-          const salesforceUrl = magicLink + '&retURL=/' + encodeURIComponent(id);
-          link.setAttribute('href', salesforceUrl);
-          link.setAttribute('target', '_blank');
-          link.setAttribute('rel', 'noopener noreferrer');
-          link.style.cursor = 'pointer';
-        }
-      }
+      // Only process raw IDs: sf://id (no slashes in id)
+      // Skip typed format like sf://type/name (frontdoor.jsp doesn't support Setup paths)
+      const match = href.match(/^sf:\/\/([^/]+)$/);
+      if (!match) return;
+
+      const id = match[1];
+
+      // Construct Salesforce URL using magic link + retURL
+      const salesforceUrl = magicLink + '&retURL=/' + encodeURIComponent(id);
+      link.setAttribute('href', salesforceUrl);
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+      link.style.cursor = 'pointer';
     });
   }
 
