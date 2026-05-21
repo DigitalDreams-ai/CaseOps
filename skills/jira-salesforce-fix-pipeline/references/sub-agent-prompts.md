@@ -160,6 +160,31 @@ VOICE EXAMPLES:
 ✗ "Great news — everything is now working correctly — you should see this in Production."
 ✓ "I've confirmed the fix works. You'll see this in Production by end of week."
 
+SALESFORCE ARTIFACT LINKING (mandatory):
+When mentioning any Salesforce artifact (Permission Set, Flow, Field, Object, Profile, Class, etc.), 
+linkify using markdown syntax so GUI can convert to clickable Salesforce URLs:
+
+FORMAT: [artifact_type: artifact_name](sf://artifact_type_lower/artifact_name_encoded)
+
+EXAMPLES:
+- [Permission Set: Advanced User](sf://permission-set/Advanced%20User)
+- [Flow: Case_Assign_RoundRobin](sf://flow/Case_Assign_RoundRobin)
+- [Field: Account.Industry__c](sf://field/Account/Industry__c)
+- [Object: ServiceResource](sf://object/ServiceResource)
+- [Apex Class: CaseAssignmentHandler](sf://apex-class/CaseAssignmentHandler)
+- [Record Type: Account.Partner](sf://record-type/Account/Partner)
+
+ARTIFACT TYPES (use lowercase in sf:// URL):
+permission-set, profile, flow, field, object, apex-class, apex-trigger, 
+record-type, custom-object, page-layout, validation-rule, etc.
+
+Rules:
+✓ Linkify EVERY Salesforce artifact mentioned
+✓ Use artifact type + name from Production/Sandbox context
+✓ Encode spaces as %20 in URL
+✓ Keep human-readable text in [brackets]
+✓ GUI will detect sf:// and convert to actual Salesforce URL based on org context
+
 FORBIDDEN IN THIS FILE (hard stop if present):
 ✗ [INTERNAL] section
 ✗ ## [INTERNAL] header
