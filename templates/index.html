@@ -922,82 +922,83 @@
     await loadPipelineHistory(key, selectIssueSeq);
   }
 
-  let cachedMagicLinks = null;
-
-  async function getMagicLinks() {
-    if (cachedMagicLinks) return cachedMagicLinks;
-    try {
-      const res = await fetch('/api/magic-links');
-      cachedMagicLinks = await res.json();
-      return cachedMagicLinks;
-    } catch {
-      return { prod: '', sandbox: '' };
-    }
-  }
-
-  function orgIdentifierToUrl(orgId) {
-    // Convert org identifier to Salesforce URL
-    // Examples: "10xhealth-sean" → "10xhealth--sean.sandbox.my.salesforce.com"
-    //           "10xhealth" → "10xhealth.my.salesforce.com"
-    if (!orgId) return null;
-    if (orgId.includes('-')) {
-      // Sandbox: replace - with -- and add .sandbox.my.salesforce.com
-      const converted = orgId.replace(/-/g, '--');
-      return `https://${converted}.sandbox.my.salesforce.com`;
-    } else {
-      // Production: just add .my.salesforce.com
-      return `https://${orgId}.my.salesforce.com`;
-    }
-  }
-
   async function linkifySalesforceArtifacts(element) {
-    // Convert sf:// URLs to direct Salesforce Setup URLs using org identifiers from .env.jira
+    // Link Salesforce 15/18-char IDs directly using .env.jira org hosts:
+    // https://[CASEOPS_PRODUCTION_READ_ORG].lightning.force.com/[Id]
+    // https://[CASEOPS_SANDBOX_TARGET_ORG].lightning.force.com/[Id]
     if (!element) return;
 
     try {
-      // Fetch org identifiers from .env.jira
       const response = await fetch('/api/orgs');
       const orgs = await response.json();
+      const prodHost = String(orgs.prod || '').trim();
+      const sandboxHost = String(orgs.sandbox || '').trim();
+      const primaryHost = prodHost || sandboxHost;
+      if (!primaryHost && !sandboxHost) return;
 
-      // Use sandbox by default (where fixes are implemented)
-      const sandboxOrgId = orgs.sandbox || orgs.prod;
-      if (!sandboxOrgId) return; // Can't linkify without org identifier
+      const salesforceUrl = (host, id) =>
+        `https://${host}.lightning.force.com/${encodeURIComponent(id)}`;
+      const salesforceIdRe = /\b(?:00N|00O|00P|00X|01t|02s|0Af|0Pa|0PS|09D|300|301|500|801|006|001|a[0-9A-Za-z]{2})[a-zA-Z0-9]{12}(?:[a-zA-Z0-9]{3})?\b/g;
 
-      const orgUrl = orgIdentifierToUrl(sandboxOrgId);
-      if (!orgUrl) return;
-
-      // Map artifact types to Setup search URLs
-      const setupUrlMap = {
-        'permission-set': '/setup/navigate/search/PermissionSet?setupid=PermSets',
-        'profile': '/setup/navigate/search/Profile?setupid=Profile',
-        'flow': '/setup/navigate/search/Flow?setupid=Flows',
-        'field': '/setup/navigate/search/FieldDefinition?setupid=FieldDefinition',
-        'object': '/setup/navigate/search/CustomObject?setupid=CustomObject',
-        'apex-class': '/setup/navigate/search/ApexClass?setupid=ApexClasses',
-        'apex-trigger': '/setup/navigate/search/ApexTrigger?setupid=ApexTrigger',
-        'record-type': '/setup/navigate/search/RecordType?setupid=RecordType',
-        'page-layout': '/setup/navigate/search/PageLayout?setupid=PageLayout',
-        'validation-rule': '/setup/navigate/search/ValidationRule?setupid=ValidationRules',
-      };
-
-      // Find all links with sf:// protocol
-      // Only linkify raw IDs (sf://id) - typed format (sf://type/name) not supported
       element.querySelectorAll('a[href^="sf://"]').forEach(link => {
         const href = link.getAttribute('href');
-        let salesforceUrl = null;
-
-        // Only process raw ID format: sf://15or18charId
-        // Typed format (sf://type/name) requires IDs that agents don't emit
         const idMatch = href.match(/^sf:\/\/([a-zA-Z0-9]{15,18})$/);
-        if (idMatch) {
-          const id = idMatch[1];
-          salesforceUrl = orgUrl + '/' + encodeURIComponent(id);
-          link.setAttribute('href', salesforceUrl);
-          link.setAttribute('target', '_blank');
-          link.setAttribute('rel', 'noopener noreferrer');
-          link.style.cursor = 'pointer';
+        if (!idMatch || !primaryHost) return;
+        link.setAttribute('href', salesforceUrl(primaryHost, idMatch[1]));
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+        link.classList.add('sf-id-link');
+        link.title = `Open ${idMatch[1]} in Salesforce`;
+      });
+
+      const skipTags = new Set(['A', 'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'BUTTON']);
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          const parent = node.parentElement;
+          if (!parent || skipTags.has(parent.tagName)) return NodeFilter.FILTER_REJECT;
+          salesforceIdRe.lastIndex = 0;
+          if (!salesforceIdRe.test(node.nodeValue || '')) return NodeFilter.FILTER_REJECT;
+          salesforceIdRe.lastIndex = 0;
+          return NodeFilter.FILTER_ACCEPT;
         }
-        // Typed format links remain non-clickable (no href)
+      });
+
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+      textNodes.forEach(node => {
+        const text = node.nodeValue || '';
+        const frag = document.createDocumentFragment();
+        let lastIndex = 0;
+        text.replace(salesforceIdRe, (id, offset) => {
+          frag.appendChild(document.createTextNode(text.slice(lastIndex, offset)));
+
+          const link = document.createElement('a');
+          link.href = salesforceUrl(primaryHost, id);
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.className = 'sf-id-link';
+          link.textContent = id;
+          link.title = `Open ${id} in ${prodHost ? 'Production' : 'Sandbox'}`;
+          frag.appendChild(link);
+
+          if (prodHost && sandboxHost) {
+            const sandbox = document.createElement('a');
+            sandbox.href = salesforceUrl(sandboxHost, id);
+            sandbox.target = '_blank';
+            sandbox.rel = 'noopener noreferrer';
+            sandbox.className = 'sf-id-alt-link';
+            sandbox.textContent = 'SB';
+            sandbox.title = `Open ${id} in Sandbox`;
+            frag.appendChild(document.createTextNode(' '));
+            frag.appendChild(sandbox);
+          }
+
+          lastIndex = offset + id.length;
+          return id;
+        });
+        frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+        node.parentNode.replaceChild(frag, node);
       });
     } catch (error) {
       console.error('Failed to linkify Salesforce artifacts:', error);

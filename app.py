@@ -522,7 +522,7 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                         tool = block.get("name", "tool")
                         inp = block.get("input", {})
                         detail = inp.get("command") or inp.get("file_path") or inp.get("path") or ""
-                        detail = str(detail)[:80]
+                        detail = str(detail).replace("\r", " ").replace("\n", " ").strip()
                         _log_emit_line(run_key, f"[{tool}]{' ' + detail if detail else ''}")
 
             elif etype == "result":
@@ -617,6 +617,14 @@ def _stream_proc(cmd: list[str], run_key: str) -> None:
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
+        # Invalidate jira_summary caches after operations
+        # - Global operations: clear all caches so fresh data is fetched from disk
+        # - Individual issue operations: clear that issue's cache entry
+        if run_key == _GLOBAL_KEY:
+            jira_summary_cache.clear()
+        else:
+            # For individual issue syncs/runs, clear that issue's cached data
+            jira_summary_cache.pop(run_key, None)
         _log_emit_line(run_key, "Done: global run" if run_key == _GLOBAL_KEY else f"Done: {run_key}")
         _log_emit_done(run_key)
 
@@ -1506,6 +1514,15 @@ def api_magic_links():
     return jsonify({
         "prod": os.environ.get("CASEOPS_PRODUCTION_MAGIC_LINK", ""),
         "sandbox": os.environ.get("CASEOPS_SANDBOX_MAGIC_LINK", ""),
+    })
+
+
+@app.route("/api/orgs", methods=["GET"])
+def api_orgs():
+    """Return Salesforce org identifiers from .env.jira for URL construction."""
+    return jsonify({
+        "prod": os.environ.get("CASEOPS_PRODUCTION_READ_ORG", ""),
+        "sandbox": os.environ.get("CASEOPS_SANDBOX_TARGET_ORG", ""),
     })
 
 
