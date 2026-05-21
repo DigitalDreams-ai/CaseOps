@@ -624,31 +624,20 @@ def _stream_claude_proc(prompt: str, run_key: str, issue_key: str | None = None)
 
 
 def _stream_full_issue(key: str, run_key: str) -> None:
-    """Run pipeline script then hand off to Claude for Internal Notes + Jira Message."""
+    """Run full CaseOps fix pipeline via jira-salesforce-fix-pipeline Skill.
+
+    This invokes the Skill directly (Steps 1-12 orchestration including sub-agents).
+    Do NOT call deprecated run_pipeline.py — that calls removed agents.
+    """
     try:
-        env_file = str(ROOT / ".env.jira")
-        cmd = [
-            sys.executable,
-            "run_pipeline.py",
-            "--env-file",
-            env_file,
-            "--outputs-dir",
-            str(OUTPUTS),
-            "--issue",
+        _log_emit_line(run_key, f"-- Processing {key} via jira-salesforce-fix-pipeline Skill --")
+        prompt = _build_claude_prompt(
             key,
-        ]
-        exit_code = _do_stream_proc(cmd, run_key)
-        if exit_code == 0:
-            _log_emit_line(run_key, "-- Handing off to Claude --")
-            prompt = _build_claude_prompt(
-                key,
-                "Run the full CaseOps fix pipeline for this issue through completion of investigation, "
-                "internal notes, and Jira customer message (and any sandbox/escalation steps the playbook "
-                "requires for this issue).",
-            )
-            _do_stream_claude(prompt, run_key, key)
-        else:
-            _log_emit_line(run_key, f"-- Pipeline failed (exit {exit_code}) -- skipping Claude --")
+            "Run the full CaseOps fix pipeline for this issue through completion of investigation, "
+            "internal notes, and Jira customer message (and any sandbox/escalation steps the playbook "
+            "requires for this issue). Use the jira-salesforce-fix-pipeline Skill entrypoint.",
+        )
+        _do_stream_claude(prompt, run_key, key)
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
@@ -1037,9 +1026,10 @@ def api_run():
             str(OUTPUTS),
             "--issue",
             key,
+            "--no-agents",
         ]
     elif action == "triage":
-        cmd = [sys.executable, "run_pipeline.py", "--no-sync", "--outputs-dir", str(OUTPUTS)]
+        cmd = [sys.executable, "run_pipeline.py", "--no-sync", "--no-agents", "--outputs-dir", str(OUTPUTS)]
     elif action == "full":
         cmd = [
             sys.executable,
@@ -1048,6 +1038,7 @@ def api_run():
             env_file,
             "--outputs-dir",
             str(OUTPUTS),
+            "--no-agents",
         ]
     elif action == "full_issue" and key:
         use_full_issue = True

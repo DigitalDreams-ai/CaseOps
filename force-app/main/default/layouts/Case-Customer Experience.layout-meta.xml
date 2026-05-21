@@ -181,10 +181,6 @@
                 <behavior>Edit</behavior>
                 <field>Call_Details__c</field>
             </layoutItems>
-            <layoutItems>
-                <behavior>Edit</behavior>
-                <field>Supplement_Inquiry__c</field>
-            </layoutItems>
         </layoutColumns>
         <style>OneColumn</style>
     </layoutSections>

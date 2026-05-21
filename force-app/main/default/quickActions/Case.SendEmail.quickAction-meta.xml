@@ -4,10 +4,6 @@
         <field>ToIds</field>
         <formula>Case.ContactId</formula>
     </fieldOverrides>
-    <fieldOverrides>
-        <field>ReplyToAddress</field>
-        <formula>"support@cases.10xhealth.com"</formula>
-    </fieldOverrides>
     <optionsCreateFeedItem>true</optionsCreateFeedItem>
     <quickActionLayout>
         <layoutSectionStyle>TwoColumnsLeftToRight</layoutSectionStyle>

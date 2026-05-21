@@ -343,10 +343,6 @@
                 <field>Brand__c</field>
             </layoutItems>
             <layoutItems>
-                <behavior>Readonly</behavior>
-                <field>Cardone_Ventures_Employee__c</field>
-            </layoutItems>
-            <layoutItems>
                 <behavior>Edit</behavior>
                 <field>Opportunities_Type__c</field>
             </layoutItems>
