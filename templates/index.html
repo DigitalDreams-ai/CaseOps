@@ -39,6 +39,16 @@
       </div>
       <input id="filter-input" type="search" placeholder="Filter by key or summary…" oninput="debounceFilter(this.value)">
     </div>
+    <div id="bulk-action-bar" style="display:none; padding:10px 14px; border-bottom:1px solid #d0d7de; background:#f6f8fa;">
+      <div style="font-size:12px; margin-bottom:8px; color:#666;">
+        <span id="bulk-count">0</span> selected
+        <button type="button" class="link-btn" onclick="clearBulkSelection()" style="margin-left:8px;">Clear</button>
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button type="button" class="btn bulk-btn" onclick="bulkAction('sync_issue')">Sync</button>
+        <button type="button" class="btn primary bulk-btn" onclick="bulkAction('full_issue')">Run Pipeline</button>
+      </div>
+    </div>
     <div id="issue-list">
       <div style="padding:20px 14px;color:#6e7681;font-size:12px;">Loading...</div>
     </div>
@@ -167,6 +177,7 @@
   let selectTabSeq = 0;
   let eventSource = null;
   const activeRuns = new Set();
+  const selectedIssues = new Set();
   let currentSort = 'number';
 
   let cachedMessages = null;
@@ -608,7 +619,8 @@
       const item = document.createElement('div');
       item.className = 'issue-item' + (issue.key === activeKey ? ' selected' : '');
       item.dataset.key = issue.key;
-      item.onclick = () => selectIssue(issue.key);
+      const isChecked = selectedIssues.has(issue.key);
+
       const needsTriage =
         label === 'Active' && !issue.has_jira_summary
           ? '<span class="badge needs-triage" title="No synced Jira summary on disk yet (outputs/jira/summary). Run Sync This Issue or Full Jira Sync — same as overview &quot;Needs summary&quot;.">Not triaged</span>'
@@ -626,16 +638,28 @@
           ? '<span class="badge solution" title="Agent has analyzed this issue and drafted a proposed solution (outputs/internal-notes + jira-messages). Solution may be local fix or escalation to Engineering.">Solution</span>'
           : '';
       item.innerHTML = `
-        <div class="issue-key ${issue.disposition}">${issue.key}</div>
-        <div class="issue-summary">${escHtml(issue.summary)}</div>
-        <div class="issue-item-meta">
-          <span class="badge ${issue.disposition}">${escHtml(issue.status)}</span>
-          ${needsTriage}
-          ${solution}
-          ${confirmed}
-          ${engEsc}
+        <input type="checkbox" class="issue-checkbox" data-key="${escHtml(issue.key)}" ${isChecked ? 'checked' : ''}>
+        <div class="issue-content">
+          <div class="issue-key ${issue.disposition}">${issue.key}</div>
+          <div class="issue-summary">${escHtml(issue.summary)}</div>
+          <div class="issue-item-meta">
+            <span class="badge ${issue.disposition}">${escHtml(issue.status)}</span>
+            ${needsTriage}
+            ${solution}
+            ${confirmed}
+            ${engEsc}
+          </div>
         </div>
       `;
+      // Checkbox click: toggle without selecting issue
+      const checkbox = item.querySelector('.issue-checkbox');
+      checkbox.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleBulkSelection(issue.key);
+        updateBulkActionBar();
+      });
+      // Issue item click: select issue (not checkbox)
+      item.addEventListener('click', () => selectIssue(issue.key));
       itemsContainer.appendChild(item);
     });
 
@@ -1265,6 +1289,50 @@
     area.querySelectorAll('img[data-lb-url]').forEach(img => {
       img.addEventListener('click', () => openLightbox(img.dataset.lbUrl, img.dataset.lbAlt));
     });
+  }
+
+  // ── Bulk selection ────────────────────────────────────────
+
+  function toggleBulkSelection(key) {
+    if (selectedIssues.has(key)) {
+      selectedIssues.delete(key);
+    } else {
+      selectedIssues.add(key);
+    }
+    // Update checkbox state
+    document.querySelectorAll(`input.issue-checkbox[data-key="${key}"]`).forEach(cb => {
+      cb.checked = selectedIssues.has(key);
+    });
+  }
+
+  function clearBulkSelection() {
+    selectedIssues.clear();
+    document.querySelectorAll('input.issue-checkbox').forEach(cb => {
+      cb.checked = false;
+    });
+    updateBulkActionBar();
+  }
+
+  function updateBulkActionBar() {
+    const bar = document.getElementById('bulk-action-bar');
+    const count = document.getElementById('bulk-count');
+    if (bar && count) {
+      count.textContent = selectedIssues.size;
+      bar.style.display = selectedIssues.size > 0 ? 'block' : 'none';
+    }
+  }
+
+  async function bulkAction(action) {
+    if (selectedIssues.size === 0) {
+      logLine('No issues selected.', 'err', '__global__');
+      return;
+    }
+    const keys = Array.from(selectedIssues);
+    logLine(`Starting ${action} for ${keys.length} issue(s)…`, 'info', '__global__');
+    // Parallel: spawn all in parallel (existing thread pool handles it)
+    for (const key of keys) {
+      await runAction(action, key);
+    }
   }
 
   // ── Pipeline actions ───────────────────────────────────────
