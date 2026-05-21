@@ -205,13 +205,14 @@ AUDIENCE: Sean only (internal reference, NOT posted to Jira)
 TEMPLATE: internal-notes-template.md
 OUTPUT FILE: outputs/internal-notes/<KEY>.md
 
-CONTENT RULES:
-- Root cause: Full technical diagnosis (internal detail OK here)
-- Decision: Support-resolved OR Escalate to Engineering
-- Actions: What was done, what needs doing
-- Production vs Sandbox state: Explicit inventory of what exists where
-- Risks: Technical or operational risks
-- Escalation details: If Engineering, what's being handed off
+CONTENT RULES (LEAN — NOT Investigation replay):
+- Root cause: One-sentence diagnosis ONLY. Link to Investigation for full detail.
+- Decision: Support-resolved OR Escalate to Engineering + confidence + evidence (terse).
+- Actions: Concrete steps taken (if Support) or handoff summary (if Engineering).
+- Production vs Sandbox: Explicit state (what changed where, what's next for operator).
+- Risks: Brief list, one line per risk.
+- DO NOT: Paste investigation sections, full metadata dumps, detailed evidence, narrative repros.
+  → Investigation file is the source of truth. Internal Notes is the decision memo only.
 
 FORBIDDEN IN THIS FILE (hard stop if present):
 ✗ Customer greeting (no "Hi [Name],")
@@ -224,7 +225,14 @@ VALIDATION BEFORE SAVING:
 1. Read the draft you created
 2. Confirm it has root cause diagnosis, decision, actions, state, risks
 3. Confirm ZERO customer-facing greeting or tone
-4. Only after validation, save to outputs/internal-notes/<KEY>.md
+4. LEAN CHECK (all must be YES):
+   - ✓ Root Cause is ONE SENTENCE (not a paragraph)? YES or condense.
+   - ✓ No investigation sections pasted (e.g., "## Issue Understanding", "## Production Metadata")? YES or DELETE.
+   - ✓ No detailed metadata lists (Field X on Object Y configuration lists)? YES or DELETE and link to Investigation.
+   - ✓ No narrative repro steps or evidence playback? YES or DELETE and link to Investigation.
+   - ✓ Production vs Sandbox section is concrete (who does what next)? YES or rewrite for action.
+   - ✓ Total length under 500 words? YES or trim.
+5. Only after validation, save to outputs/internal-notes/<KEY>.md
 
 ════════════════════════════════════════════════════════════════════════
 STEP D: SAVE DOCUMENT 2 TO DISK
