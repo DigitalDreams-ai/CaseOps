@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionCalls>
+        <name>Post_to_Chatter_Invalid_Email</name>
+        <label>Post to Chatter - Invalid Email</label>
+        <locationX>314</locationX>
+        <locationY>539</locationY>
+        <actionName>chatterPost</actionName>
+        <actionType>chatterPost</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>text</name>
+            <value>
+                <elementReference>txtPostToChatterMessage_InvalidEmail</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>subjectNameOrId</name>
+            <value>
+                <elementReference>$Record.OpportunityId</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>chatterPost</nameSegment>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </actionCalls>
+    <actionCalls>
+        <description>This will send the email template that is assigned to the product.</description>
+        <name>Send_Scheduling_Email_To_Patient</name>
+        <label>Send Scheduling Email To Patient</label>
+        <locationX>50</locationX>
+        <locationY>539</locationY>
+        <actionName>emailSimple</actionName>
+        <actionType>emailSimple</actionType>
+        <connector>
+            <targetReference>Update_Opportunity_Stage</targetReference>
+        </connector>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>senderType</name>
+            <value>
+                <stringValue>OrgWideEmailAddress</stringValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>senderAddress</name>
+            <value>
+                <stringValue>no-reply@10xhealthsystem.com</stringValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>relatedRecordId</name>
+            <value>
+                <elementReference>$Record.OpportunityId</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>recipientId</name>
+            <value>
+                <elementReference>$Record.Opportunity.Account.PersonContactId</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>logEmailOnSend</name>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>emailTemplateId</name>
+            <value>
+                <elementReference>$Record.PricebookEntry.Product2.Calendly_Email_Template_Id__c</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>emailSimple</nameSegment>
+    </actionCalls>
+    <apiVersion>59.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <decisions>
+        <name>Check_if_Email_Is_Valid</name>
+        <label>Check if Email Is Valid</label>
+        <locationX>182</locationX>
+        <locationY>431</locationY>
+        <defaultConnector>
+            <targetReference>Post_to_Chatter_Invalid_Email</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Non Valid Email</defaultConnectorLabel>
+        <rules>
+            <name>Valid_Email</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Opportunity.Account.PersonEmailBouncedDate</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Opportunity.Account.PersonEmail</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Send_Scheduling_Email_To_Patient</targetReference>
+            </connector>
+            <label>Valid Email</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Is_there_a_Email_Template_Id</name>
+        <label>Is there a Email Template Id</label>
+        <locationX>380</locationX>
+        <locationY>323</locationY>
+        <defaultConnectorLabel>Template Id Not Present</defaultConnectorLabel>
+        <rules>
+            <name>Template_Id_Present</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.PricebookEntry.Product2.Calendly_Email_Template_Id__c</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Check_if_Email_Is_Valid</targetReference>
+            </connector>
+            <label>Template Id Present</label>
+        </rules>
+    </decisions>
+    <description>This flow will send out an email when there is one present for the particular object to record.</description>
+    <environments>Default</environments>
+    <interviewLabel>Record Trigger - After Save - Send Genetic Breakthrough Schedule Link {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - After Save - Send Consultation Email Link</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordUpdates>
+        <name>Update_Opportunity_Stage</name>
+        <label>Update Opportunity Stage</label>
+        <locationX>50</locationX>
+        <locationY>647</locationY>
+        <inputAssignments>
+            <field>StageName</field>
+            <value>
+                <stringValue>Needs Scheduling</stringValue>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record.Opportunity</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>254</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Is_there_a_Email_Template_Id</targetReference>
+        </connector>
+        <filterFormula>NOT(ISNULL({!$Record.PricebookEntry.Product2.Calendly_Email_Template_Id__c}))</filterFormula>
+        <object>OpportunityLineItem</object>
+        <recordTriggerType>Create</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <textTemplates>
+        <name>txtPostToChatterMessage_InvalidEmail</name>
+        <isViewedAsPlainText>true</isViewedAsPlainText>
+        <text>@[{!$Record.Opportunity.OwnerId}]
+The scheduling email was not sent to the patient due to the email being bounced or invalid. Please get in touch with the customer to update their information and send out a new scheduling link.
+
+Thanks
+Salesforce Automation</text>
+    </textTemplates>
+    <textTemplates>
+        <name>txtPostToChatterMessage_NoEmailTemplate</name>
+        <isViewedAsPlainText>true</isViewedAsPlainText>
+        <text>@[{!$Record.Opportunity.OwnerId}]
+The scheduling email was not sent because the added product needs an email template. Please reach out to the tech team via the Helpdesk for assistance. 
+
+Thanks
+Salesforce Automation</text>
+    </textTemplates>
+</Flow>

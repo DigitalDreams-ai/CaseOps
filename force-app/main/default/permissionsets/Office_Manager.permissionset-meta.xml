@@ -2226,11 +2226,6 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
-        <field>Case.Supplement_Inquiry__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
         <editable>true</editable>
         <field>Case.Type</field>
         <readable>true</readable>
@@ -3973,6 +3968,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Lead.Biggest_Problem__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Lead.Blood_Interest__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

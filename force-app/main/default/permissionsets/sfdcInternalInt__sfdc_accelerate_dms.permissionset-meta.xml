@@ -808,6 +808,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.Do_Not_Call_Date_Time__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Account.Do_Not_Sync_to_Biocanic__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -859,6 +864,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Account.Drivers_License_Issuing_State__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Account.Email_Opt_Out_Date_Time__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -1403,6 +1413,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.OperatingHoursId</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Account.Opportunities_Type__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -1653,21 +1668,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Account.Preferred_Name_2__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Account.Preferred_Name_3__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Account.Preferred_Name_4__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>Account.Preferred_Name__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -1894,6 +1894,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Account.Round_Robin_ID__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Account.SMS_Opt_Out__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -4034,11 +4039,6 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Case.SuppliedPhone</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Case.Supplement_Inquiry__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -9503,6 +9503,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Lead.Blood_Interest__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Lead.Brain_fog_focus_and_memory_issues__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -9643,6 +9648,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Lead.Do_Not_Call_Date_Time__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Lead.Drip_Campaign_Id__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -9654,6 +9664,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Lead.Email</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Lead.Email_Opt_Out_Date_Time__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -10359,6 +10374,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Lead.Reviewed_FDD_before__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Lead.SMS_Opt_Out_Date_Time__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -17704,11 +17724,6 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Opportunity.Same_Info_As_On_Script_Practitioner_Acc__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Opportunity.Scheduled_By__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -44910,6 +44925,16 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
+        <object>ActiveScratchOrg</object>
+        <viewAllFields>true</viewAllFields>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
+        <allowDelete>true</allowDelete>
+        <allowEdit>true</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>true</modifyAllRecords>
         <object>ActorReactiveAskRespEvent</object>
         <viewAllFields>true</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
@@ -44980,7 +45005,7 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>ApiPrtcPolicyChangeEvent</object>
+        <object>ApiProtectionPolicy</object>
         <viewAllFields>true</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
@@ -44990,7 +45015,7 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>AppAnalyticsInfraPvsngSt</object>
+        <object>ApiPrtcPolicyChangeEvent</object>
         <viewAllFields>true</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
@@ -45900,16 +45925,6 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>FlowVersionMilestone</object>
-        <viewAllFields>true</viewAllFields>
-        <viewAllRecords>true</viewAllRecords>
-    </objectPermissions>
-    <objectPermissions>
-        <allowCreate>true</allowCreate>
-        <allowDelete>true</allowDelete>
-        <allowEdit>true</allowEdit>
-        <allowRead>true</allowRead>
-        <modifyAllRecords>true</modifyAllRecords>
         <object>Flowdometer__Flow__c</object>
         <viewAllFields>true</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
@@ -46400,56 +46415,6 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>MeetingPlaybook</object>
-        <viewAllFields>true</viewAllFields>
-        <viewAllRecords>true</viewAllRecords>
-    </objectPermissions>
-    <objectPermissions>
-        <allowCreate>true</allowCreate>
-        <allowDelete>true</allowDelete>
-        <allowEdit>true</allowEdit>
-        <allowRead>true</allowRead>
-        <modifyAllRecords>true</modifyAllRecords>
-        <object>MeetingPlaybookStage</object>
-        <viewAllFields>true</viewAllFields>
-        <viewAllRecords>true</viewAllRecords>
-    </objectPermissions>
-    <objectPermissions>
-        <allowCreate>true</allowCreate>
-        <allowDelete>true</allowDelete>
-        <allowEdit>true</allowEdit>
-        <allowRead>true</allowRead>
-        <modifyAllRecords>true</modifyAllRecords>
-        <object>MeetingPlaybookStageText</object>
-        <viewAllFields>true</viewAllFields>
-        <viewAllRecords>true</viewAllRecords>
-    </objectPermissions>
-    <objectPermissions>
-        <allowCreate>true</allowCreate>
-        <allowDelete>true</allowDelete>
-        <allowEdit>true</allowEdit>
-        <allowRead>true</allowRead>
-        <modifyAllRecords>true</modifyAllRecords>
-        <object>MeetingPlbkStageCapability</object>
-        <viewAllFields>true</viewAllFields>
-        <viewAllRecords>true</viewAllRecords>
-    </objectPermissions>
-    <objectPermissions>
-        <allowCreate>true</allowCreate>
-        <allowDelete>true</allowDelete>
-        <allowEdit>true</allowEdit>
-        <allowRead>true</allowRead>
-        <modifyAllRecords>true</modifyAllRecords>
-        <object>MeetingPlbkStageContentDoc</object>
-        <viewAllFields>true</viewAllFields>
-        <viewAllRecords>true</viewAllRecords>
-    </objectPermissions>
-    <objectPermissions>
-        <allowCreate>true</allowCreate>
-        <allowDelete>true</allowDelete>
-        <allowEdit>true</allowEdit>
-        <allowRead>true</allowRead>
-        <modifyAllRecords>true</modifyAllRecords>
         <object>Membership_Service_Rendered__c</object>
         <viewAllFields>true</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
@@ -46656,6 +46621,16 @@
     </objectPermissions>
     <objectPermissions>
         <allowCreate>true</allowCreate>
+        <allowDelete>true</allowDelete>
+        <allowEdit>true</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>true</modifyAllRecords>
+        <object>NamespaceRegistry</object>
+        <viewAllFields>true</viewAllFields>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
         <allowDelete>false</allowDelete>
         <allowEdit>false</allowEdit>
         <allowRead>true</allowRead>
@@ -46721,6 +46696,16 @@
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
         <object>Next_Physical_Consultation__c</object>
+        <viewAllFields>true</viewAllFields>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
+        <allowDelete>true</allowDelete>
+        <allowEdit>true</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>true</modifyAllRecords>
+        <object>OperatingHours</object>
         <viewAllFields>true</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
@@ -46821,16 +46806,6 @@
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
         <object>Practice_Group__c</object>
-        <viewAllFields>true</viewAllFields>
-        <viewAllRecords>true</viewAllRecords>
-    </objectPermissions>
-    <objectPermissions>
-        <allowCreate>true</allowCreate>
-        <allowDelete>true</allowDelete>
-        <allowEdit>true</allowEdit>
-        <allowRead>true</allowRead>
-        <modifyAllRecords>true</modifyAllRecords>
-        <object>PreviewOrgInfo</object>
         <viewAllFields>true</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
@@ -47330,6 +47305,16 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
+        <object>ScratchOrgInfo</object>
+        <viewAllFields>true</viewAllFields>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
+        <allowDelete>true</allowDelete>
+        <allowEdit>true</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>true</modifyAllRecords>
         <object>Seller</object>
         <viewAllFields>true</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
@@ -47411,16 +47396,6 @@
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
         <object>StreamingChannel</object>
-        <viewAllFields>true</viewAllFields>
-        <viewAllRecords>true</viewAllRecords>
-    </objectPermissions>
-    <objectPermissions>
-        <allowCreate>true</allowCreate>
-        <allowDelete>true</allowDelete>
-        <allowEdit>true</allowEdit>
-        <allowRead>true</allowRead>
-        <modifyAllRecords>true</modifyAllRecords>
-        <object>TenantConsumptionAlert</object>
         <viewAllFields>true</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
@@ -49801,6 +49776,26 @@
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
         <object>rh2__PS_Export_Rollups__c</object>
+        <viewAllFields>true</viewAllFields>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
+        <allowDelete>true</allowDelete>
+        <allowEdit>true</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>true</modifyAllRecords>
+        <object>rh2__PS_Filter_Audit_History__c</object>
+        <viewAllFields>true</viewAllFields>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
+        <allowDelete>true</allowDelete>
+        <allowEdit>true</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>true</modifyAllRecords>
+        <object>rh2__PS_Filter_Audit__c</object>
         <viewAllFields>true</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>

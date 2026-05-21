@@ -1474,16 +1474,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Account.Preferred_Name_2__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Account.Preferred_Name_3__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>Account.Preferred_Name__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -3160,11 +3150,6 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Case.SuppliedPhone</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Case.Supplement_Inquiry__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -5470,6 +5455,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Lead.Biggest_Problem__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Lead.Blood_Interest__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
@@ -9679,11 +9669,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Opportunity.Scheduled_By__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>Opportunity.Second_Shipping_Company__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -13371,6 +13356,16 @@
         <allowRead>true</allowRead>
         <modifyAllRecords>false</modifyAllRecords>
         <object>Next_Physical_Consultation__c</object>
+        <viewAllFields>false</viewAllFields>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <allowCreate>false</allowCreate>
+        <allowDelete>false</allowDelete>
+        <allowEdit>false</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>false</modifyAllRecords>
+        <object>OperatingHours</object>
         <viewAllFields>false</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
