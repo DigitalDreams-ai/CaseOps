@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>58.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Create_ShipStation_Shipment</name>
+        <label>Create ShipStation Shipment</label>
+        <locationX>308</locationX>
+        <locationY>350</locationY>
+        <assignmentItems>
+            <assignToReference>rec_ShipStationShipment.sstation__Order__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>rec_Order.Id</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>rec_ShipStationShipment.Name</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>rec_Order.Name</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Set_Order_Status</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Set_Bill_To_and_Ship_To_and_Requested_Service</name>
+        <label>Set Bill To and Ship To and Requested Service</label>
+        <locationX>308</locationX>
+        <locationY>242</locationY>
+        <assignmentItems>
+            <assignToReference>rec_Order.BillToContactId</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>rec_Order.Account.PersonContactId</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>rec_Order.ShipToContactId</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>rec_Order.Account.PersonContactId</elementReference>
+            </value>
+        </assignmentItems>
+        <assignmentItems>
+            <assignToReference>rec_Order.Requested_Service__c</assignToReference>
+            <operator>Assign</operator>
+        </assignmentItems>
+        <connector>
+            <targetReference>Create_ShipStation_Shipment</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <description>This sets the status to AwaitingShipment which ShipStation will pickup and sync to ShipStation.</description>
+        <name>Set_Order_Status</name>
+        <label>Set Order Status</label>
+        <locationX>308</locationX>
+        <locationY>458</locationY>
+        <assignmentItems>
+            <assignToReference>rec_Order.Status</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <stringValue>AwaitingShipment</stringValue>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Update_Order</targetReference>
+        </connector>
+    </assignments>
+    <decisions>
+        <name>Are_There_Products</name>
+        <label>Are There Products</label>
+        <locationX>176</locationX>
+        <locationY>134</locationY>
+        <defaultConnector>
+            <targetReference>Set_Bill_To_and_Ship_To_and_Requested_Service</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Products Listed</defaultConnectorLabel>
+        <rules>
+            <name>No_Products</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>col_OrderItems</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <label>No Products</label>
+        </rules>
+    </decisions>
+    <description>This flow will be used to create a new ShipStation Record which will then sync over to ShipStation.</description>
+    <environments>Default</environments>
+    <interviewLabel>Autolaunch - Create ShipStation Record {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Autolaunch - Create ShipStation Record</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordCreates>
+        <name>Create_ShipStation_Shipment_Action</name>
+        <label>Create ShipStation Shipment</label>
+        <locationX>308</locationX>
+        <locationY>674</locationY>
+        <inputReference>rec_ShipStationShipment</inputReference>
+    </recordCreates>
+    <recordUpdates>
+        <name>Update_Order</name>
+        <label>Update Order</label>
+        <locationX>308</locationX>
+        <locationY>566</locationY>
+        <connector>
+            <targetReference>Create_ShipStation_Shipment_Action</targetReference>
+        </connector>
+        <inputReference>rec_Order</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Are_There_Products</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+    <variables>
+        <name>col_OrderItems</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>OrderItem</objectType>
+    </variables>
+    <variables>
+        <description>The Order Record</description>
+        <name>rec_Order</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Order</objectType>
+    </variables>
+    <variables>
+        <name>rec_ShipStationShipment</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>sstation__ShipStation_Shipment__c</objectType>
+    </variables>
+</Flow>

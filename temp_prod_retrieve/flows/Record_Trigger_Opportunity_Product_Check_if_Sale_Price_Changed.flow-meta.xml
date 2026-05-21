@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <customErrors>
+        <name>Can_t_Change_Sales_Price_Message</name>
+        <label>Can&apos;t Change Sales Price Message</label>
+        <locationX>753</locationX>
+        <locationY>1103</locationY>
+        <customErrorMessages>
+            <errorMessage>The price of a product on this opportunity has changed, so you do not have permission to edit it. Please contact your manager, who will be able to edit the opportunity, or the Help Desk Support Team.</errorMessage>
+            <isFieldError>false</isFieldError>
+        </customErrorMessages>
+    </customErrors>
+    <decisions>
+        <name>Does_Price_Match</name>
+        <label>Does Price Match</label>
+        <locationX>555</locationX>
+        <locationY>719</locationY>
+        <defaultConnector>
+            <targetReference>Can_t_Change_Sales_Price_Message</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Price Doesn&apos;t Match</defaultConnectorLabel>
+        <rules>
+            <name>Price_Matches</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.UnitPrice</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <elementReference>Get_Price_Book_Entry_Details.UnitPrice</elementReference>
+                </rightValue>
+            </conditions>
+            <label>Price Matches</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <description>We don&apos;t have a price on consult products for now this flow is failing. We are going to exclude consult products for now.</description>
+        <name>Is_Consult_Product</name>
+        <label>Is Consult Product</label>
+        <locationX>176</locationX>
+        <locationY>287</locationY>
+        <defaultConnector>
+            <targetReference>Is_the_Product_Sales_Tax</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Not a Consult Product</defaultConnectorLabel>
+        <rules>
+            <name>Consult_Product</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Product2.EHR_Profile_Id__c</leftValueReference>
+                <operator>IsBlank</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <label>Consult Product</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Is_New</name>
+        <label>Is New</label>
+        <locationX>753</locationX>
+        <locationY>503</locationY>
+        <defaultConnector>
+            <targetReference>Is_Price_Changed</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Existing</defaultConnectorLabel>
+        <rules>
+            <name>Is_New_Product</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>bool_IsNew</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Get_Price_Book_Entry_Details</targetReference>
+            </connector>
+            <label>Is New Product</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Is_Price_Changed</name>
+        <label>Is Price Changed</label>
+        <locationX>951</locationX>
+        <locationY>611</locationY>
+        <defaultConnectorLabel>Price Hasn&apos;t Changed</defaultConnectorLabel>
+        <rules>
+            <name>Price_has_changed</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.UnitPrice</leftValueReference>
+                <operator>IsChanged</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Can_t_Change_Sales_Price_Message</targetReference>
+            </connector>
+            <label>Price has changed</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <description>If the product is Sales Tax we allow the price to be changed.</description>
+        <name>Is_the_Product_Sales_Tax</name>
+        <label>Is the Product Sales Tax</label>
+        <locationX>456</locationX>
+        <locationY>395</locationY>
+        <defaultConnector>
+            <targetReference>Is_New</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Product is NOT Sales Tax</defaultConnectorLabel>
+        <rules>
+            <name>Product_is_Sales_Tax</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Product2Id</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>01t5a00000HHDXkAAP</stringValue>
+                </rightValue>
+            </conditions>
+            <label>Product is Sales Tax</label>
+        </rules>
+    </decisions>
+    <description>This flow is a Validation flow to ensure that only certain users can change the sales price on an opportunity line item</description>
+    <environments>Default</environments>
+    <formulas>
+        <name>bool_IsNew</name>
+        <dataType>Boolean</dataType>
+        <expression>IsNew()</expression>
+    </formulas>
+    <interviewLabel>Record Trigger - Opportunity Product - Check if Sale Price Changed {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Opportunity Product - Check if Sale Price Changed</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordLookups>
+        <name>Get_Price_Book_Entry_Details</name>
+        <label>Get Price Book Entry Details</label>
+        <locationX>555</locationX>
+        <locationY>611</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Does_Price_Match</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Id</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.PricebookEntryId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>PricebookEntry</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Is_Consult_Product</targetReference>
+        </connector>
+        <filterFormula>AND({!$UserRole.Id} != &apos;00E5a000001BBHREA4&apos;,
+{!$UserRole.Id} != &apos;00E5a000001QTSNEA4&apos;, 
+{!$UserRole.Id} != &apos;00E5a000001QTSDEA4&apos;, 
+{!$UserRole.Id} != &apos;00E5a000001QTSwEAO&apos;,
+ISBLANK({!$Record.Opportunity.Parent_Opportunity__c}))</filterFormula>
+        <object>OpportunityLineItem</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

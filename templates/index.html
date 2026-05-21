@@ -865,7 +865,7 @@
   }
 
   async function linkifySalesforceArtifacts(element) {
-    // Convert sf:// URLs to Salesforce Setup URLs
+    // Convert sf:// URLs to Salesforce URLs
     const links = await getMagicLinks();
     const magicLinkProd = links.prod || '';
     const magicLinkSandbox = links.sandbox || '';
@@ -886,28 +886,38 @@
       'validation-rule': '/setup/navigate/search/SObjectSetupPath?type=ValidationRule&name=',
     };
 
+    const magicLink = magicLinkProd || magicLinkSandbox;
+
     // Find all links with sf:// protocol
     element.querySelectorAll('a[href^="sf://"]').forEach(link => {
       const href = link.getAttribute('href');
-      const match = href.match(/^sf:\/\/([^/]+)\/(.+)$/);
-      if (!match) return;
 
-      const [, artifactType, artifactName] = match;
-      const pattern = artifactPatterns[artifactType];
-      if (!pattern) return;
-
-      // Default to Prod, fallback to Sandbox
-      const magicLink = magicLinkProd || magicLinkSandbox;
-      if (!magicLink) return;
-
-      // Construct Salesforce URL
-      const decodedName = decodeURIComponent(artifactName);
-      const salesforceUrl = magicLink + pattern + encodeURIComponent(decodedName);
-
-      link.setAttribute('href', salesforceUrl);
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
-      link.style.cursor = 'pointer';
+      // Try typed format first: sf://type/name
+      let typedMatch = href.match(/^sf:\/\/([^/]+)\/(.+)$/);
+      if (typedMatch) {
+        const [, artifactType, artifactName] = typedMatch;
+        const pattern = artifactPatterns[artifactType];
+        if (pattern) {
+          const decodedName = decodeURIComponent(artifactName);
+          const setupPath = pattern + encodeURIComponent(decodedName);
+          const salesforceUrl = magicLink + '&retURL=' + encodeURIComponent(setupPath);
+          link.setAttribute('href', salesforceUrl);
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener noreferrer');
+          link.style.cursor = 'pointer';
+        }
+      } else {
+        // Raw Salesforce ID format: sf://id
+        const idMatch = href.match(/^sf:\/\/(.+)$/);
+        if (idMatch) {
+          const id = idMatch[1];
+          const salesforceUrl = magicLink + '&retURL=/' + encodeURIComponent(id);
+          link.setAttribute('href', salesforceUrl);
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener noreferrer');
+          link.style.cursor = 'pointer';
+        }
+      }
     });
   }
 

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>58.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <description>This flow is a validation rule to make sure that when users are changing the main practitioner that they are choosing people of the same Practice Group.</description>
+    <environments>Default</environments>
+    <interviewLabel>Record Trigger - Validation - Main Practitioner Practice Group Mismatch {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Validation - Main Practitioner Practice Group Mismatch</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordUpdates>
+        <name>Set_Validation_Flag_True</name>
+        <label>Set Validation Flag True</label>
+        <locationX>176</locationX>
+        <locationY>287</locationY>
+        <inputAssignments>
+            <field>Validation_Practice_Group_Change__c</field>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Set_Validation_Flag_True</targetReference>
+        </connector>
+        <filterFormula>IF({!$UserRole.Name} = &apos;System Administration&apos;, FALSE,
+IF(ISNULL({!$Record__Prior.Main_Practitioner__c}) || ISBLANK({!$Record__Prior.Main_Practitioner__c}),FALSE,
+IF( ISNULL({!$Record__Prior.Main_Practitioner__r.Practice_Group__r.External_Id__c}) || ISBLANK({!$Record__Prior.Main_Practitioner__r.Practice_Group__r.External_Id__c}), FALSE, 
+IF({!$Record.Main_Practitioner__r.Practice_Group__r.External_Id__c} != {!$Record__Prior.Main_Practitioner__r.Practice_Group__r.External_Id__c}, TRUE, FALSE))))</filterFormula>
+        <object>Account</object>
+        <recordTriggerType>Update</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

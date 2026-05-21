@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <description>Sends a confirmation email when a Lab Order is created</description>
+    <environments>Default</environments>
+    <interviewLabel>Record Trigger - Lab Order - Confirmation Emailer {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Lab Order - Confirmation Emailer</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <object>Lab_Order__c</object>
+        <recordTriggerType>Create</recordTriggerType>
+        <scheduledPaths>
+            <connector>
+                <targetReference>Autolaunch_Lab_Order_Emailer</targetReference>
+            </connector>
+            <pathType>AsyncAfterCommit</pathType>
+        </scheduledPaths>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <subflows>
+        <name>Autolaunch_Lab_Order_Emailer</name>
+        <label>Autolaunch - Lab Order - Emailer</label>
+        <locationX>308</locationX>
+        <locationY>276</locationY>
+        <flowName>Autolaunch_Lab_Order_Emailer</flowName>
+        <inputAssignments>
+            <name>bool_SendConfirmationEmail</name>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <name>bool_SendTrackingEmail</name>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <name>rec_LabOrder</name>
+            <value>
+                <elementReference>$Record</elementReference>
+            </value>
+        </inputAssignments>
+    </subflows>
+    <triggerOrder>1120</triggerOrder>
+</Flow>

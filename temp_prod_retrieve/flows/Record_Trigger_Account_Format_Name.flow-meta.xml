@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <description>Before save flow that will run when Account or updated with a new name values. It will remove unnecessary white spaces</description>
+    <environments>Default</environments>
+    <formulas>
+        <name>txt_FormatFirstName</name>
+        <dataType>String</dataType>
+        <expression>TRIM(
+    SUBSTITUTE(
+        SUBSTITUTE(
+            SUBSTITUTE(
+                {!$Record.FirstName}, &quot;    &quot;, &quot; &quot;
+            ), &quot;   &quot;, &quot; &quot;
+        ), &quot;  &quot;, &quot; &quot;
+    )
+)</expression>
+    </formulas>
+    <formulas>
+        <name>txt_FormatLastName</name>
+        <dataType>String</dataType>
+        <expression>TRIM(
+    SUBSTITUTE(
+        SUBSTITUTE(
+            SUBSTITUTE(
+                {!$Record.LastName}, &quot;    &quot;, &quot; &quot;
+            ), &quot;   &quot;, &quot; &quot;
+        ), &quot;  &quot;, &quot; &quot;
+    )
+)</expression>
+    </formulas>
+    <formulas>
+        <name>txt_FormatMiddleName</name>
+        <dataType>String</dataType>
+        <expression>TRIM(
+    SUBSTITUTE(
+        SUBSTITUTE(
+            SUBSTITUTE(
+                {!$Record.MiddleName}, &quot;    &quot;, &quot; &quot;
+            ), &quot;   &quot;, &quot; &quot;
+        ), &quot;  &quot;, &quot; &quot;
+    )
+)</expression>
+    </formulas>
+    <interviewLabel>Record Trigger - Opportunity Line Item - Format Customer Name {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Account - Format Name</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordUpdates>
+        <description>Update Account Name with formatted value</description>
+        <name>Update_Formatted_Name</name>
+        <label>Update Formatted Name</label>
+        <locationX>176</locationX>
+        <locationY>287</locationY>
+        <inputAssignments>
+            <field>FirstName</field>
+            <value>
+                <elementReference>txt_FormatFirstName</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>LastName</field>
+            <value>
+                <elementReference>txt_FormatLastName</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>MiddleName</field>
+            <value>
+                <elementReference>txt_FormatMiddleName</elementReference>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Update_Formatted_Name</targetReference>
+        </connector>
+        <filterFormula>AND(
+    {!$Record.IsPersonAccount},
+    OR(
+        ISNEW(),
+        OR(
+            ISCHANGED({!$Record.FirstName}),
+            ISCHANGED({!$Record.LastName}),
+            ISCHANGED({!$Record.MiddleName})
+        )
+    )
+)</filterFormula>
+        <object>Account</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

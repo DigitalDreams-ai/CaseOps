@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>58.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <description>We want to override/set the Patient Record file name as this is will be used in the external systems.</description>
+        <name>Set_Patient_Agreement_Record_Name</name>
+        <label>Set Patient Agreement Record Name</label>
+        <locationX>176</locationX>
+        <locationY>287</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Name</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>form_txtName</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <description>This flow will ensure that whenever a new patient agreement is created that the name will stay in the same format for all records and for external systems to use.</description>
+    <environments>Default</environments>
+    <formulas>
+        <name>form_txtName</name>
+        <dataType>String</dataType>
+        <expression>{!$Record.Patient_Agreement_Configuration__r.Name} &amp; &apos;_&apos; &amp; {!form_txtYearSent}</expression>
+    </formulas>
+    <formulas>
+        <name>form_txtYearSent</name>
+        <dataType>String</dataType>
+        <expression>TEXT(YEAR(({!$Flow.CurrentDate})))</expression>
+    </formulas>
+    <interviewLabel>Record Trigger - Patient Agreement - Set Record Name {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Patient Agreement - Set Record Name</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Set_Patient_Agreement_Record_Name</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Patient_Agreement_Configuration__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <object>Patient_Agreement__c</object>
+        <recordTriggerType>Create</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

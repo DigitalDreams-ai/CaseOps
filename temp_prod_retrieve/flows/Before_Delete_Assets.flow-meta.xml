@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>52.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Add_to_Delete_Collection</name>
+        <label>Add to Delete Collection</label>
+        <locationX>270</locationX>
+        <locationY>551</locationY>
+        <assignmentItems>
+            <assignToReference>collectionMovementDelete</assignToReference>
+            <operator>Add</operator>
+            <value>
+                <elementReference>Loop_Movements</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Loop_Movements</targetReference>
+        </connector>
+    </assignments>
+    <decisions>
+        <name>Collection_Check</name>
+        <label>Collection Check</label>
+        <locationX>182</locationX>
+        <locationY>767</locationY>
+        <defaultConnectorLabel>Empty</defaultConnectorLabel>
+        <rules>
+            <name>Has_Records</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>collectionMovementDelete</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Delete_Movements</targetReference>
+            </connector>
+            <label>Has Records</label>
+        </rules>
+    </decisions>
+    <description>Deletes associated Inventory Movements</description>
+    <interviewLabel>Before Delete: Assets {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Before Delete: Assets</label>
+    <loops>
+        <name>Loop_Movements</name>
+        <label>Loop Movements</label>
+        <locationX>182</locationX>
+        <locationY>431</locationY>
+        <collectionReference>Get_Inventory_Movements</collectionReference>
+        <iterationOrder>Asc</iterationOrder>
+        <nextValueConnector>
+            <targetReference>Add_to_Delete_Collection</targetReference>
+        </nextValueConnector>
+        <noMoreValuesConnector>
+            <targetReference>Collection_Check</targetReference>
+        </noMoreValuesConnector>
+    </loops>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordDeletes>
+        <name>Delete_Movements</name>
+        <label>Delete Movements</label>
+        <locationX>50</locationX>
+        <locationY>887</locationY>
+        <inputReference>collectionMovementDelete</inputReference>
+    </recordDeletes>
+    <recordLookups>
+        <name>Get_Inventory_Movements</name>
+        <label>Get Inventory Movements</label>
+        <locationX>182</locationX>
+        <locationY>311</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Loop_Movements</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Asset__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.Id</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>false</getFirstRecordOnly>
+        <object>Inventory_Movement__c</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <start>
+        <locationX>56</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Get_Inventory_Movements</targetReference>
+        </connector>
+        <object>Asset</object>
+        <recordTriggerType>Delete</recordTriggerType>
+        <triggerType>RecordBeforeDelete</triggerType>
+    </start>
+    <status>Active</status>
+    <variables>
+        <name>collectionMovementDelete</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Inventory_Movement__c</objectType>
+    </variables>
+</Flow>

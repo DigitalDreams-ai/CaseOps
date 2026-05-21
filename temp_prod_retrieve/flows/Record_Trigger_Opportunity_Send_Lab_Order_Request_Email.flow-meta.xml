@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionCalls>
+        <name>Send_Email_Lab_Request</name>
+        <label>Send Email Lab Request</label>
+        <locationX>314</locationX>
+        <locationY>647</locationY>
+        <actionName>emailSimple</actionName>
+        <actionType>emailSimple</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>emailAddresses</name>
+            <value>
+                <elementReference>$Record.Account.PersonEmail</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>senderType</name>
+            <value>
+                <stringValue>OrgWideEmailAddress</stringValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>senderAddress</name>
+            <value>
+                <stringValue>no-reply@10xhealthsystem.com</stringValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>relatedRecordId</name>
+            <value>
+                <elementReference>$Record.Id</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>recipientId</name>
+            <value>
+                <elementReference>$Record.Account.PersonContact.Id</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>logEmailOnSend</name>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>emailTemplateId</name>
+            <value>
+                <elementReference>Get_Email_Template.Id</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>emailSimple</nameSegment>
+    </actionCalls>
+    <apiVersion>60.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <constants>
+        <description>00X7h000000nTVlEAM</description>
+        <name>EmailTemplateID</name>
+        <dataType>String</dataType>
+    </constants>
+    <constants>
+        <name>SenderEmail</name>
+        <dataType>String</dataType>
+    </constants>
+    <customErrors>
+        <name>Email_Bounced_Error</name>
+        <label>Email Bounced Error</label>
+        <locationX>50</locationX>
+        <locationY>647</locationY>
+        <customErrorMessages>
+            <errorMessage>The Email {!$Record.Account.PersonEmail} was bounced on {!$Record.Account.PersonEmailBouncedDate} due to reason:  {!$Record.Account.PersonEmailBouncedReason}.  Please verify and correct the email address on the Patient&apos;s Account.</errorMessage>
+            <isFieldError>false</isFieldError>
+        </customErrorMessages>
+    </customErrors>
+    <customErrors>
+        <name>Email_Template_Not_Exist</name>
+        <label>Email Template Not Exist</label>
+        <locationX>578</locationX>
+        <locationY>539</locationY>
+        <customErrorMessages>
+            <errorMessage>There is no email template named &quot;10X Lab Requisition - NEW&quot;, please get in touch with your Salesforce Administrator.</errorMessage>
+            <isFieldError>false</isFieldError>
+        </customErrorMessages>
+    </customErrors>
+    <decisions>
+        <name>Email_Bounced</name>
+        <label>Email Bounced</label>
+        <locationX>182</locationX>
+        <locationY>539</locationY>
+        <defaultConnector>
+            <targetReference>Send_Email_Lab_Request</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Email Not Bounced</defaultConnectorLabel>
+        <rules>
+            <name>Is_Email_Bounced</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Account.PersonEmailBouncedDate</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Email_Bounced_Error</targetReference>
+            </connector>
+            <label>Is Email Bounced</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Email_Template_Exists</name>
+        <label>Email Template Exists</label>
+        <locationX>380</locationX>
+        <locationY>431</locationY>
+        <defaultConnector>
+            <targetReference>Email_Template_Not_Exist</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Not Exists Email Template</defaultConnectorLabel>
+        <rules>
+            <name>Exists_Email_Template</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>Get_Email_Template.Id</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Email_Bounced</targetReference>
+            </connector>
+            <label>Exists Email Template</label>
+        </rules>
+    </decisions>
+    <description>This flow will email the patient whenever an employee fills out the Lab Requisition ID on the Opportunity. We will notify the end user if there are any errors.</description>
+    <environments>Default</environments>
+    <interviewLabel>Record Trigger {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Opportunity - Send Lab Order Request Email</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordLookups>
+        <name>Get_Email_Template</name>
+        <label>Get Email Template</label>
+        <locationX>380</locationX>
+        <locationY>323</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Email_Template_Exists</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>DeveloperName</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>X10X_Lab_Requisition_Visual_1707325954788</stringValue>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>EmailTemplate</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <start>
+        <locationX>254</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Get_Email_Template</targetReference>
+        </connector>
+        <filterFormula>AND(
+OR(
+AND (ISNEW(), NOT(ISBLANK({!$Record.Lab_Order_Request_Id__c}))),
+AND(NOT(ISBLANK({!$Record.Lab_Order_Request_Id__c})),ISBLANK({!$Record__Prior.Lab_Order_Request_Id__c}))
+),
+OR(
+{!$Record.RecordType.DeveloperName}=&apos;Hormone_Evaluation_Record_Type&apos;,
+{!$Record.RecordType.DeveloperName}=&apos;Lab_Opportunity_Record_Type&apos;
+)
+)</filterFormula>
+        <object>Opportunity</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

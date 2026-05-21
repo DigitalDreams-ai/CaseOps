@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionCalls>
+        <description>Sends email alert with a link to the Matching Account for the New Lead.</description>
+        <name>Send_notification_to_New_Lead_Owner</name>
+        <label>Send notification to New Lead Owner</label>
+        <locationX>176</locationX>
+        <locationY>539</locationY>
+        <actionName>Lead.Send_New_Matching_Lead_Email_to_Account_Owner</actionName>
+        <actionType>emailAlert</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>SObjectRowId</name>
+            <value>
+                <elementReference>$Record.Id</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>Lead.Send_New_Matching_Lead_Email_to_Account_Owner</nameSegment>
+        <offset>0</offset>
+    </actionCalls>
+    <apiVersion>63.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Assign_Matching_Account_Owner_Id</name>
+        <label>Assign Matching Account Owner Id</label>
+        <locationX>176</locationX>
+        <locationY>323</locationY>
+        <assignmentItems>
+            <assignToReference>MatchingAccountOwnerId</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Record.Matching_Account__r.OwnerId</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Update_Lead_Owner</targetReference>
+        </connector>
+    </assignments>
+    <description>Sets the Lead Owner to the same as a matching Existing Account and notifies the Lead Owner</description>
+    <environments>Default</environments>
+    <interviewLabel>Record Triggered Flow - Lead - Reassign Lead to Matching Account Owner {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Triggered Flow - Lead - Reassign Lead to Matching Account Owner</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordUpdates>
+        <description>Sets the Lead Owner to the same User as the Matching Account</description>
+        <name>Update_Lead_Owner</name>
+        <label>Update Lead Owner</label>
+        <locationX>176</locationX>
+        <locationY>431</locationY>
+        <connector>
+            <targetReference>Send_notification_to_New_Lead_Owner</targetReference>
+        </connector>
+        <inputAssignments>
+            <field>OwnerId</field>
+            <value>
+                <elementReference>MatchingAccountOwnerId</elementReference>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Assign_Matching_Account_Owner_Id</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Matching_Account__c</field>
+            <operator>IsChanged</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Matching_Account__c</field>
+            <operator>NotEqualTo</operator>
+        </filters>
+        <filters>
+            <field>OwnerId</field>
+            <operator>IsChanged</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <object>Lead</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <variables>
+        <name>MatchingAccountOwnerId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>true</isOutput>
+    </variables>
+</Flow>
