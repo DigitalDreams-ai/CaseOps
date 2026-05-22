@@ -9,17 +9,23 @@
 
 ## Summary
 
-Shopify MGT/GHT orders created between 3/18–3/27/2026 did not receive "Informed Consent 2026" (Explicit Consent) assignment due to a temporary integration failure in the Shopify→SF order sync automation. A fix was deployed on 3/27 that restored forward-looking assignment for post-3/27 orders.
+Shopify MGT/GHT orders created between 3/18–3/27/2026 did not receive "Informed Consent 2026" assignment due to a temporary integration failure in the Shopify→SF order sync automation. A fix was deployed on 3/27 that restored forward-looking assignment for post-3/27 orders.
 
-**Action required:** Backfill missing "Informed Consent" records to 54 affected accounts in the 3/18–3/27 window.
+**Action required:** Backfill missing "Informed Consent 2026" records to 41 affected accounts in the 3/18–3/27 window.
+
+**Scope note:** Some accounts may have older Informed Consent records (pre-2026 versions) but lack the required current-year version. The flow checks "if Informed Consent 2026 already exists" before creating; it will skip accounts that already have the 2026 version.
 
 ---
 
 ## Affected Accounts
 
-**Total:** 54 accounts  
+**Total:** 41 accounts  
+**Date range:** Shopify orders created 3/18–3/27/2026  
+**Filter:** Accounts with Shopify (Store) orders that do NOT have Patient_Agreement__c with Name LIKE '%2026%'  
 **Data source:** Production SOQL query (read-only verified 2026-05-22)  
 **File:** `HEAL-32826-affected-accounts.csv`
+
+**Note:** 54 total Shopify orders exist in window; 41 lack the 2026 Informed Consent version. Some of the 41 may have older Informed Consent versions but still need 2026 added.
 
 ---
 
@@ -91,11 +97,12 @@ END
 
 After backfill execution:
 
-- [ ] All 54 accounts have Patient_Agreement__c records created
+- [ ] All 41 accounts have Patient_Agreement__c records with 2026 version created
+- [ ] Each record Name contains "2026" (e.g., "Informed Consent_2026")
 - [ ] Each record has Consent_Type__c = "Explicit Consent"
 - [ ] Each record has Status__c = "Sent"
 - [ ] Creation_Source__c = "Salesforce"
-- [ ] No duplicate records created (flow duplicate-prevention logic)
+- [ ] No duplicate records created (flow has duplicate-prevention logic; safe to skip if 2026 already exists)
 - [ ] Dispatch_Platform__c set correctly for Chrono downstream sync
 - [ ] No errors in flow execution logs
 
@@ -104,14 +111,14 @@ After backfill execution:
 SELECT COUNT() FROM Patient_Agreement__c 
 WHERE Patient__c IN (
   SELECT Id FROM Account 
-  WHERE Id IN (<54 account IDs from HEAL-32826-affected-accounts.csv>)
+  WHERE Id IN (<41 account IDs from HEAL-32826-affected-accounts.csv>)
 )
-AND Consent_Type__c = 'Explicit Consent'
+AND Name LIKE '%2026%'
 AND Status__c = 'Sent'
 AND CreatedDate >= 2026-05-22T00:00:00Z
 ```
 
-**Expected result:** 54 records
+**Expected result:** 41 records (minimum; may be more if duplicates created)
 
 ---
 
