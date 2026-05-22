@@ -967,9 +967,19 @@ a:hover {
   right: 6px;
   width: 12px;
   height: 12px;
-  background: #ff6c2f;
+  background: rgba(255, 108, 47, 0.2);
   border-radius: 2px;
-  box-shadow: inset 0 0 0 2px #ff6c2f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.new-comments-indicator::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  background: #ff6c2f;
+  border-radius: 50%;
 }
 
 /* Scrollbar styling */
