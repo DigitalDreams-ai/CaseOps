@@ -1021,15 +1021,39 @@
       const primaryHost = prodHost || sandboxHost;
       if (!primaryHost && !sandboxHost) return;
 
-      const salesforceUrl = (host, id, isSandbox = false) =>
-        `https://${host}${isSandbox ? '.sandbox' : ''}.lightning.force.com/${encodeURIComponent(id)}`;
-      const salesforceIdRe = /\b(?:00N|00O|00P|00X|01t|02s|0Af|0Pa|0PS|09D|300|301|500|801|006|001|a[0-9A-Za-z]{2})[a-zA-Z0-9]{12}(?:[a-zA-Z0-9]{3})?\b/g;
+      const salesforceObjectByPrefix = {
+        '001': 'Account',
+        '005': 'User',
+        '006': 'Opportunity',
+        '00N': 'CustomField',
+        '00O': 'Report',
+        '00P': 'Document',
+        '00X': 'EmailTemplate',
+        '01t': 'Product2',
+        '02s': 'EmailMessage',
+        '09D': 'EmailServicesAddress',
+        '0PS': 'PermissionSet',
+        '300': 'FlowDefinition',
+        '301': 'Flow',
+        '500': 'Case',
+        '801': 'Order'
+      };
+      const salesforceUrl = (host, id) => {
+        const objectApiName = salesforceObjectByPrefix[id.slice(0, 3)];
+        const path = objectApiName
+          ? `/lightning/r/${encodeURIComponent(objectApiName)}/${encodeURIComponent(id)}/view`
+          : `/lightning/r/${encodeURIComponent(id)}/view`;
+        return `https://${host}.lightning.force.com${path}`;
+      };
+      const salesforceIdPrefixPattern = '(?:00N|00O|00P|00X|01t|02s|09D|0PS|300|301|500|801|006|005|001|a[0-9A-Za-z]{2})';
+      const salesforceIdRe = new RegExp(`\\b${salesforceIdPrefixPattern}[a-zA-Z0-9]{12}(?:[a-zA-Z0-9]{3})?\\b`, 'g');
+      const salesforceIdExactRe = new RegExp(`^${salesforceIdPrefixPattern}[a-zA-Z0-9]{12}(?:[a-zA-Z0-9]{3})?$`);
 
       // Handle explicit ID links (sf://00N...)
       element.querySelectorAll('a[href^="sf://"]').forEach(link => {
         const href = link.getAttribute('href');
         const idMatch = href.match(/^sf:\/\/([a-zA-Z0-9]{15,18})$/);
-        if (!idMatch || !primaryHost) return;
+        if (!idMatch || !primaryHost || !salesforceIdExactRe.test(idMatch[1])) return;
         link.setAttribute('href', salesforceUrl(primaryHost, idMatch[1]));
         link.setAttribute('target', '_blank');
         link.setAttribute('rel', 'noopener noreferrer');
@@ -1109,7 +1133,7 @@
 
           if (prodHost && sandboxHost) {
             const sandbox = document.createElement('a');
-            sandbox.href = salesforceUrl(sandboxHost, id, true);
+            sandbox.href = salesforceUrl(sandboxHost, id);
             sandbox.target = '_blank';
             sandbox.rel = 'noopener noreferrer';
             sandbox.className = 'sf-id-alt-link';

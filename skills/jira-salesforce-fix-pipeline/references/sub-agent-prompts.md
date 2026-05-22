@@ -170,6 +170,8 @@ FORMAT: [artifact_type: artifact_name](sf://salesforce_id)
 EXAMPLES:
 - [Flow: Case_Assign_RoundRobin](sf://300000000000000AAA)
 - [Flow active version: Case_Assign_RoundRobin v8](sf://301000000000000AAA)
+- [Permission Set: Lab_Providers_C_R_E](sf://0PS000000000000AAA)
+- [User: Jane Example](sf://005000000000000AAA)
 - [Field: Account.Industry__c](sf://00N000000000000AAA)
 - [Email Template: Follow Up](sf://00X000000000000AAA)
 - [Record: Example Opportunity](sf://006000000000000AAA)
@@ -179,7 +181,11 @@ Resolver rules:
 ✓ Use the Production Id for Production findings; use the Sandbox Id for Sandbox-only changed metadata
 ✓ For Flows, query Tooling API `FlowDefinition` and link the FlowDefinition Id (`300...`) by default
 ✓ Also include the active Flow version Id (`301...`) when version specificity matters
+✓ For Permission Sets, query `PermissionSet` and link the PermissionSet Id (`0PS...`)
+✓ For Users, link the User Id (`005...`) when user records are part of the evidence
 ✓ For custom fields, use the field DurableId component Id (`00N...`) when available
+✓ Do not linkify deployment/deploy request Ids (`0Af...`); those are transient deployment records
+✓ Do not linkify Permission Set Assignment Ids (`0Pa...`); they are junction records and often fail for normal admins
 ✓ If no Id is available, write the artifact name as plain text and explicitly mark "Id not resolved"
 ✓ Do not emit typed pseudo links such as `sf://flow/Flow_API_Name` or `sf://field/Object/Field__c`
 

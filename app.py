@@ -14,6 +14,7 @@ import json
 import os
 import queue
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -1594,6 +1595,21 @@ def _resolve_artifact_id(artifact_type: str, api_name: str, org_identifier: str)
         else:
             artifact_metadata_cache.pop(cache_key, None)
 
+    artifact_type_key = artifact_type.replace("-", "").replace("_", "").lower()
+    artifact_type_map = {
+        "field": "Field",
+        "permissionset": "PermissionSet",
+        "profile": "Profile",
+        "flow": "Flow",
+        "validationrule": "ValidationRule",
+        "customobject": "CustomObject",
+        "apexclass": "ApexClass",
+        "apextrigger": "ApexTrigger",
+        "apexpage": "ApexPage",
+        "customsetting": "CustomSetting",
+    }
+    artifact_type = artifact_type_map.get(artifact_type_key, artifact_type)
+
     # Map artifact type to Salesforce metadata query
     queries = {
         "Field": f"SELECT Id FROM FieldDefinition WHERE QualifiedApiName = '{api_name}'",
@@ -1611,6 +1627,8 @@ def _resolve_artifact_id(artifact_type: str, api_name: str, org_identifier: str)
     if artifact_type not in queries:
         return None
 
+    tooling_types = {"Field", "Flow", "ValidationRule", "CustomObject", "ApexClass", "ApexTrigger", "ApexPage", "CustomSetting"}
+
     try:
         # Determine target org
         if org_identifier == "sandbox":
@@ -1623,11 +1641,14 @@ def _resolve_artifact_id(artifact_type: str, api_name: str, org_identifier: str)
 
         # Query via sf CLI
         cmd = [
-            "sf", "org", "data", "query",
+            shutil.which("sf") or shutil.which("sf.cmd") or "sf",
+            "data", "query",
             "--query", queries[artifact_type],
             "--target-org", target_org,
             "--json"
         ]
+        if artifact_type in tooling_types:
+            cmd.insert(3, "--use-tooling-api")
         result = subprocess.run(
             cmd,
             capture_output=True,
