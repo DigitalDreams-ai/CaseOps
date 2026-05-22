@@ -14,6 +14,7 @@ from threading import Lock
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from caseops_paths import default_jira_dir
 from jira_sync import JiraClient
 
 POLL_INTERVAL = 600  # 10 minutes in seconds
@@ -71,7 +72,7 @@ def poll_comments(client: JiraClient, issues: list[str], manifest: dict[str, dic
     changed_keys = []
     for key in issues:
         try:
-            comments = client.get_paginated(f"/rest/api/3/issue/{key}/comment", "comments")
+            comments = client.get_paginated(f"/rest/api/3/issue/{key}/comment", "comments", page_size=100)
             new_count = len(comments)
             old_row = manifest.get(key, {})
             old_count = int(old_row.get("CommentCount", "0") or "0")
@@ -147,7 +148,7 @@ def main() -> int:
         auth_header=auth_header,
     )
 
-    jira_dir = Path(__file__).parent.parent / "caseops" / "data" / "jira"
+    jira_dir = default_jira_dir(for_write=True)
     manifest_path = jira_dir / "manifest.csv"
 
     print(f"[Comments Poller] Starting (poll interval: {POLL_INTERVAL}s)", flush=True)
