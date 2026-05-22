@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Lightweight Jira comments poller. Updates manifest.csv every 10 minutes with new comment counts."""
 
+import base64
 import csv
 import json
 import os
@@ -126,14 +127,24 @@ def main() -> int:
             os.environ[key] = value
 
     # Validate Jira auth
-    if not os.environ.get("JIRA_BASE_URL"):
+    base_url = os.environ.get("JIRA_BASE_URL", "").strip()
+    email = os.environ.get("JIRA_EMAIL", "").strip()
+    api_token = os.environ.get("JIRA_API_TOKEN", "").strip()
+
+    if not base_url:
         print("ERROR: JIRA_BASE_URL not set in .env.jira", file=sys.stderr, flush=True)
         return 1
+    if not email or not api_token:
+        print("ERROR: JIRA_EMAIL and JIRA_API_TOKEN required in .env.jira", file=sys.stderr, flush=True)
+        return 1
+
+    # Build auth header (Basic auth with base64-encoded email:token)
+    auth_token = base64.b64encode(f"{email}:{api_token}".encode("utf-8")).decode("ascii")
+    auth_header = f"Basic {auth_token}"
 
     client = JiraClient(
-        base_url=os.environ.get("JIRA_BASE_URL", ""),
-        email=os.environ.get("JIRA_EMAIL", ""),
-        api_token=os.environ.get("JIRA_API_TOKEN", ""),
+        base_url=base_url,
+        auth_header=auth_header,
     )
 
     jira_dir = Path(__file__).parent.parent / "caseops" / "data" / "jira"
