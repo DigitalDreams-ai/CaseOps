@@ -1,7 +1,0 @@
-extract:
-  Account:
-    fields:
-    - Phone
-    - Type
-    - Industry
-    - Name
