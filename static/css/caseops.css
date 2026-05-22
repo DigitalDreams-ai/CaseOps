@@ -961,6 +961,12 @@ a:hover {
   color: var(--color-danger);
 }
 
+.badge.new-comments {
+  background: rgba(255, 108, 47, 0.2);
+  color: #ff6c2f;
+  font-weight: 600;
+}
+
 /* Scrollbar styling */
 /* ── Attachments ──────────────────────────────────────────── */
 

@@ -107,15 +107,18 @@ def main() -> int:
     )
 
     # Filter to only new issues if --new-only
+    # Load existing manifest to track comment counts and flags
+    manifest_path = out_dir / "manifest.csv"
+    old_manifest: dict[str, dict[str, str]] = {}
+    if manifest_path.exists():
+        try:
+            rows = list(csv.DictReader(manifest_path.read_text(encoding="utf-8").splitlines()))
+            old_manifest = {row["Key"]: row for row in rows if row.get("Key")}
+        except Exception:
+            pass
+
     if args.new_only and not args.issue:
-        manifest_path = out_dir / "manifest.csv"
-        existing_keys = set()
-        if manifest_path.exists():
-            try:
-                rows = list(csv.DictReader(manifest_path.read_text(encoding="utf-8").splitlines()))
-                existing_keys = {row["Key"] for row in rows if row.get("Key")}
-            except Exception:
-                pass
+        existing_keys = set(old_manifest.keys())
         keys = [k for k in keys if k not in existing_keys]
         print(f"Filtered to {len(keys)} new issue(s) (not in manifest)")
     newest_updated = state.get("newestUpdated")
@@ -177,6 +180,12 @@ def main() -> int:
             priority_name = pri_raw.get("name") or ""
         duedate = issue.get("fields", {}).get("duedate") or ""
 
+        # Track comment count and detect new comments
+        new_comment_count = len(comments)
+        old_row = old_manifest.get(key, {})
+        old_comment_count = int(old_row.get("CommentCount", "0"))
+        has_new_comments = "true" if new_comment_count > old_comment_count else old_row.get("HasNewComments", "false")
+
         manifest_rows.append(
             {
                 "Key": key,
@@ -189,6 +198,8 @@ def main() -> int:
                 "SummaryPath": str(summary_dir / f"{key}.md").replace("\\", "/"),
                 "AttachmentCount": str(len(attachments)),
                 "FormCount": str(len(forms)),
+                "CommentCount": str(new_comment_count),
+                "HasNewComments": has_new_comments,
             }
         )
 
@@ -818,6 +829,8 @@ MANIFEST_FIELDNAMES = [
     "SummaryPath",
     "AttachmentCount",
     "FormCount",
+    "CommentCount",
+    "HasNewComments",
     "EscalationReady",
 ]
 

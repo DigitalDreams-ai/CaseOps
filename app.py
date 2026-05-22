@@ -1003,6 +1003,7 @@ def api_issues():
         status = row.get("Status", "")
         flags = _pipeline_file_flags(key)
         due = row.get("Due", "") or ""
+        has_new_comments = row.get("HasNewComments", "false").lower() == "true"
         result.append({
             "key": key,
             "status": status,
@@ -1013,6 +1014,7 @@ def api_issues():
             "priority_name": row.get("Priority", "") or "",
             "sla_remaining_ms": _sla_remaining_ms(due),
             "jira_url": f"{JIRA_BASE_URL}/browse/{key}" if JIRA_BASE_URL else "",
+            "hasNewComments": has_new_comments,
             **flags,
         })
     return jsonify(result)
@@ -1338,6 +1340,44 @@ def api_issue_transition(key: str):
         sys.stderr.write(f"Warning: failed to update manifest for {key}: {e}\n")
 
     return jsonify({"ok": True, "new_status": new_status})
+
+
+@app.post("/api/issue/<key>/mark-viewed")
+def api_issue_mark_viewed(key: str):
+    """Clear the HasNewComments flag for an issue."""
+    manifest_path = _manifest_path()
+    if not manifest_path.exists():
+        return jsonify({"error": "manifest not found"}), 404
+
+    fieldnames = ["Key", "Status", "Summary", "Updated", "Due", "Priority", "RawPath", "SummaryPath",
+                  "AttachmentCount", "FormCount", "CommentCount", "HasNewComments", "EscalationReady"]
+    rows: list[dict[str, str]] = []
+    try:
+        with manifest_path.open(encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f):
+                rows.append({fn: row.get(fn, "") for fn in fieldnames})
+    except Exception as e:
+        return jsonify({"error": str(e)[:300]}), 500
+
+    found = False
+    for row in rows:
+        if row.get("Key") == key:
+            row["HasNewComments"] = "false"
+            found = True
+            break
+
+    if not found:
+        return jsonify({"error": f"issue {key} not found"}), 404
+
+    try:
+        with manifest_path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(rows)
+    except Exception as e:
+        return jsonify({"error": str(e)[:300]}), 500
+
+    return jsonify({"ok": True, "key": key})
 
 
 @app.route("/api/canned-messages", methods=["GET"])
