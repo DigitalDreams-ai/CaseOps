@@ -41,6 +41,9 @@ robot/Standard-Unlocked/results/
 node_modules/
 .eslintcache
 
+# Temporary metadata retrieval and testing (sf CLI)
+temp/
+
 # Logs
 logs/
 *.log
