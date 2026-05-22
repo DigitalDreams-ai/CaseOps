@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Genetic_Testing_Promotion__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <label>Genetic Testing Promotion</label>
+    <lookupFilter>
+        <active>true</active>
+        <filterItems>
+            <field>Promotions__c.Promotion_Status__c</field>
+            <operation>equals</operation>
+            <value>Active</value>
+        </filterItems>
+        <filterItems>
+            <field>Promotions__c.Genetic_Testing_Promotion_Lookup__c</field>
+            <operation>equals</operation>
+            <value>True</value>
+        </filterItems>
+        <isOptional>true</isOptional>
+    </lookupFilter>
+    <referenceTo>Promotions__c</referenceTo>
+    <relationshipLabel>Opportunities (Genetic Testing Promotion)</relationshipLabel>
+    <relationshipName>Opportunities6</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Promotion_Applied__c</fullName>
+    <formula>IF(Genetic_Testing_Promotion__c != NULL ||Aesthetics_Promotion__c != NULL ||  Sexual_Wellness_Promotion__c != NULL ||  Lab_Promotion__c != Null || Hormone_Evaluation_Promotion__c != NULL ||  Medical_Consultation_Promotion__c != NULL || Medication_Promotion__c != NULL, TRUE, FALSE)</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Promotion Applied</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

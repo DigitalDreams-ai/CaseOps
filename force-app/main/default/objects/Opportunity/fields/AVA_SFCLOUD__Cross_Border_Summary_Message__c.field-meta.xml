@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AVA_SFCLOUD__Cross_Border_Summary_Message__c</fullName>
+    <deprecated>false</deprecated>
+    <encryptionScheme>None</encryptionScheme>
+    <inlineHelpText>The resulting tax calculation response message indicating de minimus, source rules, and etc.</inlineHelpText>
+    <label>Cross Border Summary Message</label>
+    <length>131072</length>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+</CustomField>

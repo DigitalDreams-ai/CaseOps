@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Account_Status</fullName>
+    <active>true</active>
+    <description>If the Account status is cancelled or suspended we do not want to allow opportunities to be created.</description>
+    <errorConditionFormula>OR(
+ISPICKVAL(Account.Account_Status__c, &apos;Cancelled&apos;),
+ISPICKVAL(Account.Account_Status__c, &apos;Suspended&apos;)
+				)</errorConditionFormula>
+    <errorMessage>You are not allowed to make create an Opportunity for this Account because it is Suspended.</errorMessage>
+</ValidationRule>

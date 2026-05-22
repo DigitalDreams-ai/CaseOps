@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>QB_Discount_Name__c</fullName>
+    <externalId>false</externalId>
+    <formula>IF(NOT(ISBLANK(Medical_Consultation_Promotion__c)), LEFT(Medical_Consultation_Promotion__r.Name, 31),
+    IF(NOT(ISBLANK(Medication_Promotion__c)), LEFT(Medication_Promotion__r.Name, 31),
+        IF(NOT(ISBLANK(Sexual_Wellness_Promotion__c)), LEFT(Sexual_Wellness_Promotion__r.Name, 31),
+	    IF(NOT(ISBLANK(Lab_Promotion__c)), LEFT(Lab_Promotion__r.Name, 31),
+		    IF(NOT(ISBLANK(Aesthetics_Promotion__c)), LEFT(Aesthetics_Promotion__r.Name, 31),
+		    	    IF(NOT(ISBLANK(Hormone_Evaluation_Promotion__c)), LEFT(Hormone_Evaluation_Promotion__r.Name, 31), NULL))))))</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>QB Discount Name</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

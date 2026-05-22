@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Close_Won_NO_EDIT</fullName>
+    <active>true</active>
+    <description>Operations Admin
+System Administrator
+New Finance
+Shipping Coordinator
+Office Staff</description>
+    <errorConditionFormula>AND(
+    ISPICKVAL(PRIORVALUE(StageName),&quot;Closed Won&quot;),
+    NOT($Profile.Id = &quot;00e5a0000018d9a&quot;),
+    NOT($UserRole.Id = &quot;00E5a000001BBHR&quot;),
+    NOT($Profile.Id = &quot;00e5a0000018d9G&quot;),
+    NOT($UserRole.Id = &quot;00E5a000001QTSr&quot;),
+    NOT($UserRole.Id = &quot;00E5a000001QTSm&quot;),
+    NOT($Permission.Opportunity_Edit_Closed_Won)
+)</errorConditionFormula>
+    <errorMessage>You Can Not Edit This Opportunity Because Has Been Closed Won</errorMessage>
+</ValidationRule>

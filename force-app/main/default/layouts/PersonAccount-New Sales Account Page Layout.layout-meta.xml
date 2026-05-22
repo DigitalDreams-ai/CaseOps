@@ -210,6 +210,10 @@
                 <field>VIP_Account__c</field>
             </layoutItems>
             <layoutItems>
+                <behavior>Readonly</behavior>
+                <field>Cardone_Ventures_Employee__c</field>
+            </layoutItems>
+            <layoutItems>
                 <behavior>Edit</behavior>
                 <field>Net_Terms__c</field>
             </layoutItems>
