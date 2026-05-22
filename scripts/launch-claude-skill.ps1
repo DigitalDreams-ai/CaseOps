@@ -18,8 +18,8 @@ if ($IssueKey -notmatch '^HEAL-\d+$') {
     exit 1
 }
 
-# Get repo root
-$RepoRoot = Split-Path -Parent $PSCommandPath
+# Get repo root (parent of scripts directory)
+$RepoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 if (-not (Test-Path "$RepoRoot\.env.jira")) {
     Write-Host "ERROR: .env.jira not found at $RepoRoot" -ForegroundColor Red
     exit 1

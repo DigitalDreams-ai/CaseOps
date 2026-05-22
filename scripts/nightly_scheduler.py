@@ -21,8 +21,11 @@ from datetime import datetime
 from pathlib import Path
 import schedule
 
-# Setup logging
-log_dir = Path(__file__).parent / "logs"
+# Add repo root to path so we can import from root
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+# Setup logging (in root logs directory)
+log_dir = Path(__file__).resolve().parent.parent / "logs"
 log_dir.mkdir(exist_ok=True)
 log_file = log_dir / "nightly_precompute.log"
 
