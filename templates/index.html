@@ -776,6 +776,10 @@
 
     // Clear "new comments" indicator when user views the issue
     if (issue.hasNewComments) {
+      // Remove indicator from DOM immediately
+      const indicator = document.querySelector(`.issue-item[data-key="${CSS.escape(key)}"] .new-comments-indicator`);
+      if (indicator) indicator.remove();
+      // Update server state
       fetch(`/api/issue/${key}/mark-viewed`, { method: 'POST' })
         .catch(() => { /* non-fatal */ });
     }
