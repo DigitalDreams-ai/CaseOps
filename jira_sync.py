@@ -113,7 +113,10 @@ def main() -> int:
     if manifest_path.exists():
         try:
             rows = list(csv.DictReader(manifest_path.read_text(encoding="utf-8").splitlines()))
-            old_manifest = {row["Key"]: row for row in rows if row.get("Key")}
+            old_manifest = {
+                row["Key"]: {k: (v or ("0" if k in NUMERIC_COUNT_FIELDS else "")) for k, v in row.items()}
+                for row in rows if row.get("Key")
+            }
         except Exception:
             pass
 
@@ -183,7 +186,7 @@ def main() -> int:
         # Track comment count and detect new comments
         new_comment_count = len(comments)
         old_row = old_manifest.get(key, {})
-        old_comment_count = int(old_row.get("CommentCount", "0") or "0")
+        old_comment_count = int(old_row.get("CommentCount", "0"))
         has_new_comments = "true" if new_comment_count > old_comment_count else old_row.get("HasNewComments", "false")
 
         manifest_rows.append(
@@ -834,6 +837,8 @@ MANIFEST_FIELDNAMES = [
     "EscalationReady",
 ]
 
+NUMERIC_COUNT_FIELDS = {"AttachmentCount", "FormCount", "CommentCount"}
+
 
 def write_manifest(path: Path, rows: list[dict[str, str]]) -> None:
     fieldnames = MANIFEST_FIELDNAMES
@@ -844,9 +849,9 @@ def write_manifest(path: Path, rows: list[dict[str, str]]) -> None:
             for row in csv.DictReader(fh):
                 key = row.get("Key", "")
                 if key:
-                    existing[key] = {fn: row.get(fn, "") for fn in fieldnames}
+                    existing[key] = {fn: (row.get(fn, "") or ("0" if fn in NUMERIC_COUNT_FIELDS else "")) for fn in fieldnames}
     for row in rows:
-        existing[row["Key"]] = {fn: row.get(fn, "") for fn in fieldnames}
+        existing[row["Key"]] = {fn: (row.get(fn, "") or ("0" if fn in NUMERIC_COUNT_FIELDS else "")) for fn in fieldnames}
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
