@@ -183,7 +183,7 @@ def main() -> int:
         # Track comment count and detect new comments
         new_comment_count = len(comments)
         old_row = old_manifest.get(key, {})
-        old_comment_count = int(old_row.get("CommentCount", "0"))
+        old_comment_count = int(old_row.get("CommentCount", "0") or "0")
         has_new_comments = "true" if new_comment_count > old_comment_count else old_row.get("HasNewComments", "false")
 
         manifest_rows.append(
