@@ -961,10 +961,15 @@ a:hover {
   color: var(--color-danger);
 }
 
-.badge.new-comments {
-  background: rgba(255, 108, 47, 0.2);
-  color: #ff6c2f;
-  font-weight: 600;
+.new-comments-indicator {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 12px;
+  height: 12px;
+  background: #ff6c2f;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 2px #ff6c2f;
 }
 
 /* Scrollbar styling */

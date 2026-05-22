@@ -709,9 +709,9 @@
         label === 'Active' && issue.has_solution
           ? '<span class="badge solution" title="Agent has analyzed this issue and drafted a proposed solution (outputs/internal-notes + jira-messages). Solution may be local fix or escalation to Engineering.">Solution</span>'
           : '';
-      const newComments =
+      const newCommentsIndicator =
         issue.hasNewComments
-          ? '<span class="badge new-comments" title="New Jira comments since last view">● New Comments</span>'
+          ? '<div class="new-comments-indicator" title="New Jira comments since last view"></div>'
           : '';
       item.innerHTML = `
         <input type="checkbox" class="issue-checkbox" data-key="${escHtml(issue.key)}" ${isChecked ? 'checked' : ''}>
@@ -720,7 +720,6 @@
           <div class="issue-summary">${escHtml(issue.summary)}</div>
           <div class="issue-item-meta">
             <span class="badge ${issue.disposition}">${escHtml(issue.status)}</span>
-            ${newComments}
             ${needsTriage}
             ${solution}
             ${confirmed}
@@ -728,6 +727,7 @@
           </div>
         </div>
         <div class="issue-indicator" data-key="${escHtml(issue.key)}"></div>
+        ${newCommentsIndicator}
       `;
       // Checkbox click: toggle without selecting issue
       const checkbox = item.querySelector('.issue-checkbox');
