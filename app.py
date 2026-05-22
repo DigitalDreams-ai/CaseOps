@@ -63,7 +63,12 @@ jira_summary_cache: dict[str, dict[str, str]] = {}
 # Investigation file-flag cache: key → {"has_investigation": bool, "has_solution": bool}
 investigation_cache: dict[str, dict[str, bool]] = {}
 
+# Artifact metadata cache: "type:api_name" → {"id": "...", "expires": timestamp}
+# TTL: 24 hours
+artifact_metadata_cache: dict[str, dict[str, Any]] = {}
+
 _CACHE_MAX_KEYS = 100
+_ARTIFACT_CACHE_TTL_SECONDS = 86400  # 24 hours
 
 
 def _cache_evict(cache: dict) -> None:
@@ -1506,6 +1511,112 @@ def serve_issue_rollup(filename: str):
     if not path.is_file():
         return jsonify({"error": "not found"}), 404
     return send_file(path)
+
+
+def _resolve_artifact_id(artifact_type: str, api_name: str, org_identifier: str) -> str | None:
+    """Query Salesforce for artifact ID by type and API name. Returns ID or None if not found."""
+    cache_key = f"{artifact_type}:{api_name}:{org_identifier}"
+
+    # Check cache
+    if cache_key in artifact_metadata_cache:
+        entry = artifact_metadata_cache[cache_key]
+        if time.time() < entry.get("expires", 0):
+            return entry.get("id")
+        else:
+            artifact_metadata_cache.pop(cache_key, None)
+
+    # Map artifact type to Salesforce metadata query
+    queries = {
+        "Field": f"SELECT Id FROM FieldDefinition WHERE QualifiedApiName = '{api_name}'",
+        "PermissionSet": f"SELECT Id FROM PermissionSet WHERE Name = '{api_name.split('.')[-1] if '.' in api_name else api_name}'",
+        "Profile": f"SELECT Id FROM Profile WHERE Name = '{api_name}'",
+        "Flow": f"SELECT Id FROM Flow WHERE DeveloperName = '{api_name}'",
+        "ValidationRule": f"SELECT Id FROM ValidationRule WHERE ValidationName = '{api_name}'",
+        "CustomObject": f"SELECT Id FROM CustomObject WHERE DeveloperName = '{api_name}'",
+        "ApexClass": f"SELECT Id FROM ApexClass WHERE Name = '{api_name}'",
+        "ApexTrigger": f"SELECT Id FROM ApexTrigger WHERE Name = '{api_name}'",
+        "ApexPage": f"SELECT Id FROM ApexPage WHERE Name = '{api_name}'",
+        "CustomSetting": f"SELECT Id FROM CustomSetting WHERE DeveloperName = '{api_name}'",
+    }
+
+    if artifact_type not in queries:
+        return None
+
+    try:
+        # Determine target org
+        if org_identifier == "sandbox":
+            target_org = os.environ.get("CASEOPS_SANDBOX_TARGET_ORG", "")
+        else:
+            target_org = os.environ.get("CASEOPS_PRODUCTION_READ_ORG", "")
+
+        if not target_org:
+            return None
+
+        # Query via sf CLI
+        cmd = [
+            "sf", "org", "data", "query",
+            "--query", queries[artifact_type],
+            "--target-org", target_org,
+            "--json"
+        ]
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        if result.returncode != 0:
+            return None
+
+        data = json.loads(result.stdout)
+        records = data.get("result", {}).get("records", [])
+
+        if not records:
+            return None
+
+        artifact_id = records[0].get("Id")
+
+        # Cache result
+        if artifact_id:
+            artifact_metadata_cache[cache_key] = {
+                "id": artifact_id,
+                "expires": time.time() + _ARTIFACT_CACHE_TTL_SECONDS
+            }
+
+        return artifact_id
+
+    except Exception:
+        return None
+
+
+@app.post("/api/resolve-artifact")
+def api_resolve_artifact():
+    """Resolve Salesforce artifact ID from type and API name.
+
+    POST /api/resolve-artifact
+    Body: {"type": "Field", "apiName": "Product2.Calendly_Booking_Form_Name__c", "org": "sandbox"}
+
+    Response: {"id": "00N...", "cached": false} or {"id": null} if not found
+    """
+    body = request.get_json() or {}
+    artifact_type = body.get("type", "").strip()
+    api_name = body.get("apiName", "").strip()
+    org_identifier = body.get("org", "sandbox").strip()
+
+    if not artifact_type or not api_name:
+        return jsonify({"error": "missing type or apiName"}), 400
+
+    # Check cache status before query
+    cache_key = f"{artifact_type}:{api_name}:{org_identifier}"
+    was_cached = cache_key in artifact_metadata_cache and time.time() < artifact_metadata_cache[cache_key].get("expires", 0)
+
+    artifact_id = _resolve_artifact_id(artifact_type, api_name, org_identifier)
+
+    return jsonify({
+        "id": artifact_id,
+        "cached": was_cached
+    })
 
 
 @app.get("/api/magic-links")

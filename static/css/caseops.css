@@ -683,6 +683,24 @@ a:hover {
   vertical-align: middle;
 }
 
+.sf-type-link {
+  color: var(--color-link);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.sf-type-link:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.sf-unresolved-link {
+  color: #999;
+  text-decoration: line-through;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 #log-pane {
   display: flex;
   flex-direction: column;

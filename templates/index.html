@@ -926,6 +926,7 @@
     // Link Salesforce 15/18-char IDs directly using .env.jira org hosts:
     // https://[CASEOPS_PRODUCTION_READ_ORG].lightning.force.com/[Id]
     // https://[CASEOPS_SANDBOX_TARGET_ORG].lightning.force.com/[Id]
+    // Also resolve sf://Type/ApiName patterns to IDs via /api/resolve-artifact
     if (!element) return;
 
     try {
@@ -940,6 +941,7 @@
         `https://${host}.lightning.force.com/${encodeURIComponent(id)}`;
       const salesforceIdRe = /\b(?:00N|00O|00P|00X|01t|02s|0Af|0Pa|0PS|09D|300|301|500|801|006|001|a[0-9A-Za-z]{2})[a-zA-Z0-9]{12}(?:[a-zA-Z0-9]{3})?\b/g;
 
+      // Handle explicit ID links (sf://00N...)
       element.querySelectorAll('a[href^="sf://"]').forEach(link => {
         const href = link.getAttribute('href');
         const idMatch = href.match(/^sf:\/\/([a-zA-Z0-9]{15,18})$/);
@@ -950,6 +952,45 @@
         link.classList.add('sf-id-link');
         link.title = `Open ${idMatch[1]} in Salesforce`;
       });
+
+      // Handle typed artifact links (sf://Type/ApiName)
+      const typedLinks = Array.from(element.querySelectorAll('a[href^="sf://"]')).filter(link => {
+        const href = link.getAttribute('href');
+        return /^sf:\/\/[A-Z]\w+\/[\w.]+$/.test(href);
+      });
+
+      for (const link of typedLinks) {
+        const href = link.getAttribute('href');
+        const match = href.match(/^sf:\/\/([A-Z]\w+)\/(.+)$/);
+        if (!match) continue;
+
+        const [, artifactType, apiName] = match;
+        const org = prodHost ? 'prod' : 'sandbox';
+
+        try {
+          const resolveRes = await fetch('/api/resolve-artifact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: artifactType, apiName, org })
+          });
+          const resolveData = await resolveRes.json();
+          const id = resolveData.id;
+
+          if (id && primaryHost) {
+            link.setAttribute('href', salesforceUrl(primaryHost, id));
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener noreferrer');
+            link.classList.add('sf-type-link');
+            link.title = `Open ${artifactType}: ${apiName} in Salesforce`;
+          } else {
+            link.classList.add('sf-unresolved-link');
+            link.title = `Could not resolve ${artifactType}: ${apiName}`;
+          }
+        } catch (e) {
+          link.classList.add('sf-unresolved-link');
+          link.title = `Error resolving ${artifactType}: ${apiName}`;
+        }
+      }
 
       const skipTags = new Set(['A', 'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'BUTTON']);
       const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
