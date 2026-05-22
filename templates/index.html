@@ -951,8 +951,8 @@
       const primaryHost = prodHost || sandboxHost;
       if (!primaryHost && !sandboxHost) return;
 
-      const salesforceUrl = (host, id) =>
-        `https://${host}.lightning.force.com/${encodeURIComponent(id)}`;
+      const salesforceUrl = (host, id, isSandbox = false) =>
+        `https://${host}${isSandbox ? '.sandbox' : ''}.lightning.force.com/${encodeURIComponent(id)}`;
       const salesforceIdRe = /\b(?:00N|00O|00P|00X|01t|02s|0Af|0Pa|0PS|09D|300|301|500|801|006|001|a[0-9A-Za-z]{2})[a-zA-Z0-9]{12}(?:[a-zA-Z0-9]{3})?\b/g;
 
       // Handle explicit ID links (sf://00N...)
@@ -1039,7 +1039,7 @@
 
           if (prodHost && sandboxHost) {
             const sandbox = document.createElement('a');
-            sandbox.href = salesforceUrl(sandboxHost, id);
+            sandbox.href = salesforceUrl(sandboxHost, id, true);
             sandbox.target = '_blank';
             sandbox.rel = 'noopener noreferrer';
             sandbox.className = 'sf-id-alt-link';
