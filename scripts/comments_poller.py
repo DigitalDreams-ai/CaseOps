@@ -99,7 +99,7 @@ def poll_status_and_assignee(client: JiraClient, issues: list[str], manifest: di
     changed_keys = []
     for key in issues:
         try:
-            issue = client.get(f"/rest/api/3/issue/{key}?fields=status,assignee")
+            issue = client.get_issue(key, ["status", "assignee"])
             if not issue:
                 continue
 
