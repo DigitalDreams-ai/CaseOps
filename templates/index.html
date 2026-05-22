@@ -181,6 +181,7 @@
   /** Incremented on each selectTab call; stale tab fetches must not overwrite the panel. */
   let selectTabSeq = 0;
   let eventSource = null;
+  let issuesEventSource = null;
   const activeRuns = new Set();
   const selectedIssues = new Set();
   let currentSort = 'number';
@@ -380,6 +381,35 @@
       } else {
         logLine('SSE stream failed. Manual refresh may be needed.', 'err', '__global__');
       }
+    };
+  }
+
+  function initIssuesSSE() {
+    if (issuesEventSource) return;
+    issuesEventSource = new EventSource('/api/issues-sse');
+    issuesEventSource.onmessage = e => {
+      const msg = e.data;
+      if (msg.startsWith('updated:')) {
+        const changedStr = msg.slice(8);
+        const allChanged = changedStr === 'all';
+        if (allChanged) {
+          loadIssues().then(() => {
+            if (activeKey) selectIssue(activeKey);
+          });
+        } else {
+          const changedKeys = changedStr.split(',').filter(k => k);
+          loadIssues().then(() => {
+            if (activeKey && changedKeys.includes(activeKey)) {
+              selectIssue(activeKey);
+            }
+          });
+        }
+      }
+    };
+    issuesEventSource.onerror = () => {
+      issuesEventSource.close();
+      issuesEventSource = null;
+      setTimeout(initIssuesSSE, 5000);
     };
   }
 
@@ -1996,9 +2026,11 @@
       await loadPipelineHistory('__global__');
       await restoreIssueFromSession();
       initStream();
+      initIssuesSSE();
     })
     .catch(() => {
       initStream();
+      initIssuesSSE();
     });
   initLogPaneLayout();
   document.getElementById('dashboard').addEventListener('click', ev => {

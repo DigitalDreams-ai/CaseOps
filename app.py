@@ -210,6 +210,12 @@ def _log_emit_done(run_key: str) -> None:
     _persist_pipeline_record(run_key, "", kind="done")
 
 
+def manifest_changed(changed_keys: list[str] | None = None) -> None:
+    """Signal that manifest.csv was updated. Broadcasts to all SSE clients."""
+    msg = f"updated:{','.join(changed_keys)}" if changed_keys else "updated:all"
+    _manifest_q.put(msg)
+
+
 def _read_pipeline_log_entries(run_key: str) -> list[dict[str, Any]]:
     path = _pipeline_log_path(run_key)
     if not path.is_file():
@@ -242,6 +248,7 @@ def _read_pipeline_log_entries(run_key: str) -> list[dict[str, Any]]:
 _state_lock = threading.Lock()
 _active_keys: set[str] = set()          # currently running run keys
 _log_q: queue.Queue[str] = queue.Queue()  # tagged messages: "key|line" or "__done__|key"
+_manifest_q: queue.Queue[str] = queue.Queue()  # manifest change notifications
 
 
 def _claude_process_env() -> dict[str, str]:
@@ -1186,6 +1193,28 @@ def api_stream():
     )
 
 
+@app.get("/api/issues-sse")
+def api_issues_sse():
+    """Stream manifest changes to update issue cards in real-time."""
+    def generate():
+        while True:
+            try:
+                msg = _manifest_q.get(timeout=20)
+            except queue.Empty:
+                yield ": heartbeat\n\n"
+                continue
+            yield f"data: {msg}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @app.get("/api/status")
 def api_status():
     with _state_lock:
@@ -1675,6 +1704,15 @@ def api_orgs():
         "prod": os.environ.get("CASEOPS_PRODUCTION_READ_ORG", ""),
         "sandbox": os.environ.get("CASEOPS_SANDBOX_TARGET_ORG", ""),
     })
+
+
+@app.post("/api/manifest-changed")
+def api_manifest_changed():
+    """Signal that manifest.csv was updated (called by comments_poller)."""
+    body = request.get_json(silent=True) or {}
+    keys = body.get("keys")  # Optional list of changed issue keys
+    manifest_changed(keys)
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":

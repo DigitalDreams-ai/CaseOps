@@ -2,9 +2,12 @@
 """Lightweight Jira comments poller. Updates manifest.csv every 10 minutes with new comment counts."""
 
 import csv
+import json
 import os
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from threading import Lock
 
@@ -59,12 +62,12 @@ def save_manifest(manifest_path: Path, manifest: dict[str, dict[str, str]]) -> N
         print(f"Error writing manifest: {e}", flush=True)
 
 
-def poll_comments(client: JiraClient, issues: list[str], manifest: dict[str, dict[str, str]]) -> int:
-    """Fetch comment counts for issues. Return count of updated rows."""
+def poll_comments(client: JiraClient, issues: list[str], manifest: dict[str, dict[str, str]]) -> list[str]:
+    """Fetch comment counts for issues. Return list of changed issue keys."""
     if not issues:
-        return 0
+        return []
 
-    updates = 0
+    changed_keys = []
     for key in issues:
         try:
             comments = client.get_paginated(f"/rest/api/3/issue/{key}/comment", "comments")
@@ -78,11 +81,30 @@ def poll_comments(client: JiraClient, issues: list[str], manifest: dict[str, dic
                 manifest[key]["HasNewComments"] = "true" if new_count > old_count else old_row.get(
                     "HasNewComments", "false"
                 )
-                updates += 1
+                changed_keys.append(key)
         except Exception as e:
             print(f"Error fetching comments for {key}: {str(e)[:100]}", flush=True)
 
-    return updates
+    return changed_keys
+
+
+def signal_manifest_changed(changed_keys: list[str]) -> None:
+    """Notify Flask app that manifest changed via HTTP POST."""
+    if not changed_keys:
+        return
+    try:
+        url = "http://localhost:5000/api/manifest-changed"
+        data = json.dumps({"keys": changed_keys}).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            resp.read()
+    except Exception as e:
+        print(f"Warning: Failed to signal manifest change: {str(e)[:100]}", flush=True)
 
 
 def main() -> int:
@@ -132,10 +154,11 @@ def main() -> int:
                     continue
 
                 issues = list(manifest.keys())
-                updates = poll_comments(client, issues, manifest)
-                if updates > 0:
+                changed_keys = poll_comments(client, issues, manifest)
+                if changed_keys:
                     save_manifest(manifest_path, manifest)
-                    print(f"[{iteration}] Updated {updates}/{len(issues)} issues", flush=True)
+                    print(f"[{iteration}] Updated {len(changed_keys)}/{len(issues)} issues", flush=True)
+                    signal_manifest_changed(changed_keys)
                 else:
                     print(f"[{iteration}] No updates ({len(issues)} issues)", flush=True)
         except KeyboardInterrupt:
