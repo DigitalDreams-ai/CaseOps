@@ -572,7 +572,7 @@ def _fallback_launch_claude_window(issue_key: str | None, prompt: str, run_key: 
 
     try:
         # Use PowerShell script launcher if available
-        launcher_script = ROOT / "launch-claude-skill.ps1"
+        launcher_script = ROOT / "scripts" / "launch-claude-skill.ps1"
         if launcher_script.exists():
             _log_emit_line(run_key, f"Launching Claude Code for {issue_key} in new PowerShell window...")
             subprocess.Popen(

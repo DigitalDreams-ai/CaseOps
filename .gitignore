@@ -77,9 +77,6 @@ outputs/closed-resolved/
 outputs/issue-summary-*.md
 outputs/pipeline-logs/
 
-# Docs
-docs/
-
 # Editors
 *.sublime-project
 *.sublime-workspace
