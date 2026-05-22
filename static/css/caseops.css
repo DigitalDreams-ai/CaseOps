@@ -275,6 +275,16 @@ a:hover {
   background: rgba(211, 47, 47, 0.15);
 }
 
+.issue-indicator.indicator-running {
+  color: #1976d2;
+  background: rgba(25, 118, 210, 0.15);
+}
+
+.issue-indicator.indicator-stuck {
+  color: #f57c00;
+  background: rgba(245, 124, 0, 0.15);
+}
+
 .issue-key {
   font-weight: 600;
   color: var(--color-primary);

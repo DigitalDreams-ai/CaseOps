@@ -186,7 +186,7 @@
   const selectedIssues = new Set();
   let currentSort = 'number';
   let selectMode = false;
-  const pipelineProgress = {}; // Track progress per issue: { 'HEAL-123': 4|'FAILED' }
+  const pipelineProgress = {}; // Track progress per issue: { 'HEAL-123': {step: 4, lastUpdate: timestamp, status: 'running'|'failed'|'stuck'} }
 
   let cachedMessages = null;
   let loadIssuesInProgress = false;
@@ -277,15 +277,29 @@
   const MAX_STREAM_RETRIES = 5;
 
   function updateStepIndicator(issueKey, step) {
-    pipelineProgress[issueKey] = step;
+    const now = Date.now();
+    const existing = pipelineProgress[issueKey] || {};
+    pipelineProgress[issueKey] = {
+      step: step === 'FAILED' ? (existing.step || 0) : step,
+      lastUpdate: now,
+      status: step === 'FAILED' ? 'failed' : 'running'
+    };
+
     const indicator = document.querySelector(`.issue-indicator[data-key="${issueKey}"]`);
     if (indicator) {
-      if (step === 'FAILED') {
+      const state = pipelineProgress[issueKey];
+      if (state.status === 'failed') {
         indicator.textContent = 'Failed';
         indicator.classList.add('indicator-failed');
+        indicator.classList.remove('indicator-running', 'indicator-stuck');
+      } else if (state.status === 'stuck') {
+        indicator.textContent = `Stuck: Step ${state.step}/12`;
+        indicator.classList.add('indicator-stuck');
+        indicator.classList.remove('indicator-running', 'indicator-failed');
       } else {
-        indicator.textContent = step ? `${step}/12` : '';
-        indicator.classList.remove('indicator-failed');
+        indicator.textContent = state.step ? `Running: Step ${state.step}/12` : '';
+        indicator.classList.add('indicator-running');
+        indicator.classList.remove('indicator-failed', 'indicator-stuck');
       }
     }
   }
@@ -295,13 +309,39 @@
     const indicator = document.querySelector(`.issue-indicator[data-key="${issueKey}"]`);
     if (indicator) {
       indicator.textContent = '';
-      indicator.classList.remove('indicator-failed');
+      indicator.classList.remove('indicator-failed', 'indicator-stuck', 'indicator-running');
     }
   }
 
   function applyStepIndicators() {
-    Object.entries(pipelineProgress).forEach(([issueKey, step]) => {
-      updateStepIndicator(issueKey, step);
+    Object.entries(pipelineProgress).forEach(([issueKey, state]) => {
+      const indicator = document.querySelector(`.issue-indicator[data-key="${issueKey}"]`);
+      if (indicator && state.step) {
+        if (state.status === 'failed') {
+          indicator.textContent = 'Failed';
+          indicator.classList.add('indicator-failed');
+          indicator.classList.remove('indicator-running', 'indicator-stuck');
+        } else if (state.status === 'stuck') {
+          indicator.textContent = `Stuck: Step ${state.step}/12`;
+          indicator.classList.add('indicator-stuck');
+          indicator.classList.remove('indicator-running', 'indicator-failed');
+        } else {
+          indicator.textContent = `Running: Step ${state.step}/12`;
+          indicator.classList.add('indicator-running');
+          indicator.classList.remove('indicator-failed', 'indicator-stuck');
+        }
+      }
+    });
+  }
+
+  function checkForStuckPipelines() {
+    const STUCK_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+    const now = Date.now();
+    Object.entries(pipelineProgress).forEach(([issueKey, state]) => {
+      if (state.status === 'running' && state.lastUpdate && now - state.lastUpdate > STUCK_TIMEOUT) {
+        state.status = 'stuck';
+        updateStepIndicator(issueKey, state.step);
+      }
     });
   }
 
@@ -328,7 +368,7 @@
         activeRuns.delete(runKey);
         updateStatus();
         // Successful issue runs stop showing progress; failed runs keep the Failed badge.
-        if (runKey !== '__global__' && pipelineProgress[runKey] !== 'FAILED') {
+        if (runKey !== '__global__' && pipelineProgress[runKey]?.status !== 'failed') {
           clearStepIndicator(runKey);
         }
         // Re-enable buttons for this run key
@@ -2033,6 +2073,9 @@
       initIssuesSSE();
     });
   initLogPaneLayout();
+
+  // Check for stuck pipelines every 30 seconds
+  setInterval(checkForStuckPipelines, 30000);
   document.getElementById('dashboard').addEventListener('click', ev => {
     const btn = ev.target.closest('button.overview-row[data-key]');
     if (!btn) return;
