@@ -161,29 +161,27 @@ VOICE EXAMPLES:
 ✓ "I've confirmed the fix works. You'll see this in Production by end of week."
 
 SALESFORCE ARTIFACT LINKING (mandatory):
-When mentioning any Salesforce artifact (Permission Set, Flow, Field, Object, Profile, Class, etc.), 
-linkify using markdown syntax so GUI can convert to clickable Salesforce URLs:
+When mentioning any Salesforce artifact (Permission Set, Flow, Field, Object, Profile, Class, etc.),
+resolve the artifact to a Salesforce 15/18-character Id and linkify that Id. The GUI only converts
+real Salesforce Ids, not API-name pseudo links.
 
-FORMAT: [artifact_type: artifact_name](sf://artifact_type_lower/artifact_name_encoded)
+FORMAT: [artifact_type: artifact_name](sf://salesforce_id)
 
 EXAMPLES:
-- [Permission Set: Advanced User](sf://permission-set/Advanced%20User)
-- [Flow: Case_Assign_RoundRobin](sf://flow/Case_Assign_RoundRobin)
-- [Field: Account.Industry__c](sf://field/Account/Industry__c)
-- [Object: ServiceResource](sf://object/ServiceResource)
-- [Apex Class: CaseAssignmentHandler](sf://apex-class/CaseAssignmentHandler)
-- [Record Type: Account.Partner](sf://record-type/Account/Partner)
+- [Flow: Case_Assign_RoundRobin](sf://300000000000000AAA)
+- [Flow active version: Case_Assign_RoundRobin v8](sf://301000000000000AAA)
+- [Field: Account.Industry__c](sf://00N000000000000AAA)
+- [Email Template: Follow Up](sf://00X000000000000AAA)
+- [Record: Example Opportunity](sf://006000000000000AAA)
 
-ARTIFACT TYPES (use lowercase in sf:// URL):
-permission-set, profile, flow, field, object, apex-class, apex-trigger, 
-record-type, custom-object, page-layout, validation-rule, etc.
-
-Rules:
-✓ Linkify EVERY Salesforce artifact mentioned
-✓ Use artifact type + name from Production/Sandbox context
-✓ Encode spaces as %20 in URL
-✓ Keep human-readable text in [brackets]
-✓ GUI will detect sf:// and convert to actual Salesforce URL based on org context
+Resolver rules:
+✓ Linkify EVERY Salesforce artifact mentioned when an Id can be resolved
+✓ Use the Production Id for Production findings; use the Sandbox Id for Sandbox-only changed metadata
+✓ For Flows, query Tooling API `FlowDefinition` and link the FlowDefinition Id (`300...`) by default
+✓ Also include the active Flow version Id (`301...`) when version specificity matters
+✓ For custom fields, use the field DurableId component Id (`00N...`) when available
+✓ If no Id is available, write the artifact name as plain text and explicitly mark "Id not resolved"
+✓ Do not emit typed pseudo links such as `sf://flow/Flow_API_Name` or `sf://field/Object/Field__c`
 
 FORBIDDEN IN THIS FILE (hard stop if present):
 ✗ [INTERNAL] section

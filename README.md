@@ -66,9 +66,9 @@ Process HEAL-12345 through the full pipeline.
 ┌─────────────────────────────────────────────┐
 │  Claude Skill: jira-salesforce-fix-pipeline │
 │  (Steps 1–12 orchestration)                 │
-│  - Spawns sub-agents for Steps 3,5,6,9,10  │
+│  - Spawns sub-agents for Steps 3,5,6,9,10   │
 │  - Implements fixes in Sandbox (Step 8)     │
-│  - Routes escalations to Engineering       │
+│  - Routes escalations to Engineering        │
 └─────────────────────────────────────────────┘
 ```
 
