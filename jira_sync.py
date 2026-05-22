@@ -193,6 +193,7 @@ def main() -> int:
             {
                 "Key": key,
                 "Status": get_nested(issue, ["fields", "status", "name"]) or "",
+                "Assignee": display_name(issue.get("fields", {}).get("assignee")),
                 "Summary": issue.get("fields", {}).get("summary") or "",
                 "Updated": updated or "",
                 "Due": duedate if isinstance(duedate, str) else "",
@@ -824,6 +825,7 @@ def write_json(path: Path, value: Any) -> None:
 MANIFEST_FIELDNAMES = [
     "Key",
     "Status",
+    "Assignee",
     "Summary",
     "Updated",
     "Due",

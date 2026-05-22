@@ -1015,6 +1015,7 @@ def api_issues():
         result.append({
             "key": key,
             "status": status,
+            "assignee": row.get("Assignee", ""),
             "summary": row.get("Summary", ""),
             "disposition": _disposition(status),
             "updated": row.get("Updated", ""),
@@ -1062,6 +1063,7 @@ def api_issue(key: str):
     return jsonify({
         "key": key,
         "status": row.get("Status", ""),
+        "assignee": row.get("Assignee", ""),
         "summary": row.get("Summary", ""),
         "disposition": _disposition(row.get("Status", "")),
         "updated": row.get("Updated", ""),

@@ -43,6 +43,7 @@ def save_manifest(manifest_path: Path, manifest: dict[str, dict[str, str]]) -> N
     fieldnames = [
         "Key",
         "Status",
+        "Assignee",
         "Summary",
         "Updated",
         "Due",
@@ -86,6 +87,39 @@ def poll_comments(client: JiraClient, issues: list[str], manifest: dict[str, dic
                 changed_keys.append(key)
         except Exception as e:
             print(f"Error fetching comments for {key}: {str(e)[:100]}", flush=True)
+
+    return changed_keys
+
+
+def poll_status_and_assignee(client: JiraClient, issues: list[str], manifest: dict[str, dict[str, str]]) -> list[str]:
+    """Fetch Status and Assignee for issues. Return list of changed issue keys."""
+    if not issues:
+        return []
+
+    changed_keys = []
+    for key in issues:
+        try:
+            issue = client.get(f"/rest/api/3/issue/{key}?fields=status,assignee")
+            if not issue:
+                continue
+
+            fields = issue.get("fields", {})
+            new_status = fields.get("status", {}).get("name", "")
+            assignee_obj = fields.get("assignee") or {}
+            new_assignee = assignee_obj.get("displayName") or assignee_obj.get("name") or ""
+
+            old_row = manifest.get(key, {})
+            old_status = old_row.get("Status", "")
+            old_assignee = old_row.get("Assignee", "")
+
+            # Update if Status or Assignee changed
+            if new_status != old_status or new_assignee != old_assignee:
+                manifest[key]["Status"] = new_status
+                manifest[key]["Assignee"] = new_assignee
+                if key not in changed_keys:
+                    changed_keys.append(key)
+        except Exception as e:
+            print(f"Error fetching status/assignee for {key}: {str(e)[:100]}", flush=True)
 
     return changed_keys
 
@@ -166,7 +200,10 @@ def main() -> int:
                     continue
 
                 issues = list(manifest.keys())
-                changed_keys = poll_comments(client, issues, manifest)
+                comment_changes = poll_comments(client, issues, manifest)
+                status_changes = poll_status_and_assignee(client, issues, manifest)
+                changed_keys = list(set(comment_changes + status_changes))
+
                 if changed_keys:
                     save_manifest(manifest_path, manifest)
                     print(f"[{iteration}] Updated {len(changed_keys)}/{len(issues)} issues", flush=True)
