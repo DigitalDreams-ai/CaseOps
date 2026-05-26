@@ -15,6 +15,8 @@ services:
       - ./.env.jira.nas:/app/.env.jira:ro
       # Mount Salesforce CLI auth (pre-authenticated orgs on host)
       - ~/.sfdx:/root/.sfdx:ro
+      # Mount Claude Code CLI auth (pre-authenticated on host)
+      - ~/.claude:/root/.claude:ro
       # (Optional) Mount workspace-specific .env.jira.{workspace} files
       # - ./.env.jira.production:/app/.env.jira.production:ro
     environment:

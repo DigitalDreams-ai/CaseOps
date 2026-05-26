@@ -116,20 +116,29 @@ volumes:
 This keeps your Windows `.env.jira` pristine for local dev, while `.env.jira.nas` is for NAS deployment.
 
 ### Claude Code CLI inside container
-The Docker image installs system deps but **does NOT install Claude Code CLI globally**.
 
-**Two approaches:**
+`claude` CLI is pre-installed in Dockerfile.
 
-#### A. Install Claude locally on Synology + use local auth
+### Auth approach: Mount ~/.claude from NAS host (recommended)
+
+**On NAS host (one-time):**
 ```bash
-# On Synology host
 npm install -g @anthropic-ai/claude-code
 claude login  # authenticate once
+# Credentials stored in ~/.claude/
 ```
-Then container will inherit `~/.claude` dir from host if you volume-mount it.
 
-#### B. Use Anthropic API instead (CASEOPS_LLM_AUTH=api_key)
-Simpler for remote: set `CASEOPS_LLM_AUTH=api_key` in `.env.jira` and provide `ANTHROPIC_API_KEY`. No CLI auth needed.
+**In docker-compose.yml:**
+```yaml
+volumes:
+  - ~/.claude:/root/.claude:ro  # Container reads pre-authenticated Claude session
+```
+
+Now container can invoke `claude` commands with host authentication.
+
+**Alternative:** Use Anthropic API instead (CASEOPS_LLM_AUTH=api_key)
+
+If you prefer direct API calls: set `CASEOPS_LLM_AUTH=api_key` in `.env.jira.nas` and provide `ANTHROPIC_API_KEY`. No Claude CLI auth needed.
 
 ---
 
