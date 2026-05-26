@@ -290,6 +290,20 @@
         .hidden {
             display: none;
         }
+        .settings-section-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .settings-section-grid .settings-field {
+            grid-column: auto;
+            margin-bottom: 0;
+        }
+        @media (max-width: 900px) {
+            .settings-section-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -385,17 +399,32 @@
                     </div>
                 </div>
 
-                <div class="settings-field">
-                    <label for="sf-prod-alias">Production alias:</label>
-                    <input type="text" id="sf-prod-alias" name="CASEOPS_PRODUCTION_READ_ORG" placeholder="prod">
-                </div>
-                <div id="sf-prod-status" style="margin-left: 150px; margin-bottom: 15px;"></div>
+                <!-- Two-column layout for Production and Sandbox -->
+                <div class="settings-section-grid">
+                    <div>
+                        <div class="settings-field">
+                            <label for="sf-prod-alias">Production alias:</label>
+                            <input type="text" id="sf-prod-alias" name="CASEOPS_PRODUCTION_READ_ORG" placeholder="prod">
+                        </div>
+                        <div id="sf-prod-status" style="margin-bottom: 15px;"></div>
+                        <div class="settings-field">
+                            <label for="sf-prod-url">Production URL:</label>
+                            <input type="url" id="sf-prod-url" name="CASEOPS_PRODUCTION_INSTANCE_URL" placeholder="https://myorg.my.salesforce.com">
+                        </div>
+                    </div>
 
-                <div class="settings-field">
-                    <label for="sf-sand-alias">Sandbox alias:</label>
-                    <input type="text" id="sf-sand-alias" name="CASEOPS_SANDBOX_TARGET_ORG" placeholder="sandbox">
+                    <div>
+                        <div class="settings-field">
+                            <label for="sf-sand-alias">Sandbox alias:</label>
+                            <input type="text" id="sf-sand-alias" name="CASEOPS_SANDBOX_TARGET_ORG" placeholder="sandbox">
+                        </div>
+                        <div id="sf-sand-status" style="margin-bottom: 15px;"></div>
+                        <div class="settings-field">
+                            <label for="sf-sand-url">Sandbox URL:</label>
+                            <input type="url" id="sf-sand-url" name="CASEOPS_SANDBOX_INSTANCE_URL" placeholder="https://myorg--sandbox.sandbox.my.salesforce.com">
+                        </div>
+                    </div>
                 </div>
-                <div id="sf-sand-status" style="margin-left: 150px; margin-bottom: 15px;"></div>
 
                 <div class="status-note" id="auth-instructions">
                     <!-- Instructions dynamically shown based on selected method -->
