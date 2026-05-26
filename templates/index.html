@@ -791,7 +791,6 @@
           <div class="issue-summary">${escHtml(issue.summary)}</div>
           <div class="issue-item-meta">
             <span class="badge ${issue.disposition}">${escHtml(issue.status)}</span>
-            ${issue.assignee ? `<span class="badge secondary">${escHtml(issue.assignee)}</span>` : ''}
             ${needsTriage}
             ${solution}
             ${confirmed}
