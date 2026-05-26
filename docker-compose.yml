@@ -10,13 +10,13 @@ services:
       - "5350:5000"
     volumes:
       # Persistent output files
-      - caseops-outputs:/app/outputs
+      - /volume1/docker/appdata/caseops/outputs:/app/outputs
       # Mount .env.jira.nas for NAS/Linux (use .env.jira for local Windows dev)
       - ./.env.jira.nas:/app/.env.jira:ro
       # Mount Salesforce CLI auth (pre-authenticated orgs on host)
-      - ~/.sfdx:/root/.sfdx:ro
+      - /volume1/docker/appdata/caseops/.sfdx:/root/.sfdx:ro
       # Mount Claude Code CLI auth (pre-authenticated on host)
-      - ~/.claude:/root/.claude:ro
+      - /volume1/docker/appdata/caseops/.claude:/root/.claude:ro
       # (Optional) Mount workspace-specific .env.jira.{workspace} files
       # - ./.env.jira.production:/app/.env.jira.production:ro
     environment:
@@ -31,9 +31,6 @@ services:
     networks:
       - caseops-net
 
-volumes:
-  caseops-outputs:
-    driver: local
 
 networks:
   caseops-net:
