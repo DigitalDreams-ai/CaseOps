@@ -142,8 +142,12 @@ Simpler for remote: set `CASEOPS_LLM_AUTH=api_key` in `.env.jira` and provide `A
 **On NAS host (one-time):**
 ```bash
 # Authenticate each org
-sf org login web --set-default --alias prod
-sf org login web --set-default --alias sandbox
+# Production (no --instance-url needed, uses default login.salesforce.com)
+sf org login web --set-default --alias 10xhealth --instance-url https://10xhealth.my.salesforce.com
+
+# Sandbox (MUST include --instance-url with sandbox-specific test URL)
+sf org login web --set-default --alias 10xhealth-sean --instance-url https://10xhealth--sean.sandbox.my.salesforce.com
+
 # Credentials stored in ~/.sfdx/
 ```
 
@@ -153,13 +157,13 @@ volumes:
   - ~/.sfdx:/root/.sfdx:ro  # Container reads pre-authenticated orgs
 ```
 
-**In .env.jira:**
+**In .env.jira (or .env.jira.nas for NAS):**
 ```env
-CASEOPS_PRODUCTION_READ_ORG=prod
-CASEOPS_SANDBOX_TARGET_ORG=sandbox
+CASEOPS_PRODUCTION_READ_ORG=10xhealth
+CASEOPS_SANDBOX_TARGET_ORG=10xhealth-sean
 ```
 
-Now app.py can call `sf data query --target-org prod` and it will use the authenticated session.
+Now app.py can call `sf data query --target-org 10xhealth` and it will use the authenticated session.
 
 ### Alternative: Auth inside container (ephemeral, loses creds on restart)
 ```bash
@@ -266,19 +270,27 @@ docker run --rm -v caseops-outputs:/data -v ~/backup:/backup \
 
 1. On NAS host: authenticate Salesforce orgs
    ```bash
-   sf org login web --set-default --alias prod
-   sf org login web --set-default --alias sandbox
+   # Production
+   sf org login web --set-default --alias 10xhealth --instance-url https://10xhealth.my.salesforce.com
+   
+   # Sandbox (use your sandbox domain)
+   sf org login web --set-default --alias 10xhealth-sean --instance-url https://10xhealth--sean.sandbox.my.salesforce.com
    ```
 
-2. Build image: `docker build -t caseops:latest .`
+2. Authenticate Claude Code CLI on NAS host:
+   ```bash
+   claude login
+   ```
 
-3. Copy `.env.jira` to NAS (with org aliases matching step 1)
+3. Build image: `docker build -t caseops:latest .`
 
-4. In Synology Docker GUI:
+4. Copy `.env.jira.nas` to NAS (with org aliases matching step 1)
+
+5. In Synology Docker GUI:
    - Create container from `caseops:latest`
    - Port: 5000 (container) → 5350 (host)
-   - Volumes: outputs, .env.jira, ~/.sfdx
+   - Volumes: outputs, .env.jira.nas (bind), ~/.sfdx (pre-authenticated)
 
-5. Start container
+6. Start container
 
-6. Test: `http://localhost:5350` on NAS, then `https://caseops.yourdomain.com` via Cloudflare tunnel
+7. Test: `http://localhost:5350` on NAS, then `https://caseops.yourdomain.com` via Cloudflare tunnel

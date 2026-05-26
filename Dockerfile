@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y \
 # Install Salesforce CLI (sf)
 RUN npm install -g @salesforce/cli @salesforce/cli-plugins-analytics
 
+# Install CumulusCI (for CI/CD, scratch orgs, sandboxes)
+RUN pip install --no-cache-dir cumulusci
+
 # Copy project
 COPY . /app
 
