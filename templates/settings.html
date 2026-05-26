@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaseOps Settings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/caseops.css') }}">
+    <style>
+        body {
+            background: var(--color-bg);
+            color: var(--color-text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 20px;
+        }
+        #settings-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .settings-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            gap: 15px;
+        }
+        .settings-header img {
+            width: 32px;
+            height: 32px;
+        }
+        .settings-header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .settings-header a {
+            margin-left: auto;
+            padding: 6px 12px;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            color: var(--color-text);
+            text-decoration: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .settings-header a:hover {
+            background: var(--color-border);
+        }
+        .settings-section {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .settings-section h2 {
+            margin: 0 0 15px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+        .settings-field {
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+        .settings-field label {
+            font-weight: 500;
+            color: var(--color-text);
+        }
+        .settings-field input,
+        .settings-field select {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            color: var(--color-text);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: monospace;
+        }
+        .settings-field input:focus,
+        .settings-field select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+        .settings-field input[type="password"] {
+            letter-spacing: 2px;
+        }
+        .test-button {
+            padding: 6px 12px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        .test-button:hover {
+            background: var(--color-primary-hover, #1f6feb);
+            filter: brightness(1.1);
+        }
+        .test-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .test-result {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .test-result.success {
+            background: var(--color-success);
+            color: white;
+        }
+        .test-result.error {
+            background: var(--color-danger);
+            color: white;
+        }
+        .test-result.pending {
+            background: var(--color-warn);
+            color: white;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-right: 5px;
+        }
+        .status-badge.ok {
+            background: var(--color-success);
+            color: white;
+        }
+        .status-badge.not-ok {
+            background: var(--color-danger);
+            color: white;
+        }
+        .status-note {
+            font-size: 12px;
+            color: var(--color-text);
+            margin-top: 5px;
+            font-style: italic;
+        }
+        .org-status {
+            margin-bottom: 10px;
+        }
+        .org-status-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .org-alias {
+            font-family: monospace;
+            font-weight: 500;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .button-primary {
+            padding: 8px 16px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .button-primary:hover {
+            filter: brightness(1.1);
+        }
+        .button-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .banner {
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        .banner.success {
+            background: var(--color-success);
+            color: white;
+        }
+        .banner.error {
+            background: var(--color-danger);
+            color: white;
+        }
+        .lvm-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .lvm-option input[type="radio"] {
+            margin: 0;
+        }
+        .section-collapsed {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s;
+        }
+        .section-collapsed.expanded {
+            max-height: 1000px;
+        }
+        .collapsible-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .collapsible-toggle {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 2px;
+            text-align: center;
+            line-height: 14px;
+            font-size: 12px;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="settings-container">
+        <div class="settings-header">
+            <img src="{{ url_for('static', filename='logo.svg') }}" alt="Logo">
+            <h1>Settings</h1>
+            <a href="/">← Back to CaseOps</a>
+        </div>
+
+        <div id="banner"></div>
+
+        <form id="settings-form">
+            <!-- LLM Mode -->
+            <div class="settings-section">
+                <h2>LLM Mode</h2>
+                <div class="settings-field">
+                    <label>Authentication:</label>
+                    <div>
+                        <div class="lvm-option">
+                            <input type="radio" id="lvm-api" name="CASEOPS_LLM_AUTH" value="api_key">
+                            <label for="lvm-api">Anthropic API Key (pay-per-use)</label>
+                        </div>
+                        <div class="lvm-option">
+                            <input type="radio" id="lvm-claude" name="CASEOPS_LLM_AUTH" value="claude_code">
+                            <label for="lvm-claude">Claude Code CLI (subscription)</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Jira -->
+            <div class="settings-section">
+                <h2>Jira</h2>
+                <div class="settings-field">
+                    <label for="jira-base-url">Base URL:</label>
+                    <input type="url" id="jira-base-url" name="JIRA_BASE_URL" placeholder="https://org.atlassian.net" autocomplete="off">
+                </div>
+                <div class="settings-field">
+                    <label for="jira-email">Email:</label>
+                    <input type="email" id="jira-email" name="JIRA_EMAIL" placeholder="user@example.com" autocomplete="off">
+                </div>
+                <div class="settings-field">
+                    <label for="jira-token">API Token:</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="password" id="jira-token" name="JIRA_API_TOKEN" placeholder="••••••••" autocomplete="off">
+                        <button type="button" class="test-button" id="test-jira">Test Connection</button>
+                        <span id="jira-test-result" class="test-result"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Anthropic API -->
+            <div class="settings-section">
+                <h2>Anthropic API</h2>
+                <div class="settings-field">
+                    <label for="anthropic-key">API Key:</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="password" id="anthropic-key" name="ANTHROPIC_API_KEY" placeholder="sk-••••••••" autocomplete="off">
+                        <button type="button" class="test-button" id="test-anthropic">Test API</button>
+                        <span id="anthropic-test-result" class="test-result"></span>
+                    </div>
+                </div>
+                <div class="settings-field">
+                    <label for="anthropic-model">Model:</label>
+                    <input type="text" id="anthropic-model" name="CASEOPS_ANTHROPIC_MODEL" placeholder="claude-sonnet-4-6">
+                </div>
+            </div>
+
+            <!-- Claude Code CLI -->
+            <div class="settings-section">
+                <h2>Claude Code CLI</h2>
+                <div id="claude-status">Loading...</div>
+                <div class="status-note">
+                    To authenticate Claude Code CLI: SSH to your NAS and run <code>claude login</code>
+                </div>
+            </div>
+
+            <!-- Salesforce -->
+            <div class="settings-section">
+                <h2>Salesforce</h2>
+                <div class="settings-field">
+                    <label for="sf-prod-alias">Production alias:</label>
+                    <input type="text" id="sf-prod-alias" name="CASEOPS_PRODUCTION_READ_ORG" placeholder="prod">
+                </div>
+                <div id="sf-prod-status" style="margin-left: 150px; margin-bottom: 15px;"></div>
+
+                <div class="settings-field">
+                    <label for="sf-sand-alias">Sandbox alias:</label>
+                    <input type="text" id="sf-sand-alias" name="CASEOPS_SANDBOX_TARGET_ORG" placeholder="sandbox">
+                </div>
+                <div id="sf-sand-status" style="margin-left: 150px; margin-bottom: 15px;"></div>
+
+                <div class="status-note">
+                    To authenticate Salesforce: SSH to your NAS and run:<br>
+                    <code>sf org login web --set-default --alias &lt;alias&gt;</code>
+                </div>
+            </div>
+
+            <!-- Advanced (collapsed) -->
+            <div class="settings-section">
+                <div class="collapsible-header" onclick="toggleAdvanced()">
+                    <span class="collapsible-toggle" id="advanced-toggle">+</span>
+                    <h2 style="display: inline; margin: 0;">Advanced</h2>
+                </div>
+                <div id="advanced-content" class="section-collapsed">
+                    <div class="settings-field">
+                        <label for="azure-org">Azure DevOps Org:</label>
+                        <input type="text" id="azure-org" name="AZURE_DEVOPS_ORG" placeholder="myorg">
+                    </div>
+                    <div class="settings-field">
+                        <label for="azure-project">Azure DevOps Project:</label>
+                        <input type="text" id="azure-project" name="AZURE_DEVOPS_PROJECT" placeholder="myproject">
+                    </div>
+                    <div class="settings-field">
+                        <label for="azure-pat">Azure DevOps PAT:</label>
+                        <input type="password" id="azure-pat" name="AZURE_DEVOPS_PAT" placeholder="••••••••" autocomplete="off">
+                    </div>
+                    <div class="settings-field">
+                        <label for="prod-magic-link">Production Magic Link:</label>
+                        <input type="text" id="prod-magic-link" name="CASEOPS_PRODUCTION_MAGIC_LINK" placeholder="https://...">
+                    </div>
+                    <div class="settings-field">
+                        <label for="sand-magic-link">Sandbox Magic Link:</label>
+                        <input type="text" id="sand-magic-link" name="CASEOPS_SANDBOX_MAGIC_LINK" placeholder="https://...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="button-group">
+                <button type="submit" class="button-primary" id="save-button">Save Settings</button>
+                <button type="button" class="button-primary" onclick="location.reload()">Reload Page</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let advancedExpanded = false;
+
+        function toggleAdvanced() {
+            advancedExpanded = !advancedExpanded;
+            const content = document.getElementById('advanced-content');
+            const toggle = document.getElementById('advanced-toggle');
+            if (advancedExpanded) {
+                content.classList.add('expanded');
+                toggle.textContent = '−';
+            } else {
+                content.classList.remove('expanded');
+                toggle.textContent = '+';
+            }
+        }
+
+        function showBanner(message, type) {
+            const banner = document.getElementById('banner');
+            banner.textContent = message;
+            banner.className = `banner ${type}`;
+            banner.style.display = 'block';
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 5000);
+        }
+
+        async function loadSettings() {
+            try {
+                const resp = await fetch('/api/settings');
+                if (!resp.ok) return;
+                const data = await resp.json();
+
+                for (const [key, value] of Object.entries(data)) {
+                    const elem = document.querySelector(`[name="${key}"]`);
+                    if (!elem) continue;
+
+                    if (elem.type === 'radio') {
+                        document.querySelector(`[name="${key}"][value="${value}"]`).checked = true;
+                    } else {
+                        elem.value = value || '';
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load settings:', e);
+            }
+        }
+
+        async function loadStatus() {
+            try {
+                const resp = await fetch('/api/settings/status');
+                if (!resp.ok) return;
+                const status = await resp.json();
+
+                // Claude status
+                const claudeDiv = document.getElementById('claude-status');
+                if (status.claude.installed) {
+                    claudeDiv.innerHTML = `<span class="status-badge ok">✓ Installed & functional</span> ${status.claude.version}`;
+                } else {
+                    claudeDiv.innerHTML = `<span class="status-badge not-ok">✗ Not installed</span>`;
+                }
+
+                // Salesforce prod
+                const prodDiv = document.getElementById('sf-prod-status');
+                if (status.sf_prod.authenticated) {
+                    prodDiv.innerHTML = `<span class="status-badge ok">✓ authenticated</span> ${status.sf_prod.username || ''}`;
+                } else {
+                    prodDiv.innerHTML = `<span class="status-badge not-ok">✗ not authenticated</span>`;
+                }
+
+                // Salesforce sandbox
+                const sandDiv = document.getElementById('sf-sand-status');
+                if (status.sf_sandbox.authenticated) {
+                    sandDiv.innerHTML = `<span class="status-badge ok">✓ authenticated</span> ${status.sf_sandbox.username || ''}`;
+                } else {
+                    sandDiv.innerHTML = `<span class="status-badge not-ok">✗ not authenticated</span>`;
+                }
+            } catch (e) {
+                console.error('Failed to load status:', e);
+            }
+        }
+
+        async function testJira() {
+            const baseUrl = document.getElementById('jira-base-url').value;
+            const email = document.getElementById('jira-email').value;
+            const token = document.getElementById('jira-token').value;
+
+            const result = document.getElementById('jira-test-result');
+            const btn = document.getElementById('test-jira');
+            btn.disabled = true;
+            result.textContent = '...';
+            result.className = 'test-result pending';
+
+            try {
+                const resp = await fetch('/api/settings/test-jira', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ JIRA_BASE_URL: baseUrl, JIRA_EMAIL: email, JIRA_API_TOKEN: token }),
+                });
+
+                if (resp.ok) {
+                    result.textContent = '✓ Connected';
+                    result.className = 'test-result success';
+                } else {
+                    const data = await resp.json();
+                    result.textContent = '✗ ' + (data.error || 'Error');
+                    result.className = 'test-result error';
+                }
+            } catch (e) {
+                result.textContent = '✗ ' + e.message;
+                result.className = 'test-result error';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function testAnthropicAPI() {
+            const apiKey = document.getElementById('anthropic-key').value;
+
+            const result = document.getElementById('anthropic-test-result');
+            const btn = document.getElementById('test-anthropic');
+            btn.disabled = true;
+            result.textContent = '...';
+            result.className = 'test-result pending';
+
+            try {
+                const resp = await fetch('/api/settings/test-anthropic', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ANTHROPIC_API_KEY: apiKey }),
+                });
+
+                if (resp.ok) {
+                    result.textContent = '✓ Valid';
+                    result.className = 'test-result success';
+                } else {
+                    const data = await resp.json();
+                    result.textContent = '✗ ' + (data.error || 'Error');
+                    result.className = 'test-result error';
+                }
+            } catch (e) {
+                result.textContent = '✗ ' + e.message;
+                result.className = 'test-result error';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        document.getElementById('settings-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const form = document.getElementById('settings-form');
+            const formData = new FormData(form);
+            const data = {};
+
+            for (const [key, value] of formData.entries()) {
+                data[key] = String(value).trim();
+            }
+
+            const btn = document.getElementById('save-button');
+            btn.disabled = true;
+
+            try {
+                const resp = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+
+                if (resp.ok) {
+                    showBanner('Settings saved successfully', 'success');
+                    await loadSettings();
+                    await loadStatus();
+                } else {
+                    const error = await resp.json();
+                    showBanner('Error saving settings: ' + (error.error || 'Unknown error'), 'error');
+                }
+            } catch (e) {
+                showBanner('Error: ' + String(e), 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('test-jira').addEventListener('click', testJira);
+        document.getElementById('test-anthropic').addEventListener('click', testAnthropicAPI);
+
+        // Load on page open
+        loadSettings();
+        loadStatus();
+    </script>
+</body>
+</html>

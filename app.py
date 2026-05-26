@@ -148,6 +148,81 @@ def _jira_auth_header() -> str:
         return f"Basic {base64.b64encode(f'{email}:{token}'.encode()).decode()}"
     raise RuntimeError("No Jira auth found in .env.jira")
 
+
+def _mask_secret(value: str) -> str:
+    """Mask secret by showing only last 4 chars: 'secret123' → '••••••••3'."""
+    if not value or len(value) < 4:
+        return ""
+    return "••••••••" + value[-4:]
+
+
+def _read_env_file(env_file: Path | None = None) -> dict[str, str]:
+    """Read .env.jira and return dict of all keys/values (including empty lines, comments stripped)."""
+    if env_file is None:
+        env_file = ROOT / ".env.jira"
+    result: dict[str, str] = {}
+    if not env_file.exists():
+        return result
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if not key:
+            continue
+        value = value.strip().strip('"').strip("'")
+        result[key] = value
+    return result
+
+
+def _write_env_file(updates: dict[str, str], env_file: Path | None = None) -> None:
+    """Update .env.jira with new values, preserving comments and structure.
+
+    If a key already exists in the file, update its value. If not, append it.
+    Then reload the environment.
+    """
+    if env_file is None:
+        env_file = ROOT / ".env.jira"
+
+    # Read existing file
+    existing_lines: list[str] = []
+    existing_keys: set[str] = set()
+    if env_file.exists():
+        existing_lines = env_file.read_text(encoding="utf-8").splitlines()
+
+    # Update or keep existing lines
+    new_lines: list[str] = []
+    for line in existing_lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            new_lines.append(line)
+            continue
+        if "=" not in line:
+            new_lines.append(line)
+            continue
+
+        key = stripped.partition("=")[0].strip()
+        if key in updates:
+            # Replace line with new value
+            new_lines.append(f"{key}={updates[key]}")
+            existing_keys.add(key)
+        else:
+            # Keep line unchanged
+            new_lines.append(line)
+            existing_keys.add(key)
+
+    # Append any new keys not in file
+    for key, value in updates.items():
+        if key not in existing_keys and value:  # Don't append empty values
+            new_lines.append(f"{key}={value}")
+
+    # Write back
+    env_file.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+
+    # Reload env in running process
+    _load_jira_env(env_file)
+
 CLOSED_STATUSES = {"closed", "resolved", "canceled", "cancelled"}
 ESCALATED_STATUS = "escalated to engineering"
 
@@ -1000,6 +1075,164 @@ def index():
         open_count=open_count,
         workspace=app.config.get("WORKSPACE", "default"),
     )
+
+
+@app.get("/settings")
+def settings_page():
+    return render_template("settings.html")
+
+
+@app.get("/api/settings")
+def api_get_settings():
+    """Return current .env.jira config with secrets masked."""
+    current = _read_env_file()
+    masked: dict[str, str] = {}
+    secret_keys = {"JIRA_API_TOKEN", "ANTHROPIC_API_KEY", "JIRA_BEARER_TOKEN", "AZURE_DEVOPS_PAT"}
+
+    for key, value in current.items():
+        if key in secret_keys and value:
+            masked[key] = _mask_secret(value)
+        else:
+            masked[key] = value
+
+    return jsonify(masked)
+
+
+@app.post("/api/settings")
+def api_post_settings():
+    """Save updated settings to .env.jira."""
+    data = request.get_json(silent=True) or {}
+
+    # Filter out masked values (user didn't change them)
+    updates: dict[str, str] = {}
+    for key, value in data.items():
+        if isinstance(value, str) and value.startswith("••••"):
+            # Skip masked values — no change
+            continue
+        updates[key] = value.strip() if isinstance(value, str) else ""
+
+    try:
+        _write_env_file(updates)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)[:200]}), 500
+
+
+@app.post("/api/settings/test-jira")
+def api_test_jira():
+    """Test Jira connection with provided credentials."""
+    data = request.get_json(silent=True) or {}
+    base_url = (data.get("JIRA_BASE_URL") or "").strip()
+    email = (data.get("JIRA_EMAIL") or "").strip()
+    token = (data.get("JIRA_API_TOKEN") or "").strip()
+
+    if not (base_url and email and token):
+        return jsonify({"error": "Missing JIRA_BASE_URL, JIRA_EMAIL, or JIRA_API_TOKEN"}), 400
+
+    try:
+        auth = f"Basic {base64.b64encode(f'{email}:{token}'.encode()).decode()}"
+        client = JiraClient(base_url=base_url, auth_header=auth)
+        client.get_field_map()
+        return jsonify({"ok": True})
+    except Exception as e:
+        error_msg = str(e)[:300]
+        return jsonify({"error": error_msg}), 502
+
+
+@app.post("/api/settings/test-anthropic")
+def api_test_anthropic():
+    """Test Anthropic API key with a minimal request."""
+    data = request.get_json(silent=True) or {}
+    api_key = (data.get("ANTHROPIC_API_KEY") or "").strip()
+
+    if not api_key:
+        return jsonify({"error": "Missing ANTHROPIC_API_KEY"}), 400
+
+    if Anthropic is None:
+        return jsonify({"error": "anthropic package not installed"}), 500
+
+    try:
+        client = Anthropic(api_key=api_key)
+        # Send minimal message to test auth
+        resp = client.messages.create(
+            model="claude-opus-4-7",
+            max_tokens=10,
+            messages=[{"role": "user", "content": "OK"}],
+        )
+        model = resp.model
+        return jsonify({"ok": True, "model": model})
+    except Exception as e:
+        error_msg = str(e)[:300]
+        return jsonify({"error": error_msg}), 502
+
+
+@app.get("/api/settings/status")
+def api_settings_status():
+    """Return status of Claude CLI, Salesforce auth, and sf CLI."""
+    status: dict[str, Any] = {
+        "claude": {"installed": False, "version": None},
+        "sf": {"installed": False},
+        "sf_prod": {"authenticated": False},
+        "sf_sandbox": {"authenticated": False},
+    }
+
+    # Check Claude CLI
+    try:
+        result = subprocess.run(["claude", "--version"], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            version = result.stdout.strip() if result.stdout else "unknown"
+            status["claude"] = {"installed": True, "version": version}
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    # Check sf CLI
+    sf_cmd = shutil.which("sf") or shutil.which("sf.cmd")
+    if sf_cmd:
+        status["sf"]["installed"] = True
+
+        # Check Salesforce org auth (prod)
+        prod_alias = (os.environ.get("CASEOPS_PRODUCTION_READ_ORG") or "").strip()
+        if prod_alias:
+            try:
+                result = subprocess.run(
+                    [sf_cmd, "org", "display", "--target-org", prod_alias, "--json"],
+                    capture_output=True, text=True, timeout=10
+                )
+                if result.returncode == 0:
+                    data = json.loads(result.stdout)
+                    if data.get("status") == 0 or not data.get("status"):  # status 0 means success
+                        status["sf_prod"] = {
+                            "authenticated": True,
+                            "alias": prod_alias,
+                            "username": data.get("result", {}).get("username", ""),
+                        }
+                else:
+                    status["sf_prod"] = {"authenticated": False, "alias": prod_alias}
+            except (json.JSONDecodeError, subprocess.TimeoutExpired, FileNotFoundError):
+                status["sf_prod"] = {"authenticated": False, "alias": prod_alias}
+
+        # Check Salesforce org auth (sandbox)
+        sand_alias = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
+        if sand_alias:
+            try:
+                result = subprocess.run(
+                    [sf_cmd, "org", "display", "--target-org", sand_alias, "--json"],
+                    capture_output=True, text=True, timeout=10
+                )
+                if result.returncode == 0:
+                    data = json.loads(result.stdout)
+                    if data.get("status") == 0 or not data.get("status"):
+                        status["sf_sandbox"] = {
+                            "authenticated": True,
+                            "alias": sand_alias,
+                            "username": data.get("result", {}).get("username", ""),
+                        }
+                else:
+                    status["sf_sandbox"] = {"authenticated": False, "alias": sand_alias}
+            except (json.JSONDecodeError, subprocess.TimeoutExpired, FileNotFoundError):
+                status["sf_sandbox"] = {"authenticated": False, "alias": sand_alias}
+
+    return jsonify(status)
 
 
 @app.get("/api/issues")

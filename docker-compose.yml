@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  caseops:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: caseops
+    ports:
+      - "5350:5000"
+    volumes:
+      # Persistent output files
+      - caseops-outputs:/app/outputs
+      # Mount .env.jira.nas for NAS/Linux (use .env.jira for local Windows dev)
+      - ./.env.jira.nas:/app/.env.jira:ro
+      # Mount Salesforce CLI auth (pre-authenticated orgs on host)
+      - ~/.sfdx:/root/.sfdx:ro
+      # (Optional) Mount workspace-specific .env.jira.{workspace} files
+      # - ./.env.jira.production:/app/.env.jira.production:ro
+    environment:
+      # Flask listens internally on 5000; exposed as 5350 on host
+      CASEOPS_PORT: "5000"
+      # Optional: set workspace
+      # CASEOPS_WORKSPACE: "default"
+      # For Claude Code CLI mode: omit ANTHROPIC_API_KEY from here
+      # (it will be read from .env.jira only)
+    restart: unless-stopped
+    # Synology-specific: change "bridge" to your network if using custom network
+    networks:
+      - caseops-net
+
+volumes:
+  caseops-outputs:
+    driver: local
+
+networks:
+  caseops-net:
+    driver: bridge
