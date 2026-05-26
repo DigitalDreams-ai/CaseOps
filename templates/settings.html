@@ -315,6 +315,20 @@
             <div class="settings-section">
                 <h2>Salesforce</h2>
                 <div class="settings-field">
+                    <label for="use-cci-auth">Org Auth Method:</label>
+                    <div>
+                        <div class="lvm-option">
+                            <input type="radio" id="use-sf-auth" name="CASEOPS_USE_CCI_FOR_AUTH" value="false">
+                            <label for="use-sf-auth">Salesforce CLI (sf)</label>
+                        </div>
+                        <div class="lvm-option">
+                            <input type="radio" id="use-cci-auth" name="CASEOPS_USE_CCI_FOR_AUTH" value="true">
+                            <label for="use-cci-auth">CumulusCI (cci)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-field">
                     <label for="sf-prod-alias">Production alias:</label>
                     <input type="text" id="sf-prod-alias" name="CASEOPS_PRODUCTION_READ_ORG" placeholder="prod">
                 </div>
@@ -327,8 +341,11 @@
                 <div id="sf-sand-status" style="margin-left: 150px; margin-bottom: 15px;"></div>
 
                 <div class="status-note">
-                    To authenticate Salesforce: SSH to your NAS and run:<br>
-                    <code>sf org login web --set-default --alias &lt;alias&gt;</code>
+                    <strong>Using Salesforce CLI (sf):</strong><br>
+                    <code>sf org login web --set-default --alias &lt;alias&gt; --instance-url &lt;url&gt;</code><br>
+                    <strong>Using CumulusCI (cci):</strong><br>
+                    <code>cci org connect &lt;alias&gt;</code><br>
+                    SSH to your NAS and authenticate with the selected method above.
                 </div>
             </div>
 
@@ -426,26 +443,46 @@
                 // Claude status
                 const claudeDiv = document.getElementById('claude-status');
                 if (status.claude.installed) {
-                    claudeDiv.innerHTML = `<span class="status-badge ok">✓ Installed & functional</span> ${status.claude.version}`;
+                    claudeDiv.innerHTML = `<span class="status-badge ok">✓ Installed & functional</span> ${status.claude.version || ''}`;
                 } else {
                     claudeDiv.innerHTML = `<span class="status-badge not-ok">✗ Not installed</span>`;
                 }
 
+                // Determine which auth method to show
+                const useCCI = document.querySelector('input[name="CASEOPS_USE_CCI_FOR_AUTH"]:checked');
+                const isCCIMode = useCCI && useCCI.value === 'true';
+
                 // Salesforce prod
                 const prodDiv = document.getElementById('sf-prod-status');
-                if (status.sf_prod.authenticated) {
-                    prodDiv.innerHTML = `<span class="status-badge ok">✓ authenticated</span> ${status.sf_prod.username || ''}`;
+                let prodStatus;
+                if (isCCIMode && status.cci_installed) {
+                    prodStatus = status.cci_prod.authenticated
+                        ? `<span class="status-badge ok">✓ authenticated (cci)</span>`
+                        : `<span class="status-badge not-ok">✗ not authenticated (cci)</span>`;
+                } else if (status.sf_installed) {
+                    prodStatus = status.sf_prod.authenticated
+                        ? `<span class="status-badge ok">✓ authenticated (sf)</span> ${status.sf_prod.username || ''}`
+                        : `<span class="status-badge not-ok">✗ not authenticated (sf)</span>`;
                 } else {
-                    prodDiv.innerHTML = `<span class="status-badge not-ok">✗ not authenticated</span>`;
+                    prodStatus = `<span class="status-badge not-ok">✗ CLI not installed</span>`;
                 }
+                prodDiv.innerHTML = prodStatus;
 
                 // Salesforce sandbox
                 const sandDiv = document.getElementById('sf-sand-status');
-                if (status.sf_sandbox.authenticated) {
-                    sandDiv.innerHTML = `<span class="status-badge ok">✓ authenticated</span> ${status.sf_sandbox.username || ''}`;
+                let sandStatus;
+                if (isCCIMode && status.cci_installed) {
+                    sandStatus = status.cci_sandbox.authenticated
+                        ? `<span class="status-badge ok">✓ authenticated (cci)</span>`
+                        : `<span class="status-badge not-ok">✗ not authenticated (cci)</span>`;
+                } else if (status.sf_installed) {
+                    sandStatus = status.sf_sandbox.authenticated
+                        ? `<span class="status-badge ok">✓ authenticated (sf)</span> ${status.sf_sandbox.username || ''}`
+                        : `<span class="status-badge not-ok">✗ not authenticated (sf)</span>`;
                 } else {
-                    sandDiv.innerHTML = `<span class="status-badge not-ok">✗ not authenticated</span>`;
+                    sandStatus = `<span class="status-badge not-ok">✗ CLI not installed</span>`;
                 }
+                sandDiv.innerHTML = sandStatus;
             } catch (e) {
                 console.error('Failed to load status:', e);
             }
@@ -555,6 +592,11 @@
 
         document.getElementById('test-jira').addEventListener('click', testJira);
         document.getElementById('test-anthropic').addEventListener('click', testAnthropicAPI);
+
+        // Reload status when auth method changes
+        document.querySelectorAll('input[name="CASEOPS_USE_CCI_FOR_AUTH"]').forEach(radio => {
+            radio.addEventListener('change', loadStatus);
+        });
 
         // Load on page open
         loadSettings();

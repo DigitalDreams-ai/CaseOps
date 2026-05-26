@@ -1971,6 +1971,207 @@ def api_manifest_changed():
     return jsonify({"ok": True})
 
 
+@app.route("/settings", methods=["GET"])
+def settings_page():
+    """Render settings.html."""
+    return render_template("settings.html")
+
+
+@app.route("/api/settings", methods=["GET"])
+def api_get_settings():
+    """Return current settings from .env.jira with secrets masked."""
+    settings = _read_env_file()
+
+    # Settings to expose in UI
+    exposed_keys = {
+        "JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
+        "ANTHROPIC_API_KEY", "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
+        "CASEOPS_USE_CCI_FOR_AUTH",
+        "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
+        "AZURE_DEVOPS_ORG", "AZURE_DEVOPS_PROJECT", "AZURE_DEVOPS_PAT",
+        "CASEOPS_PRODUCTION_MAGIC_LINK", "CASEOPS_SANDBOX_MAGIC_LINK",
+    }
+
+    response = {}
+    for key in exposed_keys:
+        value = settings.get(key, "")
+        # Mask secrets (but not URLs, aliases, or boolean flags)
+        if key in ("JIRA_API_TOKEN", "ANTHROPIC_API_KEY", "AZURE_DEVOPS_PAT"):
+            response[key] = _mask_secret(value)
+        else:
+            response[key] = value
+
+    return jsonify(response)
+
+
+@app.route("/api/settings", methods=["POST"])
+def api_post_settings():
+    """Save settings to .env.jira. Preserves masked values (doesn't overwrite)."""
+    body = request.get_json(silent=True) or {}
+
+    # Filter and validate
+    updates = {}
+    for key in ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
+                "ANTHROPIC_API_KEY", "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
+                "CASEOPS_USE_CCI_FOR_AUTH",
+                "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
+                "AZURE_DEVOPS_ORG", "AZURE_DEVOPS_PROJECT", "AZURE_DEVOPS_PAT",
+                "CASEOPS_PRODUCTION_MAGIC_LINK", "CASEOPS_SANDBOX_MAGIC_LINK"]:
+        value = body.get(key, "").strip()
+        # Skip masked values (user didn't change them)
+        if value.startswith("••••"):
+            continue
+        updates[key] = value
+
+    try:
+        _write_env_file(updates)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/settings/test-jira", methods=["POST"])
+def api_test_jira():
+    """Test Jira connection with provided credentials."""
+    body = request.get_json(silent=True) or {}
+    base_url = body.get("JIRA_BASE_URL", "").strip()
+    email = body.get("JIRA_EMAIL", "").strip()
+    token = body.get("JIRA_API_TOKEN", "").strip()
+
+    if not all([base_url, email, token]):
+        return jsonify({"error": "Missing credentials"}), 400
+
+    try:
+        # Build auth header
+        auth_header = f"Basic {base64.b64encode(f'{email}:{token}'.encode()).decode()}"
+
+        # Try to fetch a field map (minimal Jira call)
+        url = f"{base_url.rstrip('/')}/rest/api/3/fields"
+        req = urllib.request.Request(url, headers={"Authorization": auth_header})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if resp.status == 200:
+                return jsonify({"ok": True})
+    except urllib.error.HTTPError as e:
+        return jsonify({"error": f"Jira {e.code}: {e.reason}"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    return jsonify({"error": "Unknown error"}), 500
+
+
+@app.route("/api/settings/test-anthropic", methods=["POST"])
+def api_test_anthropic():
+    """Test Anthropic API with provided key."""
+    body = request.get_json(silent=True) or {}
+    api_key = body.get("ANTHROPIC_API_KEY", "").strip()
+
+    if not api_key:
+        return jsonify({"error": "Missing API key"}), 400
+
+    try:
+        if not Anthropic:
+            return jsonify({"error": "Anthropic SDK not installed"}), 500
+
+        client = Anthropic(api_key=api_key)
+        resp = client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=10,
+            messages=[{"role": "user", "content": "hi"}],
+        )
+        return jsonify({"ok": True, "model": resp.model})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/api/settings/status", methods=["GET"])
+def api_settings_status():
+    """Return status of Claude CLI, sf CLI, and Salesforce orgs."""
+    status = {
+        "claude": {"installed": False},
+        "sf_installed": False,
+        "sf_prod": {"authenticated": False},
+        "sf_sandbox": {"authenticated": False},
+        "cci_installed": False,
+        "cci_prod": {"authenticated": False},
+        "cci_sandbox": {"authenticated": False},
+    }
+
+    use_cci = os.environ.get("CASEOPS_USE_CCI_FOR_AUTH", "false").lower() == "true"
+    prod_alias = os.environ.get("CASEOPS_PRODUCTION_READ_ORG", "")
+    sand_alias = os.environ.get("CASEOPS_SANDBOX_TARGET_ORG", "")
+
+    # Check Claude
+    try:
+        result = subprocess.run(["claude", "--version"], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            status["claude"]["installed"] = True
+            status["claude"]["version"] = result.stdout.strip()
+    except Exception:
+        pass
+
+    # Check sf CLI
+    if shutil.which("sf"):
+        status["sf_installed"] = True
+
+        # Check prod org
+        if prod_alias:
+            try:
+                result = subprocess.run(
+                    ["sf", "org", "display", "--target-org", prod_alias, "--json"],
+                    capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0:
+                    data = json.loads(result.stdout)
+                    status["sf_prod"]["authenticated"] = True
+                    status["sf_prod"]["username"] = data.get("result", {}).get("username", "")
+            except Exception:
+                pass
+
+        # Check sandbox org
+        if sand_alias:
+            try:
+                result = subprocess.run(
+                    ["sf", "org", "display", "--target-org", sand_alias, "--json"],
+                    capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0:
+                    data = json.loads(result.stdout)
+                    status["sf_sandbox"]["authenticated"] = True
+                    status["sf_sandbox"]["username"] = data.get("result", {}).get("username", "")
+            except Exception:
+                pass
+
+    # Check CCI
+    if shutil.which("cumulusci") or shutil.which("cci"):
+        status["cci_installed"] = True
+
+        # Check prod org
+        if prod_alias and use_cci:
+            try:
+                result = subprocess.run(
+                    ["cci", "org", "info", prod_alias],
+                    capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0:
+                    status["cci_prod"]["authenticated"] = True
+            except Exception:
+                pass
+
+        # Check sandbox org
+        if sand_alias and use_cci:
+            try:
+                result = subprocess.run(
+                    ["cci", "org", "info", sand_alias],
+                    capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0:
+                    status["cci_sandbox"]["authenticated"] = True
+            except Exception:
+                pass
+
+    return jsonify(status)
+
+
 if __name__ == "__main__":
     import argparse
 
