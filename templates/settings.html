@@ -421,7 +421,7 @@
                         <div id="sf-sand-status" style="margin-bottom: 15px;"></div>
                         <div class="settings-field">
                             <label for="sf-sand-url">Sandbox URL:</label>
-                            <input type="url" id="sf-sand-url" name="CASEOPS_SANDBOX_INSTANCE_URL" placeholder="https://test.salesforce.com">
+                            <input type="url" id="sf-sand-url" name="CASEOPS_SANDBOX_INSTANCE_URL" placeholder="https://10xhealth-sean.sandbox.my.salesforce.com">
                         </div>
                     </div>
                 </div>
@@ -681,6 +681,8 @@
             const useCCI = document.querySelector('input[name="CASEOPS_USE_CCI_FOR_AUTH"]:checked')?.value === 'true';
             const prodAlias = document.getElementById('sf-prod-alias').value || '<prod-alias>';
             const sandAlias = document.getElementById('sf-sand-alias').value || '<sandbox-alias>';
+            const prodUrl = document.getElementById('sf-prod-url').value || 'https://login.salesforce.com';
+            const sandUrl = document.getElementById('sf-sand-url').value || 'https://10xhealth-sean.sandbox.my.salesforce.com';
             const instrDiv = document.getElementById('auth-instructions');
 
             let html = '';
@@ -719,7 +721,7 @@
                         <div class="auth-command-group">
                             <div class="auth-command-label">Production:</div>
                             <div class="auth-command-box">
-                                <code id="sf-prod-cmd">sf org login web --set-default --alias ${prodAlias} --instance-url &lt;url&gt;</code>
+                                <code id="sf-prod-cmd">sf org login web --set-default --alias ${prodAlias} --instance-url ${prodUrl}</code>
                                 <button class="copy-button" onclick="copyCommand('sf-prod-cmd')">Copy</button>
                             </div>
                         </div>
@@ -727,7 +729,7 @@
                         <div class="auth-command-group">
                             <div class="auth-command-label">Sandbox:</div>
                             <div class="auth-command-box">
-                                <code id="sf-sand-cmd">sf org login web --set-default --alias ${sandAlias} --instance-url &lt;url&gt;</code>
+                                <code id="sf-sand-cmd">sf org login web --set-default --alias ${sandAlias} --instance-url ${sandUrl}</code>
                                 <button class="copy-button" onclick="copyCommand('sf-sand-cmd')">Copy</button>
                             </div>
                         </div>
@@ -775,7 +777,7 @@
             radio.addEventListener('change', updateLLMVisibility);
         });
 
-        // Update instructions when auth method or aliases change
+        // Update instructions when auth method, aliases, or URLs change
         document.querySelectorAll('input[name="CASEOPS_USE_CCI_FOR_AUTH"]').forEach(radio => {
             radio.addEventListener('change', () => {
                 loadStatus();
@@ -786,6 +788,10 @@
         document.getElementById('sf-prod-alias').addEventListener('input', updateAuthInstructions);
         document.getElementById('sf-sand-alias').addEventListener('change', updateAuthInstructions);
         document.getElementById('sf-sand-alias').addEventListener('input', updateAuthInstructions);
+        document.getElementById('sf-prod-url').addEventListener('change', updateAuthInstructions);
+        document.getElementById('sf-prod-url').addEventListener('input', updateAuthInstructions);
+        document.getElementById('sf-sand-url').addEventListener('change', updateAuthInstructions);
+        document.getElementById('sf-sand-url').addEventListener('input', updateAuthInstructions);
 
         // Load on page open
         loadSettings();
