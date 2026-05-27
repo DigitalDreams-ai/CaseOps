@@ -410,7 +410,9 @@ select.desktop-only {
     width: 280px !important;
     min-width: 280px !important;
     max-width: 300px !important;
+    background: var(--color-surface) !important;
     border-left: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
     z-index: 300 !important;
   }
 
