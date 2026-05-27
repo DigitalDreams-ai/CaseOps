@@ -316,6 +316,23 @@
 
         <div id="banner"></div>
 
+        <!-- Interactive Auth Instructions -->
+        <div class="settings-section" style="background: var(--color-primary); border-color: var(--color-primary); color: white; margin-bottom: 25px;">
+            <h2 style="color: white; margin-top: 0;">Interactive Authentication (Salesforce, Claude)</h2>
+            <p style="margin: 10px 0; line-height: 1.6;">
+                To authenticate Salesforce orgs and Claude Code CLI, SSH into the container and run interactive login commands:
+            </p>
+            <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 4px; margin: 10px 0; font-family: monospace; font-size: 12px; word-break: break-all;">
+                ssh docker@10.0.1.10 "/volume1/@appstore/ContainerManager/usr/bin/docker exec -it caseops bash"
+            </div>
+            <p style="margin: 10px 0 0 0; font-size: 13px; opacity: 0.95;">Then inside the container run (use <code style="background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 3px;">--browser none</code> for device code flow):</p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+                <li><code style="background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 3px;">sf org login web --set-default --alias 10xhealth --instance-url https://10xhealth.my.salesforce.com --browser none</code></li>
+                <li><code style="background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 3px;">sf org login web --set-default --alias 10xhealth-sean --instance-url https://10xhealth--sean.sandbox.my.salesforce.com --browser none</code></li>
+                <li><code style="background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 3px;">claude login</code></li>
+            </ul>
+        </div>
+
         <form id="settings-form">
             <!-- Jira -->
             <div class="settings-section">
