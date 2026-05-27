@@ -2,6 +2,11 @@
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
     <description>This Permission Set gives SteadyMD users the ability to have access to Consult record types and manage those Opportunities.</description>
     <fieldPermissions>
+        <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
         <editable>false</editable>
         <field>Appointment__c.Account__c</field>
         <readable>true</readable>
@@ -1548,16 +1553,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Opportunity.Account_Billing_State__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>Opportunity.Account_Main_Practitioner__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
         <field>Opportunity.Aesthetics_Promotion__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -2434,6 +2429,11 @@
     <fieldPermissions>
         <editable>false</editable>
         <field>Opportunity.Same_Info_As_On_Script_Practitioner_Acc__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Opportunity.Scheduled_By__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

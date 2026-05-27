@@ -13,6 +13,11 @@ Survey Rating
 Last Modified Date
 Last Modified By</description>
     <fieldPermissions>
+        <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
         <editable>false</editable>
         <field>Case.Case_Age_in_Days__c</field>
         <readable>true</readable>

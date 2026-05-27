@@ -102,6 +102,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
+        <field>Case.Supplement_Inquiry__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
         <field>Case.Survey_Comments__c</field>
         <readable>true</readable>
     </fieldPermissions>

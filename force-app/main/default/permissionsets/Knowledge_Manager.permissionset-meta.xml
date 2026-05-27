@@ -6,6 +6,11 @@
     </classAccesses>
     <description>Contains all Knowledge Permissions</description>
     <fieldPermissions>
+        <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
         <editable>false</editable>
         <field>Article_Feedback__c.Article__c</field>
         <readable>true</readable>

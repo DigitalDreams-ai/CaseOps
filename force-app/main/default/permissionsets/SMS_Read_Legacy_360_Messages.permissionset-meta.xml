@@ -3,6 +3,11 @@
     <description>These legacy SMS messages must remain visible to Wellness Advisors after all SMS 360 permission shave been revoked.</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>OrderItem.Notes__c</field>
         <readable>true</readable>
     </fieldPermissions>

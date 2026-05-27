@@ -1925,6 +1925,11 @@
         <name>smagicinteract__Update_Related_Lists__c</name>
     </customSettingAccesses>
     <fieldPermissions>
+        <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
         <editable>false</editable>
         <field>Lead.smagicinteract__SMSOptOut__c</field>
         <readable>true</readable>

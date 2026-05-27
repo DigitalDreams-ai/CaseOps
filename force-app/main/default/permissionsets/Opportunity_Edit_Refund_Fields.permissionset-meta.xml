@@ -4,6 +4,11 @@
 Opportunity partial refunded, Opportunity refunded date, and refunded amount</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Opportunity.Opportunity_Partial_Refunded__c</field>
         <readable>true</readable>
     </fieldPermissions>

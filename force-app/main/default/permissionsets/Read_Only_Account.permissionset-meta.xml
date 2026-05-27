@@ -893,11 +893,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Account.OperatingHoursId</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
         <field>Account.Opportunities_Type__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -1024,6 +1019,16 @@
     <fieldPermissions>
         <editable>false</editable>
         <field>Account.PreferredContactMethod__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Account.Preferred_Name_3__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

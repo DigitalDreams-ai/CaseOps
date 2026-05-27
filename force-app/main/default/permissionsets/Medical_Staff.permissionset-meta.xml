@@ -1052,6 +1052,16 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Account.Preferred_Name_3__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Account.Preferred_Name__c</field>
         <readable>true</readable>
     </fieldPermissions>
@@ -6711,16 +6721,6 @@
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
-        <editable>false</editable>
-        <field>Opportunity.Account_Billing_State__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>false</editable>
-        <field>Opportunity.Account_Main_Practitioner__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
         <editable>true</editable>
         <field>Opportunity.Aesthetics_Promotion__c</field>
         <readable>true</readable>
@@ -7608,6 +7608,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>Opportunity.Same_Info_As_On_Script_Practitioner_Acc__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Opportunity.Scheduled_By__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

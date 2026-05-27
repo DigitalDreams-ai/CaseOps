@@ -3,6 +3,11 @@
     <description>This permission set grants permission to edit fields that are read only per page layout specifications. This will grant access to many fields and so care should be taken when assigning it.</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>OrderItem.Notes__c</field>
         <readable>true</readable>
     </fieldPermissions>

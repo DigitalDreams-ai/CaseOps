@@ -3,6 +3,11 @@
     <description>This permission set is used to give Tier 1 access the ability to see Genetic Test record types.</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>OrderItem.Notes__c</field>
         <readable>true</readable>
     </fieldPermissions>

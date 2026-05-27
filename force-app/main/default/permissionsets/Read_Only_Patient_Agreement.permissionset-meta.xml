@@ -3,6 +3,11 @@
     <description>This Permission Set gives users Read Only access to the Patient Agreement object.</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>OrderItem.Notes__c</field>
         <readable>true</readable>
     </fieldPermissions>

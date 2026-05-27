@@ -3,6 +3,11 @@
     <description>Used to give users the right to create Fulfillment records</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Fulfillment_Line_Item__c.Discount__c</field>
         <readable>true</readable>
     </fieldPermissions>

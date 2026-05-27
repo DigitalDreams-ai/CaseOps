@@ -3,6 +3,11 @@
     <description>This permission set will confer the ability to edit the Shipping Address fields, as well the Synced field on the Order Object.</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Order.Fulfilled_By__c</field>
         <readable>true</readable>
     </fieldPermissions>

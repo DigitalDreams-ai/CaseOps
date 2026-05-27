@@ -13,7 +13,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>Lead.Blood_Interest__c</field>
+        <field>Account.Preferred_Name_2__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

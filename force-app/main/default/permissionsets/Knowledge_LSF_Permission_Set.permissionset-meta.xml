@@ -3,6 +3,11 @@
     <description>Grants CRUD permission for Knowledge, as well as Knowledge user permissions.</description>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>OrderItem.Notes__c</field>
         <readable>true</readable>
     </fieldPermissions>

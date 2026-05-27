@@ -74,6 +74,11 @@
     </classAccesses>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Account.Preferred_Name_2__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Event.Call_Outcome__c</field>
         <readable>true</readable>
     </fieldPermissions>
