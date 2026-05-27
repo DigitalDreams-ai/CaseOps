@@ -1300,7 +1300,7 @@ a:hover {
     display: none;
   }
 
-  #issue-actions-container[style*="display:"] {
+  #issue-actions-container.visible {
     display: inline-flex !important;
   }
 

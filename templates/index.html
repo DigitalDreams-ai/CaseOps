@@ -274,6 +274,8 @@
     }
     const inst = document.getElementById('instruction-panel');
     if (inst) inst.style.display = 'none';
+    const actionsContainer = document.getElementById('issue-actions-container');
+    if (actionsContainer) actionsContainer.classList.remove('visible');
   }
 
   function showOverview() {
@@ -976,7 +978,7 @@
     // Show issue-actions in topbar and load transitions/messages
     document.getElementById('issue-jira-url').value = issue.jira_url || '';
     const actionsContainer = document.getElementById('issue-actions-container');
-    if (actionsContainer) actionsContainer.style.display = '';
+    if (actionsContainer) actionsContainer.classList.add('visible');
 
     // Hide old detail-actions
     const actionsEl = document.getElementById('detail-actions');
@@ -2122,6 +2124,7 @@
       await recoverActiveRuns();
       await loadPipelineHistory('__global__');
       await restoreIssueFromSession();
+      if (!activeKey) resetMainToOverview();
       initStream();
       initIssuesSSE();
     })
