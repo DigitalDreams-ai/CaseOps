@@ -46,11 +46,11 @@ a:hover {
 }
 
 .desktop-only {
-  display: inline-flex;
+  display: inline-flex !important;
 }
 
 select.desktop-only {
-  display: block;
+  display: block !important;
 }
 
 /* Button styles (reused everywhere) */

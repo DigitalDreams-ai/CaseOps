@@ -1026,16 +1026,7 @@
     const actionsContainer = document.getElementById('issue-actions-container');
     if (actionsContainer) actionsContainer.classList.add('visible');
 
-    // Show detail-actions (desktop) or detail-actions-btn (mobile)
-    if (window.innerWidth <= 768) {
-      document.querySelectorAll('#detail-actions .desktop-only').forEach(el => el.style.display = 'none');
-      const btn = document.getElementById('detail-actions-btn');
-      if (btn) btn.style.display = 'inline-flex';
-    } else {
-      document.querySelectorAll('#detail-actions .desktop-only').forEach(el => el.style.display = '');
-      const btn = document.getElementById('detail-actions-btn');
-      if (btn) btn.style.display = 'none';
-    }
+    // CSS media queries handle visibility of detail-actions based on viewport
 
     loadTransitionsTopbar(key);
     loadCannedMessagesTopbar(key, issue.status);
