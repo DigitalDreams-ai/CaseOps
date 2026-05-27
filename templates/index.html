@@ -127,6 +127,7 @@
               </div>
               <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
                 <button class="action-menu-item" onclick="window.open(document.getElementById('issue-jira-url').value,'_blank')" style="width:100%; padding:6px 8px;">View in Jira</button>
+                <button class="action-menu-item" onclick="copyFullPrompt(activeKey); closeDetailActionsMenu();" style="width:100%; padding:6px 8px;">Copy Claude Prompt</button>
                 <button class="action-menu-item" onclick="sendInstruction(); closeDetailActionsMenu();" style="width:100%; padding:6px 8px;">Send to Claude</button>
               </div>
             </div>
@@ -2552,9 +2553,9 @@
     }
   }
 
-  async function applyTransitionDetail(key) {
-    const sel = document.getElementById('detail-transition-select');
-    const btn = document.getElementById('detail-transition-btn');
+  async function applyTransition(key, suffix = '') {
+    const sel = document.getElementById(`detail-transition-select${suffix}`);
+    const btn = document.getElementById(`detail-transition-btn${suffix}`);
     if (!sel || !btn) return;
 
     const opt = sel.options[sel.selectedIndex];
@@ -2580,41 +2581,19 @@
         }, 500);
       }
     }
+  }
+
+  async function applyTransitionDetail(key) {
+    return applyTransition(key, '');
   }
 
   async function applyTransitionDetailMobile(key) {
-    const sel = document.getElementById('detail-transition-select-mobile');
-    const btn = document.getElementById('detail-transition-btn-mobile');
-    if (!sel || !btn) return;
-
-    const opt = sel.options[sel.selectedIndex];
-    const transition_id = sel.value;
-    const new_status = opt.getAttribute('data-status') || '';
-    if (!transition_id) return;
-
-    btn.disabled = true;
-    try {
-      const res = await fetch(`/api/issue/${key}/transition`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transition_id, new_status })
-      });
-      const data = await res.json();
-      if (activeKey !== key) return;
-      if (!res.ok) throw new Error(data.error || 'Transition failed');
-    } catch(e) {
-      if (activeKey === key) {
-        console.error('Transition error:', e.message);
-        setTimeout(() => {
-          if (btn && activeKey === key) btn.disabled = !sel.value;
-        }, 500);
-      }
-    }
+    return applyTransition(key, '-mobile');
   }
 
-  async function sendCannedMessageDetail(key) {
-    const sel = document.getElementById('detail-message-select');
-    const btn = document.getElementById('detail-message-btn');
+  async function sendCannedMessageDetail(key, suffix = '') {
+    const sel = document.getElementById(`detail-message-select${suffix}`);
+    const btn = document.getElementById(`detail-message-btn${suffix}`);
     if (!sel || !btn) return;
 
     const message_id = sel.value;
@@ -2639,29 +2618,7 @@
   }
 
   async function sendCannedMessageDetailMobile(key) {
-    const sel = document.getElementById('detail-message-select-mobile');
-    const btn = document.getElementById('detail-message-btn-mobile');
-    if (!sel || !btn) return;
-
-    const message_id = sel.value;
-    if (!message_id) return;
-
-    btn.disabled = true;
-    try {
-      const res = await fetch(`/api/issue/${key}/send-canned-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message_id })
-      });
-      const data = await res.json();
-      if (activeKey !== key) return;
-      if (!res.ok) throw new Error(data.error || 'Send failed');
-    } catch(e) {
-      if (activeKey === key) {
-        console.error('Send error:', e.message);
-        btn.disabled = false;
-      }
-    }
+    return sendCannedMessageDetail(key, '-mobile');
   }
 </script>
 </body>
