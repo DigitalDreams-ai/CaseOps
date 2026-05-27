@@ -1643,6 +1643,10 @@ select.desktop-only {
     display: none !important;
   }
 
+  #detail-actions {
+    display: none !important;
+  }
+
   .btn {
     min-height: 40px;
     font-size: 13px;
