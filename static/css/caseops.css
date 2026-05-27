@@ -1289,17 +1289,18 @@ a:hover {
   }
 
   .issue-actions-menu {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    min-width: auto;
-    max-height: 60vh;
-    border-radius: 8px 8px 0 0;
-    margin: 0;
-    z-index: 400;
+    display: block !important;
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    min-width: auto !important;
+    max-height: 60vh !important;
+    border-radius: 8px 8px 0 0 !important;
+    margin: 0 !important;
+    z-index: 400 !important;
   }
 
   /* Touch-friendly buttons */
@@ -1342,13 +1343,9 @@ a:hover {
   }
 }
 
-/* Consolidated Actions menu - mobile only */
-#issue-actions-btn {
-  position: relative;
-  display: none !important;
-}
-
+/* Consolidated Actions menu - desktop default (hidden), mobile override below */
 .issue-actions-menu {
+  display: none;
   position: absolute;
   top: 100%;
   right: 0;
