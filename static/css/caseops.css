@@ -1624,15 +1624,15 @@ select.desktop-only {
 
 @media (max-width: 768px) {
   .mobile-only {
-    display: inline-flex;
+    display: inline-flex !important;
   }
 
   .desktop-only {
-    display: none;
+    display: none !important;
   }
 
   select.desktop-only {
-    display: none;
+    display: none !important;
   }
 
   #detail-actions-btn {
