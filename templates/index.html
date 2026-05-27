@@ -24,8 +24,31 @@
     <button class="btn" onclick="runAction('triage')">Prepare Issues</button>
     <button class="btn primary" onclick="runAction('full')">Auto-Process All</button>
     <button type="button" class="btn" id="topbar-overview-btn" onclick="showOverview()">Overview</button>
-    <a href="/settings" class="btn" title="Settings">⚙</a>
   </div>
+  <div id="issue-actions-container" style="display:none; position:relative;">
+    <button type="button" class="btn primary" id="issue-actions-topbar-btn" onclick="toggleIssueActionsMenu()">Actions ▼</button>
+    <div id="issue-actions-topbar-menu" class="issue-actions-menu" style="display:none;">
+      <div style="padding:6px;">
+        <button class="action-menu-item" id="sync-issue-btn" onclick="runAction('sync_issue',activeKey)">Sync This Issue</button>
+        <button class="action-menu-item primary" id="run-issue-btn" onclick="runAction('full_issue',activeKey)">Run Pipeline For This Issue</button>
+        <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
+          <select id="transition-select-topbar" class="action-menu-select" style="width:100%; margin-bottom:4px; font-size:12px; padding:4px;"><option value="">Change status…</option></select>
+          <button class="action-menu-item" id="transition-btn-topbar" onclick="applyTransitionTopbar(activeKey)" disabled style="width:100%; padding:6px 8px;">Apply</button>
+          <span id="transition-status-topbar" style="font-size:11px; display:block; margin-top:4px;"></span>
+        </div>
+        <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
+          <select id="message-select-topbar" class="action-menu-select" style="width:100%; margin-bottom:4px; font-size:12px; padding:4px;"><option value="">Send message…</option></select>
+          <button class="action-menu-item" id="message-btn-topbar" onclick="sendCannedMessageTopbar(activeKey)" disabled style="width:100%; padding:6px 8px;">Send</button>
+          <span id="message-status-topbar" style="font-size:11px; display:block; margin-top:4px;"></span>
+        </div>
+        <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
+          <button class="action-menu-item" id="view-jira-btn" onclick="window.open(document.getElementById('issue-jira-url').value,'_blank')" style="width:100%; padding:6px 8px;">View in Jira</button>
+          <button class="action-menu-item" onclick="copyFullPrompt(activeKey)" style="width:100%; padding:6px 8px;">Copy Claude Prompt</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <a href="/settings" class="btn" title="Settings">⚙</a>
   <button type="button" id="mobile-menu-btn" class="btn mobile-only" onclick="toggleMobileMenu()">⋮</button>
 </div>
 
@@ -65,24 +88,27 @@
     </div>
   </div>
 
+  <!-- Hidden storage for issue data -->
+  <input type="hidden" id="issue-jira-url" value="">
+
   <!-- Main panel -->
   <div id="main">
-    <div id="detail-header" style="display:none;">
-      <div id="detail-title"></div>
-      <div id="detail-badges"></div>
-      <div id="detail-meta"></div>
-    </div>
-    <div id="detail-actions" style="display:none"></div>
-    <button id="instruction-toggle-btn" class="btn" style="display:none; width:100%; margin-bottom:8px;" onclick="toggleInstructionPanel()">+ Instructions</button>
-    <div id="instruction-panel">
-      <div id="instruction-context"></div>
-      <div id="instruction-row">
-        <textarea id="instruction-input" placeholder="Instruct Claude on what to do next…&#10;e.g. &quot;Draft the Jira message based on the investigation&quot;" onkeydown="handleInstructionKeydown(event)"></textarea>
-        <button id="send-claude-btn" class="btn primary" onclick="sendInstruction()">Send to Claude</button>
-      </div>
-    </div>
-    <div id="tabs" style="display:none"></div>
     <div id="content-area">
+      <div id="detail-header" style="display:none;">
+        <div id="detail-title"></div>
+        <div id="detail-badges"></div>
+        <div id="detail-meta"></div>
+      </div>
+      <div id="detail-actions" style="display:none"></div>
+      <button id="instruction-toggle-btn" class="btn" style="display:none; width:100%; margin-bottom:8px;" onclick="toggleInstructionPanel()">+ Instructions</button>
+      <div id="instruction-panel">
+        <div id="instruction-context"></div>
+        <div id="instruction-row">
+          <textarea id="instruction-input" placeholder="Instruct Claude on what to do next…&#10;e.g. &quot;Draft the Jira message based on the investigation&quot;" onkeydown="handleInstructionKeydown(event)"></textarea>
+          <button id="send-claude-btn" class="btn primary" onclick="sendInstruction()">Send to Claude</button>
+        </div>
+      </div>
+      <div id="tabs" style="display:none"></div>
       <div id="dashboard">
         <h2>Overview</h2>
         <p id="overview-meta" class="overview-meta"></p>
@@ -947,44 +973,17 @@
     const headerEl = document.getElementById('detail-header');
     if (headerEl) headerEl.style.display = 'block';
 
-    // actions - render all buttons for desktop, will be hidden/consolidated on mobile
+    // Show issue-actions in topbar and load transitions/messages
+    document.getElementById('issue-jira-url').value = issue.jira_url || '';
+    const actionsContainer = document.getElementById('issue-actions-container');
+    if (actionsContainer) actionsContainer.style.display = '';
+
+    // Hide old detail-actions
     const actionsEl = document.getElementById('detail-actions');
-    if (actionsEl) actionsEl.style.display = 'flex';
-    else {
-      await loadPipelineHistory(key, selectIssueSeq);
-      return;
-    }
-    const isRunning = activeRuns.has(key);
-    const jiraLink = issue.jira_url
-      ? `<a class="btn" href="${escHtml(issue.jira_url)}" target="_blank" rel="noopener">View in Jira</a>`
-      : '';
-    actionsEl.innerHTML = `
-      <button class="btn" data-run-key="${key}" onclick="runAction('sync_issue','${key}')"
-        ${isRunning ? 'disabled' : ''}>Sync This Issue</button>
-      <button class="btn primary" data-run-key="${key}" onclick="runAction('full_issue','${key}')"
-        ${isRunning ? 'disabled' : ''}>Run Pipeline For This Issue</button>
-      ${jiraLink}
-      <button type="button" class="btn" id="issue-actions-btn" onclick="toggleIssueActionsMenu('${key}')" style="display:none;">Actions ▼</button>
-      <div id="issue-actions-menu" class="issue-actions-menu" style="display:none;">
-        <div style="padding:8px;">
-          <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
-            <select id="transition-select" class="btn" style="padding:5px 8px; flex:1; min-width:140px;">
-              <option value="">Change status…</option>
-            </select>
-            <button class="btn primary" id="transition-btn" onclick="applyTransition('${key}')" disabled style="padding:5px 8px;">Apply</button>
-          </div>
-          <span id="transition-status" style="font-size:12px; display:block; margin-bottom:8px;"></span>
-          <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
-            <select id="message-select" class="btn" style="padding:5px 8px; flex:1; min-width:140px;">
-              <option value="">Send message…</option>
-            </select>
-            <button class="btn primary" id="message-btn" onclick="sendCannedMessage('${key}')" disabled style="padding:5px 8px;">Send</button>
-          </div>
-          <span id="message-status" style="font-size:12px; display:block; margin-bottom:8px;"></span>
-          <button class="btn" onclick="copyFullPrompt('${key}')" style="width:100%;">Copy Claude Prompt</button>
-        </div>
-      </div>
-    `;
+    if (actionsEl) actionsEl.style.display = 'none';
+
+    loadTransitionsTopbar(key);
+    loadCannedMessagesTopbar(key, issue.status);
 
     // tabs
     const tabsEl = document.getElementById('tabs');
@@ -2171,9 +2170,9 @@
     btn.textContent = open ? 'Filters ▴' : 'Filters ▾';
   }
 
-  function toggleIssueActionsMenu(key) {
-    const menu = document.getElementById('issue-actions-menu');
-    const btn = document.getElementById('issue-actions-btn');
+  function toggleIssueActionsMenu() {
+    const menu = document.getElementById('issue-actions-topbar-menu');
+    const btn = document.getElementById('issue-actions-topbar-btn');
     const open = menu.style.display !== 'none';
     menu.style.display = open ? 'none' : 'block';
     btn.textContent = open ? 'Actions ▼' : 'Actions ▲';
@@ -2187,6 +2186,209 @@
         }
       };
       document.addEventListener('click', closeMenu);
+    }
+  }
+
+  async function loadTransitionsTopbar(key) {
+    let sel = document.getElementById('transition-select-topbar');
+    if (!sel) return;
+    try {
+      const res = await fetch(`/api/issue/${key}/transitions`);
+      const data = await res.json();
+      if (activeKey !== key) return;
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      const transitions = Array.isArray(data) ? data : data.entries || [];
+      sel.innerHTML = '<option value="">Change status…</option>' +
+        transitions.map(t => `<option value="${escHtml(t.id)}" data-status="${escHtml(t.to_status)}">${escHtml(t.name)}</option>`).join('');
+      sel.onchange = () => {
+        const b = document.getElementById('transition-btn-topbar');
+        if (b) b.disabled = !sel.value;
+      };
+    } catch(e) {
+      if (activeKey !== key) return;
+      sel.innerHTML = `<option value="">Error: ${escHtml(e.message)}</option>`;
+    }
+  }
+
+  async function loadCannedMessagesTopbar(key, status) {
+    let sel = document.getElementById('message-select-topbar');
+    if (!sel) return;
+
+    try {
+      if (!cachedMessages) {
+        const res = await fetch(`/api/canned-messages`);
+        if (!res.ok) throw new Error('Failed to load canned messages');
+        cachedMessages = await res.json();
+      }
+
+      if (activeKey !== key) return;
+      sel = document.getElementById('message-select-topbar');
+      const btnCurrent = document.getElementById('message-btn-topbar');
+      if (!sel) return;
+      const data = cachedMessages;
+
+      const available = data.filter(m => {
+        if (m.id === 'initial-response') return status === 'Waiting for support';
+        return true;
+      });
+
+      if (available.length === 0) {
+        sel.innerHTML = '<option value="">No messages available</option>';
+        if (btnCurrent) btnCurrent.disabled = true;
+      } else {
+        sel.innerHTML = '<option value="">Send message…</option>' +
+          available.map(m => `<option value="${escHtml(m.id)}">${escHtml(m.name)}</option>`).join('');
+        sel.onchange = () => { if (btnCurrent) btnCurrent.disabled = !sel.value; };
+      }
+    } catch(e) {
+      if (activeKey !== key) return;
+      sel.innerHTML = `<option value="">Error: ${escHtml(e.message)}</option>`;
+    }
+  }
+
+  async function applyTransitionTopbar(key) {
+    const sel = document.getElementById('transition-select-topbar');
+    const btn = document.getElementById('transition-btn-topbar');
+    const statusEl = document.getElementById('transition-status-topbar');
+    const opt = sel.options[sel.selectedIndex];
+    const transition_id = sel.value;
+    const new_status = opt.getAttribute('data-status') || '';
+    if (!transition_id) return;
+
+    btn.disabled = true;
+    if (statusEl) {
+      statusEl.style.color = '#8b949e';
+      statusEl.textContent = 'Applying…';
+    }
+
+    try {
+      const res = await fetch(`/api/issue/${key}/transition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transition_id, new_status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (activeKey !== key) {
+        logLine(`Transitioned ${key} to ${new_status}`, 'ok', key);
+        await loadIssues();
+        return;
+      }
+
+      const meta = document.getElementById('detail-meta');
+      if (meta) {
+        const oldText = meta.textContent;
+        const newText = oldText.replace(/Status: [^|]+/, `Status: ${new_status}   `);
+        meta.textContent = newText;
+      }
+
+      if (statusEl) {
+        statusEl.style.color = '#3fb950';
+        statusEl.textContent = `→ ${new_status}`;
+      }
+      logLine(`Transitioned ${key} to ${new_status}`, 'ok', key);
+      await loadIssues();
+    } catch(e) {
+      if (activeKey === key) {
+        if (statusEl) {
+          statusEl.style.color = '#f85149';
+          statusEl.textContent = e.message;
+        }
+        if (btn) {
+          btn.disabled = false;
+          setTimeout(() => {
+            if (btn && activeKey === key) btn.disabled = !sel.value;
+          }, 500);
+        }
+      }
+    }
+  }
+
+  async function sendCannedMessageTopbar(key) {
+    const sel = document.getElementById('message-select-topbar');
+    const btn = document.getElementById('message-btn-topbar');
+    const statusEl = document.getElementById('message-status-topbar');
+    const message_id = sel.value;
+    if (!message_id) return;
+
+    btn.disabled = true;
+    if (statusEl) {
+      statusEl.style.color = '#8b949e';
+      statusEl.textContent = 'Sending…';
+    }
+
+    try {
+      const res = await fetch(`/api/issue/${key}/send-canned-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      if (activeKey !== key) {
+        logLine(`Sent message to ${key}`, 'ok', key);
+        await loadIssues();
+        return;
+      }
+
+      if (statusEl) {
+        statusEl.style.color = '#3fb950';
+        statusEl.textContent = '✓ Sent';
+      }
+      logLine(`Sent message to ${key}`, 'ok', key);
+      sel.value = '';
+      btn.disabled = true;
+
+      if (message_id === 'initial-response') {
+        setTimeout(() => {
+          if (activeKey !== key) return;
+          try {
+            (async () => {
+              const transRes = await fetch(`/api/issue/${key}/transitions`);
+              const transitions = await transRes.json();
+              if (activeKey !== key) {
+                await loadIssues();
+                return;
+              }
+              const inProgressTrans = transitions.find(t => t.to_status && t.to_status.toLowerCase() === 'in progress');
+              if (inProgressTrans) {
+                const transRes2 = await fetch(`/api/issue/${key}/transition`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ transition_id: inProgressTrans.id, new_status: inProgressTrans.to_status }),
+                });
+                const transData = await transRes2.json();
+                if (activeKey !== key) {
+                  await loadIssues();
+                  return;
+                }
+                if (!transRes2.ok) throw new Error(transData.error || 'Failed');
+                logLine(`Auto-transitioned ${key} to In Progress`, 'ok', key);
+              }
+              await loadIssues();
+            })();
+          } catch(err) {
+            console.error('Auto-transition failed:', err);
+            if (activeKey === key) loadIssues();
+          }
+        }, 2000);
+      } else {
+        await loadIssues();
+      }
+    } catch(e) {
+      if (activeKey === key) {
+        if (statusEl) {
+          statusEl.style.color = '#f85149';
+          statusEl.textContent = e.message;
+        }
+        if (btn) {
+          btn.disabled = false;
+          setTimeout(() => {
+            if (btn && activeKey === key) btn.disabled = !sel.value;
+          }, 500);
+        }
+      }
     }
   }
 

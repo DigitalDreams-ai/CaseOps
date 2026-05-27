@@ -39,8 +39,8 @@ a:hover {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 8px 12px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   flex-wrap: wrap;
@@ -53,6 +53,26 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+#issue-actions-container {
+  position: relative;
+}
+
+#issue-actions-topbar-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 320px;
+  max-height: 600px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  margin-top: 4px;
+  z-index: 400;
+  animation: slideDown 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
 }
 
 #topbar-logo {
@@ -93,7 +113,7 @@ a:hover {
 }
 
 .btn {
-  padding: 6px 12px;
+  padding: 4px 10px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
@@ -340,9 +360,13 @@ a:hover {
 }
 
 #detail-header {
-  padding: 16px;
+  padding: 12px;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  z-index: 50;
 }
 
 #detail-title {
@@ -453,10 +477,13 @@ a:hover {
   flex-shrink: 0;
   overflow-x: auto;
   background: var(--color-surface);
+  position: sticky;
+  top: 70px;
+  z-index: 40;
 }
 
 .tab {
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-right: 1px solid var(--color-border);
   cursor: pointer;
   font-size: 12px;
@@ -481,7 +508,7 @@ a:hover {
 #content-area {
   flex: 1;
   overflow: auto;
-  padding: 16px;
+  padding: 12px;
 }
 
 #dashboard {
@@ -1268,6 +1295,29 @@ a:hover {
     gap: 4px;
   }
 
+  /* Show Actions container on mobile (in topbar) */
+  #issue-actions-container {
+    display: none;
+  }
+
+  #issue-actions-container[style*="display:"] {
+    display: inline-flex !important;
+  }
+
+  #issue-actions-topbar-menu {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    min-width: auto !important;
+    max-height: 60vh !important;
+    border-radius: 8px 8px 0 0 !important;
+    margin: 0 !important;
+    z-index: 400 !important;
+  }
+
   /* Mobile: consolidate detail-actions into dropdown menu */
   #detail-actions {
     flex-wrap: wrap;
@@ -1302,6 +1352,8 @@ a:hover {
     margin: 0 !important;
     z-index: 400 !important;
   }
+
+  /* Sticky positioning (already set in base, maintained for mobile) */
 
   /* Touch-friendly buttons */
   .btn {
