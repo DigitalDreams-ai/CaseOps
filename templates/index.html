@@ -25,8 +25,9 @@
     <button class="btn primary" onclick="runAction('full')">Auto-Process All</button>
     <button type="button" class="btn" id="topbar-overview-btn" onclick="showOverview()">Overview</button>
   </div>
-  <div id="issue-actions-container" style="display:none; position:relative;">
-    <button type="button" class="btn primary" id="issue-actions-topbar-btn" onclick="toggleIssueActionsMenu()">Actions ▼</button>
+  <!-- Mobile: issue actions button (in topbar, left of menu) -->
+  <div id="issue-actions-container" style="position:relative;">
+    <button type="button" class="btn primary mobile-only" id="issue-actions-topbar-btn" onclick="toggleIssueActionsMenu()" style="display:none;">Actions ▼</button>
     <div id="issue-actions-topbar-menu" class="issue-actions-menu" style="display:none;">
       <div style="padding:6px;">
         <button class="action-menu-item" id="sync-issue-btn" onclick="runAction('sync_issue',activeKey)">Sync This Issue</button>
@@ -48,8 +49,8 @@
       </div>
     </div>
   </div>
-  <a href="/settings" class="btn" title="Settings">⚙</a>
-  <button type="button" id="mobile-menu-btn" class="btn mobile-only" onclick="toggleMobileMenu()">⋮</button>
+  <a href="/settings" class="btn desktop-only" title="Settings">⚙</a>
+  <button type="button" id="mobile-menu-btn" class="btn mobile-only" onclick="toggleMobileMenu()" title="Menu">⋮</button>
 </div>
 
 <!-- Main layout -->
@@ -100,7 +101,40 @@
     </div>
     <div id="tabs" style="display:none"></div>
     <div id="content-area">
-      <div id="detail-actions"></div>
+      <div id="detail-actions" style="display:flex; padding:12px 16px; border-bottom:1px solid var(--color-border); gap:8px; align-items:center; flex-wrap:wrap; background:rgba(0,0,0,0.1);">
+        <!-- Desktop: always visible -->
+        <button class="btn desktop-only" id="detail-sync-btn" onclick="runAction('sync_issue',activeKey)" style="display:none;">Sync This Issue</button>
+        <button class="btn primary desktop-only" id="detail-pipeline-btn" onclick="runAction('full_issue',activeKey)" style="display:none;">Run Pipeline</button>
+        <select id="detail-transition-select" class="action-menu-select desktop-only" style="display:none; padding:5px 8px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:4px; font-size:12px;"><option value="">Change status…</option></select>
+        <button class="btn desktop-only" id="detail-transition-btn" onclick="applyTransitionDetail(activeKey)" disabled style="display:none; padding:6px 8px;">Apply</button>
+        <select id="detail-message-select" class="action-menu-select desktop-only" style="display:none; padding:5px 8px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:4px; font-size:12px;"><option value="">Send message…</option></select>
+        <button class="btn desktop-only" id="detail-message-btn" onclick="sendCannedMessageDetail(activeKey)" disabled style="display:none; padding:6px 8px;">Send</button>
+        <button class="btn desktop-only" id="detail-jira-btn" onclick="window.open(document.getElementById('issue-jira-url').value,'_blank')" style="display:none; padding:6px 8px;">View in Jira</button>
+        <button class="btn desktop-only" id="detail-prompt-btn" onclick="copyFullPrompt(activeKey)" style="display:none; padding:6px 8px;">Copy Claude Prompt</button>
+
+        <!-- Mobile: dropdown menu -->
+        <div style="position:relative;">
+          <button type="button" class="btn primary mobile-only" id="detail-actions-btn" onclick="toggleDetailActionsMenu()" style="display:none;">Actions ▼</button>
+          <div id="detail-actions-menu" class="issue-actions-menu" style="display:none; position:absolute; top:100%; right:0; background:var(--color-surface); border:1px solid var(--color-border); border-radius:4px; z-index:100; min-width:200px;">
+            <div style="padding:6px;">
+              <button class="action-menu-item" onclick="runAction('sync_issue',activeKey)">Sync This Issue</button>
+              <button class="action-menu-item primary" onclick="runAction('full_issue',activeKey)">Run Pipeline For This Issue</button>
+              <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
+                <select id="detail-transition-select-mobile" class="action-menu-select" style="width:100%; margin-bottom:4px; font-size:12px; padding:4px;"><option value="">Change status…</option></select>
+                <button class="action-menu-item" id="detail-transition-btn-mobile" onclick="applyTransitionDetailMobile(activeKey)" disabled style="width:100%; padding:6px 8px;">Apply</button>
+              </div>
+              <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
+                <select id="detail-message-select-mobile" class="action-menu-select" style="width:100%; margin-bottom:4px; font-size:12px; padding:4px;"><option value="">Send message…</option></select>
+                <button class="action-menu-item" id="detail-message-btn-mobile" onclick="sendCannedMessageDetailMobile(activeKey)" disabled style="width:100%; padding:6px 8px;">Send</button>
+              </div>
+              <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
+                <button class="action-menu-item" onclick="window.open(document.getElementById('issue-jira-url').value,'_blank')" style="width:100%; padding:6px 8px;">View in Jira</button>
+                <button class="action-menu-item" onclick="copyFullPrompt(activeKey); closeDetailActionsMenu();" style="width:100%; padding:6px 8px;">Send to Claude</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <button id="instruction-toggle-btn" class="btn" style="display:none; width:100%; margin-bottom:8px;" onclick="toggleInstructionPanel()">+ Instructions</button>
       <div id="instruction-panel">
         <div id="instruction-context"></div>
@@ -265,8 +299,11 @@
       issueBody.innerHTML = '';
     }
     if (header) header.style.display = 'none';
-    const actionsEl = document.getElementById('detail-actions');
-    if (actionsEl) actionsEl.style.display = 'none';
+    document.querySelectorAll('#detail-actions .desktop-only').forEach(el => el.style.display = 'none');
+    const detailActionsBtn = document.getElementById('detail-actions-btn');
+    if (detailActionsBtn) detailActionsBtn.style.display = 'none';
+    const detailActionsMenu = document.getElementById('detail-actions-menu');
+    if (detailActionsMenu) detailActionsMenu.style.display = 'none';
     const tabsEl = document.getElementById('tabs');
     if (tabsEl) {
       tabsEl.style.display = 'none';
@@ -899,6 +936,10 @@
     persistSelectedIssue(key);
     renderLogForKey(key);
 
+    // Show issue actions button on mobile when issue selected
+    const ac = document.getElementById('issue-actions-container');
+    if (ac) ac.classList.add('visible');
+
     // highlight sidebar
     document.querySelectorAll('.issue-item').forEach(el => {
       el.classList.toggle('selected', el.dataset.key === key);
@@ -975,28 +1016,34 @@
     const headerEl = document.getElementById('detail-header');
     if (headerEl) headerEl.style.display = 'block';
 
+    // Mobile: hide badges and meta to save space
+    if (window.innerWidth <= 768) {
+      const badges = document.getElementById('detail-badges');
+      const meta = document.getElementById('detail-meta');
+      if (badges) badges.style.display = 'none';
+      if (meta) meta.style.display = 'none';
+    }
+
     // Show issue-actions in topbar and load transitions/messages
     document.getElementById('issue-jira-url').value = issue.jira_url || '';
     const actionsContainer = document.getElementById('issue-actions-container');
     if (actionsContainer) actionsContainer.classList.add('visible');
 
-    // Show detail-actions on desktop, hide on mobile
-    const actionsEl = document.getElementById('detail-actions');
-    if (actionsEl) {
-      if (window.innerWidth <= 768) {
-        actionsEl.style.display = 'none';
-      } else {
-        actionsEl.style.display = 'flex';
-        // Populate desktop detail-actions with action buttons
-        actionsEl.innerHTML = `
-          <button class="btn" onclick="runAction('sync_issue','${key}')">Sync This Issue</button>
-          <button class="btn primary" onclick="runAction('full_issue','${key}')">Run Pipeline</button>
-        `;
-      }
+    // Show detail-actions (desktop) or detail-actions-btn (mobile)
+    if (window.innerWidth <= 768) {
+      document.querySelectorAll('#detail-actions .desktop-only').forEach(el => el.style.display = 'none');
+      const btn = document.getElementById('detail-actions-btn');
+      if (btn) btn.style.display = 'inline-flex';
+    } else {
+      document.querySelectorAll('#detail-actions .desktop-only').forEach(el => el.style.display = '');
+      const btn = document.getElementById('detail-actions-btn');
+      if (btn) btn.style.display = 'none';
     }
 
     loadTransitionsTopbar(key);
     loadCannedMessagesTopbar(key, issue.status);
+    loadTransitionsDetail(key);
+    loadCannedMessagesDetail(key, issue.status);
 
     // tabs
     const tabsEl = document.getElementById('tabs');
@@ -2412,6 +2459,228 @@
     const open = panel.style.display !== 'none';
     panel.style.display = open ? 'none' : 'block';
     btn.textContent = open ? '+ Instructions' : '- Instructions';
+  }
+
+  // Detail-Actions Menu (Mobile dropdown)
+  function toggleDetailActionsMenu() {
+    const menu = document.getElementById('detail-actions-menu');
+    const btn = document.getElementById('detail-actions-btn');
+    const open = menu.style.display !== 'none';
+    menu.style.display = open ? 'none' : 'block';
+    btn.textContent = open ? 'Actions ▼' : 'Actions ▲';
+
+    if (!open) {
+      const closeMenu = (e) => {
+        if (!menu.contains(e.target) && !btn.contains(e.target)) {
+          menu.style.display = 'none';
+          btn.textContent = 'Actions ▼';
+          document.removeEventListener('click', closeMenu);
+        }
+      };
+      document.addEventListener('click', closeMenu);
+    }
+  }
+
+  function closeDetailActionsMenu() {
+    const menu = document.getElementById('detail-actions-menu');
+    const btn = document.getElementById('detail-actions-btn');
+    menu.style.display = 'none';
+    btn.textContent = 'Actions ▼';
+  }
+
+  async function loadTransitionsDetail(key) {
+    // Load for both desktop and mobile versions
+    const selDesktop = document.getElementById('detail-transition-select');
+    const selMobile = document.getElementById('detail-transition-select-mobile');
+    if (!selDesktop && !selMobile) return;
+
+    try {
+      const res = await fetch(`/api/issue/${key}/transitions`);
+      const data = await res.json();
+      if (activeKey !== key) return;
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      const transitions = Array.isArray(data) ? data : data.entries || [];
+      const html = '<option value="">Change status…</option>' +
+        transitions.map(t => `<option value="${escHtml(t.id)}" data-status="${escHtml(t.to_status)}">${escHtml(t.name)}</option>`).join('');
+
+      if (selDesktop) {
+        selDesktop.innerHTML = html;
+        selDesktop.onchange = () => {
+          const b = document.getElementById('detail-transition-btn');
+          if (b) b.disabled = !selDesktop.value;
+        };
+      }
+      if (selMobile) {
+        selMobile.innerHTML = html;
+        selMobile.onchange = () => {
+          const b = document.getElementById('detail-transition-btn-mobile');
+          if (b) b.disabled = !selMobile.value;
+        };
+      }
+    } catch(e) {
+      if (activeKey !== key) return;
+      const html = `<option value="">Error: ${escHtml(e.message)}</option>`;
+      if (selDesktop) selDesktop.innerHTML = html;
+      if (selMobile) selMobile.innerHTML = html;
+    }
+  }
+
+  async function loadCannedMessagesDetail(key, status) {
+    const selDesktop = document.getElementById('detail-message-select');
+    const selMobile = document.getElementById('detail-message-select-mobile');
+    if (!selDesktop && !selMobile) return;
+
+    try {
+      if (!cachedMessages) {
+        const res = await fetch(`/api/canned-messages`);
+        if (!res.ok) throw new Error('Failed to load canned messages');
+        cachedMessages = await res.json();
+      }
+
+      if (activeKey !== key) return;
+      const data = cachedMessages;
+
+      const available = data.filter(m => {
+        if (m.id === 'initial-response') return status === 'Waiting for support';
+        return true;
+      });
+
+      const html = available.length === 0
+        ? '<option value="">No messages available</option>'
+        : '<option value="">Send message…</option>' +
+          available.map(m => `<option value="${escHtml(m.id)}">${escHtml(m.name)}</option>`).join('');
+
+      if (selDesktop) {
+        selDesktop.innerHTML = html;
+        const btnDesktop = document.getElementById('detail-message-btn');
+        selDesktop.onchange = () => { if (btnDesktop) btnDesktop.disabled = !selDesktop.value; };
+        if (btnDesktop) btnDesktop.disabled = true;
+      }
+      if (selMobile) {
+        selMobile.innerHTML = html;
+        const btnMobile = document.getElementById('detail-message-btn-mobile');
+        selMobile.onchange = () => { if (btnMobile) btnMobile.disabled = !selMobile.value; };
+        if (btnMobile) btnMobile.disabled = true;
+      }
+    } catch(e) {
+      if (activeKey !== key) return;
+      const html = `<option value="">Error: ${escHtml(e.message)}</option>`;
+      if (selDesktop) selDesktop.innerHTML = html;
+      if (selMobile) selMobile.innerHTML = html;
+    }
+  }
+
+  async function applyTransitionDetail(key) {
+    const sel = document.getElementById('detail-transition-select');
+    const btn = document.getElementById('detail-transition-btn');
+    if (!sel || !btn) return;
+
+    const opt = sel.options[sel.selectedIndex];
+    const transition_id = sel.value;
+    const new_status = opt.getAttribute('data-status') || '';
+    if (!transition_id) return;
+
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/issue/${key}/transition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transition_id, new_status })
+      });
+      const data = await res.json();
+      if (activeKey !== key) return;
+      if (!res.ok) throw new Error(data.error || 'Transition failed');
+    } catch(e) {
+      if (activeKey === key) {
+        console.error('Transition error:', e.message);
+        setTimeout(() => {
+          if (btn && activeKey === key) btn.disabled = !sel.value;
+        }, 500);
+      }
+    }
+  }
+
+  async function applyTransitionDetailMobile(key) {
+    const sel = document.getElementById('detail-transition-select-mobile');
+    const btn = document.getElementById('detail-transition-btn-mobile');
+    if (!sel || !btn) return;
+
+    const opt = sel.options[sel.selectedIndex];
+    const transition_id = sel.value;
+    const new_status = opt.getAttribute('data-status') || '';
+    if (!transition_id) return;
+
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/issue/${key}/transition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transition_id, new_status })
+      });
+      const data = await res.json();
+      if (activeKey !== key) return;
+      if (!res.ok) throw new Error(data.error || 'Transition failed');
+    } catch(e) {
+      if (activeKey === key) {
+        console.error('Transition error:', e.message);
+        setTimeout(() => {
+          if (btn && activeKey === key) btn.disabled = !sel.value;
+        }, 500);
+      }
+    }
+  }
+
+  async function sendCannedMessageDetail(key) {
+    const sel = document.getElementById('detail-message-select');
+    const btn = document.getElementById('detail-message-btn');
+    if (!sel || !btn) return;
+
+    const message_id = sel.value;
+    if (!message_id) return;
+
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/issue/${key}/send-canned-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id })
+      });
+      const data = await res.json();
+      if (activeKey !== key) return;
+      if (!res.ok) throw new Error(data.error || 'Send failed');
+    } catch(e) {
+      if (activeKey === key) {
+        console.error('Send error:', e.message);
+        btn.disabled = false;
+      }
+    }
+  }
+
+  async function sendCannedMessageDetailMobile(key) {
+    const sel = document.getElementById('detail-message-select-mobile');
+    const btn = document.getElementById('detail-message-btn-mobile');
+    if (!sel || !btn) return;
+
+    const message_id = sel.value;
+    if (!message_id) return;
+
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/issue/${key}/send-canned-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id })
+      });
+      const data = await res.json();
+      if (activeKey !== key) return;
+      if (!res.ok) throw new Error(data.error || 'Send failed');
+    } catch(e) {
+      if (activeKey === key) {
+        console.error('Send error:', e.message);
+        btn.disabled = false;
+      }
+    }
   }
 </script>
 </body>
