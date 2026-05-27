@@ -320,14 +320,14 @@ select.desktop-only {
     flex-direction: row;
     flex-wrap: nowrap;
     align-items: center;
-    padding: 6px 8px;
-    gap: 6px;
+    padding: 4px 6px;
+    gap: 4px;
     height: auto;
-    min-height: 44px;
+    min-height: 36px;
   }
 
   #topbar h1 {
-    font-size: 14px;
+    font-size: 13px;
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -337,14 +337,23 @@ select.desktop-only {
   }
 
   #topbar-logo {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+  }
+
+  #topbar .btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   #run-status {
     order: 3;
-    font-size: 11px;
-    padding: 3px 6px;
+    font-size: 10px;
+    padding: 2px 4px;
   }
 
   /* Mobile menu: hidden by default, shown on toggle */
