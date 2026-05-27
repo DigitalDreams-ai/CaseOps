@@ -2046,4 +2046,4 @@ if __name__ == "__main__":
     app.config["WORKSPACE"] = WORKSPACE
 
     # use_reloader=False prevents the dev reloader from killing SSE streams
-    app.run(debug=True, threaded=True, port=_args.port, use_reloader=False)
+    app.run(debug=True, threaded=True, host="0.0.0.0", port=_args.port, use_reloader=False)
