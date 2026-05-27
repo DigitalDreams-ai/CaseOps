@@ -418,6 +418,8 @@ a:hover {
   align-items: center;
   flex-wrap: wrap;
   background: rgba(0,0,0,0.1);
+  /* Override inline style for desktop */
+  display: flex !important;
 }
 
 #detail-actions select {
@@ -1329,24 +1331,9 @@ a:hover {
     z-index: 400 !important;
   }
 
-  /* Mobile: consolidate detail-actions into dropdown menu */
+  /* Mobile: hide detail-actions, use topbar dropdown instead */
   #detail-actions {
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  #detail-actions .btn:not(#issue-actions-btn) {
-    display: none;
-  }
-
-  #detail-actions a.btn {
-    display: none;
-  }
-
-  #issue-actions-btn {
-    display: inline-flex !important;
-    width: 100%;
-    margin-bottom: 0;
+    display: none !important;
   }
 
   .issue-actions-menu {

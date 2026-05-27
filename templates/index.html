@@ -100,7 +100,7 @@
     </div>
     <div id="tabs" style="display:none"></div>
     <div id="content-area">
-      <div id="detail-actions" style="display:none"></div>
+      <div id="detail-actions"></div>
       <button id="instruction-toggle-btn" class="btn" style="display:none; width:100%; margin-bottom:8px;" onclick="toggleInstructionPanel()">+ Instructions</button>
       <div id="instruction-panel">
         <div id="instruction-context"></div>
@@ -980,9 +980,20 @@
     const actionsContainer = document.getElementById('issue-actions-container');
     if (actionsContainer) actionsContainer.classList.add('visible');
 
-    // Hide old detail-actions
+    // Show detail-actions on desktop, hide on mobile
     const actionsEl = document.getElementById('detail-actions');
-    if (actionsEl) actionsEl.style.display = 'none';
+    if (actionsEl) {
+      if (window.innerWidth <= 768) {
+        actionsEl.style.display = 'none';
+      } else {
+        actionsEl.style.display = 'flex';
+        // Populate desktop detail-actions with action buttons
+        actionsEl.innerHTML = `
+          <button class="btn" onclick="runAction('sync_issue','${key}')">Sync This Issue</button>
+          <button class="btn primary" onclick="runAction('full_issue','${key}')">Run Pipeline</button>
+        `;
+      }
+    }
 
     loadTransitionsTopbar(key);
     loadCannedMessagesTopbar(key, issue.status);
