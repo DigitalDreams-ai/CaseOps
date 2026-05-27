@@ -36,6 +36,7 @@ a:hover {
 }
 
 #topbar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1157,174 +1158,165 @@ a:hover {
 }
 
 /* Mobile responsiveness */
-@media (max-width: 768px) {
-  html, body {
-    font-size: 13px;
-  }
 
+/* Elements only visible on mobile */
+.mobile-only { display: none; }
+
+@media (max-width: 768px) {
+  .mobile-only { display: inline-flex; }
+
+  /* Topbar: single row with logo, status, menu button */
   #topbar {
-    flex-direction: column;
-    align-items: flex-start;
+    position: relative;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
     padding: 8px 12px;
     gap: 8px;
   }
 
   #topbar h1 {
-    font-size: 18px;
-    width: 100%;
+    font-size: 16px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
-  .spacer {
+  #run-status { order: 3; }
+
+  /* Action buttons: hidden by default, shown when menu open */
+  #topbar-actions {
+    display: none;
+    position: absolute;
+    top: 52px;
+    right: 0;
+    left: 0;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    flex-direction: column;
+    gap: 0;
+    z-index: 300;
+    padding: 8px;
+  }
+
+  #topbar-actions.mobile-open {
+    display: flex;
+  }
+
+  #topbar-actions .btn {
+    width: 100%;
+    text-align: left;
+    border-radius: 4px;
+    min-height: 44px;
+    margin-bottom: 4px;
+  }
+
+  #topbar-actions .btn:last-child { margin-bottom: 0; }
+
+  /* Sidebar: hidden off-screen on mobile */
+  #layout {
+    position: relative;
+  }
+
+  #sidebar {
+    position: fixed;
+    top: 52px;
+    left: -280px;
+    width: 280px;
+    height: calc(100vh - 52px);
+    z-index: 200;
+    transition: left 0.25s ease;
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+    overflow-y: auto;
+  }
+
+  #sidebar.mobile-open {
+    left: 0;
+  }
+
+  /* Overlay behind sidebar */
+  #sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 198;
+    pointer-events: auto;
+  }
+
+  #sidebar-overlay.active {
+    display: block;
+  }
+
+  /* Main takes full width on mobile */
+  #main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Sort pills: hidden on mobile until toggled */
+  #sort-pills {
     display: none;
   }
 
-  #run-status {
-    width: 100%;
+  #sort-pills.mobile-open {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
   }
 
   /* Touch-friendly buttons */
   .btn {
-    padding: 8px 14px;
     min-height: 40px;
     font-size: 13px;
   }
 
-  /* Main layout */
-  #content {
-    padding: 8px;
+  .spacer { display: none; }
+}
+
+/* Action grouping: More menu for issue details */
+#issue-more-btn {
+  position: relative;
+}
+
+.issue-more-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  min-width: 280px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  margin-top: 4px;
+  z-index: 400;
+  animation: slideDown 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
   }
-
-  /* Grid layouts */
-  .settings-section-grid {
-    grid-template-columns: 1fr !important;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-
-  .issue-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* Issue cards */
-  .issue-card {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .issue-left, .issue-middle, .issue-right {
-    width: 100%;
-  }
-
-  /* Form fields */
-  .settings-field {
-    grid-template-columns: 1fr !important;
-    gap: 6px;
-  }
-
-  .settings-field label {
-    font-weight: 600;
-    font-size: 12px;
-  }
-
-  .settings-field input,
-  .settings-field select {
-    font-size: 14px;
-    min-height: 40px;
-    padding: 10px;
-  }
-
-  /* Settings sections */
-  .settings-section {
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-
-  .settings-section h2 {
-    font-size: 15px;
-    margin-bottom: 12px;
-  }
-
-  /* Text content */
-  h1 { font-size: 20px; }
-  h2 { font-size: 16px; }
-  h3 { font-size: 14px; }
-
-  /* Reduce gaps */
-  gap: 8px;
-  .gap-12 { gap: 8px !important; }
 }
 
 @media (max-width: 480px) {
-  html, body {
-    font-size: 12px;
+  #topbar h1 { font-size: 14px; }
+
+  #sidebar {
+    width: 100vw;
+    left: -100vw;
   }
 
-  #topbar {
-    padding: 8px;
-  }
+  .btn { min-height: 44px; }
 
-  #topbar h1 {
-    font-size: 16px;
-  }
-
-  #topbar-logo {
-    width: 20px;
-    height: 20px;
-  }
-
-  .btn {
-    padding: 10px 12px;
-    min-height: 44px;
-    font-size: 12px;
-    width: 100%;
-  }
-
-  /* Flex buttons stack vertically */
-  button[type="button"]:not(.inline-btn),
-  .btn:not(.inline-btn) {
-    width: 100%;
-  }
-
-  #content {
-    padding: 6px;
-  }
-
-  .settings-section {
-    padding: 10px;
-    border-radius: 4px;
-  }
-
-  .settings-field {
-    margin-bottom: 12px;
-  }
-
-  /* Modal/sidebar adjustments */
-  aside {
-    width: 100% !important;
-  }
-
-  /* Reduce font sizes further */
-  h1 { font-size: 18px; }
-  h2 { font-size: 14px; }
-  h3 { font-size: 13px; }
-
-  /* Hide non-essential elements on very small screens */
-  .hide-mobile {
-    display: none !important;
-  }
-
-  /* Increase touch target sizes */
-  input, button, select, textarea {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  /* Table scrolling on mobile */
-  table {
-    font-size: 11px;
-  }
-
-  /* Padding/margin reductions */
-  * {
-    padding-left: 6px;
-    padding-right: 6px;
-  }
+  input, select, textarea { min-height: 44px; font-size: 14px; }
 }
