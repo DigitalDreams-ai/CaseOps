@@ -93,12 +93,13 @@
 
   <!-- Main panel -->
   <div id="main">
+    <div id="detail-header" style="display:none;">
+      <div id="detail-title"></div>
+      <div id="detail-badges"></div>
+      <div id="detail-meta"></div>
+    </div>
+    <div id="tabs" style="display:none"></div>
     <div id="content-area">
-      <div id="detail-header" style="display:none;">
-        <div id="detail-title"></div>
-        <div id="detail-badges"></div>
-        <div id="detail-meta"></div>
-      </div>
       <div id="detail-actions" style="display:none"></div>
       <button id="instruction-toggle-btn" class="btn" style="display:none; width:100%; margin-bottom:8px;" onclick="toggleInstructionPanel()">+ Instructions</button>
       <div id="instruction-panel">
@@ -108,7 +109,6 @@
           <button id="send-claude-btn" class="btn primary" onclick="sendInstruction()">Send to Claude</button>
         </div>
       </div>
-      <div id="tabs" style="display:none"></div>
       <div id="dashboard">
         <h2>Overview</h2>
         <p id="overview-meta" class="overview-meta"></p>
