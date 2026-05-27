@@ -57,6 +57,7 @@ a:hover {
 
 #issue-actions-container {
   position: relative;
+  display: none !important;
 }
 
 #issue-actions-topbar-menu {
