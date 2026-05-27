@@ -1635,6 +1635,10 @@ select.desktop-only {
     display: none;
   }
 
+  #detail-actions-btn {
+    display: none !important;
+  }
+
   #detail-actions-menu {
     display: none !important;
   }
