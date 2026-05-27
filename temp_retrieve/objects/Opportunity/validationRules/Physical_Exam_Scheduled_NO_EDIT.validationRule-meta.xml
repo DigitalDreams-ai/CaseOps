@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Physical_Exam_Scheduled_NO_EDIT</fullName>
+    <active>true</active>
+    <description>Operations, New Operation
+System Administrator
+Finance, New Finance</description>
+    <errorConditionFormula>AND(
+ISPICKVAL(PRIORVALUE(StageName),&quot;Physical Exam Scheduled&quot;),
+NOT($Profile.Id = &quot;00e0b000001nOvW&quot;),
+NOT($Profile.Id = &quot;00e5a0000018d9a&quot;),
+NOT($Profile.Id = &quot;00e0b000001iU5h&quot;),
+NOT($Profile.Id = &quot;00e0b000001nOvl&quot;),
+NOT($Profile.Id = &quot;00e5a0000018d9G&quot;)
+)</errorConditionFormula>
+    <errorMessage>You Can Not Edit This Opportunity Because Physical Exam Was Scheduled</errorMessage>
+</ValidationRule>

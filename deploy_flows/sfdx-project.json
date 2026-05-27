@@ -1,0 +1,7 @@
+{
+  "name": "Flow Fixes",
+  "namespace": "",
+  "sfdcLoginUrl": "https://login.salesforce.com",
+  "sourceApiVersion": "67.0",
+  "packageDirectories": [{"path": "force-app", "default": true}]
+}

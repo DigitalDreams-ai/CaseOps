@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>64.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <description>Here we set the isMobilePhoneVerified__c to false.</description>
+        <name>Set_Is_Mobile_Verified_False</name>
+        <label>Set Is Mobile Verified = False</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.isMobilePhoneVerified__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>What_is_the_OTP_Preference_Value_set_to</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <description>Here we set the isPhoneVerified__c to false.</description>
+        <name>Set_Is_Phone_Verified_False</name>
+        <label>Set Is Phone Verified = False</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.isPhoneVerified__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <assignments>
+        <description>We set the OTP Preference BACK to email from sms because when MWP reads SMS they won&apos;t ask to re-setup the SMS OTP. This way we have to set the value back to email and will then ask the MWP user to re-setup the SMS OTP.</description>
+        <name>Set_OTP_Preference_to_Email</name>
+        <label>Set OTP Preference to Email</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.OTP_Preference__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <stringValue>email</stringValue>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <decisions>
+        <description>Here we check the OTP Preference and if the OTP Preference is SMS we need to set back to our default of email.</description>
+        <name>What_is_the_OTP_Preference_Value_set_to</name>
+        <label>What is the OTP Preference Value set to</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnectorLabel>OTP Preference is not SMS</defaultConnectorLabel>
+        <rules>
+            <name>OTP_Preference_is_SMS</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.OTP_Preference__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>sms</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Set_OTP_Preference_to_Email</targetReference>
+            </connector>
+            <label>OTP Preference is SMS</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <description>Here we check if the Mobile or Phone field were changed. And depending on which field was changed we will go through and set the Verified flag to false.</description>
+        <name>Which_Field_Changed</name>
+        <label>Which Field Changed</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnectorLabel>Not Defined Field Changed</defaultConnectorLabel>
+        <rules>
+            <name>Mobile_Phone_Changed</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.PersonMobilePhone</leftValueReference>
+                <operator>IsChanged</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.isMobilePhoneVerified__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Set_Is_Mobile_Verified_False</targetReference>
+            </connector>
+            <label>Mobile Phone Changed</label>
+        </rules>
+        <rules>
+            <name>Phone_Changed</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Phone</leftValueReference>
+                <operator>IsChanged</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.isPhoneVerified__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Set_Is_Phone_Verified_False</targetReference>
+            </connector>
+            <label>Phone Changed</label>
+        </rules>
+    </decisions>
+    <description>This flow runs whenever the Phone or Mobile Phone fields on an Account are updated. It checks which field changed and, if the updated field was previously marked as verified, sets the verification flag back to false.
+
+We will also reset the OTP Preference to email as well if the Mobile Phone is edited and the OTP Preference is SMS.</description>
+    <environments>Default</environments>
+    <interviewLabel>Record Trigger - Account - Phone/Mobile Changed {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Account - Unverify on Phone or Mobile Update</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Which_Field_Changed</targetReference>
+        </connector>
+        <filterLogic>or</filterLogic>
+        <filters>
+            <field>PersonMobilePhone</field>
+            <operator>IsChanged</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Phone</field>
+            <operator>IsChanged</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <object>Account</object>
+        <recordTriggerType>Update</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Order_Processing_Supplements</fullName>
+    <columns>OPPORTUNITY.CREATED_DATE</columns>
+    <columns>OPPORTUNITY.NAME</columns>
+    <columns>ACCOUNT.NAME</columns>
+    <columns>VIP_Opportunity__c</columns>
+    <columns>OPPORTUNITY.AMOUNT</columns>
+    <columns>OPPORTUNITY.STAGE_NAME</columns>
+    <columns>Order_Notes__c</columns>
+    <columns>Transaction_Source__c</columns>
+    <columns>OPPORTUNITY.RECORDTYPE</columns>
+    <columns>IsSupplement__c</columns>
+    <columns>CORE.USERS.ALIAS</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>OPPORTUNITY.STAGE_NAME</field>
+        <operation>equals</operation>
+        <value>Waiting For Approval</value>
+    </filters>
+    <filters>
+        <field>OPPORTUNITY.RECORDTYPE</field>
+        <operation>equals</operation>
+        <value>Opportunity.Medication_Opportunity_Record_Type</value>
+    </filters>
+    <filters>
+        <field>IsSupplement__c</field>
+        <operation>equals</operation>
+        <value>1</value>
+    </filters>
+    <label>Order Processing - Supplements</label>
+    <sharedTo>
+        <role>Back_Office</role>
+        <role>Director_of_Operations</role>
+        <role>Operations_Manager_new</role>
+    </sharedTo>
+</ListView>

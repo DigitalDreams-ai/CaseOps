@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Lead_to_1st_CloseWon_Sales_Cycle__c</fullName>
+    <externalId>false</externalId>
+    <formula>TEXT( 
+FLOOR(Opp_Closed_Date_Time__c  -  Account.Lead_Created_Date_Time__c) 
+) &amp; &quot; Days &quot; &amp; 
+TEXT( 
+FLOOR(MOD((Opp_Closed_Date_Time__c  -  Account.Lead_Created_Date_Time__c)*24,24)) 
+) &amp;&quot; Hours &quot; &amp; 
+TEXT( 
+ROUND(MOD((Opp_Closed_Date_Time__c  -  Account.Lead_Created_Date_Time__c)*1440,60),0) 
+) &amp;&quot; Minutes &quot;</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Lead to 1st CloseWon Sales Cycle</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

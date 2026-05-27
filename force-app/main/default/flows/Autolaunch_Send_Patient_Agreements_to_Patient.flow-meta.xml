@@ -1269,7 +1269,7 @@
         <assignNextValueToReference>currentItem_Collection_Informed_Consents</assignNextValueToReference>
         <collectionProcessorType>FilterCollectionProcessor</collectionProcessorType>
         <collectionReference>Get_Patient_Agreements</collectionReference>
-        <conditionLogic>1 AND NOT(2) AND NOT(3)</conditionLogic>
+        <conditionLogic>1 OR (1 AND 2) AND NOT(3)</conditionLogic>
         <conditions>
             <leftValueReference>currentItem_Collection_Informed_Consents.Name</leftValueReference>
             <operator>Contains</operator>

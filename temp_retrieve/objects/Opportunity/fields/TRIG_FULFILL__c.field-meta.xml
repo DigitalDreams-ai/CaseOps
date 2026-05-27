@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TRIG_FULFILL__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>This will force the order to sync to Shopify and mark the order as fulfilled.</description>
+    <label>TRIG_FULFILL</label>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

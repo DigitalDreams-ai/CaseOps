@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>User_Changed_Status_WaitingForApproval</fullName>
+    <active>true</active>
+    <description>Do not allow the user to change the status to &quot;Waiting For Approval&quot;</description>
+    <errorConditionFormula>AND(
+OR(ISNEW(),
+ISCHANGED(StageName)
+),
+TEXT(StageName) = &apos;Waiting For Approval&apos;,
+NOT($Profile.Id = &apos;00e5a000001Gfuk&apos;),
+NOT($Profile.Id = &apos;00e0b000001iU5h&apos;)
+)</errorConditionFormula>
+    <errorMessage>Please use the &quot;Submit For Approval&quot; button in the action bar on the top right of this page. This will notify the operations team.</errorMessage>
+</ValidationRule>

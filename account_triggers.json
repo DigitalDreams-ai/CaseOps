@@ -1,0 +1,47 @@
+ »   Warning: @salesforce/cli update available from 2.133.4 to 2.134.6.
+{
+  "status": 0,
+  "result": {
+    "records": [
+      {
+        "attributes": {
+          "type": "ApexTrigger",
+          "url": "/services/data/v66.0/sobjects/ApexTrigger/01q0b000000286VAAQ"
+        },
+        "Id": "01q0b000000286VAAQ",
+        "Name": "dc3AccountTrigger",
+        "Body": "(hidden)"
+      },
+      {
+        "attributes": {
+          "type": "ApexTrigger",
+          "url": "/services/data/v66.0/sobjects/ApexTrigger/01q0b000000ATdLAAW"
+        },
+        "Id": "01q0b000000ATdLAAW",
+        "Name": "PS_Account",
+        "Body": "(hidden)"
+      },
+      {
+        "attributes": {
+          "type": "ApexTrigger",
+          "url": "/services/data/v66.0/sobjects/ApexTrigger/01qQl000009rDMvIAM"
+        },
+        "Id": "01qQl000009rDMvIAM",
+        "Name": "AHBDrChronoAccount",
+        "Body": "trigger AHBDrChronoAccount on Account (after update) {\n    AHBDrChronoAccountTriggerHandler.afterUpdate(Trigger.new, Trigger.oldMap);\n}"
+      },
+      {
+        "attributes": {
+          "type": "ApexTrigger",
+          "url": "/services/data/v66.0/sobjects/ApexTrigger/01qRh000001bghFIAQ"
+        },
+        "Id": "01qRh000001bghFIAQ",
+        "Name": "generateUUID_Account",
+        "Body": "/**\n * @description This trigger generates a UUID for the Account object before inserting or updating.\n * @apexTestClass generateUUID_TestSuite.testAccountInsert\n */\ntrigger generateUUID_Account on Account (before insert, before update) {\n    for (Account acc : Trigger.new) {\n        if (acc.UUID__c == null) { // Assuming you have a custom field UUID__c\n            acc.UUID__c = String.valueOf(UUID.randomUUID());\n        }\n    }\n}"
+      }
+    ],
+    "totalSize": 4,
+    "done": true
+  },
+  "warnings": []
+}

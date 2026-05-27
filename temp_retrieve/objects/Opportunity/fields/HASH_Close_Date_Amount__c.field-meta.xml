@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>HASH_Close_Date_Amount__c</fullName>
+    <externalId>false</externalId>
+    <formula>VALUE(
+      TEXT(YEAR(CloseDate)) &amp;
+      LPAD(TEXT(MONTH(CloseDate)), 2, &quot;0&quot;) &amp;
+      LPAD(TEXT(DAY(CloseDate)), 2, &quot;0&quot;) &amp;
+      LPAD(TEXT(Amount), 10, &quot;0&quot;)
+)</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>HASH Close Date &amp; Amount</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

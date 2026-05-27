@@ -13,6 +13,8 @@ services:
       - /volume1/docker/appdata/caseops/outputs:/app/outputs
       # Mount .env.jira.nas for NAS/Linux (use .env.jira for local Windows dev)
       - ./.env.jira.nas:/app/.env.jira:ro
+      # Mount app.py (override baked-in version from COPY . /app)
+      - ./app.py:/app/app.py:ro
       # Mount Salesforce CLI auth (pre-authenticated orgs on host)
       - /volume1/docker/appdata/caseops/.sfdx:/root/.sfdx:ro
       # Mount Claude Code CLI auth (pre-authenticated on host)

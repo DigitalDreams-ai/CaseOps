@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Matching_Account_from_Lead__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>This field will store the Account that was identified as matching the Lead record prior to converting into an Opportunity. It will store a value only if the Opportunity is created from Lead Conversion AND the Lead record converted had a Matching Account identified by system logic. It is used to set the Opportunity Owner as the same Owner of the Lead Matching Account in that scenario only.</description>
+    <label>Matching Account from Lead</label>
+    <referenceTo>Account</referenceTo>
+    <relationshipLabel>Opportunities (Matching Account from Lead)</relationshipLabel>
+    <relationshipName>Matching_Lead_Opportunities</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionCalls>
+        <name>Decrypt_Credit_Card_Number</name>
+        <label>Decrypt Credit Card Number</label>
+        <locationX>176</locationX>
+        <locationY>323</locationY>
+        <actionName>mc_getCreditCardNumber</actionName>
+        <actionType>apex</actionType>
+        <connector>
+            <targetReference>Set_Last_4_Digits</targetReference>
+        </connector>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>creditCardId</name>
+            <value>
+                <elementReference>$Record.Id</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>mc_getCreditCardNumber</nameSegment>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </actionCalls>
+    <apiVersion>62.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Set_Last_4_Digits</name>
+        <label>Set Last 4 Digits</label>
+        <locationX>176</locationX>
+        <locationY>431</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Last_4_Digits__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>form_txtLastFourDigits</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Update_Credit_Card_Record</targetReference>
+        </connector>
+    </assignments>
+    <description>This flow will decrypt the credit card field and set the last 4 digits on the credit card record.</description>
+    <environments>Default</environments>
+    <formulas>
+        <name>form_txtLastFourDigits</name>
+        <dataType>String</dataType>
+        <expression>RIGHT({!Decrypt_Credit_Card_Number.returnValue},4)</expression>
+    </formulas>
+    <interviewLabel>Record Trigger - Credit Card - Set Last 4 Digits {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Credit Card - Set Last 4 Digits</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordUpdates>
+        <name>Update_Credit_Card_Record</name>
+        <label>Update Credit Card Record</label>
+        <locationX>176</locationX>
+        <locationY>539</locationY>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Decrypt_Credit_Card_Number</targetReference>
+        </connector>
+        <object>Credit_Card__c</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>
