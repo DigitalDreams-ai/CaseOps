@@ -428,6 +428,23 @@ select.desktop-only {
   .spacer {
     display: none;
   }
+
+  .dash-cards {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+  }
+
+  .dash-card {
+    padding: 14px;
+  }
+
+  .dash-count {
+    font-size: 22px;
+  }
+
+  .dash-label {
+    font-size: 11px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1626,5 +1643,22 @@ select.desktop-only {
   textarea {
     min-height: 44px;
     font-size: 14px;
+  }
+
+  .dash-cards {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 8px;
+  }
+
+  .dash-card {
+    padding: 12px;
+  }
+
+  .dash-count {
+    font-size: 20px;
+  }
+
+  .dash-label {
+    font-size: 10px;
   }
 }
