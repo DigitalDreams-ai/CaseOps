@@ -16,9 +16,9 @@ services:
       # Mount app.py (override baked-in version from COPY . /app)
       - ./app.py:/app/app.py:ro
       # Mount Salesforce CLI auth (pre-authenticated orgs on host)
-      - /volume1/docker/appdata/caseops/.sfdx:/root/.sfdx:ro
+      - /volume1/docker/appdata/caseops/.sfdx:/root/.sfdx
       # Mount Claude Code CLI auth (pre-authenticated on host)
-      - /volume1/docker/appdata/caseops/.claude:/root/.claude:ro
+      - /volume1/docker/appdata/caseops/.claude:/root/.claude
       # (Optional) Mount workspace-specific .env.jira.{workspace} files
       # - ./.env.jira.production:/app/.env.jira.production:ro
     environment:
