@@ -364,6 +364,10 @@ select.desktop-only {
     order: 5;
   }
 
+  #settings-link {
+    order: 6;
+  }
+
   /* Mobile menu: hidden by default, shown on toggle */
   #topbar-actions {
     display: none;
@@ -740,6 +744,7 @@ select.desktop-only {
   top: 0;
   background: var(--color-surface);
   z-index: 50;
+  margin: 0;
 }
 
 #detail-title {
@@ -887,9 +892,10 @@ select.desktop-only {
   flex-shrink: 0;
   background: var(--color-surface);
   position: sticky;
-  top: 70px;
+  top: 0;
   z-index: 40;
   overflow-x: hidden;
+  margin: 0;
 }
 
 .tab {
@@ -1627,6 +1633,10 @@ select.desktop-only {
 
   select.desktop-only {
     display: none;
+  }
+
+  #detail-actions-menu {
+    display: none !important;
   }
 
   .btn {
