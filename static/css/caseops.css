@@ -340,9 +340,13 @@ a:hover {
 }
 
 #detail-header {
-  padding: 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--color-surface);
 }
 
 #detail-title {
@@ -453,6 +457,9 @@ a:hover {
   flex-shrink: 0;
   overflow-x: auto;
   background: var(--color-surface);
+  position: sticky;
+  top: 73px;
+  z-index: 99;
 }
 
 .tab {
@@ -1306,6 +1313,71 @@ a:hover {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Consolidated Actions menu in detail header */
+#issue-actions-btn {
+  position: relative;
+}
+
+.issue-actions-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 320px;
+  max-height: 600px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  margin-top: 4px;
+  z-index: 400;
+  animation: slideDown 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+}
+
+.action-menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.action-menu-item:hover:not(:disabled) {
+  background: rgba(31, 111, 235, 0.08);
+  color: var(--color-primary);
+}
+
+.action-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-menu-item.primary {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.action-menu-select {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.action-menu-select:hover {
+  border-color: var(--color-primary);
 }
 
 @media (max-width: 480px) {
