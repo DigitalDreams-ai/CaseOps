@@ -476,11 +476,11 @@ a:hover {
   padding: 0;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
-  overflow-x: auto;
   background: var(--color-surface);
   position: sticky;
   top: 70px;
   z-index: 40;
+  overflow-x: hidden;
 }
 
 .tab {
@@ -492,6 +492,10 @@ a:hover {
   color: var(--color-text-secondary);
   transition: background 0.15s, color 0.15s;
   background: transparent;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tab:hover {
@@ -1283,6 +1287,12 @@ a:hover {
   #main {
     width: 100%;
     min-width: 0;
+  }
+
+  /* Tabs: fit all on one row with smaller padding */
+  .tab {
+    padding: 8px 6px;
+    font-size: 11px;
   }
 
   /* Sort pills: hidden on mobile until toggled */
