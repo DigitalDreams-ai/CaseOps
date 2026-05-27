@@ -17,6 +17,8 @@ services:
       - ./app.py:/app/app.py:ro
       # Mount templates (override baked-in version from COPY . /app)
       - ./templates:/app/templates:ro
+      # Mount static assets (override baked-in version from COPY . /app)
+      - ./static:/app/static:ro
       # Mount Salesforce CLI auth (pre-authenticated orgs on host)
       - /volume1/docker/appdata/caseops/.sfdx:/root/.sfdx
       # Mount Claude Code CLI auth (pre-authenticated on host)
