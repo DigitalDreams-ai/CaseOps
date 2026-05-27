@@ -1951,16 +1951,9 @@
 
   function renderInstructionPanel(issue) {
     const panel = document.getElementById('instruction-panel');
-    const toggleBtn = document.getElementById('instruction-toggle-btn');
-    const isMobile = window.innerWidth <= 768;
 
-    if (isMobile) {
-      panel.style.display = 'none';
-      toggleBtn.style.display = 'block';
-    } else {
-      panel.style.display = 'block';
-      toggleBtn.style.display = 'none';
-    }
+    // Show panel on both mobile and desktop
+    panel.style.display = 'block';
 
     // Derive pipeline stage from existing tabs
     const tabIds = new Set((issue.tabs || []).map(t => t.id));
