@@ -880,70 +880,6 @@
     const issueBody = document.getElementById('issue-body');
     if (dash) dash.style.display = 'none';
     if (issueBody) issueBody.style.display = 'block';
-
-    const headerEl = document.getElementById('detail-header');
-    const actionsEl = document.getElementById('detail-actions');
-    if (headerEl) {
-      headerEl.style.display = 'block';
-      actionsEl.style.display = 'none';
-    }
-
-    // Render consolidated Actions dropdown header first (creates the detail-title, detail-badges, detail-meta elements)
-    const isRunning = activeRuns.has(key);
-    const jiraLink = issue.jira_url
-      ? `<button class="action-menu-item" onclick="window.open('${escHtml(issue.jira_url)}', '_blank')">View in Jira</button>`
-      : '';
-
-    if (headerEl) {
-      let headerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-          <div style="flex: 1;">
-            <div id="detail-title" style="font-size: 18px; font-weight: 600; margin-bottom: 4px;"></div>
-            <div id="detail-badges" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
-            <div id="detail-meta" style="font-size: 12px; color: var(--color-text-secondary);"></div>
-          </div>
-          <div style="position: relative; flex-shrink: 0;">
-            <button type="button" class="btn primary" id="issue-actions-btn" onclick="toggleIssueActionsMenu('${key}')" style="white-space: nowrap;">Actions ▼</button>
-            <div id="issue-actions-menu" class="issue-actions-menu" style="display:none;">
-              <div style="padding: 8px;">
-                <div style="padding: 6px 12px; color: var(--color-text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Run</div>
-                <button class="action-menu-item" data-run-key="${key}" onclick="runAction('sync_issue','${key}')" ${isRunning ? 'disabled' : ''}>
-                  <span>Sync This Issue</span>
-                </button>
-                <button class="action-menu-item primary" data-run-key="${key}" onclick="runAction('full_issue','${key}')" ${isRunning ? 'disabled' : ''}>
-                  <span>Run Pipeline For This Issue</span>
-                </button>
-
-                <div style="padding: 6px 12px; color: var(--color-text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 4px 0; border-top: 1px solid var(--color-border); padding-top: 8px;">Status</div>
-                <div style="display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;">
-                  <select id="transition-select" class="action-menu-select" style="flex: 1; min-width: 140px;">
-                    <option value="">Change status…</option>
-                  </select>
-                  <button class="action-menu-item" id="transition-btn" onclick="applyTransition('${key}')" disabled>Apply</button>
-                </div>
-                <span id="transition-status" style="font-size:12px; display:block; margin-bottom:8px;"></span>
-
-                <div style="padding: 6px 12px; color: var(--color-text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 4px 0; border-top: 1px solid var(--color-border); padding-top: 8px;">Message</div>
-                <div style="display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;">
-                  <select id="message-select" class="action-menu-select" style="flex: 1; min-width: 140px;">
-                    <option value="">Send message…</option>
-                  </select>
-                  <button class="action-menu-item" id="message-btn" onclick="sendCannedMessage('${key}')" disabled>Send</button>
-                </div>
-                <span id="message-status" style="font-size:12px; display:block; margin-bottom:8px;"></span>
-
-                <div style="padding: 6px 12px; color: var(--color-text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 4px 0; border-top: 1px solid var(--color-border); padding-top: 8px;">Links &amp; Export</div>
-                ${jiraLink}
-                <button class="action-menu-item" onclick="copyFullPrompt('${key}')">Copy Claude Prompt</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-      headerEl.innerHTML = headerHTML;
-    }
-
-    // Now update the detail-title, detail-badges, detail-meta elements
     const titleEl = document.getElementById('detail-title');
     if (titleEl) {
       titleEl.textContent = `${issue.key} — ${issue.summary}`;
@@ -1007,6 +943,48 @@
     if (metaEl) {
       metaEl.textContent = `Status: ${issue.status}   |   Updated: ${issue.updated || '—'}`;
     }
+
+    const headerEl = document.getElementById('detail-header');
+    if (headerEl) headerEl.style.display = 'block';
+
+    // actions - render all buttons for desktop, will be hidden/consolidated on mobile
+    const actionsEl = document.getElementById('detail-actions');
+    if (actionsEl) actionsEl.style.display = 'flex';
+    else {
+      await loadPipelineHistory(key, selectIssueSeq);
+      return;
+    }
+    const isRunning = activeRuns.has(key);
+    const jiraLink = issue.jira_url
+      ? `<a class="btn" href="${escHtml(issue.jira_url)}" target="_blank" rel="noopener">View in Jira</a>`
+      : '';
+    actionsEl.innerHTML = `
+      <button class="btn" data-run-key="${key}" onclick="runAction('sync_issue','${key}')"
+        ${isRunning ? 'disabled' : ''}>Sync This Issue</button>
+      <button class="btn primary" data-run-key="${key}" onclick="runAction('full_issue','${key}')"
+        ${isRunning ? 'disabled' : ''}>Run Pipeline For This Issue</button>
+      ${jiraLink}
+      <button type="button" class="btn" id="issue-actions-btn" onclick="toggleIssueActionsMenu('${key}')" style="display:none;">Actions ▼</button>
+      <div id="issue-actions-menu" class="issue-actions-menu" style="display:none;">
+        <div style="padding:8px;">
+          <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+            <select id="transition-select" class="btn" style="padding:5px 8px; flex:1; min-width:140px;">
+              <option value="">Change status…</option>
+            </select>
+            <button class="btn primary" id="transition-btn" onclick="applyTransition('${key}')" disabled style="padding:5px 8px;">Apply</button>
+          </div>
+          <span id="transition-status" style="font-size:12px; display:block; margin-bottom:8px;"></span>
+          <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+            <select id="message-select" class="btn" style="padding:5px 8px; flex:1; min-width:140px;">
+              <option value="">Send message…</option>
+            </select>
+            <button class="btn primary" id="message-btn" onclick="sendCannedMessage('${key}')" disabled style="padding:5px 8px;">Send</button>
+          </div>
+          <span id="message-status" style="font-size:12px; display:block; margin-bottom:8px;"></span>
+          <button class="btn" onclick="copyFullPrompt('${key}')" style="width:100%;">Copy Claude Prompt</button>
+        </div>
+      </div>
+    `;
 
     // tabs
     const tabsEl = document.getElementById('tabs');
