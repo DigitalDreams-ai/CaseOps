@@ -1891,8 +1891,8 @@ def api_test_jira():
         # Build auth header
         auth_header = f"Basic {base64.b64encode(f'{email}:{token}'.encode()).decode()}"
 
-        # Try to fetch a field map (minimal Jira call)
-        url = f"{base_url.rstrip('/')}/rest/api/3/fields"
+        # Try to fetch current user (minimal Jira call, works on v2 & v3)
+        url = f"{base_url.rstrip('/')}/rest/api/3/myself"
         req = urllib.request.Request(url, headers={"Authorization": auth_header})
         with urllib.request.urlopen(req, timeout=5) as resp:
             if resp.status == 200:
