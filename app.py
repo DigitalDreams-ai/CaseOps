@@ -2062,6 +2062,13 @@ if __name__ == "__main__":
     OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
     OUTPUTS.mkdir(parents=True, exist_ok=True)
 
+    # Pre-create all pipeline output subdirectories so Claude Code doesn't need write permissions to create them
+    for subdir in [
+        "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
+        "engineering-escalations", "step-4-hypothesis", "pipeline-logs"
+    ]:
+        (OUTPUTS / subdir).mkdir(parents=True, exist_ok=True)
+
     _load_jira_env(ROOT / f".env.jira.{WORKSPACE}" if WORKSPACE != "default" else ROOT / ".env.jira")
     JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "").rstrip("/")
     app.config["WORKSPACE"] = WORKSPACE
