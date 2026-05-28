@@ -334,6 +334,7 @@ def _claude_process_env() -> dict[str, str]:
 
     Remove ANTHROPIC_API_KEY in claude_code mode so CLI uses subscription/login,
     not API billing. Only pass API key for api_key mode (Anthropic Messages API).
+    Pass instance-specific output directories so Skill writes to correct location.
     """
     env = os.environ.copy()
     if not caseops_llm_auth_uses_anthropic_api_key():
@@ -343,6 +344,9 @@ def _claude_process_env() -> dict[str, str]:
         env["BROWSER"] = chrome
         if not (env.get("CLAUDE_CODE_CHROME_PATH") or "").strip():
             env["CLAUDE_CODE_CHROME_PATH"] = chrome
+    # Pass instance-specific directories to Claude Skill
+    env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")
+    env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
     return env
 
 
