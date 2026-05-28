@@ -331,6 +331,18 @@
         </div>
 
         <form id="settings-form">
+            <!-- Instance Display -->
+            <div class="settings-section">
+                <h2>Instance Display</h2>
+                <div class="settings-field">
+                    <label for="instance-display-label">Display Label:</label>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <input type="text" id="instance-display-label" placeholder="e.g., Production, Sandbox, Dev" style="max-width: 300px;">
+                        <div style="font-size: 12px; color: var(--color-text); opacity: 0.8;">Custom label for browser tab and top bar. Leave blank to use workspace name.</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Jira -->
             <div class="settings-section">
                 <h2>Jira</h2>
@@ -656,6 +668,26 @@
             }
         }
 
+        // Handle display label changes (localStorage, no API)
+        const displayLabelInput = document.getElementById('instance-display-label');
+        displayLabelInput.addEventListener('change', () => {
+            const label = displayLabelInput.value.trim();
+            localStorage.setItem('caseops-display-label', label);
+            updatePageDisplay();
+        });
+
+        function loadDisplayLabel() {
+            const label = localStorage.getItem('caseops-display-label') || '';
+            displayLabelInput.value = label;
+        }
+
+        function updatePageDisplay() {
+            const label = localStorage.getItem('caseops-display-label') || '';
+            const workspace = new URLSearchParams(window.location.search).get('workspace') || 'CaseOps';
+            const displayName = label || workspace;
+            document.title = `CaseOps${label ? ' — ' + label : ''}`;
+        }
+
         document.getElementById('settings-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -811,6 +843,7 @@
         // Load on page open
         loadSettings();
         loadStatus();
+        loadDisplayLabel();
     </script>
 </body>
 </html>

@@ -242,6 +242,27 @@
 </div>
 
 <script>
+  // Apply instance display label from localStorage
+  (function applyDisplayLabel() {
+    const label = localStorage.getItem('caseops-display-label') || '';
+    const workspace = document.querySelector('h1')?.textContent?.split('—')[1]?.trim() || 'CaseOps';
+
+    if (label) {
+      // Update page title
+      document.title = `CaseOps — ${label}`;
+      // Update h1 in topbar
+      const h1 = document.querySelector('h1');
+      if (h1) {
+        const parts = h1.innerHTML.split('—');
+        if (parts.length > 1) {
+          h1.innerHTML = parts[0].trim() + ' — ' + label;
+        } else {
+          h1.innerHTML = h1.innerHTML.split('</img>')[0] + '</img>' + ' CaseOps — ' + label;
+        }
+      }
+    }
+  })();
+
   let activeKey = null;
   let activeTab = null;
   /** Incremented on each selectIssue call; stale in-flight responses must not repaint UI. */
