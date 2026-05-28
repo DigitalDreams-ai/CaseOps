@@ -434,13 +434,13 @@ _manifest_q: queue.Queue[str] = queue.Queue()  # manifest change notifications
 def _claude_process_env() -> dict[str, str]:
     """Environment for Claude Code CLI subprocess.
 
-    Remove ANTHROPIC_API_KEY in claude_code mode so CLI uses subscription/login,
-    not API billing. Only pass API key for api_key mode (Anthropic Messages API).
-    Pass instance-specific output directories so Skill writes to correct location.
+    Pass ANTHROPIC_API_KEY to subprocess in all modes. Claude Code CLI will
+    prefer subscription billing if account has active subscription.
+    Instance-specific output directories so Skill writes to correct location.
     """
     env = os.environ.copy()
-    if not caseops_llm_auth_uses_anthropic_api_key():
-        env.pop("ANTHROPIC_API_KEY", None)
+    # NOTE: ANTHROPIC_API_KEY is kept in env for all modes.
+    # Claude Code CLI uses subscription (not API billing) if account has active subscription.
     chrome = (env.get("CASEOPS_CLAUDE_BROWSER") or "").strip()
     if chrome:
         env["BROWSER"] = chrome
@@ -1642,7 +1642,11 @@ def api_issue_mark_viewed(key: str):
 
 @app.route("/api/canned-messages", methods=["GET"])
 def api_canned_messages():
-    messages_file = ROOT / "canned-messages.json"
+    # Try instance-specific file first, fall back to shared default (supports per-instance customization)
+    workspace = os.environ.get("CASEOPS_WORKSPACE", "default")
+    instance_messages = ROOT / workspace / "canned-messages.json" if workspace != "default" else None
+    messages_file = instance_messages if instance_messages and instance_messages.exists() else ROOT / "canned-messages.json"
+
     if not messages_file.exists():
         return jsonify([])
     try:
@@ -1659,7 +1663,11 @@ def api_send_canned_message(key: str):
     if not message_id:
         return jsonify({"error": "message_id required"}), 400
 
-    messages_file = ROOT / "canned-messages.json"
+    # Try instance-specific file first, fall back to shared default (supports per-instance customization)
+    workspace = os.environ.get("CASEOPS_WORKSPACE", "default")
+    instance_messages = ROOT / workspace / "canned-messages.json" if workspace != "default" else None
+    messages_file = instance_messages if instance_messages and instance_messages.exists() else ROOT / "canned-messages.json"
+
     if not messages_file.exists():
         return jsonify({"error": "No canned messages configured"}), 400
     try:
