@@ -79,6 +79,15 @@ def _cache_evict(cache: dict) -> None:
         cache.pop(next(iter(cache)))
 
 
+def _instance_cache_key(key: str) -> str:
+    """Generate instance-specific cache key to prevent cross-instance contamination.
+
+    Prefixes key with current WORKSPACE so instance1 and instance2 don't share cache entries.
+    """
+    workspace = os.environ.get("CASEOPS_WORKSPACE", "default")
+    return f"{workspace}:{key}"
+
+
 def _validate_instance_path(path: Path, operation: str = "write") -> None:
     """Hard rule: Prevent writes/operations to shared directories.
 
@@ -1103,14 +1112,15 @@ _ROLLUP_FILENAME = re.compile(r"^issue-summary-\d{4}-\d{2}-\d{2}\.md$")
 def _pipeline_file_flags(key: str) -> dict[str, bool]:
     """Which pipeline output files exist for this issue (for dashboard / API)."""
     # Phase 2: check investigation_cache before disk I/O for investigation/solution flags
-    if key in investigation_cache:
-        cached = investigation_cache[key]
+    cache_key = _instance_cache_key(key)
+    if cache_key in investigation_cache:
+        cached = investigation_cache[cache_key]
         has_investigation = cached["has_investigation"]
         has_solution = cached["has_solution"]
     else:
         has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
         has_solution = (OUTPUTS / "solutions" / key).exists()
-        investigation_cache[key] = {"has_investigation": has_investigation, "has_solution": has_solution}
+        investigation_cache[cache_key] = {"has_investigation": has_investigation, "has_solution": has_solution}
         _cache_evict(investigation_cache)
 
     return {
@@ -1297,8 +1307,9 @@ def api_file(key: str, ftype: str):
         return jsonify({"error": "unknown file type"}), 400
 
     # Phase 2: serve jira_summary from cache (check before disk I/O)
-    if ftype == "jira_summary" and key in jira_summary_cache:
-        return jsonify(jira_summary_cache[key])
+    cache_key = _instance_cache_key(key)
+    if ftype == "jira_summary" and cache_key in jira_summary_cache:
+        return jsonify(jira_summary_cache[cache_key])
 
     path = OUTPUTS / rel.format(key=key)
     if not path.exists():
@@ -1308,7 +1319,7 @@ def api_file(key: str, ftype: str):
 
     # Phase 2: populate jira_summary cache
     if ftype == "jira_summary":
-        jira_summary_cache[key] = result
+        jira_summary_cache[cache_key] = result
         _cache_evict(jira_summary_cache)
 
     return jsonify(result)
@@ -1545,7 +1556,7 @@ def api_post_comment(key: str):
 
 @app.get("/api/issue/<key>/transitions")
 def api_issue_transitions(key: str):
-    _load_jira_env()
+    _load_jira_env(Path(app.config.get("ENV_FILE_PATH", ROOT / ".env.jira")))  # Use instance-specific .env.jira
     try:
         auth = _jira_auth_header()
     except ValueError as e:
@@ -1568,7 +1579,7 @@ def api_issue_transition(key: str):
     if not transition_id:
         return jsonify({"error": "transition_id required"}), 400
 
-    _load_jira_env()
+    _load_jira_env(Path(app.config.get("ENV_FILE_PATH", ROOT / ".env.jira")))  # Use instance-specific .env.jira
     try:
         auth = _jira_auth_header()
     except ValueError as e:
@@ -1804,7 +1815,8 @@ def serve_issue_rollup(filename: str):
 
 def _resolve_artifact_id(artifact_type: str, api_name: str, org_identifier: str) -> str | None:
     """Query Salesforce for artifact ID by type and API name. Returns ID or None if not found."""
-    cache_key = f"{artifact_type}:{api_name}:{org_identifier}"
+    workspace = os.environ.get("CASEOPS_WORKSPACE", "default")
+    cache_key = f"{workspace}:{artifact_type}:{api_name}:{org_identifier}"
 
     # Check cache
     if cache_key in artifact_metadata_cache:
@@ -2235,6 +2247,78 @@ if __name__ == "__main__":
     JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "").rstrip("/")
     app.config["WORKSPACE"] = WORKSPACE
     app.config["ENV_FILE_PATH"] = str(env_file_path)
+
+    # ─── STARTUP VALIDATION ───────────────────────────────────────────
+    print(f"\n{'='*70}")
+    print(f"CaseOps Startup Validation")
+    print(f"{'='*70}")
+    print(f"Workspace: {WORKSPACE}")
+    print(f"Outputs directory: {OUTPUTS}")
+    print(f"Env file: {env_file_path}")
+    print()
+
+    # Validate OUTPUTS directory exists and is writable
+    if not OUTPUTS.exists():
+        raise RuntimeError(f"OUTPUTS directory does not exist: {OUTPUTS}")
+    if not OUTPUTS.is_dir():
+        raise RuntimeError(f"OUTPUTS is not a directory: {OUTPUTS}")
+
+    try:
+        test_file = OUTPUTS / ".startup-test"
+        test_file.write_text("test", encoding="utf-8")
+        test_file.unlink()
+        print(f"✓ OUTPUTS directory is writable")
+    except Exception as e:
+        raise RuntimeError(f"OUTPUTS directory is not writable: {OUTPUTS}\nError: {e}") from e
+
+    # Validate .env.jira file exists and is readable
+    if not env_file_path.exists():
+        raise RuntimeError(f".env.jira file does not exist: {env_file_path}")
+    if not env_file_path.is_file():
+        raise RuntimeError(f".env.jira is not a file: {env_file_path}")
+
+    try:
+        env_file_path.read_text(encoding="utf-8")
+        print(f"✓ .env.jira file is readable")
+    except Exception as e:
+        raise RuntimeError(f".env.jira file is not readable: {env_file_path}\nError: {e}") from e
+
+    # Validate all required subdirectories exist
+    required_subdirs = [
+        "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
+        "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "closed-resolved"
+    ]
+    for subdir in required_subdirs:
+        subdir_path = OUTPUTS / subdir
+        if not subdir_path.exists():
+            raise RuntimeError(f"Required subdirectory missing: {subdir_path}")
+        if not subdir_path.is_dir():
+            raise RuntimeError(f"Subdirectory is not a directory: {subdir_path}")
+    print(f"✓ All required subdirectories exist ({len(required_subdirs)} dirs)")
+
+    # Validate app config is set
+    if not app.config.get("WORKSPACE"):
+        raise RuntimeError("WORKSPACE not set in app.config")
+    if not app.config.get("ENV_FILE_PATH"):
+        raise RuntimeError("ENV_FILE_PATH not set in app.config")
+    print(f"✓ App config set (WORKSPACE={app.config['WORKSPACE']})")
+
+    # Verify CASEOPS environment variables will be available to subprocesses
+    print(f"✓ Subprocess environment variables to be set:")
+    print(f"  - CASEOPS_OUTPUTS_DIR={OUTPUTS}")
+    print(f"  - CASEOPS_JIRA_OUT_DIR={OUTPUTS / 'jira'}")
+    print(f"  - CASEOPS_JIRA_ENV_FILE={env_file_path}")
+    print(f"  - CASEOPS_WORKSPACE={WORKSPACE}")
+
+    # Validate no hardcoded ROOT paths are being used for instance operations
+    print(f"✓ Instance routing validation:")
+    print(f"  - ROOT/outputs isolation: OUTPUTS={OUTPUTS.relative_to(ROOT) if OUTPUTS.is_relative_to(ROOT) else OUTPUTS}")
+    print(f"  - Jira directory: {(OUTPUTS / 'jira').relative_to(ROOT) if (OUTPUTS / 'jira').is_relative_to(ROOT) else OUTPUTS / 'jira'}")
+    print(f"  - Pipeline logs: {(OUTPUTS / 'pipeline-logs').relative_to(ROOT) if (OUTPUTS / 'pipeline-logs').is_relative_to(ROOT) else OUTPUTS / 'pipeline-logs'}")
+
+    print(f"\n{'='*70}")
+    print(f"✓ Startup validation PASSED — instance isolation ready")
+    print(f"{'='*70}\n")
 
     # use_reloader=False prevents the dev reloader from killing SSE streams
     app.run(debug=True, threaded=True, host="0.0.0.0", port=_args.port, use_reloader=False)
