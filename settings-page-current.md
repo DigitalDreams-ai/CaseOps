@@ -1,0 +1,111 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - img "Logo" [ref=e4]
+    - heading "Settings" [level=1] [ref=e5]
+    - link "← Back to CaseOps" [ref=e6] [cursor=pointer]:
+      - /url: /
+  - generic [ref=e7]:
+    - heading "Interactive Authentication (Salesforce, Claude)" [level=2] [ref=e8]
+    - paragraph [ref=e9]: "To authenticate Salesforce orgs and Claude Code CLI, SSH into the container using the command:"
+    - generic [ref=e10]:
+      - generic [ref=e11]: ssh -t docker@10.0.1.10 "/volume1/@appstore/ContainerManager/usr/bin/docker exec -it caseops bash"
+      - button "Copy" [ref=e12] [cursor=pointer]
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - heading "Jira" [level=2] [ref=e15]
+      - generic [ref=e16]:
+        - generic [ref=e17]: "Base URL:"
+        - textbox "Base URL:" [ref=e18]:
+          - /placeholder: https://org.atlassian.net
+      - generic [ref=e19]:
+        - generic [ref=e20]: "Email:"
+        - textbox "Email:" [ref=e21]:
+          - /placeholder: user@example.com
+      - generic [ref=e22]:
+        - generic [ref=e23]: "API Token:"
+        - generic [ref=e24]:
+          - textbox "API Token:" [ref=e25]:
+            - /placeholder: ••••••••
+          - button "Test Connection" [ref=e26] [cursor=pointer]
+    - generic [ref=e28]:
+      - heading "LLM Mode" [level=2] [ref=e29]
+      - generic [ref=e30]:
+        - generic [ref=e31]: "Authentication:"
+        - generic [ref=e32]:
+          - generic [ref=e33]:
+            - radio "Anthropic API Key (pay-per-use)" [ref=e34]
+            - generic [ref=e35]: Anthropic API Key (pay-per-use)
+          - generic [ref=e36]:
+            - radio "Claude Code CLI (subscription)" [checked] [ref=e37]
+            - generic [ref=e38]: Claude Code CLI (subscription)
+    - generic [ref=e39]:
+      - heading "Salesforce" [level=2] [ref=e40]
+      - generic [ref=e41]:
+        - generic [ref=e42]: "Org Auth Method:"
+        - generic [ref=e43]:
+          - generic [ref=e44]:
+            - radio "Salesforce CLI (sf)" [ref=e45]
+            - generic [ref=e46]: Salesforce CLI (sf)
+          - generic [ref=e47]:
+            - 'radio "Org Auth Method: CumulusCI (cci)" [ref=e48]'
+            - generic [ref=e49]: CumulusCI (cci)
+      - generic [ref=e50]:
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - generic [ref=e53]: "Production alias:"
+            - textbox "Production alias:" [ref=e54]:
+              - /placeholder: prod
+              - text: 10xhealth
+          - generic [ref=e87]:
+            - generic [ref=e88]: ✓ authenticated (sf)
+            - text: sbingham@10xhealthsystem.com
+          - generic [ref=e55]:
+            - generic [ref=e56]: "Production URL:"
+            - textbox "Production URL:" [ref=e57]:
+              - /placeholder: https://login.salesforce.com
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e60]: "Sandbox alias:"
+            - textbox "Sandbox alias:" [ref=e61]:
+              - /placeholder: sandbox
+              - text: 10xhealth-sean
+          - generic [ref=e89]:
+            - generic [ref=e90]: ✓ authenticated (sf)
+            - text: seanbingham@10xhealthsystem.com.sean
+          - generic [ref=e62]:
+            - generic [ref=e63]: "Sandbox URL:"
+            - textbox "Sandbox URL:" [ref=e64]:
+              - /placeholder: https://10xhealth-sean.sandbox.my.salesforce.com
+    - generic [ref=e65]:
+      - generic [ref=e66] [cursor=pointer]:
+        - generic [ref=e67]: +
+        - heading "Advanced" [level=2] [ref=e68]
+      - generic:
+        - generic [ref=e69]:
+          - generic [ref=e70]: "Azure DevOps Org:"
+          - textbox "Azure DevOps Org:" [ref=e71]:
+            - /placeholder: myorg
+            - text: 10xhealthsystem
+        - generic [ref=e72]:
+          - generic [ref=e73]: "Azure DevOps Project:"
+          - textbox "Azure DevOps Project:" [ref=e74]:
+            - /placeholder: myproject
+            - text: 10x Health Technology
+        - generic [ref=e75]:
+          - generic [ref=e76]: "Azure DevOps PAT:"
+          - textbox "Azure DevOps PAT:" [ref=e77]:
+            - /placeholder: ••••••••
+            - text: ••••••••3bEk
+        - generic [ref=e78]:
+          - generic [ref=e79]: "Production Magic Link:"
+          - textbox "Production Magic Link:" [ref=e80]:
+            - /placeholder: https://...
+            - text: https://10xhealth.my.salesforce.com/secur/frontdoor.jsp?sid=00D0b000000vHFc!AQEAQFXt2bdB8.2rZ5wFv9k55XHvG5fbuOj3GNqcGWhGeeJAl9QAIDK9D1Lyc7vayGg1FmjWwc4IuFuv72CwAfhJg.jvytHl
+        - generic [ref=e81]:
+          - generic [ref=e82]: "Sandbox Magic Link:"
+          - textbox "Sandbox Magic Link:" [ref=e83]:
+            - /placeholder: https://...
+            - text: https://10xhealth--sean.sandbox.my.salesforce.com/secur/frontdoor.jsp?sid=00DEa00000RViur!AQEAQC1Buu0mjBBJ5kedFRfGs26PS78IQ43IIQceVgT2ilPJvVQD7kArAWNYLcVX61QXA9kpLHtG6k4dxev0GksLnN.LOVMY
+    - generic [ref=e84]:
+      - button "Save Settings" [ref=e85] [cursor=pointer]
+      - button "Reload Page" [ref=e86] [cursor=pointer]

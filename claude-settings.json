@@ -1,0 +1,8 @@
+{
+  "sandboxApprovedPaths": ["/app/outputs/**"],
+  "sandboxApprovedPathsAbsolute": ["/app/outputs"],
+  "permissions": {
+    "approvedWritePaths": ["/app/outputs"],
+    "allowedDirectories": ["/app/outputs"]
+  }
+}

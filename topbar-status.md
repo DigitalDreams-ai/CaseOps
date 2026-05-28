@@ -1,0 +1,17 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - button "☰ Issues" [disabled] [ref=e3]
+    - heading "CaseOps CaseOps" [level=1] [ref=e4]:
+      - img "CaseOps" [ref=e5]
+      - text: CaseOps
+    - generic [ref=e8]: Running...
+    - link "⚙" [ref=e9] [cursor=pointer]:
+      - /url: /settings
+    - button "⋮" [disabled] [ref=e10]
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]
+      - generic [ref=e19]
+    - generic [ref=e207]:
+      - generic [ref=e213]
+      - generic [ref=e294]
