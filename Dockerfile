@@ -39,9 +39,15 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/ || exit 1
 
+# Copy entrypoint script and make executable (before switching to caseops user)
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Run as non-root user
 USER caseops
 
 # CaseOps runs on port 5000; Claude Code CLI will be invoked as subprocess
 # .env.jira is mounted at runtime (see docker-compose.yml)
-CMD ["python", "app.py", "--port", "5000"]
+# Entrypoint initializes Claude Code sandbox settings before starting Flask
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["--port", "5000"]
