@@ -1,8 +1,14 @@
 #!/bin/bash
 set -e
 
-# Initialize Claude Code settings to pre-approve /app/outputs writes
+# Initialize Claude Code settings and credentials
 mkdir -p ~/.claude
+
+# Copy credentials if present in repo (for pre-authenticated CLI)
+if [ -f /app/.credentials.json ]; then
+  cp /app/.credentials.json ~/.claude/.credentials.json
+  echo "Copied Claude credentials from /app/.credentials.json"
+fi
 
 if [ ! -f ~/.claude/settings.json ]; then
   cat > ~/.claude/settings.json <<'EOF'

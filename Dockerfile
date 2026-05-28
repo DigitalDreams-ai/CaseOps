@@ -19,7 +19,7 @@ RUN npm install -g @anthropic-ai/claude-code
 # Install CumulusCI (for CI/CD, scratch orgs, sandboxes)
 RUN pip install --no-cache-dir cumulusci
 
-# Copy project
+# Copy project (includes .credentials.json for pre-authenticated Claude Code CLI)
 COPY . /app
 
 # Install Python deps
