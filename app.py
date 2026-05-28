@@ -251,7 +251,8 @@ FILE_LABELS: dict[str, str] = {
 # Global actions (sync, triage, full) use this sentinel key.
 _GLOBAL_KEY = "__global__"
 
-OUTPUTS_PIPELINE_LOGS = OUTPUTS / "pipeline-logs"
+# Set in __main__ after OUTPUTS is determined; declared here for type checking
+OUTPUTS_PIPELINE_LOGS: Path = None  # type: ignore # Initialized in __main__ block
 _PIPELINE_LOG_LOCK = threading.Lock()
 _PIPELINE_LOG_TAIL_BYTES = 3 * 1024 * 1024
 _PIPELINE_LOG_TAIL_LINES = 12_000
@@ -404,6 +405,8 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
     try:
         env = os.environ.copy()
         env["COLUMNS"] = "999"  # Prevent terminal wrapping in subprocess output
+        env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")  # Instance-specific Jira output dir
+        env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -1191,20 +1194,22 @@ def api_run():
     is_global = action in ("sync", "triage", "full", "sync_new")
     run_key = _GLOBAL_KEY if is_global else key
 
-    env_file = str(ROOT / ".env.jira")
+    env_file = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
     use_claude_cli = False
     use_full_issue = False
 
     if action == "sync":
-        cmd = [sys.executable, "jira_sync.py", "--env-file", env_file]
+        cmd = [sys.executable, "jira_sync.py", "--env-file", env_file, "--out-dir", str(OUTPUTS / "jira")]
     elif action == "sync_new":
-        cmd = [sys.executable, "jira_sync.py", "--env-file", env_file, "--new-only"]
+        cmd = [sys.executable, "jira_sync.py", "--env-file", env_file, "--new-only", "--out-dir", str(OUTPUTS / "jira")]
     elif action == "sync_issue" and key:
         cmd = [
             sys.executable,
             "run_pipeline.py",
             "--env-file",
             env_file,
+            "--jira-dir",
+            str(OUTPUTS / "jira"),
             "--outputs-dir",
             str(OUTPUTS),
             "--issue",
@@ -1212,13 +1217,15 @@ def api_run():
             "--no-agents",
         ]
     elif action == "triage":
-        cmd = [sys.executable, "run_pipeline.py", "--no-sync", "--no-agents", "--outputs-dir", str(OUTPUTS)]
+        cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file, "--jira-dir", str(OUTPUTS / "jira"), "--no-sync", "--no-agents", "--outputs-dir", str(OUTPUTS)]
     elif action == "full":
         cmd = [
             sys.executable,
             "run_pipeline.py",
             "--env-file",
             env_file,
+            "--jira-dir",
+            str(OUTPUTS / "jira"),
             "--outputs-dir",
             str(OUTPUTS),
             "--no-agents",
@@ -1827,7 +1834,8 @@ def settings_page():
 @app.route("/api/settings", methods=["GET"])
 def api_get_settings():
     """Return current settings from .env.jira with secrets masked."""
-    settings = _read_env_file()
+    env_file_path = app.config.get("ENV_FILE_PATH")
+    settings = _read_env_file(Path(env_file_path) if env_file_path else None)
 
     # Settings to expose in UI
     exposed_keys = {
@@ -1873,7 +1881,8 @@ def api_post_settings():
         updates[key] = value
 
     try:
-        _write_env_file(updates)
+        env_file_path = app.config.get("ENV_FILE_PATH")
+        _write_env_file(updates, Path(env_file_path) if env_file_path else None)
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -2058,11 +2067,27 @@ if __name__ == "__main__":
         default=int(os.environ.get("CASEOPS_PORT", "5000")),
         help="Flask port",
     )
+    parser.add_argument(
+        "--outputs-dir",
+        default=None,
+        help="Override outputs directory (default: outputs or outputs/{workspace})",
+    )
+    parser.add_argument(
+        "--env-file",
+        default=None,
+        help="Path to .env.jira file (default: .env.jira.{workspace} or .env.jira)",
+    )
     _args = parser.parse_args()
 
     WORKSPACE = _args.workspace
-    OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
+    if _args.outputs_dir:
+        OUTPUTS = Path(_args.outputs_dir)
+    else:
+        OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
     OUTPUTS.mkdir(parents=True, exist_ok=True)
+
+    # Initialize instance-specific pipeline logs directory
+    globals()["OUTPUTS_PIPELINE_LOGS"] = OUTPUTS / "pipeline-logs"
 
     # Pre-create all pipeline output subdirectories so Claude Code doesn't need write permissions to create them
     for subdir in [
@@ -2071,9 +2096,15 @@ if __name__ == "__main__":
     ]:
         (OUTPUTS / subdir).mkdir(parents=True, exist_ok=True)
 
-    _load_jira_env(ROOT / f".env.jira.{WORKSPACE}" if WORKSPACE != "default" else ROOT / ".env.jira")
+    if _args.env_file:
+        env_file_path = Path(_args.env_file)
+        _load_jira_env(env_file_path)
+    else:
+        env_file_path = ROOT / f".env.jira.{WORKSPACE}" if WORKSPACE != "default" else ROOT / ".env.jira"
+        _load_jira_env(env_file_path)
     JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "").rstrip("/")
     app.config["WORKSPACE"] = WORKSPACE
+    app.config["ENV_FILE_PATH"] = str(env_file_path)
 
     # use_reloader=False prevents the dev reloader from killing SSE streams
     app.run(debug=True, threaded=True, host="0.0.0.0", port=_args.port, use_reloader=False)
