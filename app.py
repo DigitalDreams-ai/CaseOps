@@ -332,10 +332,12 @@ _manifest_q: queue.Queue[str] = queue.Queue()  # manifest change notifications
 def _claude_process_env() -> dict[str, str]:
     """Environment for Claude Code CLI subprocess.
 
-    Keep ANTHROPIC_API_KEY in all modes: claude_code mode needs it for authentication,
-    and api_key mode explicitly uses it for the Anthropic Messages API.
+    Remove ANTHROPIC_API_KEY in claude_code mode so CLI uses subscription/login,
+    not API billing. Only pass API key for api_key mode (Anthropic Messages API).
     """
     env = os.environ.copy()
+    if not caseops_llm_auth_uses_anthropic_api_key():
+        env.pop("ANTHROPIC_API_KEY", None)
     chrome = (env.get("CASEOPS_CLAUDE_BROWSER") or "").strip()
     if chrome:
         env["BROWSER"] = chrome
