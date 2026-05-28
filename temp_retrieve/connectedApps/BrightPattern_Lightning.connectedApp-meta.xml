@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ConnectedApp xmlns="http://soap.sforce.com/2006/04/metadata">
+    <contactEmail>noe@vitalityconnect.com</contactEmail>
+    <label>BrightPattern Lightning</label>
+    <oauthConfig>
+        <callbackUrl>https://vitalityconnect.brightpattern.com/admin/salesforcecallback.html</callbackUrl>
+        <consumerKey>3MVG9dZJodJWITSv1kFvgSqTu9bktGMeFK.q_4ZsTfwopoEQdul2AqqmfpXNceOTem5roz8EVbCwJIXDvSTSN</consumerKey>
+        <isAdminApproved>true</isAdminApproved>
+        <isClientCredentialEnabled>false</isClientCredentialEnabled>
+        <isCodeCredentialEnabled>false</isCodeCredentialEnabled>
+        <isCodeCredentialPostOnly>false</isCodeCredentialPostOnly>
+        <isConsumerSecretOptional>false</isConsumerSecretOptional>
+        <isIntrospectAllTokens>false</isIntrospectAllTokens>
+        <isNamedUserJwtEnabled>false</isNamedUserJwtEnabled>
+        <isPkceRequired>false</isPkceRequired>
+        <isRefreshTokenRotationEnabled>false</isRefreshTokenRotationEnabled>
+        <isSecretRequiredForRefreshToken>true</isSecretRequiredForRefreshToken>
+        <isSecretRequiredForTokenExchange>false</isSecretRequiredForTokenExchange>
+        <isTokenExchangeEnabled>false</isTokenExchangeEnabled>
+        <scopes>Api</scopes>
+        <scopes>Full</scopes>
+        <scopes>RefreshToken</scopes>
+    </oauthConfig>
+    <oauthPolicy>
+        <ipRelaxation>BYPASS</ipRelaxation>
+        <isTokenExchangeFlowEnabled>false</isTokenExchangeFlowEnabled>
+        <refreshTokenPolicy>infinite</refreshTokenPolicy>
+    </oauthPolicy>
+    <permissionSetName>Bright Pattern Connected Apps</permissionSetName>
+    <profileName>System Administrator</profileName>
+    <profileName>Finance</profileName>
+    <profileName>Medical Team</profileName>
+    <profileName>HG SysAdmin</profileName>
+    <profileName>10X Administrator</profileName>
+</ConnectedApp>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Form_Fill_Assessment_URL__c</fullName>
+    <description>This field will hold the URL that has all of the form fields on it that the API will use to create the signed PDF.</description>
+    <encryptionScheme>None</encryptionScheme>
+    <inlineHelpText>This field will hold the URL that has all of the form fields on it that the API will use to create the signed PDF.</inlineHelpText>
+    <label>Form Fill Assessment URL</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Url</type>
+</CustomField>

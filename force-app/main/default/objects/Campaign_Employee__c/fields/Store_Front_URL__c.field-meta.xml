@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Store_Front_URL__c</fullName>
+    <defaultValue>&apos;https://shop.10xhealthsystem.com/&apos;</defaultValue>
+    <encryptionScheme>None</encryptionScheme>
+    <inlineHelpText>This can be product-specific or the store&apos;s home page. Either way, it needs to be the full URL of the storefront.</inlineHelpText>
+    <label>Store Front URL</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Url</type>
+</CustomField>

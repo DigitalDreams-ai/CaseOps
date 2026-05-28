@@ -88,6 +88,14 @@ outputs/pipeline-logs/
 .project
 .settings/
 
+# Multi-instance state directories (each instance has isolated .sfdx, .claude, outputs)
+instance1/.sfdx/
+instance1/.claude/
+instance1/outputs/
+instance2/.sfdx/
+instance2/.claude/
+instance2/outputs/
+
 # Local assistant/session data (track CaseOps Claude Code skill stub under .claude/skills/)
 .claude/*
 !.claude/skills/

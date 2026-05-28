@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Duplicate_Dr_Chrono_Accounts</fullName>
+    <columns>CASES.CASE_NUMBER</columns>
+    <columns>NAME</columns>
+    <columns>CASES.SUBJECT</columns>
+    <columns>CASES.STATUS</columns>
+    <columns>CASES.PRIORITY</columns>
+    <columns>CASES.CREATED_DATE</columns>
+    <columns>CORE.USERS.ALIAS</columns>
+    <columns>Case_Resolution_Type__c</columns>
+    <columns>Case_Resolution_Reason__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>CASES.RECORDTYPE</field>
+        <operation>equals</operation>
+        <value>Case.Patient_Case_Record_Type</value>
+    </filters>
+    <filters>
+        <field>CASES.STATUS</field>
+        <operation>equals</operation>
+        <value>New,Working,On Hold,Escalated</value>
+    </filters>
+    <filters>
+        <field>Case_Resolution_Type__c</field>
+        <operation>equals</operation>
+        <value>Chrono Duplicate</value>
+    </filters>
+    <label>Duplicate Dr Chrono Accounts</label>
+</ListView>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Ted</label>
+    <protected>false</protected>
+    <values>
+        <field>client_id__c</field>
+        <value xsi:type="xsd:string">3MVG9EJ2FoGDnkgVzNJdBSAioC8.e3sGXmKKHHlvz.thDwBJFFzlGqMzmdRxZ7LX9R1.26HvlLya_GjacPJ__</value>
+    </values>
+    <values>
+        <field>client_secret__c</field>
+        <value xsi:type="xsd:string">6CA26BFD20E3ECD293FEB06594D7CEAB590EB95F5756734B40BE61220F03FF4B</value>
+    </values>
+    <values>
+        <field>create_products__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>endpoint__c</field>
+        <value xsi:type="xsd:string">https://10xhealth--teddev.sandbox.my.salesforce.com/services/oauth2/token</value>
+    </values>
+    <values>
+        <field>sandbox_name__c</field>
+        <value xsi:type="xsd:string">Ted</value>
+    </values>
+    <values>
+        <field>update_products__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+</CustomMetadata>

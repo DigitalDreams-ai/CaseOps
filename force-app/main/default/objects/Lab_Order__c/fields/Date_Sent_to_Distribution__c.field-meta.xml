@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Date_Sent_to_Distribution__c</fullName>
+    <description>This field will dictate when the lab order was sent to the distribution provider to ship out the kit. This serves as a key reference point for operational management and reporting purposes, ensuring stakeholders have clear visibility into the timelines of lab order processing.</description>
+    <encryptionScheme>None</encryptionScheme>
+    <label>Date Sent to Distribution</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+</CustomField>

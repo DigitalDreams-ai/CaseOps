@@ -1,0 +1,1565 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Dispo_Level_3__c</fullName>
+    <label>Dispo Level 3</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <controllingField>Dispo_Level_2__c</controllingField>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Escalation</fullName>
+                <default>false</default>
+                <label>Escalation</label>
+            </value>
+            <value>
+                <fullName>FCR</fullName>
+                <default>false</default>
+                <label>FCR</label>
+            </value>
+            <value>
+                <fullName>Send Info</fullName>
+                <default>false</default>
+                <label>Send Info</label>
+            </value>
+            <value>
+                <fullName>Transfer</fullName>
+                <default>false</default>
+                <label>Transfer</label>
+            </value>
+            <value>
+                <fullName>Diet Recommendations</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Diet Recommendations</label>
+            </value>
+            <value>
+                <fullName>Feedback Submission</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Feedback Submission</label>
+            </value>
+            <value>
+                <fullName>Genetic Counseling</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Genetic Counseling</label>
+            </value>
+            <value>
+                <fullName>Login Issue</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Login Issue</label>
+            </value>
+            <value>
+                <fullName>Membership Benefits</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Membership Benefits</label>
+            </value>
+            <value>
+                <fullName>Prescription Refill Inquiry</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Prescription Refill Inquiry</label>
+            </value>
+            <value>
+                <fullName>Results Follow-up</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Results Follow-up</label>
+            </value>
+            <value>
+                <fullName>Technical Support Needed</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Technical Support Needed</label>
+            </value>
+            <value>
+                <fullName>Test Inquiry</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Test Inquiry</label>
+            </value>
+            <value>
+                <fullName>Usage Instructions</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Usage Instructions</label>
+            </value>
+        </valueSetDefinition>
+        <valueSettings>
+            <controllingFieldValue>BenefitHub</controllingFieldValue>
+            <controllingFieldValue>Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>No results in portal - Can&apos;t find error codes</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my lab review</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Didn&apos;t receive kit</controllingFieldValue>
+            <controllingFieldValue>Subscription - item added</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my PGT clarity call</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Missing kit</controllingFieldValue>
+            <controllingFieldValue>Subscription - item removed</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my review</controllingFieldValue>
+            <controllingFieldValue>Google Shop</controllingFieldValue>
+            <controllingFieldValue>10x Precision Aminos - Tell me about your product</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule a PGT clarity call</controllingFieldValue>
+            <controllingFieldValue>Hard copy of results requested</controllingFieldValue>
+            <controllingFieldValue>Tell me about Mitochondrial testing</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule a visit to your clinic</controllingFieldValue>
+            <controllingFieldValue>How do I order</controllingFieldValue>
+            <controllingFieldValue>Tell me more about your memberships</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule my lab review</controllingFieldValue>
+            <controllingFieldValue>HSA/FSA - eligibility</controllingFieldValue>
+            <controllingFieldValue>My discount did not apply as expected</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule my review</controllingFieldValue>
+            <controllingFieldValue>HSA/FSA - issue</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Did not receive my order</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t provide valuable information during our call</controllingFieldValue>
+            <controllingFieldValue>HyperMax Oxygen - inquiry</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Missing item(s)</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t show up for my call</controllingFieldValue>
+            <controllingFieldValue>I am requesting a copy of my data from your system</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t show up for my clarity call</controllingFieldValue>
+            <controllingFieldValue>Can you provide me with more information on &apos;x&apos; supplement</controllingFieldValue>
+            <controllingFieldValue>Can you Send/Resend lab requisition</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice for my PGT purchase</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice for my purchase</controllingFieldValue>
+            <controllingFieldValue>Can you send my gut health test results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my medical recommendations to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my MGT results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my PGT results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my test results to a new email</controllingFieldValue>
+            <controllingFieldValue>Schedule with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>Incorrect charge, should have been free</controllingFieldValue>
+            <controllingFieldValue>Reschedule with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>My DOB is incorrect on the portal</controllingFieldValue>
+            <controllingFieldValue>Ingredient inquiry</controllingFieldValue>
+            <controllingFieldValue>Cancel with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>My DOB is incorrect on the portal can you fix it?</controllingFieldValue>
+            <controllingFieldValue>Instagram Shop</controllingFieldValue>
+            <controllingFieldValue>Access to FaceBook Group</controllingFieldValue>
+            <controllingFieldValue>Amazon inquiries</controllingFieldValue>
+            <controllingFieldValue>My height and weight on my account are incorrect/missing</controllingFieldValue>
+            <controllingFieldValue>International availability</controllingFieldValue>
+            <controllingFieldValue>FaceBook Group Questions</controllingFieldValue>
+            <controllingFieldValue>Am I able to change my shipping address</controllingFieldValue>
+            <controllingFieldValue>My item arrived damaged</controllingFieldValue>
+            <controllingFieldValue>Invoice request</controllingFieldValue>
+            <controllingFieldValue>Beta Test Questions</controllingFieldValue>
+            <controllingFieldValue>Are my MGT results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is damaged</controllingFieldValue>
+            <controllingFieldValue>I want to change by WA/WC</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Pharmacy Verification</controllingFieldValue>
+            <controllingFieldValue>Are my PGT results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>I want to give feedback on my WA/WC</controllingFieldValue>
+            <controllingFieldValue>I need site support</controllingFieldValue>
+            <controllingFieldValue>Are my results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is unusable</controllingFieldValue>
+            <controllingFieldValue>Kit missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>I Need to connect with my provider</controllingFieldValue>
+            <controllingFieldValue>Can I reschedule my lab review</controllingFieldValue>
+            <controllingFieldValue>My medication packaging was damaged as well as the contents</controllingFieldValue>
+            <controllingFieldValue>Logged in and can&apos;t move forward (errors 1021, 1022)</controllingFieldValue>
+            <controllingFieldValue>I want to become a part of the Health net</controllingFieldValue>
+            <controllingFieldValue>Can I reschedule my PGT Clarity Call</controllingFieldValue>
+            <controllingFieldValue>My MGT kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>Medication is damaged</controllingFieldValue>
+            <controllingFieldValue>Can I schedule my Clarity Call</controllingFieldValue>
+            <controllingFieldValue>My minor child just turned 18 and his/her results are no longer in my portal</controllingFieldValue>
+            <controllingFieldValue>Can I take these recommendations with my other medications</controllingFieldValue>
+            <controllingFieldValue>Can you tell me about your products</controllingFieldValue>
+            <controllingFieldValue>Clincal Questions about my protocol (in scope)</controllingFieldValue>
+            <controllingFieldValue>Clincal Questions about my protocol (Out of scope)</controllingFieldValue>
+            <controllingFieldValue>Clinical Questions about my protocol (In Scope)</controllingFieldValue>
+            <controllingFieldValue>Clinical Questions about my results (Outside of scope)</controllingFieldValue>
+            <controllingFieldValue>Collecting credit card information</controllingFieldValue>
+            <controllingFieldValue>Do you ship Superhuman Protocol Internationally?</controllingFieldValue>
+            <controllingFieldValue>How can I track my medications from the pharmacy</controllingFieldValue>
+            <controllingFieldValue>How do I know that the recommendations are working?</controllingFieldValue>
+            <controllingFieldValue>How do I know that the supplements are working?</controllingFieldValue>
+            <controllingFieldValue>Tell me about Health Net</controllingFieldValue>
+            <controllingFieldValue>Medication order is missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Bottle Update</controllingFieldValue>
+            <controllingFieldValue>My order is missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Minor child just turned 18 and results are no longer in portal</controllingFieldValue>
+            <controllingFieldValue>National availability</controllingFieldValue>
+            <controllingFieldValue>My package wasn&apos;t delivered</controllingFieldValue>
+            <controllingFieldValue>Navigation or general questions</controllingFieldValue>
+            <controllingFieldValue>Schedule Test Pickup</controllingFieldValue>
+            <controllingFieldValue>My packaging was damaged as well as the contents</controllingFieldValue>
+            <controllingFieldValue>Need help collecting sample</controllingFieldValue>
+            <controllingFieldValue>My packaging was damaged but contents in tact</controllingFieldValue>
+            <controllingFieldValue>Need help downloading the app</controllingFieldValue>
+            <controllingFieldValue>My PGT kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>Need lab requisition</controllingFieldValue>
+            <controllingFieldValue>My PGT results were not delivered</controllingFieldValue>
+            <controllingFieldValue>Need to update information on profile - no error code</controllingFieldValue>
+            <controllingFieldValue>My results were not delivered</controllingFieldValue>
+            <controllingFieldValue>Never received OTP - no error code</controllingFieldValue>
+            <controllingFieldValue>My results were not delivered (unaware of timeframe/email sent)</controllingFieldValue>
+            <controllingFieldValue>One Time Order - change shipping address</controllingFieldValue>
+            <controllingFieldValue>My supplement purchase says unfulfilled in my shopify account</controllingFieldValue>
+            <controllingFieldValue>One Time Order - didn&apos;t receive</controllingFieldValue>
+            <controllingFieldValue>Sending clients tracking information and instructions</controllingFieldValue>
+            <controllingFieldValue>How do I take my protocol</controllingFieldValue>
+            <controllingFieldValue>How do I use HyperMax Oxygen</controllingFieldValue>
+            <controllingFieldValue>How do I use the PEMF mat?</controllingFieldValue>
+            <controllingFieldValue>How do I use the red light bed?</controllingFieldValue>
+            <controllingFieldValue>How do I use the red light panels?</controllingFieldValue>
+            <controllingFieldValue>How long should I exercise with HyperMax Oxygen?</controllingFieldValue>
+            <controllingFieldValue>How long will it take for me to receive my results</controllingFieldValue>
+            <controllingFieldValue>I am &apos;x&apos; religion and can not consume &apos;x&apos; do your supplements contain this?</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase the Gut Health test</controllingFieldValue>
+            <controllingFieldValue>One Time Order - how to track</controllingFieldValue>
+            <controllingFieldValue>Some items are missing from my order</controllingFieldValue>
+            <controllingFieldValue>One Time Order - shipment damaged</controllingFieldValue>
+            <controllingFieldValue>Tell me about my recommended medications</controllingFieldValue>
+            <controllingFieldValue>One Time Order - shipment missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Tell me about the MGT</controllingFieldValue>
+            <controllingFieldValue>Order free printed book</controllingFieldValue>
+            <controllingFieldValue>Tell me about the PGT</controllingFieldValue>
+            <controllingFieldValue>Order has incorrect demographic information</controllingFieldValue>
+            <controllingFieldValue>Tell me about your products</controllingFieldValue>
+            <controllingFieldValue>Parent/Child Relationship</controllingFieldValue>
+            <controllingFieldValue>Tell me about your SHP products</controllingFieldValue>
+            <controllingFieldValue>Partnership - issue with personal order</controllingFieldValue>
+            <controllingFieldValue>Tell me about your supplements</controllingFieldValue>
+            <controllingFieldValue>Partnership - issue with their customer order</controllingFieldValue>
+            <controllingFieldValue>These supplements are not making me feel good (overmethylation)</controllingFieldValue>
+            <controllingFieldValue>Partnership - other</controllingFieldValue>
+            <controllingFieldValue>These supplements are not making me feel good (Refund)</controllingFieldValue>
+            <controllingFieldValue>Partnership - want to sell 10X Health products</controllingFieldValue>
+            <controllingFieldValue>The status of my order says unfulfilled (in portal)</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase the test</controllingFieldValue>
+            <controllingFieldValue>I am a prospective partner wanting more information about your business</controllingFieldValue>
+            <controllingFieldValue>I am having trouble with my patient agreements</controllingFieldValue>
+            <controllingFieldValue>I can not get in touch with your affiliate team</controllingFieldValue>
+            <controllingFieldValue>I can not log in to edit my supplement subscription</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (DOB Discrepancy)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (email incorrect)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (Never received OTP)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (OTP incorrect)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (Timed out)</controllingFieldValue>
+            <controllingFieldValue>Partnership - will 10X sell my products</controllingFieldValue>
+            <controllingFieldValue>Troubleshooting broken items</controllingFieldValue>
+            <controllingFieldValue>PEMF - inquiry</controllingFieldValue>
+            <controllingFieldValue>What are the 10X Health Light Bed&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Protocol question</controllingFieldValue>
+            <controllingFieldValue>What are the HyperMax Oxygen specs?</controllingFieldValue>
+            <controllingFieldValue>Protocol questions</controllingFieldValue>
+            <controllingFieldValue>What are the package weight and dimensions?</controllingFieldValue>
+            <controllingFieldValue>Provider did not show for appointment</controllingFieldValue>
+            <controllingFieldValue>What are the PEMF mat&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Purchase blood test for in clinic</controllingFieldValue>
+            <controllingFieldValue>What are the red light panel&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Purchase blood test for LabCorp</controllingFieldValue>
+            <controllingFieldValue>What are the wavelengths in the panels and/or light bed?</controllingFieldValue>
+            <controllingFieldValue>Purchase clarity call</controllingFieldValue>
+            <controllingFieldValue>What is my tracking number</controllingFieldValue>
+            <controllingFieldValue>Purchase Gut Health kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the status of my blood test</controllingFieldValue>
+            <controllingFieldValue>Purchase Gut Health kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What is the status of my gut health test results</controllingFieldValue>
+            <controllingFieldValue>I can not see my guth health test results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my MGT results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my PGT results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my supplement purchase in my shopify account</controllingFieldValue>
+            <controllingFieldValue>I can only order &apos;x&apos; quantity of supplements</controllingFieldValue>
+            <controllingFieldValue>I did not receive my MGT results</controllingFieldValue>
+            <controllingFieldValue>I do not have access to my portal</controllingFieldValue>
+            <controllingFieldValue>I had my review but I haven&apos;t heard anything</controllingFieldValue>
+            <controllingFieldValue>I had my review but I haven&apos;t heard anything from your team</controllingFieldValue>
+            <controllingFieldValue>Purchase MGT kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the status of my MGT</controllingFieldValue>
+            <controllingFieldValue>Purchase MGT kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What is the status of my PGT</controllingFieldValue>
+            <controllingFieldValue>Purchase PGT kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the warranty?</controllingFieldValue>
+            <controllingFieldValue>Purchase PGT kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What PEMF settings should I use?</controllingFieldValue>
+            <controllingFieldValue>Purchase printed book</controllingFieldValue>
+            <controllingFieldValue>What settings should I use with the red light bed?</controllingFieldValue>
+            <controllingFieldValue>Purchase supplements</controllingFieldValue>
+            <controllingFieldValue>What settings should I use with the red light panels?</controllingFieldValue>
+            <controllingFieldValue>Red Light Bed - inquiry</controllingFieldValue>
+            <controllingFieldValue>Where is my medication order</controllingFieldValue>
+            <controllingFieldValue>Red Light Panel - inquiry</controllingFieldValue>
+            <controllingFieldValue>Where is my order</controllingFieldValue>
+            <controllingFieldValue>Refund request</controllingFieldValue>
+            <controllingFieldValue>Registration</controllingFieldValue>
+            <controllingFieldValue>I have a new address and need to change my shipping address</controllingFieldValue>
+            <controllingFieldValue>I have a question on your T&amp;C</controllingFieldValue>
+            <controllingFieldValue>I have not heard from my WA</controllingFieldValue>
+            <controllingFieldValue>I have not received my recommendations</controllingFieldValue>
+            <controllingFieldValue>I have questions about my protocol</controllingFieldValue>
+            <controllingFieldValue>I have questions on your T&amp;C</controllingFieldValue>
+            <controllingFieldValue>I need help scheduling my review?</controllingFieldValue>
+            <controllingFieldValue>I need to be scheduled</controllingFieldValue>
+            <controllingFieldValue>I need to be scheduled for my review</controllingFieldValue>
+            <controllingFieldValue>I need to manage my subscription</controllingFieldValue>
+            <controllingFieldValue>Registration - Minor</controllingFieldValue>
+            <controllingFieldValue>Registration - Multiple Registration</controllingFieldValue>
+            <controllingFieldValue>Report contents questions</controllingFieldValue>
+            <controllingFieldValue>Requesting analysis raw data</controllingFieldValue>
+            <controllingFieldValue>Request refund</controllingFieldValue>
+            <controllingFieldValue>Request replacement</controllingFieldValue>
+            <controllingFieldValue>Request warranty claim</controllingFieldValue>
+            <controllingFieldValue>Reschedule clarity call</controllingFieldValue>
+            <controllingFieldValue>Adverse reaction</controllingFieldValue>
+            <controllingFieldValue>Reschedule protocol review</controllingFieldValue>
+            <controllingFieldValue>Affiliate - interested in becoming</controllingFieldValue>
+            <controllingFieldValue>Reschedule provider review</controllingFieldValue>
+            <controllingFieldValue>Affiliate - issue with follower order</controllingFieldValue>
+            <controllingFieldValue>I need to reschedule my Clarity Call</controllingFieldValue>
+            <controllingFieldValue>I need to speak to my WA/WC</controllingFieldValue>
+            <controllingFieldValue>I never received my kit</controllingFieldValue>
+            <controllingFieldValue>I never received my order</controllingFieldValue>
+            <controllingFieldValue>I never received my PGT kit</controllingFieldValue>
+            <controllingFieldValue>I never received my test kit</controllingFieldValue>
+            <controllingFieldValue>I ordered to (x) country and now I cant place another order</controllingFieldValue>
+            <controllingFieldValue>I received the wrong item(s) in my order</controllingFieldValue>
+            <controllingFieldValue>I shipped supplements to the wrong address</controllingFieldValue>
+            <controllingFieldValue>I want to add &apos;x&apos; item to my order</controllingFieldValue>
+            <controllingFieldValue>Affiliate - issue with personal order</controllingFieldValue>
+            <controllingFieldValue>Affiliate - other</controllingFieldValue>
+            <controllingFieldValue>Affiliate - payment questions</controllingFieldValue>
+            <controllingFieldValue>Affiliate - technical issues</controllingFieldValue>
+            <controllingFieldValue>Amazon - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Amazon - Fraudulent Order</controllingFieldValue>
+            <controllingFieldValue>Amazon - not happy with product</controllingFieldValue>
+            <controllingFieldValue>Amazon - request refund</controllingFieldValue>
+            <controllingFieldValue>Amazon - request replacement</controllingFieldValue>
+            <controllingFieldValue>Amazon - status of order</controllingFieldValue>
+            <controllingFieldValue>I want to be scheduled for a lab redraw</controllingFieldValue>
+            <controllingFieldValue>I want to change my address for my PGT supplements</controllingFieldValue>
+            <controllingFieldValue>I want to place a medication order</controllingFieldValue>
+            <controllingFieldValue>I want to place an order</controllingFieldValue>
+            <controllingFieldValue>I want to update payment on supplement subscription</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my gut health test results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my MGT results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my PGT results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my results</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for MGT Supplements</controllingFieldValue>
+            <controllingFieldValue>Android - code does not work</controllingFieldValue>
+            <controllingFieldValue>Android - request code</controllingFieldValue>
+            <controllingFieldValue>Apple - code does not work</controllingFieldValue>
+            <controllingFieldValue>Apple - request code</controllingFieldValue>
+            <controllingFieldValue>Arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Available open roles</controllingFieldValue>
+            <controllingFieldValue>Averse reaction</controllingFieldValue>
+            <controllingFieldValue>Broken - does not charge</controllingFieldValue>
+            <controllingFieldValue>Broken - exploded</controllingFieldValue>
+            <controllingFieldValue>Broken - leaks</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my blood test</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my gut health test</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my medical recommendations (Meds not received)</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my MGT</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my PGT</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my product</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my supplements</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel a visit to your clinic</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my lab review</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my review</controllingFieldValue>
+            <controllingFieldValue>Reship - Kit is damaged</controllingFieldValue>
+            <controllingFieldValue>Reship - Kit is unusable</controllingFieldValue>
+            <controllingFieldValue>Results file is corrupt</controllingFieldValue>
+            <controllingFieldValue>Results provided to wrong customer</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Aventura clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Beverly Hills clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Las Vegas clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at North Miami (UBS) clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at North Scottsdale clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule clarity call</controllingFieldValue>
+            <controllingFieldValue>Schedule protocol review with Concierge</controllingFieldValue>
+            <controllingFieldValue>Schedule provider review</controllingFieldValue>
+            <controllingFieldValue>Specimen rejected/invalid</controllingFieldValue>
+            <controllingFieldValue>Status of order</controllingFieldValue>
+            <controllingFieldValue>Subscription - cancellation</controllingFieldValue>
+            <controllingFieldValue>Subscription - creation</controllingFieldValue>
+            <controllingFieldValue>Subscription - didn&apos;t receive</controllingFieldValue>
+            <controllingFieldValue>Subscription - how to self-manage</controllingFieldValue>
+            <controllingFieldValue>Subscription - how to track</controllingFieldValue>
+            <controllingFieldValue>Subscription - modification</controllingFieldValue>
+            <controllingFieldValue>Subscription - shipment damaged</controllingFieldValue>
+            <controllingFieldValue>Can&apos;t access emailed results</controllingFieldValue>
+            <controllingFieldValue>Subscription - shipment missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Cancel clarity call</controllingFieldValue>
+            <controllingFieldValue>Subscription - update address</controllingFieldValue>
+            <controllingFieldValue>Cancel protocol review</controllingFieldValue>
+            <controllingFieldValue>Subscription - update payment</controllingFieldValue>
+            <controllingFieldValue>Cancel provider review</controllingFieldValue>
+            <controllingFieldValue>Tech issue viewing lab reports (errors 3001, 3003, 3004)</controllingFieldValue>
+            <controllingFieldValue>Cannot log into portal (error 1003)</controllingFieldValue>
+            <controllingFieldValue>Tech issue with appointments (errors 4001, 4002, 4003)</controllingFieldValue>
+            <controllingFieldValue>Cannot log into portal (errors 8001)</controllingFieldValue>
+            <controllingFieldValue>Tech issue with kit registration (errors 2001, 2002, 2003, 2004, 2005)</controllingFieldValue>
+            <controllingFieldValue>Cannot see minor child&apos;s results in portal</controllingFieldValue>
+            <controllingFieldValue>Tech issue with OTP (errors 1005, 1006, 1007, 1009, 1011, 1012, 1013, 1016, 1019, 1020, 1023, 1024, 1025)</controllingFieldValue>
+            <controllingFieldValue>Change shipping address</controllingFieldValue>
+            <controllingFieldValue>Tech issue with privacy policy/consents (errors 7001, 7002, 7003, 7004, 7005, 7006, 7007, 7009)</controllingFieldValue>
+            <controllingFieldValue>Clarity call/report translation request</controllingFieldValue>
+            <controllingFieldValue>Tech issue with profile (errors 5001, 5002, 5005, 5006)</controllingFieldValue>
+            <controllingFieldValue>Clinic services, locations, addresses, hours</controllingFieldValue>
+            <controllingFieldValue>Tell me about the blood test</controllingFieldValue>
+            <controllingFieldValue>Damaged/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Tell me about the gut health test</controllingFieldValue>
+            <controllingFieldValue>Decode</controllingFieldValue>
+            <controllingFieldValue>The app does not contain any of my results</controllingFieldValue>
+            <controllingFieldValue>Delete all my information from all systems</controllingFieldValue>
+            <controllingFieldValue>TicTok - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Delivered with no water in it</controllingFieldValue>
+            <controllingFieldValue>TicTok - Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>Delivered with water in it</controllingFieldValue>
+            <controllingFieldValue>TicTok- not happy with product</controllingFieldValue>
+            <controllingFieldValue>Didn&apos;t receive medications</controllingFieldValue>
+            <controllingFieldValue>TicTok- request refund</controllingFieldValue>
+            <controllingFieldValue>Didn&apos;t receive printed book</controllingFieldValue>
+            <controllingFieldValue>TicTok - request replacement</controllingFieldValue>
+            <controllingFieldValue>Did not receive my results - past SLA</controllingFieldValue>
+            <controllingFieldValue>TicTok - status of order</controllingFieldValue>
+            <controllingFieldValue>Discount or campaign question</controllingFieldValue>
+            <controllingFieldValue>Walmart - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Double shipping for same household</controllingFieldValue>
+            <controllingFieldValue>Walmart - not happy with product</controllingFieldValue>
+            <controllingFieldValue>eBay - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Walmart- request refund</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my review/ Clarity Call</controllingFieldValue>
+            <controllingFieldValue>eBay - Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>Walmart - request replacement</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a Blood test</controllingFieldValue>
+            <controllingFieldValue>eBay - not happy with product</controllingFieldValue>
+            <controllingFieldValue>Walmart - status of order</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a MGT kit</controllingFieldValue>
+            <controllingFieldValue>eBay - request refund</controllingFieldValue>
+            <controllingFieldValue>Warranty question</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase an item</controllingFieldValue>
+            <controllingFieldValue>eBay - request replacement</controllingFieldValue>
+            <controllingFieldValue>Warranty scope/registration</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase an MGT clarity call</controllingFieldValue>
+            <controllingFieldValue>eBay - status of order</controllingFieldValue>
+            <controllingFieldValue>When will results be available - within SLA</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a PGT</controllingFieldValue>
+            <controllingFieldValue>Effectiveness of supplements</controllingFieldValue>
+            <controllingFieldValue>No response needed</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase my medication</controllingFieldValue>
+            <controllingFieldValue>Employment verification</controllingFieldValue>
+            <controllingFieldValue>Critical labs</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase supplements</controllingFieldValue>
+            <controllingFieldValue>Exchange request</controllingFieldValue>
+            <controllingFieldValue>GovX</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase the gut health test</controllingFieldValue>
+            <controllingFieldValue>Facebook Shop</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule a visit to your clinic</controllingFieldValue>
+            <valueName>Escalation</valueName>
+        </valueSettings>
+        <valueSettings>
+            <controllingFieldValue>BenefitHub</controllingFieldValue>
+            <controllingFieldValue>Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>No results in portal - Can&apos;t find error codes</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my lab review</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Didn&apos;t receive kit</controllingFieldValue>
+            <controllingFieldValue>Subscription - item added</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my PGT clarity call</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Missing kit</controllingFieldValue>
+            <controllingFieldValue>Subscription - item removed</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my review</controllingFieldValue>
+            <controllingFieldValue>Google Shop</controllingFieldValue>
+            <controllingFieldValue>10x Precision Aminos - Tell me about your product</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule a PGT clarity call</controllingFieldValue>
+            <controllingFieldValue>Hard copy of results requested</controllingFieldValue>
+            <controllingFieldValue>Tell me about Mitochondrial testing</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule a visit to your clinic</controllingFieldValue>
+            <controllingFieldValue>How do I order</controllingFieldValue>
+            <controllingFieldValue>Tell me more about your memberships</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule my lab review</controllingFieldValue>
+            <controllingFieldValue>HSA/FSA - eligibility</controllingFieldValue>
+            <controllingFieldValue>My discount did not apply as expected</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule my review</controllingFieldValue>
+            <controllingFieldValue>HSA/FSA - issue</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Did not receive my order</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t provide valuable information during our call</controllingFieldValue>
+            <controllingFieldValue>HyperMax Oxygen - inquiry</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Missing item(s)</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t show up for my call</controllingFieldValue>
+            <controllingFieldValue>I am requesting a copy of my data from your system</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t show up for my clarity call</controllingFieldValue>
+            <controllingFieldValue>Can you provide me with more information on &apos;x&apos; supplement</controllingFieldValue>
+            <controllingFieldValue>Can you Send/Resend lab requisition</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice for my PGT purchase</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice for my purchase</controllingFieldValue>
+            <controllingFieldValue>Can you send my gut health test results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my medical recommendations to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my MGT results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my PGT results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my test results to a new email</controllingFieldValue>
+            <controllingFieldValue>Schedule with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>Incorrect charge, should have been free</controllingFieldValue>
+            <controllingFieldValue>Reschedule with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>My DOB is incorrect on the portal</controllingFieldValue>
+            <controllingFieldValue>Ingredient inquiry</controllingFieldValue>
+            <controllingFieldValue>Cancel with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>My DOB is incorrect on the portal can you fix it?</controllingFieldValue>
+            <controllingFieldValue>Instagram Shop</controllingFieldValue>
+            <controllingFieldValue>Access to FaceBook Group</controllingFieldValue>
+            <controllingFieldValue>Amazon inquiries</controllingFieldValue>
+            <controllingFieldValue>My height and weight on my account are incorrect/missing</controllingFieldValue>
+            <controllingFieldValue>International availability</controllingFieldValue>
+            <controllingFieldValue>FaceBook Group Questions</controllingFieldValue>
+            <controllingFieldValue>Am I able to change my shipping address</controllingFieldValue>
+            <controllingFieldValue>My item arrived damaged</controllingFieldValue>
+            <controllingFieldValue>Invoice request</controllingFieldValue>
+            <controllingFieldValue>Beta Test Questions</controllingFieldValue>
+            <controllingFieldValue>Are my MGT results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is damaged</controllingFieldValue>
+            <controllingFieldValue>I want to change by WA/WC</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Pharmacy Verification</controllingFieldValue>
+            <controllingFieldValue>Are my PGT results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>I want to give feedback on my WA/WC</controllingFieldValue>
+            <controllingFieldValue>I need site support</controllingFieldValue>
+            <controllingFieldValue>Are my results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is unusable</controllingFieldValue>
+            <controllingFieldValue>Kit missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>I Need to connect with my provider</controllingFieldValue>
+            <controllingFieldValue>Can I reschedule my lab review</controllingFieldValue>
+            <controllingFieldValue>My medication packaging was damaged as well as the contents</controllingFieldValue>
+            <controllingFieldValue>Logged in and can&apos;t move forward (errors 1021, 1022)</controllingFieldValue>
+            <controllingFieldValue>I want to become a part of the Health net</controllingFieldValue>
+            <controllingFieldValue>Can I reschedule my PGT Clarity Call</controllingFieldValue>
+            <controllingFieldValue>My MGT kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>Medication is damaged</controllingFieldValue>
+            <controllingFieldValue>Can I schedule my Clarity Call</controllingFieldValue>
+            <controllingFieldValue>My minor child just turned 18 and his/her results are no longer in my portal</controllingFieldValue>
+            <controllingFieldValue>Can I take these recommendations with my other medications</controllingFieldValue>
+            <controllingFieldValue>Can you tell me about your products</controllingFieldValue>
+            <controllingFieldValue>Clincal Questions about my protocol (in scope)</controllingFieldValue>
+            <controllingFieldValue>Clincal Questions about my protocol (Out of scope)</controllingFieldValue>
+            <controllingFieldValue>Clinical Questions about my protocol (In Scope)</controllingFieldValue>
+            <controllingFieldValue>Clinical Questions about my results (Outside of scope)</controllingFieldValue>
+            <controllingFieldValue>Collecting credit card information</controllingFieldValue>
+            <controllingFieldValue>Do you ship Superhuman Protocol Internationally?</controllingFieldValue>
+            <controllingFieldValue>How can I track my medications from the pharmacy</controllingFieldValue>
+            <controllingFieldValue>How do I know that the recommendations are working?</controllingFieldValue>
+            <controllingFieldValue>How do I know that the supplements are working?</controllingFieldValue>
+            <controllingFieldValue>Tell me about Health Net</controllingFieldValue>
+            <controllingFieldValue>Medication order is missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Bottle Update</controllingFieldValue>
+            <controllingFieldValue>My order is missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Minor child just turned 18 and results are no longer in portal</controllingFieldValue>
+            <controllingFieldValue>National availability</controllingFieldValue>
+            <controllingFieldValue>My package wasn&apos;t delivered</controllingFieldValue>
+            <controllingFieldValue>Navigation or general questions</controllingFieldValue>
+            <controllingFieldValue>Schedule Test Pickup</controllingFieldValue>
+            <controllingFieldValue>My packaging was damaged as well as the contents</controllingFieldValue>
+            <controllingFieldValue>Need help collecting sample</controllingFieldValue>
+            <controllingFieldValue>My packaging was damaged but contents in tact</controllingFieldValue>
+            <controllingFieldValue>Need help downloading the app</controllingFieldValue>
+            <controllingFieldValue>My PGT kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>Need lab requisition</controllingFieldValue>
+            <controllingFieldValue>My PGT results were not delivered</controllingFieldValue>
+            <controllingFieldValue>Need to update information on profile - no error code</controllingFieldValue>
+            <controllingFieldValue>My results were not delivered</controllingFieldValue>
+            <controllingFieldValue>Never received OTP - no error code</controllingFieldValue>
+            <controllingFieldValue>My results were not delivered (unaware of timeframe/email sent)</controllingFieldValue>
+            <controllingFieldValue>One Time Order - change shipping address</controllingFieldValue>
+            <controllingFieldValue>My supplement purchase says unfulfilled in my shopify account</controllingFieldValue>
+            <controllingFieldValue>One Time Order - didn&apos;t receive</controllingFieldValue>
+            <controllingFieldValue>Sending clients tracking information and instructions</controllingFieldValue>
+            <controllingFieldValue>How do I take my protocol</controllingFieldValue>
+            <controllingFieldValue>How do I use HyperMax Oxygen</controllingFieldValue>
+            <controllingFieldValue>How do I use the PEMF mat?</controllingFieldValue>
+            <controllingFieldValue>How do I use the red light bed?</controllingFieldValue>
+            <controllingFieldValue>How do I use the red light panels?</controllingFieldValue>
+            <controllingFieldValue>How long should I exercise with HyperMax Oxygen?</controllingFieldValue>
+            <controllingFieldValue>How long will it take for me to receive my results</controllingFieldValue>
+            <controllingFieldValue>I am &apos;x&apos; religion and can not consume &apos;x&apos; do your supplements contain this?</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase the Gut Health test</controllingFieldValue>
+            <controllingFieldValue>One Time Order - how to track</controllingFieldValue>
+            <controllingFieldValue>Some items are missing from my order</controllingFieldValue>
+            <controllingFieldValue>One Time Order - shipment damaged</controllingFieldValue>
+            <controllingFieldValue>Tell me about my recommended medications</controllingFieldValue>
+            <controllingFieldValue>One Time Order - shipment missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Tell me about the MGT</controllingFieldValue>
+            <controllingFieldValue>Order free printed book</controllingFieldValue>
+            <controllingFieldValue>Tell me about the PGT</controllingFieldValue>
+            <controllingFieldValue>Order has incorrect demographic information</controllingFieldValue>
+            <controllingFieldValue>Tell me about your products</controllingFieldValue>
+            <controllingFieldValue>Parent/Child Relationship</controllingFieldValue>
+            <controllingFieldValue>Tell me about your SHP products</controllingFieldValue>
+            <controllingFieldValue>Partnership - issue with personal order</controllingFieldValue>
+            <controllingFieldValue>Tell me about your supplements</controllingFieldValue>
+            <controllingFieldValue>Partnership - issue with their customer order</controllingFieldValue>
+            <controllingFieldValue>These supplements are not making me feel good (overmethylation)</controllingFieldValue>
+            <controllingFieldValue>Partnership - other</controllingFieldValue>
+            <controllingFieldValue>These supplements are not making me feel good (Refund)</controllingFieldValue>
+            <controllingFieldValue>Partnership - want to sell 10X Health products</controllingFieldValue>
+            <controllingFieldValue>The status of my order says unfulfilled (in portal)</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase the test</controllingFieldValue>
+            <controllingFieldValue>I am a prospective partner wanting more information about your business</controllingFieldValue>
+            <controllingFieldValue>I am having trouble with my patient agreements</controllingFieldValue>
+            <controllingFieldValue>I can not get in touch with your affiliate team</controllingFieldValue>
+            <controllingFieldValue>I can not log in to edit my supplement subscription</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (DOB Discrepancy)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (email incorrect)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (Never received OTP)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (OTP incorrect)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (Timed out)</controllingFieldValue>
+            <controllingFieldValue>Partnership - will 10X sell my products</controllingFieldValue>
+            <controllingFieldValue>Troubleshooting broken items</controllingFieldValue>
+            <controllingFieldValue>PEMF - inquiry</controllingFieldValue>
+            <controllingFieldValue>What are the 10X Health Light Bed&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Protocol question</controllingFieldValue>
+            <controllingFieldValue>What are the HyperMax Oxygen specs?</controllingFieldValue>
+            <controllingFieldValue>Protocol questions</controllingFieldValue>
+            <controllingFieldValue>What are the package weight and dimensions?</controllingFieldValue>
+            <controllingFieldValue>Provider did not show for appointment</controllingFieldValue>
+            <controllingFieldValue>What are the PEMF mat&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Purchase blood test for in clinic</controllingFieldValue>
+            <controllingFieldValue>What are the red light panel&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Purchase blood test for LabCorp</controllingFieldValue>
+            <controllingFieldValue>What are the wavelengths in the panels and/or light bed?</controllingFieldValue>
+            <controllingFieldValue>Purchase clarity call</controllingFieldValue>
+            <controllingFieldValue>What is my tracking number</controllingFieldValue>
+            <controllingFieldValue>Purchase Gut Health kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the status of my blood test</controllingFieldValue>
+            <controllingFieldValue>Purchase Gut Health kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What is the status of my gut health test results</controllingFieldValue>
+            <controllingFieldValue>I can not see my guth health test results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my MGT results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my PGT results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my supplement purchase in my shopify account</controllingFieldValue>
+            <controllingFieldValue>I can only order &apos;x&apos; quantity of supplements</controllingFieldValue>
+            <controllingFieldValue>I did not receive my MGT results</controllingFieldValue>
+            <controllingFieldValue>I do not have access to my portal</controllingFieldValue>
+            <controllingFieldValue>I had my review but I haven&apos;t heard anything</controllingFieldValue>
+            <controllingFieldValue>I had my review but I haven&apos;t heard anything from your team</controllingFieldValue>
+            <controllingFieldValue>Purchase MGT kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the status of my MGT</controllingFieldValue>
+            <controllingFieldValue>Purchase MGT kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What is the status of my PGT</controllingFieldValue>
+            <controllingFieldValue>Purchase PGT kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the warranty?</controllingFieldValue>
+            <controllingFieldValue>Purchase PGT kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What PEMF settings should I use?</controllingFieldValue>
+            <controllingFieldValue>Purchase printed book</controllingFieldValue>
+            <controllingFieldValue>What settings should I use with the red light bed?</controllingFieldValue>
+            <controllingFieldValue>Purchase supplements</controllingFieldValue>
+            <controllingFieldValue>What settings should I use with the red light panels?</controllingFieldValue>
+            <controllingFieldValue>Red Light Bed - inquiry</controllingFieldValue>
+            <controllingFieldValue>Where is my medication order</controllingFieldValue>
+            <controllingFieldValue>Red Light Panel - inquiry</controllingFieldValue>
+            <controllingFieldValue>Where is my order</controllingFieldValue>
+            <controllingFieldValue>Refund request</controllingFieldValue>
+            <controllingFieldValue>Registration</controllingFieldValue>
+            <controllingFieldValue>I have a new address and need to change my shipping address</controllingFieldValue>
+            <controllingFieldValue>I have a question on your T&amp;C</controllingFieldValue>
+            <controllingFieldValue>I have not heard from my WA</controllingFieldValue>
+            <controllingFieldValue>I have not received my recommendations</controllingFieldValue>
+            <controllingFieldValue>I have questions about my protocol</controllingFieldValue>
+            <controllingFieldValue>I have questions on your T&amp;C</controllingFieldValue>
+            <controllingFieldValue>I need help scheduling my review?</controllingFieldValue>
+            <controllingFieldValue>I need to be scheduled</controllingFieldValue>
+            <controllingFieldValue>I need to be scheduled for my review</controllingFieldValue>
+            <controllingFieldValue>I need to manage my subscription</controllingFieldValue>
+            <controllingFieldValue>Registration - Minor</controllingFieldValue>
+            <controllingFieldValue>Registration - Multiple Registration</controllingFieldValue>
+            <controllingFieldValue>Report contents questions</controllingFieldValue>
+            <controllingFieldValue>Requesting analysis raw data</controllingFieldValue>
+            <controllingFieldValue>Request refund</controllingFieldValue>
+            <controllingFieldValue>Request replacement</controllingFieldValue>
+            <controllingFieldValue>Request warranty claim</controllingFieldValue>
+            <controllingFieldValue>Reschedule clarity call</controllingFieldValue>
+            <controllingFieldValue>Adverse reaction</controllingFieldValue>
+            <controllingFieldValue>Reschedule protocol review</controllingFieldValue>
+            <controllingFieldValue>Affiliate - interested in becoming</controllingFieldValue>
+            <controllingFieldValue>Reschedule provider review</controllingFieldValue>
+            <controllingFieldValue>Affiliate - issue with follower order</controllingFieldValue>
+            <controllingFieldValue>I need to reschedule my Clarity Call</controllingFieldValue>
+            <controllingFieldValue>I need to speak to my WA/WC</controllingFieldValue>
+            <controllingFieldValue>I never received my kit</controllingFieldValue>
+            <controllingFieldValue>I never received my order</controllingFieldValue>
+            <controllingFieldValue>I never received my PGT kit</controllingFieldValue>
+            <controllingFieldValue>I never received my test kit</controllingFieldValue>
+            <controllingFieldValue>I ordered to (x) country and now I cant place another order</controllingFieldValue>
+            <controllingFieldValue>I received the wrong item(s) in my order</controllingFieldValue>
+            <controllingFieldValue>I shipped supplements to the wrong address</controllingFieldValue>
+            <controllingFieldValue>I want to add &apos;x&apos; item to my order</controllingFieldValue>
+            <controllingFieldValue>Affiliate - issue with personal order</controllingFieldValue>
+            <controllingFieldValue>Affiliate - other</controllingFieldValue>
+            <controllingFieldValue>Affiliate - payment questions</controllingFieldValue>
+            <controllingFieldValue>Affiliate - technical issues</controllingFieldValue>
+            <controllingFieldValue>Amazon - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Amazon - Fraudulent Order</controllingFieldValue>
+            <controllingFieldValue>Amazon - not happy with product</controllingFieldValue>
+            <controllingFieldValue>Amazon - request refund</controllingFieldValue>
+            <controllingFieldValue>Amazon - request replacement</controllingFieldValue>
+            <controllingFieldValue>Amazon - status of order</controllingFieldValue>
+            <controllingFieldValue>I want to be scheduled for a lab redraw</controllingFieldValue>
+            <controllingFieldValue>I want to change my address for my PGT supplements</controllingFieldValue>
+            <controllingFieldValue>I want to place a medication order</controllingFieldValue>
+            <controllingFieldValue>I want to place an order</controllingFieldValue>
+            <controllingFieldValue>I want to update payment on supplement subscription</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my gut health test results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my MGT results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my PGT results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my results</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for MGT Supplements</controllingFieldValue>
+            <controllingFieldValue>Android - code does not work</controllingFieldValue>
+            <controllingFieldValue>Android - request code</controllingFieldValue>
+            <controllingFieldValue>Apple - code does not work</controllingFieldValue>
+            <controllingFieldValue>Apple - request code</controllingFieldValue>
+            <controllingFieldValue>Arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Available open roles</controllingFieldValue>
+            <controllingFieldValue>Averse reaction</controllingFieldValue>
+            <controllingFieldValue>Broken - does not charge</controllingFieldValue>
+            <controllingFieldValue>Broken - exploded</controllingFieldValue>
+            <controllingFieldValue>Broken - leaks</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my blood test</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my gut health test</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my medical recommendations (Meds not received)</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my MGT</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my PGT</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my product</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my supplements</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel a visit to your clinic</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my lab review</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my review</controllingFieldValue>
+            <controllingFieldValue>Reship - Kit is damaged</controllingFieldValue>
+            <controllingFieldValue>Reship - Kit is unusable</controllingFieldValue>
+            <controllingFieldValue>Results file is corrupt</controllingFieldValue>
+            <controllingFieldValue>Results provided to wrong customer</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Aventura clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Beverly Hills clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Las Vegas clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at North Miami (UBS) clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at North Scottsdale clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule clarity call</controllingFieldValue>
+            <controllingFieldValue>Schedule protocol review with Concierge</controllingFieldValue>
+            <controllingFieldValue>Schedule provider review</controllingFieldValue>
+            <controllingFieldValue>Specimen rejected/invalid</controllingFieldValue>
+            <controllingFieldValue>Status of order</controllingFieldValue>
+            <controllingFieldValue>Subscription - cancellation</controllingFieldValue>
+            <controllingFieldValue>Subscription - creation</controllingFieldValue>
+            <controllingFieldValue>Subscription - didn&apos;t receive</controllingFieldValue>
+            <controllingFieldValue>Subscription - how to self-manage</controllingFieldValue>
+            <controllingFieldValue>Subscription - how to track</controllingFieldValue>
+            <controllingFieldValue>Subscription - modification</controllingFieldValue>
+            <controllingFieldValue>Subscription - shipment damaged</controllingFieldValue>
+            <controllingFieldValue>Can&apos;t access emailed results</controllingFieldValue>
+            <controllingFieldValue>Subscription - shipment missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Cancel clarity call</controllingFieldValue>
+            <controllingFieldValue>Subscription - update address</controllingFieldValue>
+            <controllingFieldValue>Cancel protocol review</controllingFieldValue>
+            <controllingFieldValue>Subscription - update payment</controllingFieldValue>
+            <controllingFieldValue>Cancel provider review</controllingFieldValue>
+            <controllingFieldValue>Tech issue viewing lab reports (errors 3001, 3003, 3004)</controllingFieldValue>
+            <controllingFieldValue>Cannot log into portal (error 1003)</controllingFieldValue>
+            <controllingFieldValue>Tech issue with appointments (errors 4001, 4002, 4003)</controllingFieldValue>
+            <controllingFieldValue>Cannot log into portal (errors 8001)</controllingFieldValue>
+            <controllingFieldValue>Tech issue with kit registration (errors 2001, 2002, 2003, 2004, 2005)</controllingFieldValue>
+            <controllingFieldValue>Cannot see minor child&apos;s results in portal</controllingFieldValue>
+            <controllingFieldValue>Tech issue with OTP (errors 1005, 1006, 1007, 1009, 1011, 1012, 1013, 1016, 1019, 1020, 1023, 1024, 1025)</controllingFieldValue>
+            <controllingFieldValue>Change shipping address</controllingFieldValue>
+            <controllingFieldValue>Tech issue with privacy policy/consents (errors 7001, 7002, 7003, 7004, 7005, 7006, 7007, 7009)</controllingFieldValue>
+            <controllingFieldValue>Clarity call/report translation request</controllingFieldValue>
+            <controllingFieldValue>Tech issue with profile (errors 5001, 5002, 5005, 5006)</controllingFieldValue>
+            <controllingFieldValue>Clinic services, locations, addresses, hours</controllingFieldValue>
+            <controllingFieldValue>Tell me about the blood test</controllingFieldValue>
+            <controllingFieldValue>Damaged/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Tell me about the gut health test</controllingFieldValue>
+            <controllingFieldValue>Decode</controllingFieldValue>
+            <controllingFieldValue>The app does not contain any of my results</controllingFieldValue>
+            <controllingFieldValue>Delete all my information from all systems</controllingFieldValue>
+            <controllingFieldValue>TicTok - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Delivered with no water in it</controllingFieldValue>
+            <controllingFieldValue>TicTok - Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>Delivered with water in it</controllingFieldValue>
+            <controllingFieldValue>TicTok- not happy with product</controllingFieldValue>
+            <controllingFieldValue>Didn&apos;t receive medications</controllingFieldValue>
+            <controllingFieldValue>TicTok- request refund</controllingFieldValue>
+            <controllingFieldValue>Didn&apos;t receive printed book</controllingFieldValue>
+            <controllingFieldValue>TicTok - request replacement</controllingFieldValue>
+            <controllingFieldValue>Did not receive my results - past SLA</controllingFieldValue>
+            <controllingFieldValue>TicTok - status of order</controllingFieldValue>
+            <controllingFieldValue>Discount or campaign question</controllingFieldValue>
+            <controllingFieldValue>Walmart - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Double shipping for same household</controllingFieldValue>
+            <controllingFieldValue>Walmart - not happy with product</controllingFieldValue>
+            <controllingFieldValue>eBay - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Walmart- request refund</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my review/ Clarity Call</controllingFieldValue>
+            <controllingFieldValue>eBay - Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>Walmart - request replacement</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a Blood test</controllingFieldValue>
+            <controllingFieldValue>eBay - not happy with product</controllingFieldValue>
+            <controllingFieldValue>Walmart - status of order</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a MGT kit</controllingFieldValue>
+            <controllingFieldValue>eBay - request refund</controllingFieldValue>
+            <controllingFieldValue>Warranty question</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase an item</controllingFieldValue>
+            <controllingFieldValue>eBay - request replacement</controllingFieldValue>
+            <controllingFieldValue>Warranty scope/registration</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase an MGT clarity call</controllingFieldValue>
+            <controllingFieldValue>eBay - status of order</controllingFieldValue>
+            <controllingFieldValue>When will results be available - within SLA</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a PGT</controllingFieldValue>
+            <controllingFieldValue>Effectiveness of supplements</controllingFieldValue>
+            <controllingFieldValue>No response needed</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase my medication</controllingFieldValue>
+            <controllingFieldValue>Employment verification</controllingFieldValue>
+            <controllingFieldValue>Critical labs</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase supplements</controllingFieldValue>
+            <controllingFieldValue>Exchange request</controllingFieldValue>
+            <controllingFieldValue>GovX</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase the gut health test</controllingFieldValue>
+            <controllingFieldValue>Facebook Shop</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule a visit to your clinic</controllingFieldValue>
+            <valueName>FCR</valueName>
+        </valueSettings>
+        <valueSettings>
+            <controllingFieldValue>BenefitHub</controllingFieldValue>
+            <controllingFieldValue>Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>No results in portal - Can&apos;t find error codes</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my lab review</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Didn&apos;t receive kit</controllingFieldValue>
+            <controllingFieldValue>Subscription - item added</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my PGT clarity call</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Missing kit</controllingFieldValue>
+            <controllingFieldValue>Subscription - item removed</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my review</controllingFieldValue>
+            <controllingFieldValue>Google Shop</controllingFieldValue>
+            <controllingFieldValue>10x Precision Aminos - Tell me about your product</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule a PGT clarity call</controllingFieldValue>
+            <controllingFieldValue>Hard copy of results requested</controllingFieldValue>
+            <controllingFieldValue>Tell me about Mitochondrial testing</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule a visit to your clinic</controllingFieldValue>
+            <controllingFieldValue>How do I order</controllingFieldValue>
+            <controllingFieldValue>Tell me more about your memberships</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule my lab review</controllingFieldValue>
+            <controllingFieldValue>HSA/FSA - eligibility</controllingFieldValue>
+            <controllingFieldValue>My discount did not apply as expected</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule my review</controllingFieldValue>
+            <controllingFieldValue>HSA/FSA - issue</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Did not receive my order</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t provide valuable information during our call</controllingFieldValue>
+            <controllingFieldValue>HyperMax Oxygen - inquiry</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Missing item(s)</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t show up for my call</controllingFieldValue>
+            <controllingFieldValue>I am requesting a copy of my data from your system</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t show up for my clarity call</controllingFieldValue>
+            <controllingFieldValue>Can you provide me with more information on &apos;x&apos; supplement</controllingFieldValue>
+            <controllingFieldValue>Can you Send/Resend lab requisition</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice for my PGT purchase</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice for my purchase</controllingFieldValue>
+            <controllingFieldValue>Can you send my gut health test results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my medical recommendations to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my MGT results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my PGT results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my test results to a new email</controllingFieldValue>
+            <controllingFieldValue>Schedule with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>Incorrect charge, should have been free</controllingFieldValue>
+            <controllingFieldValue>Reschedule with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>My DOB is incorrect on the portal</controllingFieldValue>
+            <controllingFieldValue>Ingredient inquiry</controllingFieldValue>
+            <controllingFieldValue>Cancel with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>My DOB is incorrect on the portal can you fix it?</controllingFieldValue>
+            <controllingFieldValue>Instagram Shop</controllingFieldValue>
+            <controllingFieldValue>Access to FaceBook Group</controllingFieldValue>
+            <controllingFieldValue>Amazon inquiries</controllingFieldValue>
+            <controllingFieldValue>My height and weight on my account are incorrect/missing</controllingFieldValue>
+            <controllingFieldValue>International availability</controllingFieldValue>
+            <controllingFieldValue>FaceBook Group Questions</controllingFieldValue>
+            <controllingFieldValue>Am I able to change my shipping address</controllingFieldValue>
+            <controllingFieldValue>My item arrived damaged</controllingFieldValue>
+            <controllingFieldValue>Invoice request</controllingFieldValue>
+            <controllingFieldValue>Beta Test Questions</controllingFieldValue>
+            <controllingFieldValue>Are my MGT results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is damaged</controllingFieldValue>
+            <controllingFieldValue>I want to change by WA/WC</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Pharmacy Verification</controllingFieldValue>
+            <controllingFieldValue>Are my PGT results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>I want to give feedback on my WA/WC</controllingFieldValue>
+            <controllingFieldValue>I need site support</controllingFieldValue>
+            <controllingFieldValue>Are my results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is unusable</controllingFieldValue>
+            <controllingFieldValue>Kit missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>I Need to connect with my provider</controllingFieldValue>
+            <controllingFieldValue>Can I reschedule my lab review</controllingFieldValue>
+            <controllingFieldValue>My medication packaging was damaged as well as the contents</controllingFieldValue>
+            <controllingFieldValue>Logged in and can&apos;t move forward (errors 1021, 1022)</controllingFieldValue>
+            <controllingFieldValue>I want to become a part of the Health net</controllingFieldValue>
+            <controllingFieldValue>Can I reschedule my PGT Clarity Call</controllingFieldValue>
+            <controllingFieldValue>My MGT kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>Medication is damaged</controllingFieldValue>
+            <controllingFieldValue>Can I schedule my Clarity Call</controllingFieldValue>
+            <controllingFieldValue>My minor child just turned 18 and his/her results are no longer in my portal</controllingFieldValue>
+            <controllingFieldValue>Can I take these recommendations with my other medications</controllingFieldValue>
+            <controllingFieldValue>Can you tell me about your products</controllingFieldValue>
+            <controllingFieldValue>Clincal Questions about my protocol (in scope)</controllingFieldValue>
+            <controllingFieldValue>Clincal Questions about my protocol (Out of scope)</controllingFieldValue>
+            <controllingFieldValue>Clinical Questions about my protocol (In Scope)</controllingFieldValue>
+            <controllingFieldValue>Clinical Questions about my results (Outside of scope)</controllingFieldValue>
+            <controllingFieldValue>Collecting credit card information</controllingFieldValue>
+            <controllingFieldValue>Do you ship Superhuman Protocol Internationally?</controllingFieldValue>
+            <controllingFieldValue>How can I track my medications from the pharmacy</controllingFieldValue>
+            <controllingFieldValue>How do I know that the recommendations are working?</controllingFieldValue>
+            <controllingFieldValue>How do I know that the supplements are working?</controllingFieldValue>
+            <controllingFieldValue>Tell me about Health Net</controllingFieldValue>
+            <controllingFieldValue>Medication order is missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Bottle Update</controllingFieldValue>
+            <controllingFieldValue>My order is missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Minor child just turned 18 and results are no longer in portal</controllingFieldValue>
+            <controllingFieldValue>National availability</controllingFieldValue>
+            <controllingFieldValue>My package wasn&apos;t delivered</controllingFieldValue>
+            <controllingFieldValue>Navigation or general questions</controllingFieldValue>
+            <controllingFieldValue>Schedule Test Pickup</controllingFieldValue>
+            <controllingFieldValue>My packaging was damaged as well as the contents</controllingFieldValue>
+            <controllingFieldValue>Need help collecting sample</controllingFieldValue>
+            <controllingFieldValue>My packaging was damaged but contents in tact</controllingFieldValue>
+            <controllingFieldValue>Need help downloading the app</controllingFieldValue>
+            <controllingFieldValue>My PGT kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>Need lab requisition</controllingFieldValue>
+            <controllingFieldValue>My PGT results were not delivered</controllingFieldValue>
+            <controllingFieldValue>Need to update information on profile - no error code</controllingFieldValue>
+            <controllingFieldValue>My results were not delivered</controllingFieldValue>
+            <controllingFieldValue>Never received OTP - no error code</controllingFieldValue>
+            <controllingFieldValue>My results were not delivered (unaware of timeframe/email sent)</controllingFieldValue>
+            <controllingFieldValue>One Time Order - change shipping address</controllingFieldValue>
+            <controllingFieldValue>My supplement purchase says unfulfilled in my shopify account</controllingFieldValue>
+            <controllingFieldValue>One Time Order - didn&apos;t receive</controllingFieldValue>
+            <controllingFieldValue>Sending clients tracking information and instructions</controllingFieldValue>
+            <controllingFieldValue>How do I take my protocol</controllingFieldValue>
+            <controllingFieldValue>How do I use HyperMax Oxygen</controllingFieldValue>
+            <controllingFieldValue>How do I use the PEMF mat?</controllingFieldValue>
+            <controllingFieldValue>How do I use the red light bed?</controllingFieldValue>
+            <controllingFieldValue>How do I use the red light panels?</controllingFieldValue>
+            <controllingFieldValue>How long should I exercise with HyperMax Oxygen?</controllingFieldValue>
+            <controllingFieldValue>How long will it take for me to receive my results</controllingFieldValue>
+            <controllingFieldValue>I am &apos;x&apos; religion and can not consume &apos;x&apos; do your supplements contain this?</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase the Gut Health test</controllingFieldValue>
+            <controllingFieldValue>One Time Order - how to track</controllingFieldValue>
+            <controllingFieldValue>Some items are missing from my order</controllingFieldValue>
+            <controllingFieldValue>One Time Order - shipment damaged</controllingFieldValue>
+            <controllingFieldValue>Tell me about my recommended medications</controllingFieldValue>
+            <controllingFieldValue>One Time Order - shipment missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Tell me about the MGT</controllingFieldValue>
+            <controllingFieldValue>Order free printed book</controllingFieldValue>
+            <controllingFieldValue>Tell me about the PGT</controllingFieldValue>
+            <controllingFieldValue>Order has incorrect demographic information</controllingFieldValue>
+            <controllingFieldValue>Tell me about your products</controllingFieldValue>
+            <controllingFieldValue>Parent/Child Relationship</controllingFieldValue>
+            <controllingFieldValue>Tell me about your SHP products</controllingFieldValue>
+            <controllingFieldValue>Partnership - issue with personal order</controllingFieldValue>
+            <controllingFieldValue>Tell me about your supplements</controllingFieldValue>
+            <controllingFieldValue>Partnership - issue with their customer order</controllingFieldValue>
+            <controllingFieldValue>These supplements are not making me feel good (overmethylation)</controllingFieldValue>
+            <controllingFieldValue>Partnership - other</controllingFieldValue>
+            <controllingFieldValue>These supplements are not making me feel good (Refund)</controllingFieldValue>
+            <controllingFieldValue>Partnership - want to sell 10X Health products</controllingFieldValue>
+            <controllingFieldValue>The status of my order says unfulfilled (in portal)</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase the test</controllingFieldValue>
+            <controllingFieldValue>I am a prospective partner wanting more information about your business</controllingFieldValue>
+            <controllingFieldValue>I am having trouble with my patient agreements</controllingFieldValue>
+            <controllingFieldValue>I can not get in touch with your affiliate team</controllingFieldValue>
+            <controllingFieldValue>I can not log in to edit my supplement subscription</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (DOB Discrepancy)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (email incorrect)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (Never received OTP)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (OTP incorrect)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (Timed out)</controllingFieldValue>
+            <controllingFieldValue>Partnership - will 10X sell my products</controllingFieldValue>
+            <controllingFieldValue>Troubleshooting broken items</controllingFieldValue>
+            <controllingFieldValue>PEMF - inquiry</controllingFieldValue>
+            <controllingFieldValue>What are the 10X Health Light Bed&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Protocol question</controllingFieldValue>
+            <controllingFieldValue>What are the HyperMax Oxygen specs?</controllingFieldValue>
+            <controllingFieldValue>Protocol questions</controllingFieldValue>
+            <controllingFieldValue>What are the package weight and dimensions?</controllingFieldValue>
+            <controllingFieldValue>Provider did not show for appointment</controllingFieldValue>
+            <controllingFieldValue>What are the PEMF mat&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Purchase blood test for in clinic</controllingFieldValue>
+            <controllingFieldValue>What are the red light panel&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Purchase blood test for LabCorp</controllingFieldValue>
+            <controllingFieldValue>What are the wavelengths in the panels and/or light bed?</controllingFieldValue>
+            <controllingFieldValue>Purchase clarity call</controllingFieldValue>
+            <controllingFieldValue>What is my tracking number</controllingFieldValue>
+            <controllingFieldValue>Purchase Gut Health kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the status of my blood test</controllingFieldValue>
+            <controllingFieldValue>Purchase Gut Health kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What is the status of my gut health test results</controllingFieldValue>
+            <controllingFieldValue>I can not see my guth health test results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my MGT results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my PGT results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my supplement purchase in my shopify account</controllingFieldValue>
+            <controllingFieldValue>I can only order &apos;x&apos; quantity of supplements</controllingFieldValue>
+            <controllingFieldValue>I did not receive my MGT results</controllingFieldValue>
+            <controllingFieldValue>I do not have access to my portal</controllingFieldValue>
+            <controllingFieldValue>I had my review but I haven&apos;t heard anything</controllingFieldValue>
+            <controllingFieldValue>I had my review but I haven&apos;t heard anything from your team</controllingFieldValue>
+            <controllingFieldValue>Purchase MGT kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the status of my MGT</controllingFieldValue>
+            <controllingFieldValue>Purchase MGT kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What is the status of my PGT</controllingFieldValue>
+            <controllingFieldValue>Purchase PGT kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the warranty?</controllingFieldValue>
+            <controllingFieldValue>Purchase PGT kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What PEMF settings should I use?</controllingFieldValue>
+            <controllingFieldValue>Purchase printed book</controllingFieldValue>
+            <controllingFieldValue>What settings should I use with the red light bed?</controllingFieldValue>
+            <controllingFieldValue>Purchase supplements</controllingFieldValue>
+            <controllingFieldValue>What settings should I use with the red light panels?</controllingFieldValue>
+            <controllingFieldValue>Red Light Bed - inquiry</controllingFieldValue>
+            <controllingFieldValue>Where is my medication order</controllingFieldValue>
+            <controllingFieldValue>Red Light Panel - inquiry</controllingFieldValue>
+            <controllingFieldValue>Where is my order</controllingFieldValue>
+            <controllingFieldValue>Refund request</controllingFieldValue>
+            <controllingFieldValue>Registration</controllingFieldValue>
+            <controllingFieldValue>I have a new address and need to change my shipping address</controllingFieldValue>
+            <controllingFieldValue>I have a question on your T&amp;C</controllingFieldValue>
+            <controllingFieldValue>I have not heard from my WA</controllingFieldValue>
+            <controllingFieldValue>I have not received my recommendations</controllingFieldValue>
+            <controllingFieldValue>I have questions about my protocol</controllingFieldValue>
+            <controllingFieldValue>I have questions on your T&amp;C</controllingFieldValue>
+            <controllingFieldValue>I need help scheduling my review?</controllingFieldValue>
+            <controllingFieldValue>I need to be scheduled</controllingFieldValue>
+            <controllingFieldValue>I need to be scheduled for my review</controllingFieldValue>
+            <controllingFieldValue>I need to manage my subscription</controllingFieldValue>
+            <controllingFieldValue>Registration - Minor</controllingFieldValue>
+            <controllingFieldValue>Registration - Multiple Registration</controllingFieldValue>
+            <controllingFieldValue>Report contents questions</controllingFieldValue>
+            <controllingFieldValue>Requesting analysis raw data</controllingFieldValue>
+            <controllingFieldValue>Request refund</controllingFieldValue>
+            <controllingFieldValue>Request replacement</controllingFieldValue>
+            <controllingFieldValue>Request warranty claim</controllingFieldValue>
+            <controllingFieldValue>Reschedule clarity call</controllingFieldValue>
+            <controllingFieldValue>Adverse reaction</controllingFieldValue>
+            <controllingFieldValue>Reschedule protocol review</controllingFieldValue>
+            <controllingFieldValue>Affiliate - interested in becoming</controllingFieldValue>
+            <controllingFieldValue>Reschedule provider review</controllingFieldValue>
+            <controllingFieldValue>Affiliate - issue with follower order</controllingFieldValue>
+            <controllingFieldValue>I need to reschedule my Clarity Call</controllingFieldValue>
+            <controllingFieldValue>I need to speak to my WA/WC</controllingFieldValue>
+            <controllingFieldValue>I never received my kit</controllingFieldValue>
+            <controllingFieldValue>I never received my order</controllingFieldValue>
+            <controllingFieldValue>I never received my PGT kit</controllingFieldValue>
+            <controllingFieldValue>I never received my test kit</controllingFieldValue>
+            <controllingFieldValue>I ordered to (x) country and now I cant place another order</controllingFieldValue>
+            <controllingFieldValue>I received the wrong item(s) in my order</controllingFieldValue>
+            <controllingFieldValue>I shipped supplements to the wrong address</controllingFieldValue>
+            <controllingFieldValue>I want to add &apos;x&apos; item to my order</controllingFieldValue>
+            <controllingFieldValue>Affiliate - issue with personal order</controllingFieldValue>
+            <controllingFieldValue>Affiliate - other</controllingFieldValue>
+            <controllingFieldValue>Affiliate - payment questions</controllingFieldValue>
+            <controllingFieldValue>Affiliate - technical issues</controllingFieldValue>
+            <controllingFieldValue>Amazon - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Amazon - Fraudulent Order</controllingFieldValue>
+            <controllingFieldValue>Amazon - not happy with product</controllingFieldValue>
+            <controllingFieldValue>Amazon - request refund</controllingFieldValue>
+            <controllingFieldValue>Amazon - request replacement</controllingFieldValue>
+            <controllingFieldValue>Amazon - status of order</controllingFieldValue>
+            <controllingFieldValue>I want to be scheduled for a lab redraw</controllingFieldValue>
+            <controllingFieldValue>I want to change my address for my PGT supplements</controllingFieldValue>
+            <controllingFieldValue>I want to place a medication order</controllingFieldValue>
+            <controllingFieldValue>I want to place an order</controllingFieldValue>
+            <controllingFieldValue>I want to update payment on supplement subscription</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my gut health test results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my MGT results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my PGT results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my results</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for MGT Supplements</controllingFieldValue>
+            <controllingFieldValue>Android - code does not work</controllingFieldValue>
+            <controllingFieldValue>Android - request code</controllingFieldValue>
+            <controllingFieldValue>Apple - code does not work</controllingFieldValue>
+            <controllingFieldValue>Apple - request code</controllingFieldValue>
+            <controllingFieldValue>Arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Available open roles</controllingFieldValue>
+            <controllingFieldValue>Averse reaction</controllingFieldValue>
+            <controllingFieldValue>Broken - does not charge</controllingFieldValue>
+            <controllingFieldValue>Broken - exploded</controllingFieldValue>
+            <controllingFieldValue>Broken - leaks</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my blood test</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my gut health test</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my medical recommendations (Meds not received)</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my MGT</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my PGT</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my product</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my supplements</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel a visit to your clinic</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my lab review</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my review</controllingFieldValue>
+            <controllingFieldValue>Reship - Kit is damaged</controllingFieldValue>
+            <controllingFieldValue>Reship - Kit is unusable</controllingFieldValue>
+            <controllingFieldValue>Results file is corrupt</controllingFieldValue>
+            <controllingFieldValue>Results provided to wrong customer</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Aventura clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Beverly Hills clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Las Vegas clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at North Miami (UBS) clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at North Scottsdale clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule clarity call</controllingFieldValue>
+            <controllingFieldValue>Schedule protocol review with Concierge</controllingFieldValue>
+            <controllingFieldValue>Schedule provider review</controllingFieldValue>
+            <controllingFieldValue>Specimen rejected/invalid</controllingFieldValue>
+            <controllingFieldValue>Status of order</controllingFieldValue>
+            <controllingFieldValue>Subscription - cancellation</controllingFieldValue>
+            <controllingFieldValue>Subscription - creation</controllingFieldValue>
+            <controllingFieldValue>Subscription - didn&apos;t receive</controllingFieldValue>
+            <controllingFieldValue>Subscription - how to self-manage</controllingFieldValue>
+            <controllingFieldValue>Subscription - how to track</controllingFieldValue>
+            <controllingFieldValue>Subscription - modification</controllingFieldValue>
+            <controllingFieldValue>Subscription - shipment damaged</controllingFieldValue>
+            <controllingFieldValue>Can&apos;t access emailed results</controllingFieldValue>
+            <controllingFieldValue>Subscription - shipment missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Cancel clarity call</controllingFieldValue>
+            <controllingFieldValue>Subscription - update address</controllingFieldValue>
+            <controllingFieldValue>Cancel protocol review</controllingFieldValue>
+            <controllingFieldValue>Subscription - update payment</controllingFieldValue>
+            <controllingFieldValue>Cancel provider review</controllingFieldValue>
+            <controllingFieldValue>Tech issue viewing lab reports (errors 3001, 3003, 3004)</controllingFieldValue>
+            <controllingFieldValue>Cannot log into portal (error 1003)</controllingFieldValue>
+            <controllingFieldValue>Tech issue with appointments (errors 4001, 4002, 4003)</controllingFieldValue>
+            <controllingFieldValue>Cannot log into portal (errors 8001)</controllingFieldValue>
+            <controllingFieldValue>Tech issue with kit registration (errors 2001, 2002, 2003, 2004, 2005)</controllingFieldValue>
+            <controllingFieldValue>Cannot see minor child&apos;s results in portal</controllingFieldValue>
+            <controllingFieldValue>Tech issue with OTP (errors 1005, 1006, 1007, 1009, 1011, 1012, 1013, 1016, 1019, 1020, 1023, 1024, 1025)</controllingFieldValue>
+            <controllingFieldValue>Change shipping address</controllingFieldValue>
+            <controllingFieldValue>Tech issue with privacy policy/consents (errors 7001, 7002, 7003, 7004, 7005, 7006, 7007, 7009)</controllingFieldValue>
+            <controllingFieldValue>Clarity call/report translation request</controllingFieldValue>
+            <controllingFieldValue>Tech issue with profile (errors 5001, 5002, 5005, 5006)</controllingFieldValue>
+            <controllingFieldValue>Clinic services, locations, addresses, hours</controllingFieldValue>
+            <controllingFieldValue>Tell me about the blood test</controllingFieldValue>
+            <controllingFieldValue>Damaged/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Tell me about the gut health test</controllingFieldValue>
+            <controllingFieldValue>Decode</controllingFieldValue>
+            <controllingFieldValue>The app does not contain any of my results</controllingFieldValue>
+            <controllingFieldValue>Delete all my information from all systems</controllingFieldValue>
+            <controllingFieldValue>TicTok - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Delivered with no water in it</controllingFieldValue>
+            <controllingFieldValue>TicTok - Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>Delivered with water in it</controllingFieldValue>
+            <controllingFieldValue>TicTok- not happy with product</controllingFieldValue>
+            <controllingFieldValue>Didn&apos;t receive medications</controllingFieldValue>
+            <controllingFieldValue>TicTok- request refund</controllingFieldValue>
+            <controllingFieldValue>Didn&apos;t receive printed book</controllingFieldValue>
+            <controllingFieldValue>TicTok - request replacement</controllingFieldValue>
+            <controllingFieldValue>Did not receive my results - past SLA</controllingFieldValue>
+            <controllingFieldValue>TicTok - status of order</controllingFieldValue>
+            <controllingFieldValue>Discount or campaign question</controllingFieldValue>
+            <controllingFieldValue>Walmart - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Double shipping for same household</controllingFieldValue>
+            <controllingFieldValue>Walmart - not happy with product</controllingFieldValue>
+            <controllingFieldValue>eBay - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Walmart- request refund</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my review/ Clarity Call</controllingFieldValue>
+            <controllingFieldValue>eBay - Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>Walmart - request replacement</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a Blood test</controllingFieldValue>
+            <controllingFieldValue>eBay - not happy with product</controllingFieldValue>
+            <controllingFieldValue>Walmart - status of order</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a MGT kit</controllingFieldValue>
+            <controllingFieldValue>eBay - request refund</controllingFieldValue>
+            <controllingFieldValue>Warranty question</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase an item</controllingFieldValue>
+            <controllingFieldValue>eBay - request replacement</controllingFieldValue>
+            <controllingFieldValue>Warranty scope/registration</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase an MGT clarity call</controllingFieldValue>
+            <controllingFieldValue>eBay - status of order</controllingFieldValue>
+            <controllingFieldValue>When will results be available - within SLA</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a PGT</controllingFieldValue>
+            <controllingFieldValue>Effectiveness of supplements</controllingFieldValue>
+            <controllingFieldValue>No response needed</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase my medication</controllingFieldValue>
+            <controllingFieldValue>Employment verification</controllingFieldValue>
+            <controllingFieldValue>Critical labs</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase supplements</controllingFieldValue>
+            <controllingFieldValue>Exchange request</controllingFieldValue>
+            <controllingFieldValue>GovX</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase the gut health test</controllingFieldValue>
+            <controllingFieldValue>Facebook Shop</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule a visit to your clinic</controllingFieldValue>
+            <valueName>Send Info</valueName>
+        </valueSettings>
+        <valueSettings>
+            <controllingFieldValue>BenefitHub</controllingFieldValue>
+            <controllingFieldValue>Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>No results in portal - Can&apos;t find error codes</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my lab review</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Didn&apos;t receive kit</controllingFieldValue>
+            <controllingFieldValue>Subscription - item added</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my PGT clarity call</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Missing kit</controllingFieldValue>
+            <controllingFieldValue>Subscription - item removed</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule my review</controllingFieldValue>
+            <controllingFieldValue>Google Shop</controllingFieldValue>
+            <controllingFieldValue>10x Precision Aminos - Tell me about your product</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule a PGT clarity call</controllingFieldValue>
+            <controllingFieldValue>Hard copy of results requested</controllingFieldValue>
+            <controllingFieldValue>Tell me about Mitochondrial testing</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule a visit to your clinic</controllingFieldValue>
+            <controllingFieldValue>How do I order</controllingFieldValue>
+            <controllingFieldValue>Tell me more about your memberships</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule my lab review</controllingFieldValue>
+            <controllingFieldValue>HSA/FSA - eligibility</controllingFieldValue>
+            <controllingFieldValue>My discount did not apply as expected</controllingFieldValue>
+            <controllingFieldValue>I would like to schedule my review</controllingFieldValue>
+            <controllingFieldValue>HSA/FSA - issue</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Did not receive my order</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t provide valuable information during our call</controllingFieldValue>
+            <controllingFieldValue>HyperMax Oxygen - inquiry</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Missing item(s)</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t show up for my call</controllingFieldValue>
+            <controllingFieldValue>I am requesting a copy of my data from your system</controllingFieldValue>
+            <controllingFieldValue>My clinical provider didn&apos;t show up for my clarity call</controllingFieldValue>
+            <controllingFieldValue>Can you provide me with more information on &apos;x&apos; supplement</controllingFieldValue>
+            <controllingFieldValue>Can you Send/Resend lab requisition</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice for my PGT purchase</controllingFieldValue>
+            <controllingFieldValue>Can you send me an invoice for my purchase</controllingFieldValue>
+            <controllingFieldValue>Can you send my gut health test results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my medical recommendations to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my MGT results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my PGT results to a new email</controllingFieldValue>
+            <controllingFieldValue>Can you send my test results to a new email</controllingFieldValue>
+            <controllingFieldValue>Schedule with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>Incorrect charge, should have been free</controllingFieldValue>
+            <controllingFieldValue>Reschedule with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>My DOB is incorrect on the portal</controllingFieldValue>
+            <controllingFieldValue>Ingredient inquiry</controllingFieldValue>
+            <controllingFieldValue>Cancel with my Wellness Advisor</controllingFieldValue>
+            <controllingFieldValue>My DOB is incorrect on the portal can you fix it?</controllingFieldValue>
+            <controllingFieldValue>Instagram Shop</controllingFieldValue>
+            <controllingFieldValue>Access to FaceBook Group</controllingFieldValue>
+            <controllingFieldValue>Amazon inquiries</controllingFieldValue>
+            <controllingFieldValue>My height and weight on my account are incorrect/missing</controllingFieldValue>
+            <controllingFieldValue>International availability</controllingFieldValue>
+            <controllingFieldValue>FaceBook Group Questions</controllingFieldValue>
+            <controllingFieldValue>Am I able to change my shipping address</controllingFieldValue>
+            <controllingFieldValue>My item arrived damaged</controllingFieldValue>
+            <controllingFieldValue>Invoice request</controllingFieldValue>
+            <controllingFieldValue>Beta Test Questions</controllingFieldValue>
+            <controllingFieldValue>Are my MGT results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is damaged</controllingFieldValue>
+            <controllingFieldValue>I want to change by WA/WC</controllingFieldValue>
+            <controllingFieldValue>Fulfillment - Pharmacy Verification</controllingFieldValue>
+            <controllingFieldValue>Are my PGT results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>I want to give feedback on my WA/WC</controllingFieldValue>
+            <controllingFieldValue>I need site support</controllingFieldValue>
+            <controllingFieldValue>Are my results ready</controllingFieldValue>
+            <controllingFieldValue>My kit is unusable</controllingFieldValue>
+            <controllingFieldValue>Kit missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>I Need to connect with my provider</controllingFieldValue>
+            <controllingFieldValue>Can I reschedule my lab review</controllingFieldValue>
+            <controllingFieldValue>My medication packaging was damaged as well as the contents</controllingFieldValue>
+            <controllingFieldValue>Logged in and can&apos;t move forward (errors 1021, 1022)</controllingFieldValue>
+            <controllingFieldValue>I want to become a part of the Health net</controllingFieldValue>
+            <controllingFieldValue>Can I reschedule my PGT Clarity Call</controllingFieldValue>
+            <controllingFieldValue>My MGT kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>Medication is damaged</controllingFieldValue>
+            <controllingFieldValue>Can I schedule my Clarity Call</controllingFieldValue>
+            <controllingFieldValue>My minor child just turned 18 and his/her results are no longer in my portal</controllingFieldValue>
+            <controllingFieldValue>Can I take these recommendations with my other medications</controllingFieldValue>
+            <controllingFieldValue>Can you tell me about your products</controllingFieldValue>
+            <controllingFieldValue>Clincal Questions about my protocol (in scope)</controllingFieldValue>
+            <controllingFieldValue>Clincal Questions about my protocol (Out of scope)</controllingFieldValue>
+            <controllingFieldValue>Clinical Questions about my protocol (In Scope)</controllingFieldValue>
+            <controllingFieldValue>Clinical Questions about my results (Outside of scope)</controllingFieldValue>
+            <controllingFieldValue>Collecting credit card information</controllingFieldValue>
+            <controllingFieldValue>Do you ship Superhuman Protocol Internationally?</controllingFieldValue>
+            <controllingFieldValue>How can I track my medications from the pharmacy</controllingFieldValue>
+            <controllingFieldValue>How do I know that the recommendations are working?</controllingFieldValue>
+            <controllingFieldValue>How do I know that the supplements are working?</controllingFieldValue>
+            <controllingFieldValue>Tell me about Health Net</controllingFieldValue>
+            <controllingFieldValue>Medication order is missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Bottle Update</controllingFieldValue>
+            <controllingFieldValue>My order is missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Minor child just turned 18 and results are no longer in portal</controllingFieldValue>
+            <controllingFieldValue>National availability</controllingFieldValue>
+            <controllingFieldValue>My package wasn&apos;t delivered</controllingFieldValue>
+            <controllingFieldValue>Navigation or general questions</controllingFieldValue>
+            <controllingFieldValue>Schedule Test Pickup</controllingFieldValue>
+            <controllingFieldValue>My packaging was damaged as well as the contents</controllingFieldValue>
+            <controllingFieldValue>Need help collecting sample</controllingFieldValue>
+            <controllingFieldValue>My packaging was damaged but contents in tact</controllingFieldValue>
+            <controllingFieldValue>Need help downloading the app</controllingFieldValue>
+            <controllingFieldValue>My PGT kit is damaged/unusable</controllingFieldValue>
+            <controllingFieldValue>Need lab requisition</controllingFieldValue>
+            <controllingFieldValue>My PGT results were not delivered</controllingFieldValue>
+            <controllingFieldValue>Need to update information on profile - no error code</controllingFieldValue>
+            <controllingFieldValue>My results were not delivered</controllingFieldValue>
+            <controllingFieldValue>Never received OTP - no error code</controllingFieldValue>
+            <controllingFieldValue>My results were not delivered (unaware of timeframe/email sent)</controllingFieldValue>
+            <controllingFieldValue>One Time Order - change shipping address</controllingFieldValue>
+            <controllingFieldValue>My supplement purchase says unfulfilled in my shopify account</controllingFieldValue>
+            <controllingFieldValue>One Time Order - didn&apos;t receive</controllingFieldValue>
+            <controllingFieldValue>Sending clients tracking information and instructions</controllingFieldValue>
+            <controllingFieldValue>How do I take my protocol</controllingFieldValue>
+            <controllingFieldValue>How do I use HyperMax Oxygen</controllingFieldValue>
+            <controllingFieldValue>How do I use the PEMF mat?</controllingFieldValue>
+            <controllingFieldValue>How do I use the red light bed?</controllingFieldValue>
+            <controllingFieldValue>How do I use the red light panels?</controllingFieldValue>
+            <controllingFieldValue>How long should I exercise with HyperMax Oxygen?</controllingFieldValue>
+            <controllingFieldValue>How long will it take for me to receive my results</controllingFieldValue>
+            <controllingFieldValue>I am &apos;x&apos; religion and can not consume &apos;x&apos; do your supplements contain this?</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase the Gut Health test</controllingFieldValue>
+            <controllingFieldValue>One Time Order - how to track</controllingFieldValue>
+            <controllingFieldValue>Some items are missing from my order</controllingFieldValue>
+            <controllingFieldValue>One Time Order - shipment damaged</controllingFieldValue>
+            <controllingFieldValue>Tell me about my recommended medications</controllingFieldValue>
+            <controllingFieldValue>One Time Order - shipment missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Tell me about the MGT</controllingFieldValue>
+            <controllingFieldValue>Order free printed book</controllingFieldValue>
+            <controllingFieldValue>Tell me about the PGT</controllingFieldValue>
+            <controllingFieldValue>Order has incorrect demographic information</controllingFieldValue>
+            <controllingFieldValue>Tell me about your products</controllingFieldValue>
+            <controllingFieldValue>Parent/Child Relationship</controllingFieldValue>
+            <controllingFieldValue>Tell me about your SHP products</controllingFieldValue>
+            <controllingFieldValue>Partnership - issue with personal order</controllingFieldValue>
+            <controllingFieldValue>Tell me about your supplements</controllingFieldValue>
+            <controllingFieldValue>Partnership - issue with their customer order</controllingFieldValue>
+            <controllingFieldValue>These supplements are not making me feel good (overmethylation)</controllingFieldValue>
+            <controllingFieldValue>Partnership - other</controllingFieldValue>
+            <controllingFieldValue>These supplements are not making me feel good (Refund)</controllingFieldValue>
+            <controllingFieldValue>Partnership - want to sell 10X Health products</controllingFieldValue>
+            <controllingFieldValue>The status of my order says unfulfilled (in portal)</controllingFieldValue>
+            <controllingFieldValue>I am an affiliate and I can not purchase the test</controllingFieldValue>
+            <controllingFieldValue>I am a prospective partner wanting more information about your business</controllingFieldValue>
+            <controllingFieldValue>I am having trouble with my patient agreements</controllingFieldValue>
+            <controllingFieldValue>I can not get in touch with your affiliate team</controllingFieldValue>
+            <controllingFieldValue>I can not log in to edit my supplement subscription</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (DOB Discrepancy)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (email incorrect)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (Never received OTP)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (OTP incorrect)</controllingFieldValue>
+            <controllingFieldValue>I can not log into my portal (Timed out)</controllingFieldValue>
+            <controllingFieldValue>Partnership - will 10X sell my products</controllingFieldValue>
+            <controllingFieldValue>Troubleshooting broken items</controllingFieldValue>
+            <controllingFieldValue>PEMF - inquiry</controllingFieldValue>
+            <controllingFieldValue>What are the 10X Health Light Bed&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Protocol question</controllingFieldValue>
+            <controllingFieldValue>What are the HyperMax Oxygen specs?</controllingFieldValue>
+            <controllingFieldValue>Protocol questions</controllingFieldValue>
+            <controllingFieldValue>What are the package weight and dimensions?</controllingFieldValue>
+            <controllingFieldValue>Provider did not show for appointment</controllingFieldValue>
+            <controllingFieldValue>What are the PEMF mat&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Purchase blood test for in clinic</controllingFieldValue>
+            <controllingFieldValue>What are the red light panel&apos;s specs?</controllingFieldValue>
+            <controllingFieldValue>Purchase blood test for LabCorp</controllingFieldValue>
+            <controllingFieldValue>What are the wavelengths in the panels and/or light bed?</controllingFieldValue>
+            <controllingFieldValue>Purchase clarity call</controllingFieldValue>
+            <controllingFieldValue>What is my tracking number</controllingFieldValue>
+            <controllingFieldValue>Purchase Gut Health kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the status of my blood test</controllingFieldValue>
+            <controllingFieldValue>Purchase Gut Health kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What is the status of my gut health test results</controllingFieldValue>
+            <controllingFieldValue>I can not see my guth health test results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my MGT results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my PGT results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my results inside of the portal</controllingFieldValue>
+            <controllingFieldValue>I can not see my supplement purchase in my shopify account</controllingFieldValue>
+            <controllingFieldValue>I can only order &apos;x&apos; quantity of supplements</controllingFieldValue>
+            <controllingFieldValue>I did not receive my MGT results</controllingFieldValue>
+            <controllingFieldValue>I do not have access to my portal</controllingFieldValue>
+            <controllingFieldValue>I had my review but I haven&apos;t heard anything</controllingFieldValue>
+            <controllingFieldValue>I had my review but I haven&apos;t heard anything from your team</controllingFieldValue>
+            <controllingFieldValue>Purchase MGT kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the status of my MGT</controllingFieldValue>
+            <controllingFieldValue>Purchase MGT kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What is the status of my PGT</controllingFieldValue>
+            <controllingFieldValue>Purchase PGT kit for in clinic</controllingFieldValue>
+            <controllingFieldValue>What is the warranty?</controllingFieldValue>
+            <controllingFieldValue>Purchase PGT kit to be shipped</controllingFieldValue>
+            <controllingFieldValue>What PEMF settings should I use?</controllingFieldValue>
+            <controllingFieldValue>Purchase printed book</controllingFieldValue>
+            <controllingFieldValue>What settings should I use with the red light bed?</controllingFieldValue>
+            <controllingFieldValue>Purchase supplements</controllingFieldValue>
+            <controllingFieldValue>What settings should I use with the red light panels?</controllingFieldValue>
+            <controllingFieldValue>Red Light Bed - inquiry</controllingFieldValue>
+            <controllingFieldValue>Where is my medication order</controllingFieldValue>
+            <controllingFieldValue>Red Light Panel - inquiry</controllingFieldValue>
+            <controllingFieldValue>Where is my order</controllingFieldValue>
+            <controllingFieldValue>Refund request</controllingFieldValue>
+            <controllingFieldValue>Registration</controllingFieldValue>
+            <controllingFieldValue>I have a new address and need to change my shipping address</controllingFieldValue>
+            <controllingFieldValue>I have a question on your T&amp;C</controllingFieldValue>
+            <controllingFieldValue>I have not heard from my WA</controllingFieldValue>
+            <controllingFieldValue>I have not received my recommendations</controllingFieldValue>
+            <controllingFieldValue>I have questions about my protocol</controllingFieldValue>
+            <controllingFieldValue>I have questions on your T&amp;C</controllingFieldValue>
+            <controllingFieldValue>I need help scheduling my review?</controllingFieldValue>
+            <controllingFieldValue>I need to be scheduled</controllingFieldValue>
+            <controllingFieldValue>I need to be scheduled for my review</controllingFieldValue>
+            <controllingFieldValue>I need to manage my subscription</controllingFieldValue>
+            <controllingFieldValue>Registration - Minor</controllingFieldValue>
+            <controllingFieldValue>Registration - Multiple Registration</controllingFieldValue>
+            <controllingFieldValue>Report contents questions</controllingFieldValue>
+            <controllingFieldValue>Requesting analysis raw data</controllingFieldValue>
+            <controllingFieldValue>Request refund</controllingFieldValue>
+            <controllingFieldValue>Request replacement</controllingFieldValue>
+            <controllingFieldValue>Request warranty claim</controllingFieldValue>
+            <controllingFieldValue>Reschedule clarity call</controllingFieldValue>
+            <controllingFieldValue>Adverse reaction</controllingFieldValue>
+            <controllingFieldValue>Reschedule protocol review</controllingFieldValue>
+            <controllingFieldValue>Affiliate - interested in becoming</controllingFieldValue>
+            <controllingFieldValue>Reschedule provider review</controllingFieldValue>
+            <controllingFieldValue>Affiliate - issue with follower order</controllingFieldValue>
+            <controllingFieldValue>I need to reschedule my Clarity Call</controllingFieldValue>
+            <controllingFieldValue>I need to speak to my WA/WC</controllingFieldValue>
+            <controllingFieldValue>I never received my kit</controllingFieldValue>
+            <controllingFieldValue>I never received my order</controllingFieldValue>
+            <controllingFieldValue>I never received my PGT kit</controllingFieldValue>
+            <controllingFieldValue>I never received my test kit</controllingFieldValue>
+            <controllingFieldValue>I ordered to (x) country and now I cant place another order</controllingFieldValue>
+            <controllingFieldValue>I received the wrong item(s) in my order</controllingFieldValue>
+            <controllingFieldValue>I shipped supplements to the wrong address</controllingFieldValue>
+            <controllingFieldValue>I want to add &apos;x&apos; item to my order</controllingFieldValue>
+            <controllingFieldValue>Affiliate - issue with personal order</controllingFieldValue>
+            <controllingFieldValue>Affiliate - other</controllingFieldValue>
+            <controllingFieldValue>Affiliate - payment questions</controllingFieldValue>
+            <controllingFieldValue>Affiliate - technical issues</controllingFieldValue>
+            <controllingFieldValue>Amazon - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Amazon - Fraudulent Order</controllingFieldValue>
+            <controllingFieldValue>Amazon - not happy with product</controllingFieldValue>
+            <controllingFieldValue>Amazon - request refund</controllingFieldValue>
+            <controllingFieldValue>Amazon - request replacement</controllingFieldValue>
+            <controllingFieldValue>Amazon - status of order</controllingFieldValue>
+            <controllingFieldValue>I want to be scheduled for a lab redraw</controllingFieldValue>
+            <controllingFieldValue>I want to change my address for my PGT supplements</controllingFieldValue>
+            <controllingFieldValue>I want to place a medication order</controllingFieldValue>
+            <controllingFieldValue>I want to place an order</controllingFieldValue>
+            <controllingFieldValue>I want to update payment on supplement subscription</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my gut health test results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my MGT results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my PGT results</controllingFieldValue>
+            <controllingFieldValue>I would like a hard copy of my results</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for MGT Supplements</controllingFieldValue>
+            <controllingFieldValue>Android - code does not work</controllingFieldValue>
+            <controllingFieldValue>Android - request code</controllingFieldValue>
+            <controllingFieldValue>Apple - code does not work</controllingFieldValue>
+            <controllingFieldValue>Apple - request code</controllingFieldValue>
+            <controllingFieldValue>Arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Available open roles</controllingFieldValue>
+            <controllingFieldValue>Averse reaction</controllingFieldValue>
+            <controllingFieldValue>Broken - does not charge</controllingFieldValue>
+            <controllingFieldValue>Broken - exploded</controllingFieldValue>
+            <controllingFieldValue>Broken - leaks</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my blood test</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my gut health test</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my medical recommendations (Meds not received)</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my MGT</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my PGT</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my product</controllingFieldValue>
+            <controllingFieldValue>I would like a refund for my supplements</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel a visit to your clinic</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my lab review</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my review</controllingFieldValue>
+            <controllingFieldValue>Reship - Kit is damaged</controllingFieldValue>
+            <controllingFieldValue>Reship - Kit is unusable</controllingFieldValue>
+            <controllingFieldValue>Results file is corrupt</controllingFieldValue>
+            <controllingFieldValue>Results provided to wrong customer</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Aventura clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Beverly Hills clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at Las Vegas clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at North Miami (UBS) clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule appointment at North Scottsdale clinic</controllingFieldValue>
+            <controllingFieldValue>Schedule clarity call</controllingFieldValue>
+            <controllingFieldValue>Schedule protocol review with Concierge</controllingFieldValue>
+            <controllingFieldValue>Schedule provider review</controllingFieldValue>
+            <controllingFieldValue>Specimen rejected/invalid</controllingFieldValue>
+            <controllingFieldValue>Status of order</controllingFieldValue>
+            <controllingFieldValue>Subscription - cancellation</controllingFieldValue>
+            <controllingFieldValue>Subscription - creation</controllingFieldValue>
+            <controllingFieldValue>Subscription - didn&apos;t receive</controllingFieldValue>
+            <controllingFieldValue>Subscription - how to self-manage</controllingFieldValue>
+            <controllingFieldValue>Subscription - how to track</controllingFieldValue>
+            <controllingFieldValue>Subscription - modification</controllingFieldValue>
+            <controllingFieldValue>Subscription - shipment damaged</controllingFieldValue>
+            <controllingFieldValue>Can&apos;t access emailed results</controllingFieldValue>
+            <controllingFieldValue>Subscription - shipment missing an item(s)</controllingFieldValue>
+            <controllingFieldValue>Cancel clarity call</controllingFieldValue>
+            <controllingFieldValue>Subscription - update address</controllingFieldValue>
+            <controllingFieldValue>Cancel protocol review</controllingFieldValue>
+            <controllingFieldValue>Subscription - update payment</controllingFieldValue>
+            <controllingFieldValue>Cancel provider review</controllingFieldValue>
+            <controllingFieldValue>Tech issue viewing lab reports (errors 3001, 3003, 3004)</controllingFieldValue>
+            <controllingFieldValue>Cannot log into portal (error 1003)</controllingFieldValue>
+            <controllingFieldValue>Tech issue with appointments (errors 4001, 4002, 4003)</controllingFieldValue>
+            <controllingFieldValue>Cannot log into portal (errors 8001)</controllingFieldValue>
+            <controllingFieldValue>Tech issue with kit registration (errors 2001, 2002, 2003, 2004, 2005)</controllingFieldValue>
+            <controllingFieldValue>Cannot see minor child&apos;s results in portal</controllingFieldValue>
+            <controllingFieldValue>Tech issue with OTP (errors 1005, 1006, 1007, 1009, 1011, 1012, 1013, 1016, 1019, 1020, 1023, 1024, 1025)</controllingFieldValue>
+            <controllingFieldValue>Change shipping address</controllingFieldValue>
+            <controllingFieldValue>Tech issue with privacy policy/consents (errors 7001, 7002, 7003, 7004, 7005, 7006, 7007, 7009)</controllingFieldValue>
+            <controllingFieldValue>Clarity call/report translation request</controllingFieldValue>
+            <controllingFieldValue>Tech issue with profile (errors 5001, 5002, 5005, 5006)</controllingFieldValue>
+            <controllingFieldValue>Clinic services, locations, addresses, hours</controllingFieldValue>
+            <controllingFieldValue>Tell me about the blood test</controllingFieldValue>
+            <controllingFieldValue>Damaged/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Tell me about the gut health test</controllingFieldValue>
+            <controllingFieldValue>Decode</controllingFieldValue>
+            <controllingFieldValue>The app does not contain any of my results</controllingFieldValue>
+            <controllingFieldValue>Delete all my information from all systems</controllingFieldValue>
+            <controllingFieldValue>TicTok - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Delivered with no water in it</controllingFieldValue>
+            <controllingFieldValue>TicTok - Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>Delivered with water in it</controllingFieldValue>
+            <controllingFieldValue>TicTok- not happy with product</controllingFieldValue>
+            <controllingFieldValue>Didn&apos;t receive medications</controllingFieldValue>
+            <controllingFieldValue>TicTok- request refund</controllingFieldValue>
+            <controllingFieldValue>Didn&apos;t receive printed book</controllingFieldValue>
+            <controllingFieldValue>TicTok - request replacement</controllingFieldValue>
+            <controllingFieldValue>Did not receive my results - past SLA</controllingFieldValue>
+            <controllingFieldValue>TicTok - status of order</controllingFieldValue>
+            <controllingFieldValue>Discount or campaign question</controllingFieldValue>
+            <controllingFieldValue>Walmart - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Double shipping for same household</controllingFieldValue>
+            <controllingFieldValue>Walmart - not happy with product</controllingFieldValue>
+            <controllingFieldValue>eBay - arrived broken/shipping issue</controllingFieldValue>
+            <controllingFieldValue>Walmart- request refund</controllingFieldValue>
+            <controllingFieldValue>I would like to cancel my review/ Clarity Call</controllingFieldValue>
+            <controllingFieldValue>eBay - Fraudulent Orders</controllingFieldValue>
+            <controllingFieldValue>Walmart - request replacement</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a Blood test</controllingFieldValue>
+            <controllingFieldValue>eBay - not happy with product</controllingFieldValue>
+            <controllingFieldValue>Walmart - status of order</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a MGT kit</controllingFieldValue>
+            <controllingFieldValue>eBay - request refund</controllingFieldValue>
+            <controllingFieldValue>Warranty question</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase an item</controllingFieldValue>
+            <controllingFieldValue>eBay - request replacement</controllingFieldValue>
+            <controllingFieldValue>Warranty scope/registration</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase an MGT clarity call</controllingFieldValue>
+            <controllingFieldValue>eBay - status of order</controllingFieldValue>
+            <controllingFieldValue>When will results be available - within SLA</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase a PGT</controllingFieldValue>
+            <controllingFieldValue>Effectiveness of supplements</controllingFieldValue>
+            <controllingFieldValue>No response needed</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase my medication</controllingFieldValue>
+            <controllingFieldValue>Employment verification</controllingFieldValue>
+            <controllingFieldValue>Critical labs</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase supplements</controllingFieldValue>
+            <controllingFieldValue>Exchange request</controllingFieldValue>
+            <controllingFieldValue>GovX</controllingFieldValue>
+            <controllingFieldValue>I would like to purchase the gut health test</controllingFieldValue>
+            <controllingFieldValue>Facebook Shop</controllingFieldValue>
+            <controllingFieldValue>I would like to reschedule a visit to your clinic</controllingFieldValue>
+            <valueName>Transfer</valueName>
+        </valueSettings>
+    </valueSet>
+</CustomField>

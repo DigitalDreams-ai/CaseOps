@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Minimum_Sale_Total_Value_cant_be_higher</fullName>
+    <active>true</active>
+    <description>Minimum Sale Total Value can’t be higher than the Maximum Sale Total Value</description>
+    <errorConditionFormula>Minimum_Sale_Total_Value__c  &gt;  Maximum_Sale_Total_Value__c</errorConditionFormula>
+    <errorDisplayField>Minimum_Sale_Total_Value__c</errorDisplayField>
+    <errorMessage>Minimum Sale Total Value can’t be higher than the Maximum Sale Total Value</errorMessage>
+</ValidationRule>

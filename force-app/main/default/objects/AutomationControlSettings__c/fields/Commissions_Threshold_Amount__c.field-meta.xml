@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Commissions_Threshold_Amount__c</fullName>
+    <description>This is the amount needed to reach to become Commissionable. This amount is taken out of the Commissionable Sales total before calculating the percentage.</description>
+    <inlineHelpText>This is the amount needed to reach to become Commissionable. This amount is taken out of the Commissionable Sales total before calculating the percentage.</inlineHelpText>
+    <label>Commissions Threshold Amount</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackTrending>false</trackTrending>
+    <type>Currency</type>
+</CustomField>

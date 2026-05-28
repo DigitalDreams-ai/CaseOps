@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Primary_Version__c</fullName>
+    <description>As long as there is no Replacement Version on the related PACV, this PA is marked as Primary Version</description>
+    <formula>NOT(Patient_Agreement_Configuration_Version__r.Past_Retirement_Date__c)</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <inlineHelpText>As long as there is no Replacement Version on the related PACV, this PA is marked as Primary Version</inlineHelpText>
+    <label>Primary Version</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SharingRules xmlns="http://soap.sforce.com/2006/04/metadata">
+    <sharingOwnerRules>
+        <fullName>DELETE_CEO_TO_CFO</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>DELETE_CEO_TO_CFO</label>
+        <sharedTo>
+            <roleAndSubordinates>CFO_New</roleAndSubordinates>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>President</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>DELETE_President_to_Back_Office</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>DELETE President to Back Office</label>
+        <sharedTo>
+            <role>Back_Office</role>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>President</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>Head_of_Sales_to_Back_Office</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>Head of Sales to Back Office</label>
+        <sharedTo>
+            <role>Back_Office</role>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>Head_of_Sales</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>Head_of_Sales_with_Business_Analyst</fullName>
+        <accessLevel>Read</accessLevel>
+        <label>Head of Sales with Business Analyst</label>
+        <sharedTo>
+            <role>Business_Analyst</role>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>Head_of_Sales</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>President_to_BA</fullName>
+        <accessLevel>Read</accessLevel>
+        <label>President to BA</label>
+        <sharedTo>
+            <role>Business_Analyst</role>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>President</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>VIP_Director_of_Operations_to_Back_Office</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>VIP-Director of Operations to Back Office</label>
+        <sharedTo>
+            <role>Back_Office</role>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>VIP_Director_of_Operations</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>VIP_Med_Director_to_BA</fullName>
+        <accessLevel>Read</accessLevel>
+        <label>VIP Med Director to BA</label>
+        <sharedTo>
+            <role>Business_Analyst</role>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>VIP_Medical_Director</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>VIP_Medical_Director_to_Back_Office</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>VIP-Medical Director to Back Office</label>
+        <sharedTo>
+            <role>Back_Office</role>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>VIP_Medical_Director</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>VIP_to_Business_Analyst</fullName>
+        <accessLevel>Read</accessLevel>
+        <label>VIP to Business Analyst</label>
+        <sharedTo>
+            <role>Business_Analyst</role>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>VIP_Director_of_Operations</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+</SharingRules>

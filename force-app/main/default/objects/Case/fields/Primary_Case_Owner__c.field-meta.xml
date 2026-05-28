@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Primary_Case_Owner__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Initial person this case was assigned to</description>
+    <inlineHelpText>Case owner at time of case creation.</inlineHelpText>
+    <label>Primary Case Owner</label>
+    <referenceTo>User</referenceTo>
+    <relationshipName>Cases1</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

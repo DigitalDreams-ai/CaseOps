@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Flat_Commission_Rule__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>The current flat commission rule this Commission Summary is assigned. This is dynamically changed based on the Total Sale Value amount.</description>
+    <label>Flat Commission Rule</label>
+    <referenceTo>Commission_Rule__c</referenceTo>
+    <relationshipName>Commission_Summary</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

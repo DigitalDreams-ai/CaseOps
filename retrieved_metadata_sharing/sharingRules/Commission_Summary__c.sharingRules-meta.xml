@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SharingRules xmlns="http://soap.sforce.com/2006/04/metadata">
+    <sharingOwnerRules>
+        <fullName>Finance_VIP_of_Operations</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>Finance VIP of Director Operations</label>
+        <sharedTo>
+            <roleAndSubordinatesInternal>CFO_New</roleAndSubordinatesInternal>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinatesInternal>VIP_Director_of_Operations</roleAndSubordinatesInternal>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>Finance_View_All_Head_of_Sales</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>Finance View All Head of Sales</label>
+        <sharedTo>
+            <roleAndSubordinatesInternal>CFO_New</roleAndSubordinatesInternal>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinatesInternal>Head_of_Sales</roleAndSubordinatesInternal>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>Head_of_Sales_See_s_All</fullName>
+        <accessLevel>Read</accessLevel>
+        <description>This will provide head of sales to view all commissions for their employee&apos;s</description>
+        <label>Head of Sales See&apos;s All</label>
+        <sharedTo>
+            <role>Head_of_Sales</role>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinatesInternal>Head_of_Sales</roleAndSubordinatesInternal>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>VIP_Director_of_Operations</fullName>
+        <accessLevel>Read</accessLevel>
+        <label>VIP Director of Operations</label>
+        <sharedTo>
+            <role>VIP_Director_of_Operations</role>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinatesInternal>VIP_Director_of_Operations</roleAndSubordinatesInternal>
+        </sharedFrom>
+    </sharingOwnerRules>
+</SharingRules>

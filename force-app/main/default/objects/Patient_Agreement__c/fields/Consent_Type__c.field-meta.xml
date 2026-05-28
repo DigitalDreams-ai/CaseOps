@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Consent_Type__c</fullName>
+    <inlineHelpText>How was consent given from the patient. Implied consent means the patient didn&apos;t have to read thru the consent to sign; where as the explicit consent is the user has read and signed this agreement.</inlineHelpText>
+    <label>Consent Type</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetName>Consent_Type</valueSetName>
+    </valueSet>
+</CustomField>

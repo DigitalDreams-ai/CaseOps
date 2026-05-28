@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>HCG_Units__c</fullName>
+    <label>HCG Units</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>500 Units (25 On Insulin Syringe) Once Per Week</fullName>
+                <default>false</default>
+                <label>500 Units (25 On Insulin Syringe) Once Per Week</label>
+            </value>
+            <value>
+                <fullName>500 Units (25 On Insulin Syringe) Twice Per Week</fullName>
+                <default>false</default>
+                <label>500 Units (25 On Insulin Syringe) Twice Per Week</label>
+            </value>
+            <value>
+                <fullName>1000 Units (50 On Insulin Syringe) Once Per Week</fullName>
+                <default>false</default>
+                <label>1000 Units (50 On Insulin Syringe) Once Per Week</label>
+            </value>
+            <value>
+                <fullName>1000 Units (50 On Insulin Syringe) Twice Per Week</fullName>
+                <default>false</default>
+                <label>1000 Units (50 On Insulin Syringe) Twice Per Week</label>
+            </value>
+            <value>
+                <fullName>Other</fullName>
+                <default>false</default>
+                <label>Other</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

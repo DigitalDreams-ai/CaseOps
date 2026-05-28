@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Commission_Period_This_Month</fullName>
+    <columns>NAME</columns>
+    <columns>Employee__c</columns>
+    <columns>End_Date__c</columns>
+    <columns>Total_Flat_Rate_Commission_Value__c</columns>
+    <columns>Total_Tiered_Commission_Value__c</columns>
+    <columns>Total_Commission_Value__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>End_Date__c</field>
+        <operation>equals</operation>
+        <value>THIS_MONTH</value>
+    </filters>
+    <label>Commission Period - This Month</label>
+</ListView>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Creation_Source__c</fullName>
+    <description>Identifies the platform or service used to create the record. This field indicates the record&apos;s origin, whether created internally within Salesforce or imported from an external platform like Shopify.</description>
+    <label>Creation Source</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetName>Patient_Agreement_Platforms</valueSetName>
+    </valueSet>
+</CustomField>

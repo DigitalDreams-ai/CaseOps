@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Supplement_Processing_Start_Date__c</fullName>
+    <description>Automatically populated with the current date when Status Reason is set to &quot;Supplement Production Started&quot; on a Lab Order.</description>
+    <encryptionScheme>None</encryptionScheme>
+    <inlineHelpText>Date the supplement processing started based on Status Reason change to &quot;Supplement Production Started&quot;.</inlineHelpText>
+    <label>Supplement Processing Start Date</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

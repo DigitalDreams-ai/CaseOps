@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ClaimedAssetRule</fullName>
+    <active>true</active>
+    <description>Claimed Movements must have Assets</description>
+    <errorConditionFormula>AND(
+    ISBLANK( Asset__c ),
+    ISPICKVAL ( Movement__c, &quot;Claimed&quot;)
+    )</errorConditionFormula>
+    <errorDisplayField>Asset__c</errorDisplayField>
+    <errorMessage>If you are creating an &quot;Claimed&quot; record, you must indicate the Asset that this product is Claimed to.</errorMessage>
+</ValidationRule>

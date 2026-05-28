@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CompactLayout xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Default</fullName>
+    <fields>Name</fields>
+    <fields>Account__c</fields>
+    <fields>Start_Date__c</fields>
+    <fields>appointment_Status__c</fields>
+    <fields>Visit_Reason__c</fields>
+    <label>Default</label>
+</CompactLayout>

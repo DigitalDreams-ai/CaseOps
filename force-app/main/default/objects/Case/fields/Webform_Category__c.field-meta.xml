@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Webform_Category__c</fullName>
+    <label>Webform Category</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Precision Genetic Test</fullName>
+                <default>false</default>
+                <label>Precision Genetic Test</label>
+            </value>
+            <value>
+                <fullName>Methylation Genetic Test</fullName>
+                <default>false</default>
+                <label>Methylation Genetic Test</label>
+            </value>
+            <value>
+                <fullName>Blood Test</fullName>
+                <default>false</default>
+                <label>Blood Test</label>
+            </value>
+            <value>
+                <fullName>Gut Health Test</fullName>
+                <default>false</default>
+                <label>Gut Health Test</label>
+            </value>
+            <value>
+                <fullName>Supplements</fullName>
+                <default>false</default>
+                <label>Supplements</label>
+            </value>
+            <value>
+                <fullName>MyWellness Portal</fullName>
+                <default>false</default>
+                <label>MyWellness Portal</label>
+            </value>
+            <value>
+                <fullName>Hydrogen Water Bottle</fullName>
+                <default>false</default>
+                <label>Hydrogen Water Bottle</label>
+            </value>
+            <value>
+                <fullName>Superhuman Protocol</fullName>
+                <default>false</default>
+                <label>Superhuman Protocol</label>
+            </value>
+            <value>
+                <fullName>Legal and Compliance</fullName>
+                <default>false</default>
+                <label>Legal and Compliance</label>
+            </value>
+            <value>
+                <fullName>Brand Partnerships</fullName>
+                <default>false</default>
+                <label>Brand Partnerships</label>
+            </value>
+            <value>
+                <fullName>Mitoscreen</fullName>
+                <default>false</default>
+                <label>Mitoscreen</label>
+            </value>
+            <value>
+                <fullName>Other</fullName>
+                <default>false</default>
+                <label>Other</label>
+            </value>
+            <value>
+                <fullName>Medications</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Medications</label>
+            </value>
+            <value>
+                <fullName>My Wellness Portal</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>My Wellness Portal</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

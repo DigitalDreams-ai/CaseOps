@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>No_Editing_After_Retirement</fullName>
+    <active>false</active>
+    <description>Once Retirement Date has been set, do not allow any additional edits to the record</description>
+    <errorConditionFormula>NOT(ISNEW()) &amp;&amp; ISCHANGED(Retirement_Date__c) &amp;&amp; NOT(ISBLANK(PRIORVALUE(Retirement_Date__c)))</errorConditionFormula>
+    <errorMessage>Once Retirement Date has been set, no edits to the record are possible!</errorMessage>
+</ValidationRule>

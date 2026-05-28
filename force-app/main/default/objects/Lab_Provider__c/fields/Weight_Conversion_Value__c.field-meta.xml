@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Weight_Conversion_Value__c</fullName>
+    <externalId>false</externalId>
+    <formula>CASE(
+    TEXT(Weight_Conversion_Factor__c),
+        &quot;lbs&quot;,0,
+				    &quot;kilos&quot;,2.20462
+				,0)</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <inlineHelpText>Stores the numerical value used to convert weight measurements based on the selected weight conversion factor.</inlineHelpText>
+    <label>Weight Conversion Value</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>6</scale>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

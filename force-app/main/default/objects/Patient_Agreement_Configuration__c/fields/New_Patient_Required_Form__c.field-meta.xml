@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>New_Patient_Required_Form__c</fullName>
+    <defaultValue>false</defaultValue>
+    <inlineHelpText>If this is checked this will send when there is a new Patient as well as any other configuration on this record.</inlineHelpText>
+    <label>New Patient Required Form</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Open_Can_t_Sync_to_DrChrono</fullName>
+    <columns>CASES.CASE_NUMBER</columns>
+    <columns>CASES.SUBJECT</columns>
+    <columns>CASES.STATUS</columns>
+    <columns>CASES.TYPE</columns>
+    <columns>CASES.CREATED_DATE_DATE_ONLY</columns>
+    <columns>Case_Resolution_Type__c</columns>
+    <columns>Case_Resolution_Reason__c</columns>
+    <filterScope>Queue</filterScope>
+    <filters>
+        <field>CASES.RECORDTYPE</field>
+        <operation>equals</operation>
+        <value>Case.Patient_Case_Record_Type</value>
+    </filters>
+    <filters>
+        <field>CASES.STATUS</field>
+        <operation>equals</operation>
+        <value>New,Working,On Hold,Escalated</value>
+    </filters>
+    <filters>
+        <field>CASES.SUBJECT</field>
+        <operation>contains</operation>
+        <value>CAN&apos;T SYNC TO DRCHRONO,Missing Patient Demographic Information</value>
+    </filters>
+    <label>Open Can&apos;t Sync to DrChrono</label>
+    <queue>Patient_Account_Management</queue>
+</ListView>

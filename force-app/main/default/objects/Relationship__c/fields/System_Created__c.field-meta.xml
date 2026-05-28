@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>System_Created__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>System field that indicates if this Relationship was created automatically as the reciprocal to another Relationships.</description>
+    <inlineHelpText>System field that indicates if this Relationship was created automatically as the reciprocal to another Relationships.</inlineHelpText>
+    <label>System Created</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

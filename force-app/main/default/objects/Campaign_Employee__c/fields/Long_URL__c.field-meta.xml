@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Long_URL__c</fullName>
+    <externalId>false</externalId>
+    <formula>Store_Front_URL__c + &quot;/?utm_medium=salesforce%26utm_source=&quot; + Employee__r.Referral_Code__c + &quot;%26utm_campaign=&quot; + Campaign__r.Affiliate_Code__c</formula>
+    <label>Long URL</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

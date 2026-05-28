@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SharingRules xmlns="http://soap.sforce.com/2006/04/metadata">
+    <sharingOwnerRules>
+        <fullName>COO_to_CMO</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>COO to CMO</label>
+        <sharedTo>
+            <roleAndSubordinates>CMO_new</roleAndSubordinates>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>COO_new</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>Head_of_Sales_to_CMO</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>Head of Sales to CMO</label>
+        <sharedTo>
+            <roleAndSubordinates>CMO_new</roleAndSubordinates>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>Head_of_Sales</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>Head_of_Sales_to_COO</fullName>
+        <accessLevel>Read</accessLevel>
+        <label>Head of Sales to COO</label>
+        <sharedTo>
+            <roleAndSubordinatesInternal>COO_new</roleAndSubordinatesInternal>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinatesInternal>Head_of_Sales</roleAndSubordinatesInternal>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>Head_of_Sales_w_CFO</fullName>
+        <accessLevel>Read</accessLevel>
+        <label>Head of Sales w/ CFO</label>
+        <sharedTo>
+            <roleAndSubordinates>CFO_New</roleAndSubordinates>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>Head_of_Sales</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>Head_of_Sales_w_Head_of_Sales</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>Head of Sales w/ Head of Sales</label>
+        <sharedTo>
+            <roleAndSubordinates>Head_of_Sales</roleAndSubordinates>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>Head_of_Sales</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>VIP_DOO_to_CMO_and_subs</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>VIP - DOO to CMO and subs</label>
+        <sharedTo>
+            <roleAndSubordinatesInternal>CMO_new</roleAndSubordinatesInternal>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinatesInternal>VIP_Director_of_Operations</roleAndSubordinatesInternal>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>VIP_Director_of_Operations_to_VIP_Medical_Director</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>VIP - Director of Operations to VIP - Medical Director</label>
+        <sharedTo>
+            <roleAndSubordinates>VIP_Medical_Director</roleAndSubordinates>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>VIP_Director_of_Operations</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+    <sharingOwnerRules>
+        <fullName>VIP_Medical_Director_to_CMO</fullName>
+        <accessLevel>Edit</accessLevel>
+        <label>VIP - Medical Director to CMO</label>
+        <sharedTo>
+            <roleAndSubordinates>CMO_new</roleAndSubordinates>
+        </sharedTo>
+        <sharedFrom>
+            <roleAndSubordinates>VIP_Medical_Director</roleAndSubordinates>
+        </sharedFrom>
+    </sharingOwnerRules>
+</SharingRules>

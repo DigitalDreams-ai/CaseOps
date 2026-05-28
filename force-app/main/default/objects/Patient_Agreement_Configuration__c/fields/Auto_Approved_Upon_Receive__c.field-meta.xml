@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Auto_Approved_Upon_Receive__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>This field will be used in automation to automatically approve the Patient Agreement when we receive the form back from the patient.</description>
+    <inlineHelpText>If checked, the patient agreement will be auto-approved upon receiving the signed form.</inlineHelpText>
+    <label>Auto Approved Upon Receive</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

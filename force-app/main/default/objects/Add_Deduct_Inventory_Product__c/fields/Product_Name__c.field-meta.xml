@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Product_Name__c</fullName>
+    <label>Product Name</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Amniocyte PBIO-AC100</fullName>
+                <default>false</default>
+                <label>Amniocyte PBIO-AC100</label>
+            </value>
+            <value>
+                <fullName>Corecyte 1ml PBIO-CC100</fullName>
+                <default>false</default>
+                <label>Corecyte 1ml PBIO-CC100</label>
+            </value>
+            <value>
+                <fullName>Corecyte 2ml PBIO-CC200</fullName>
+                <default>false</default>
+                <label>Corecyte 2ml PBIO-CC200</label>
+            </value>
+            <value>
+                <fullName>Juvederm_Ultra_3</fullName>
+                <default>false</default>
+                <label>Juvederm Ultra 3</label>
+            </value>
+            <value>
+                <fullName>Kaplan Penis Pump</fullName>
+                <default>false</default>
+                <label>Kaplan Penis Pump</label>
+            </value>
+            <value>
+                <fullName>Kaplan Penis Pump Base</fullName>
+                <default>false</default>
+                <label>Kaplan Penis Pump Base</label>
+            </value>
+            <value>
+                <fullName>KY Jelly</fullName>
+                <default>false</default>
+                <label>KY Jelly</label>
+            </value>
+            <value>
+                <fullName>Nutrafol Men</fullName>
+                <default>false</default>
+                <label>Nutrafol Men</label>
+            </value>
+            <value>
+                <fullName>Nutrafol Women</fullName>
+                <default>false</default>
+                <label>Nutrafol Women</label>
+            </value>
+            <value>
+                <fullName>Phallosan Penis Stretcher</fullName>
+                <default>false</default>
+                <label>Phallosan Penis Stretcher</label>
+            </value>
+            <value>
+                <fullName>PRP Kit-30-Eclipse</fullName>
+                <default>false</default>
+                <label>PRP Kit-30-Eclipse</label>
+            </value>
+            <value>
+                <fullName>PRP Kit-30-Harvest</fullName>
+                <default>false</default>
+                <label>PRP Kit-30-Harvest</label>
+            </value>
+            <value>
+                <fullName>PRP Kit-60-Emcyte</fullName>
+                <default>false</default>
+                <label>PRP Kit-60-Emcyte</label>
+            </value>
+            <value>
+                <fullName>PRP Kit-60-Harvest</fullName>
+                <default>false</default>
+                <label>PRP Kit-60-Harvest</label>
+            </value>
+            <value>
+                <fullName>UBER Lube</fullName>
+                <default>false</default>
+                <label>UBER Lube</label>
+            </value>
+            <value>
+                <fullName>Verapamil 5MG</fullName>
+                <default>false</default>
+                <label>Verapamil 5MG</label>
+            </value>
+            <value>
+                <fullName>Vibrator</fullName>
+                <default>false</default>
+                <label>Vibrator</label>
+            </value>
+            <value>
+                <fullName>AmnioWell Exosome</fullName>
+                <default>false</default>
+                <label>AmnioWell Exosome</label>
+            </value>
+            <value>
+                <fullName>Autoject</fullName>
+                <default>false</default>
+                <label>Autoject</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

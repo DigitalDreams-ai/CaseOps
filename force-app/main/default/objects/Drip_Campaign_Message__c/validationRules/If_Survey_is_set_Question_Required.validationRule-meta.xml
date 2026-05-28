@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>If_Survey_is_set_Question_Required</fullName>
+    <active>true</active>
+    <description>If the survey field is set then the Question field is required. The survey field is only there to provide a filtered lookup because of the auto-numbered Question Name.</description>
+    <errorConditionFormula>NOT( ISNULL(Survey__c )) &amp;&amp; ISNULL( Question__c )</errorConditionFormula>
+    <errorDisplayField>Question__c</errorDisplayField>
+    <errorMessage>The first question of the survey is required. The list is filtered so only that question appears. You just have to explicitly choose it for right now.</errorMessage>
+</ValidationRule>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>AHB Opportunity</label>
+    <protected>false</protected>
+    <values>
+        <field>AHB_Opportunity_Record_Type__c</field>
+        <value xsi:type="xsd:string">Genetic_Testing</value>
+    </values>
+    <values>
+        <field>AHB_Product_Name_Female__c</field>
+        <value xsi:type="xsd:string">At-Home Blood Test: Hormone Panel (Female)</value>
+    </values>
+    <values>
+        <field>AHB_Product_Name_Male__c</field>
+        <value xsi:type="xsd:string">At-Home Blood Test: Hormone Panel (Male)</value>
+    </values>
+    <values>
+        <field>Consultation_Opportunity_Record_Type__c</field>
+        <value xsi:type="xsd:string">Consultation</value>
+    </values>
+    <values>
+        <field>Consultation_Product_Name__c</field>
+        <value xsi:type="xsd:string">At-Home Blood Test: Hormone Panel Consultation</value>
+    </values>
+</CustomMetadata>

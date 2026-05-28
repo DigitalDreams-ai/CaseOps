@@ -34,12 +34,19 @@ Issue key: <KEY>
 Problem hypothesis: <paste from outputs/step-4-hypothesis/<KEY>.md OR inline notes from Step 4>
 Investigation record: outputs/investigations/<KEY>.md
 
+CRITICAL: Instance-Specific Metadata Directory
+- Retrieve metadata to: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve (instance-isolated)
+- All `sf project retrieve` commands MUST include:
+  --output-dir "${CASEOPS_OUTPUTS_DIR}/../temp-retrieve"
+- This prevents cross-instance metadata contamination (e.g., instance2 retrieving instance1's org metadata)
+
 Instructions:
 1. Use the salesforce-production-metadata-investigation skill.
 2. Retrieve only metadata directly relevant to the hypothesis. Do not modify Production.
-3. Append your findings to the Production Metadata Retrieved section of
+3. Pass instance-specific output directory to all retrieve commands (see CRITICAL section above).
+4. Append your findings to the Production Metadata Retrieved section of
    outputs/investigations/<KEY>.md.
-4. If additional metadata is discovered to be needed (e.g., during drilling in Step 6), 
+5. If additional metadata is discovered to be needed (e.g., during drilling in Step 6), 
    Step 6 will loop back to you with a refined request.
 
 Return a compact summary (max 400 tokens) containing:
@@ -47,6 +54,7 @@ Return a compact summary (max 400 tokens) containing:
 - Key findings per item
 - Whether each item confirms or rejects the hypothesis
 - Recommended implementation surface (what to change and where)
+- Temp directory used: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve
 - Path written: outputs/investigations/<KEY>.md
 ```
 
@@ -60,9 +68,15 @@ Problem hypothesis: <paste from outputs/step-4-hypothesis/<KEY>.md OR inline not
 Production metadata: <paste the Summary from Step 5>
 Investigation record: outputs/investigations/<KEY>.md
 
+CRITICAL: Instance-Specific Metadata Directory
+- Use instance-isolated temp directory: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve
+- If additional metadata retrieval is needed, pass to Step 5:
+  --output-dir "${CASEOPS_OUTPUTS_DIR}/../temp-retrieve"
+- This prevents cross-instance metadata contamination
+
 Instructions:
 1. Use the salesforce-production-metadata-investigation skill (drilling mode).
-2. From the Step 5 metadata, drill down to identify:
+2. From the Step 5 metadata (stored in instance-isolated temp dir), drill down to identify:
    - **Problem type**: data / component / config / integration / access / setting / process
    - **Specific artifact**: exact name, API name, class name, field name (from Production)
    - **Location**: Production path (Setup > Object > Field, or code path, or org setting)
@@ -77,6 +91,7 @@ Return a compact summary (max 400 tokens) containing:
 - Failure point in the flow
 - Root cause identified (why this artifact is broken)
 - If more metadata needed: "REQUEST: Step 5 refinement — need [specific metadata]"
+- Temp directory: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve
 - Path written: outputs/investigations/<KEY>.md
 ```
 
@@ -92,11 +107,18 @@ Allowlisted Sandbox (from .env.jira CASEOPS_SANDBOX_TARGET_ORG): <paste exact va
 Fix description: <paste the solution from Step 8>
 Investigation record: outputs/investigations/<KEY>.md
 
+CRITICAL: Instance-Specific Deploy Directory
+- Deploy/retrieve artifacts to: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve (instance-isolated)
+- All `sf project deploy|retrieve` commands MUST include:
+  --output-dir "${CASEOPS_OUTPUTS_DIR}/../temp-retrieve" or metadata-dir flag
+- This prevents cross-instance deploy artifacts (e.g., instance2 deploy files contaminating instance1)
+
 Instructions:
 1. Use the salesforce-sandbox-deploy-test skill (mandatory allowlist rules).
 2. Confirm the CLI/UI org target matches the allowlisted value exactly before any deploy or write.
-3. Deploy the fix, test against the Jira acceptance criteria.
-4. Write results to outputs/test-reports/<KEY>.md using
+3. Use instance-specific deploy directory (see CRITICAL section above).
+4. Deploy the fix, test against the Jira acceptance criteria.
+5. Write results to outputs/test-reports/<KEY>.md using
    skills/jira-salesforce-fix-pipeline/assets/test-report-template.md.
    Fill **Production deployment state** (Sandbox vs Production; Gearset required Y/N/N/A).
 
@@ -105,6 +127,7 @@ Return a compact summary (max 400 tokens) containing:
 - Steps tested and actual results
 - Whether the issue is confirmed fixed
 - If failed: what broke, what hypothesis was wrong, what to try next
+- Deploy directory: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve
 - Path written: outputs/test-reports/<KEY>.md
 ```
 

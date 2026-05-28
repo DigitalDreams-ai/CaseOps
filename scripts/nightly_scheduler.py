@@ -4,15 +4,17 @@
 Schedule: Weekdays at 6 AM MST
 
 Usage:
-  python nightly_scheduler.py
+  python nightly_scheduler.py                    # default instance only
+  python nightly_scheduler.py --instances instance1 instance2  # multiple instances
 
 On Windows, schedule via Task Scheduler:
   - Trigger: Daily, 6:00 AM MST (UTC-7), Mon-Fri only
-  - Action: Run python.exe C:\path\to\nightly_scheduler.py
+  - Action: Run python.exe C:\path\to\nightly_scheduler.py --instances instance1 instance2
   - Run with highest privileges: No
   - Run whether user is logged in or not: Yes
 """
 
+import argparse
 import os
 import sys
 import time
@@ -22,10 +24,11 @@ from pathlib import Path
 import schedule
 
 # Add repo root to path so we can import from root
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 # Setup logging (in root logs directory)
-log_dir = Path(__file__).resolve().parent.parent / "logs"
+log_dir = PROJECT_ROOT / "logs"
 log_dir.mkdir(exist_ok=True)
 log_file = log_dir / "nightly_precompute.log"
 
@@ -40,28 +43,57 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def run_precompute():
-    """Run the nightly pre-computation."""
+def run_precompute_for_instance(instance: str | None = None):
+    """Run nightly pre-computation for a specific instance."""
     try:
-        logger.info("Starting nightly pre-computation...")
+        from caseops_paths import default_jira_env_file
         from run_pipeline import run_nightly_precompute
 
-        completed, failed = run_nightly_precompute()
-        logger.info(f"Pre-computation complete: {completed} succeeded, {failed} failed")
+        if instance:
+            env_file = str(PROJECT_ROOT / instance / ".env.jira")
+            outputs_dir = PROJECT_ROOT / instance / "outputs"
+            label = f"[{instance}]"
+        else:
+            env_file = default_jira_env_file()
+            outputs_dir = PROJECT_ROOT / "outputs"
+            label = "[default]"
+
+        logger.info(f"Starting nightly pre-computation {label}")
+        completed, failed = run_nightly_precompute(outputs_dir=outputs_dir)
+        logger.info(f"Pre-computation {label} complete: {completed} succeeded, {failed} failed")
     except Exception as e:
-        logger.error(f"Pre-computation failed: {e}", exc_info=True)
+        label = f"[{instance}]" if instance else "[default]"
+        logger.error(f"Pre-computation {label} failed: {e}", exc_info=True)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Nightly scheduler for multi-instance CaseOps")
+    parser.add_argument(
+        "--instances",
+        nargs="*",
+        default=None,
+        help="Instance names to process (e.g. instance1 instance2). If omitted, processes default only.",
+    )
+    return parser.parse_args()
 
 
 def main():
     """Schedule and run jobs."""
-    logger.info("Nightly scheduler started")
+    args = parse_args()
 
-    # Schedule job: weekdays at 6 AM MST
-    schedule.every().monday.at("06:00").do(run_precompute)
-    schedule.every().tuesday.at("06:00").do(run_precompute)
-    schedule.every().wednesday.at("06:00").do(run_precompute)
-    schedule.every().thursday.at("06:00").do(run_precompute)
-    schedule.every().friday.at("06:00").do(run_precompute)
+    # Determine which instances to process
+    instances = args.instances if args.instances else [None]  # None = default instance
+    logger.info(f"Nightly scheduler started. Instances: {instances or ['default']}")
+
+    # Schedule job: weekdays at 6 AM MST for each instance
+    for instance in instances:
+        schedule.every().monday.at("06:00").do(run_precompute_for_instance, instance=instance)
+        schedule.every().tuesday.at("06:00").do(run_precompute_for_instance, instance=instance)
+        schedule.every().wednesday.at("06:00").do(run_precompute_for_instance, instance=instance)
+        schedule.every().thursday.at("06:00").do(run_precompute_for_instance, instance=instance)
+        schedule.every().friday.at("06:00").do(run_precompute_for_instance, instance=instance)
+        label = f"[{instance}]" if instance else "[default]"
+        logger.info(f"  Scheduled weekdays 06:00 MST for {label}")
 
     logger.info("Scheduler armed. Waiting for next scheduled run...")
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Sample_Received_Status_Change_NotAllowed</fullName>
+    <active>true</active>
+    <description>For Lab Orders where the status is &quot;Sample Received&quot; for PGT, no updates should be allowed to the status. Any attempts to update the status should be blocked while the current status remains &quot;Sample Received.&quot; $UserRole.Id =System Administration</description>
+    <errorConditionFormula>AND(
+    NOT(OR(
+        $Permission.TIQ_Team,
+        $UserRole.Id = &apos;00E5a000001BBHR&apos;
+    )),
+    ISCHANGED(Status__c),
+    ISPICKVAL(PRIORVALUE(Status__c), &apos;Sample Received&apos;)
+)</errorConditionFormula>
+    <errorDisplayField>Status__c</errorDisplayField>
+    <errorMessage>The lab has already started processing this order and can not be cancelled or updated</errorMessage>
+</ValidationRule>

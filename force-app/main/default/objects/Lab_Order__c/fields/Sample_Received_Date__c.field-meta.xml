@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Sample_Received_Date__c</fullName>
+    <description>Automatically populated with the current date when Status is set to &quot;Sample Received&quot; on a Lab Order.</description>
+    <encryptionScheme>None</encryptionScheme>
+    <inlineHelpText>Date the sample was received based on Status change to &quot;Sample Received&quot;.</inlineHelpText>
+    <label>Sample Received Date</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

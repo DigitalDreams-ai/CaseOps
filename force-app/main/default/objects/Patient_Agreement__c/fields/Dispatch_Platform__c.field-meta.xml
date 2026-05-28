@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Dispatch_Platform__c</fullName>
+    <description>Specifies the platform or tool used to send or generate the patient agreement. This field helps track the method used for agreement dissemination, whether through a patient portal, an integration with a service like Biocanic, or a document signing tool like Adobe Sign.</description>
+    <label>Dispatch Platform</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetName>Patient_Agreement_Platforms</valueSetName>
+    </valueSet>
+</CustomField>

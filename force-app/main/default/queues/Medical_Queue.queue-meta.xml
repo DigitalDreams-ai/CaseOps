@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Queue xmlns="http://soap.sforce.com/2006/04/metadata">
+    <doesSendEmailToMembers>true</doesSendEmailToMembers>
+    <email>admin@healthgains.com</email>
+    <name>Medical Queue</name>
+    <queueMembers>
+        <users>
+            <user>jessica_brazis@healthgains.com</user>
+            <user>team_medical@healthgains.com</user>
+        </users>
+    </queueMembers>
+    <queueSobject>
+        <sobjectType>Case</sobjectType>
+    </queueSobject>
+</Queue>

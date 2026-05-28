@@ -24,7 +24,7 @@
     </values>
     <values>
         <field>JSON_Path__c</field>
-        <value xsi:type="xsd:string">$.City</value>
+        <value xsi:type="xsd:string">$.shippingAddress.city</value>
     </values>
     <values>
         <field>Location__c</field>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SamlSsoConfig xmlns="http://soap.sforce.com/2006/04/metadata">
+    <identityLocation>SubjectNameId</identityLocation>
+    <identityMapping>Username</identityMapping>
+    <issuer>https://sts.windows.net/73c0d483-e1c4-4d02-aea6-48511deed2ba/</issuer>
+    <loginUrl>https://login.microsoftonline.com/73c0d483-e1c4-4d02-aea6-48511deed2ba/saml2</loginUrl>
+    <name>10x Microsoft SSO</name>
+    <oauthTokenEndpoint>https://10xhealth.my.salesforce.com/services/oauth2/token?so=00D0b000000vHFc</oauthTokenEndpoint>
+    <redirectBinding>true</redirectBinding>
+    <requestSignatureMethod>1</requestSignatureMethod>
+    <requestSigningCertId>0P15a000000ARpp</requestSigningCertId>
+    <salesforceLoginUrl>https://10xhealth.my.salesforce.com?so=00D0b000000vHFc</salesforceLoginUrl>
+    <samlEntityId>https://10xhealth.my.salesforce.com</samlEntityId>
+    <samlVersion>SAML2_0</samlVersion>
+    <singleLogoutBinding>RedirectBinding</singleLogoutBinding>
+    <singleLogoutUrl>https://login.microsoftonline.com/73c0d483-e1c4-4d02-aea6-48511deed2ba/saml2</singleLogoutUrl>
+    <useConfigRequestMethod>false</useConfigRequestMethod>
+    <useSameDigestAlgoForSigning>true</useSameDigestAlgoForSigning>
+    <userProvisioning>false</userProvisioning>
+    <validationCert>MIIC8DCCAdigAwIBAgIQPl+ihpSLYpdNid9JwC7EqTANBgkqhkiG9w0BAQsFADA0MTIwMAYDVQQDEylNaWNyb3NvZnQgQXp1cmUgRmVkZXJhdGVkIFNTTyBDZXJ0aWZpY2F0ZTAeFw0yMzA3MTExOTA1MTZaFw0yNjA3MTExOTA1MThaMDQxMjAwBgNVBAMTKU1pY3Jvc29mdCBBenVyZSBGZWRlcmF0ZWQgU1NPIENlcnRpZmljYXRlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1QEIxNGG9HxJ6tazYVU8eEzE/6G+LuQh+ttDPw8xgij0WP0fs+u1OA8shRSwp/OUdbaVZVCn/4E8soOs/ITbrpQO4G2jQKiq1MiGzufjlocTiRc0+aE/wdyjVkeQdV0shRCP5mnr4XP1HD0luoa761wZmBtbXCGSaKsKb/ic7ltdYQiBEaHYQeR6+ljD9h6rzqIrxG6ZDnmRmw2YWH8KiRndDQ2PNJt72iDxWsI1Ugyli3+DlM7pBywIq7M5tY1c3AXZry/T+oacy7xpXL0ypx8eW4nt5x7F7petehAjjaVMjk7EwO2PI+ognhZTTcTNp1n4RRqwgmiluLmEbC6DYQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCE8K3aBV01u7pHntuAT+ad/gIxXBLvYwv2P2+yLkpEyWYdnBcbiv3qKm9v4hdCAOnIQr2x8rOguDEY4vzvwD5XOOov9UXrOC69a5soj/sZsl2t8rfqZvfEMR9IQL1DXSfcMm2l6uSyVcaU4nmYqTzWngrLUp6YzdferScC8ioI1L4zPfEb9h71RxfU3fEqDQpom5/YQbub1Ey3U5twFALWqTRHDP4QKYHYRoQoLuHr4gRJM7ezCbbUndYPBVrSENnjZn0cN5rW+Ke1N2V8wKG0YRep7AgHGMEBaWNHDYNAAj3GuS+SNiA7XsQwwSlJN9ICKaCDmBCoT4owIriz/92s</validationCert>
+</SamlSsoConfig>

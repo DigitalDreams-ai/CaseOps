@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>52.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <decisions>
+        <name>Tracked_Inventory_Check</name>
+        <label>Tracked Inventory Check</label>
+        <locationX>270</locationX>
+        <locationY>276</locationY>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>Tracked_Inventory_1st</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Tracked_Inventory__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Flow.CurrentDate</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <elementReference>formulaFirstOfTheMonth</elementReference>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Create_Inventory_Snapshot</targetReference>
+            </connector>
+            <label>Tracked Inventory 1st</label>
+        </rules>
+        <rules>
+            <name>Tracked_Inventory_Other</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Tracked_Inventory__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Update_Product</targetReference>
+            </connector>
+            <label>Tracked Inventory</label>
+        </rules>
+    </decisions>
+    <description>Recalculates Balances &amp; Works Inventory Snapshots</description>
+    <formulas>
+        <name>formulaFirstOfTheMonth</name>
+        <dataType>Date</dataType>
+        <expression>DATE(YEAR({!$Flow.CurrentDate}),MONTH({!$Flow.CurrentDate}),1)</expression>
+    </formulas>
+    <interviewLabel>Scheduled Flow: Products {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Scheduled Flow: Products</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordCreates>
+        <name>Create_Inventory_Snapshot</name>
+        <label>Create Inventory Snapshot</label>
+        <locationX>50</locationX>
+        <locationY>396</locationY>
+        <connector>
+            <targetReference>Update_Product</targetReference>
+        </connector>
+        <inputAssignments>
+            <field>Product__c</field>
+            <value>
+                <elementReference>$Record.Id</elementReference>
+            </value>
+        </inputAssignments>
+        <object>Inventory_Snapshot__c</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordCreates>
+    <recordUpdates>
+        <name>Update_Product</name>
+        <label>Update Product</label>
+        <locationX>270</locationX>
+        <locationY>612</locationY>
+        <inputAssignments>
+            <field>Last_Inventory_Update__c</field>
+            <value>
+                <elementReference>$Flow.CurrentDate</elementReference>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>144</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Tracked_Inventory_Check</targetReference>
+        </connector>
+        <object>Product2</object>
+        <schedule>
+            <frequency>Daily</frequency>
+            <startDate>2021-06-28</startDate>
+            <startTime>00:15:00.000Z</startTime>
+        </schedule>
+        <triggerType>Scheduled</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

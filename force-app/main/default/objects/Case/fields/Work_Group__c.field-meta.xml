@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Work_Group__c</fullName>
+    <label>Work Group</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Affiliates</fullName>
+                <default>false</default>
+                <label>Affiliates</label>
+            </value>
+            <value>
+                <fullName>Clinical</fullName>
+                <default>false</default>
+                <label>Clinical</label>
+            </value>
+            <value>
+                <fullName>HelpDesk</fullName>
+                <default>false</default>
+                <label>HelpDesk</label>
+            </value>
+            <value>
+                <fullName>Legal</fullName>
+                <default>false</default>
+                <label>Legal</label>
+            </value>
+            <value>
+                <fullName>Order Processing</fullName>
+                <default>false</default>
+                <label>Order Processing</label>
+            </value>
+            <value>
+                <fullName>Refund Approver</fullName>
+                <default>false</default>
+                <label>Refund Approver</label>
+            </value>
+            <value>
+                <fullName>Scheduling</fullName>
+                <default>false</default>
+                <label>Scheduling</label>
+            </value>
+            <value>
+                <fullName>Wellness Adv/Conc</fullName>
+                <default>false</default>
+                <label>Wellness Adv/Conc</label>
+            </value>
+            <value>
+                <fullName>Admin Team</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Admin Team</label>
+            </value>
+            <value>
+                <fullName>CX Specialist</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>CX Specialist</label>
+            </value>
+            <value>
+                <fullName>PSR</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>PSR</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

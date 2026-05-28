@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Sync_to_DrChrono__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>This field will be used to trigger automations to sync the appointment to drchrono.</description>
+    <label>Sync to DrChrono</label>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

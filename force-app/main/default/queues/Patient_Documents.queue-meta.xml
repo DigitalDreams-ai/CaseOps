@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Queue xmlns="http://soap.sforce.com/2006/04/metadata">
+    <doesSendEmailToMembers>false</doesSendEmailToMembers>
+    <name>Patient Documents</name>
+    <queueMembers>
+        <roles>
+            <role>Back_Office</role>
+            <role>System_Administration</role>
+            <role>VIP_Office_Staff</role>
+            <role>VIP_Wellness_Assistant</role>
+            <role>Wellness_Assistant</role>
+        </roles>
+        <users>
+            <user>cfrench@10xhealthsystem.com</user>
+            <user>drodas@10xhealthsystem.com</user>
+            <user>mmartinez@10xhealthsystem.com</user>
+            <user>sphonthaphanh@10xhealthsystem.com</user>
+        </users>
+    </queueMembers>
+    <queueSobject>
+        <sobjectType>Case</sobjectType>
+    </queueSobject>
+    <queueSobject>
+        <sobjectType>Task</sobjectType>
+    </queueSobject>
+</Queue>

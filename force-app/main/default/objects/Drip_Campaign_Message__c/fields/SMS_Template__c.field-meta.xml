@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SMS_Template__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Customer chooses either at an SMS Template or a Survey to send.
+SMS Template is filtered by the Object chosen for the Drip Campaign Template</description>
+    <label>SMS Template</label>
+    <referenceTo>tdc_tsw__Message_Template__c</referenceTo>
+    <relationshipLabel>Drip Campaign Messages</relationshipLabel>
+    <relationshipName>Drip_Campaign_Messages</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

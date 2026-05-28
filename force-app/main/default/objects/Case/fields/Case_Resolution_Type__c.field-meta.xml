@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Case_Resolution_Type__c</fullName>
+    <label>Case Resolution Type</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Audit</fullName>
+                <default>false</default>
+                <label>Audit</label>
+            </value>
+            <value>
+                <fullName>Atlas Patient not in SF</fullName>
+                <default>false</default>
+                <label>Atlas Patient not in SF</label>
+            </value>
+            <value>
+                <fullName>Chrono Duplicate</fullName>
+                <default>false</default>
+                <label>Chrono Duplicate</label>
+            </value>
+            <value>
+                <fullName>Chrono Not Synced</fullName>
+                <default>false</default>
+                <label>Chrono Not Synced</label>
+            </value>
+            <value>
+                <fullName>Incorrect Patient Demographic</fullName>
+                <default>false</default>
+                <label>Incorrect Patient Demographic</label>
+            </value>
+            <value>
+                <fullName>Med Rec Not Synced</fullName>
+                <default>false</default>
+                <label>Med Rec Not Synced</label>
+            </value>
+            <value>
+                <fullName>Missing Patient Demographic</fullName>
+                <default>false</default>
+                <label>Missing Patient Demographic</label>
+            </value>
+            <value>
+                <fullName>Missing GT Results</fullName>
+                <default>false</default>
+                <label>Missing GT Results</label>
+            </value>
+            <value>
+                <fullName>Not found in any system</fullName>
+                <default>false</default>
+                <label>Not found in any system</label>
+            </value>
+            <value>
+                <fullName>Not Found in EHR (Dr Chrono)</fullName>
+                <default>false</default>
+                <label>Not Found in EHR (Dr Chrono)</label>
+            </value>
+            <value>
+                <fullName>Nothing Wrong</fullName>
+                <default>false</default>
+                <label>Nothing Wrong</label>
+            </value>
+            <value>
+                <fullName>Order to account mismatch</fullName>
+                <default>false</default>
+                <label>Order to account mismatch</label>
+            </value>
+            <value>
+                <fullName>Other</fullName>
+                <default>false</default>
+                <label>Other</label>
+            </value>
+            <value>
+                <fullName>Password Request</fullName>
+                <default>false</default>
+                <label>Password Request</label>
+            </value>
+            <value>
+                <fullName>Payment Failed</fullName>
+                <default>false</default>
+                <label>Payment Failed</label>
+            </value>
+            <value>
+                <fullName>Payment Received</fullName>
+                <default>false</default>
+                <label>Payment Received</label>
+            </value>
+            <value>
+                <fullName>Reviewed</fullName>
+                <default>false</default>
+                <label>Reviewed</label>
+            </value>
+            <value>
+                <fullName>Rejected</fullName>
+                <default>false</default>
+                <label>Rejected</label>
+            </value>
+            <value>
+                <fullName>Migrated to Patient Agreement</fullName>
+                <default>false</default>
+                <label>Migrated to Patient Agreement</label>
+            </value>
+            <value>
+                <fullName>Scheduled</fullName>
+                <default>false</default>
+                <label>Scheduled</label>
+            </value>
+            <value>
+                <fullName>Lab Order Error</fullName>
+                <default>false</default>
+                <label>Lab Order Error</label>
+            </value>
+            <value>
+                <fullName>Shopify Duplicate Issue</fullName>
+                <default>false</default>
+                <label>Shopify Duplicate Issue</label>
+            </value>
+            <value>
+                <fullName>Shopify ID mismatch</fullName>
+                <default>false</default>
+                <label>Shopify ID mismatch</label>
+            </value>
+            <value>
+                <fullName>Shopify Fraud Risk</fullName>
+                <default>false</default>
+                <label>Shopify Fraud Risk</label>
+            </value>
+            <value>
+                <fullName>Atlas Purchase</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Atlas Purchase</label>
+            </value>
+            <value>
+                <fullName>Missing Gender</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Missing Gender</label>
+            </value>
+            <value>
+                <fullName>Wrong Patient Name</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Wrong Patient Name</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

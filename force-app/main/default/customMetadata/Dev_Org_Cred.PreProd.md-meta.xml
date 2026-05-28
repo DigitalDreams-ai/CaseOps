@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>PreProd</label>
+    <protected>false</protected>
+    <values>
+        <field>client_id__c</field>
+        <value xsi:type="xsd:string">3MVG9EJ2FoGDnkgXNfea0SA9RMwAO2KtjCjdyvVoaUovStKQ1ACwE0STK4MY2w4V9D3xyazQe0pvEVQMFpraD</value>
+    </values>
+    <values>
+        <field>client_secret__c</field>
+        <value xsi:type="xsd:string">92465318DB10B142192509249364AB66DB70A7A80B75252A5AF764E52A4AE972</value>
+    </values>
+    <values>
+        <field>create_products__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>endpoint__c</field>
+        <value xsi:type="xsd:string">https://10xhealth--preprod.sandbox.my.salesforce.com/services/oauth2/token</value>
+    </values>
+    <values>
+        <field>sandbox_name__c</field>
+        <value xsi:type="xsd:string">Pre Prod Dev</value>
+    </values>
+    <values>
+        <field>update_products__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+</CustomMetadata>

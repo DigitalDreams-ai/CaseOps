@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SamlSsoConfig xmlns="http://soap.sforce.com/2006/04/metadata">
+    <identityLocation>SubjectNameId</identityLocation>
+    <identityMapping>Username</identityMapping>
+    <issuer>https://accounts.google.com/o/saml2?idpid=C01yva8lc</issuer>
+    <loginUrl>https://accounts.google.com/o/saml2/idp?idpid=C01yva8lc</loginUrl>
+    <name>CV GSuite</name>
+    <oauthTokenEndpoint>https://10xhealth.my.salesforce.com/services/oauth2/token?so=00D0b000000vHFc</oauthTokenEndpoint>
+    <redirectBinding>true</redirectBinding>
+    <requestSignatureMethod>1</requestSignatureMethod>
+    <requestSigningCertId>0P1Rh00000000b7</requestSigningCertId>
+    <salesforceLoginUrl>https://10xhealth.my.salesforce.com?so=00D0b000000vHFc</salesforceLoginUrl>
+    <samlEntityId>https://10xhealth.my.salesforce.com</samlEntityId>
+    <samlVersion>SAML2_0</samlVersion>
+    <useConfigRequestMethod>false</useConfigRequestMethod>
+    <useSameDigestAlgoForSigning>true</useSameDigestAlgoForSigning>
+    <userProvisioning>false</userProvisioning>
+    <validationCert>MIIDdDCCAlygAwIBAgIGAXYaKFtqMA0GCSqGSIb3DQEBCwUAMHsxFDASBgNVBAoTC0dvb2dsZSBJ
+bmMuMRYwFAYDVQQHEw1Nb3VudGFpbiBWaWV3MQ8wDQYDVQQDEwZHb29nbGUxGDAWBgNVBAsTD0dv
+b2dsZSBGb3IgV29yazELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWEwHhcNMjAxMTMw
+MTcxNjU4WhcNMjUxMTI5MTcxNjU4WjB7MRQwEgYDVQQKEwtHb29nbGUgSW5jLjEWMBQGA1UEBxMN
+TW91bnRhaW4gVmlldzEPMA0GA1UEAxMGR29vZ2xlMRgwFgYDVQQLEw9Hb29nbGUgRm9yIFdvcmsx
+CzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
+MIIBCgKCAQEAxuDBU4744dtEVR08YVOEuOgj6UvLBfcwUqIZQUNSb10aWhIBRicy9xrHiQF6Ip0G
+bDyUwan4rBpb8b31KYFSXlesKWx56gPm7a498FN8z0Ul4zLtpjvxYHiFKJ7aBngCnfrzghlJJYuC
+FPT4FEUljzupusoGiypTk6uu7M6rdgisBNYQ4SZnadr3kDqULeE5EgRSenhSSjjn4ry96dVrXs+G
+FhIZUPHaLCbdCOKrUWZ9gSdWdcJ4EpcPU678dfYF47uuL1sy8wpjnNuJ5YWxV2vlUsxxDIu3aiJw
+p7DEHoV7uBWOs8ofIg/U4UZwyjg7orFQuIOlT6MYma5Zxm+NrwIDAQABMA0GCSqGSIb3DQEBCwUA
+A4IBAQAeq0PYvyeZpEHUqWHD/1yxcpp2S8hyCnVg8qI77XlWeALmoJUD38qkd9a0cD7yYUM3L9KE
+DzPQpsEwLFBtP8VFfE9tKzTAvLUHzl/l2/l/Sj0FQFcR4mMLF0mbnNnxnSmTatUESG9dRbwb1GSb
+DPxhQLdXhGXk0pZvzlMbJ6olZlQ8yWdDXyMogm6YKO3Ww9i9wJ09lsA69qQT2jLmlZzsAUn0uMBg
+FZey3XpSoMNRXzmymGecb/VxIP3bdLmJPjWQAFwUY1E/wdu4TUxAziKUU4e8t2uEsoppW/8ZEHAS
+SNEgSzcgoBuftWXXTM5dGZ+sB/yI6skoD4/hg+VPtK0a</validationCert>
+</SamlSsoConfig>

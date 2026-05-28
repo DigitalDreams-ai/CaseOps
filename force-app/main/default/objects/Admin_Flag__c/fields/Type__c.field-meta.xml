@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Type__c</fullName>
+    <label>Type</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Account Standardization (Billing Address)</fullName>
+                <default>false</default>
+                <label>Account Standardization (Billing Address)</label>
+            </value>
+            <value>
+                <fullName>Account Standardization (Shipping Address)</fullName>
+                <default>false</default>
+                <label>Account Standardization (Shipping Address)</label>
+            </value>
+            <value>
+                <fullName>DrChrono Syncing</fullName>
+                <default>false</default>
+                <label>DrChrono Syncing</label>
+            </value>
+            <value>
+                <fullName>Patient Portal Syncing</fullName>
+                <default>false</default>
+                <label>Patient Portal Syncing</label>
+            </value>
+            <value>
+                <fullName>External Systems Syncing</fullName>
+                <default>false</default>
+                <label>External Systems Syncing</label>
+            </value>
+            <value>
+                <fullName>Patient Created</fullName>
+                <default>false</default>
+                <label>Patient Created</label>
+            </value>
+            <value>
+                <fullName>Account Standardization</fullName>
+                <default>false</default>
+                <label>Account Standardization</label>
+            </value>
+            <value>
+                <fullName>DrChrono Update Appointment</fullName>
+                <default>false</default>
+                <label>DrChrono Update Appointment</label>
+            </value>
+            <value>
+                <fullName>DrChrono Create Appointment</fullName>
+                <default>false</default>
+                <label>DrChrono Create Appointment</label>
+            </value>
+            <value>
+                <fullName>Submit Lab Order</fullName>
+                <default>false</default>
+                <label>Submit Lab Order</label>
+            </value>
+            <value>
+                <fullName>Update Lab Order</fullName>
+                <default>false</default>
+                <label>Update Lab Order</label>
+            </value>
+            <value>
+                <fullName>DrChrono Delete Appointment</fullName>
+                <default>false</default>
+                <label>DrChrono Delete Appointment</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

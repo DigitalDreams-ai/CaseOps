@@ -859,6 +859,10 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
     # Instance-specific outputs directory (may differ from ROOT/outputs in multi-instance setup)
     outputs_dir_relative = OUTPUTS.relative_to(ROOT).as_posix() if OUTPUTS.is_relative_to(ROOT) else str(OUTPUTS)
 
+    # Instance-specific env file (may differ from ROOT/.env.jira in multi-instance setup)
+    env_file_path = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+    env_file_relative = Path(env_file_path).relative_to(ROOT).as_posix() if Path(env_file_path).is_relative_to(ROOT) else env_file_path
+
     core = (
         f"Issue: {key} — {summary}\n"
         f"Status: {status}\n\n"
@@ -875,6 +879,20 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
         f"**CRITICAL for multi-instance deployments:** All file paths in this run must use:\n"
         f"`{outputs_dir_relative}/` instead of the generic `outputs/` references in the playbook.\n"
         f"Example: Instead of `outputs/investigations/{{KEY}}.md`, use `{outputs_dir_relative}/investigations/{{KEY}}.md`\n\n"
+        f"## Instance Configuration (.env.jira)\n"
+        f"**CRITICAL for multi-instance deployments:** Use the instance-specific configuration file:\n"
+        f"- Read Jira credentials and Salesforce orgs from: `{env_file_relative}`\n"
+        f"- Do NOT read from `ROOT/.env.jira` (this is another instance's config)\n"
+        f"- Environment variable available: `CASEOPS_JIRA_ENV_FILE={env_file_path}`\n"
+        f"- Example: `source {env_file_relative}` or pass it explicitly to commands that need Jira/Salesforce config\n\n"
+        f"## Instance Metadata & Deploy Directory\n"
+        f"**CRITICAL for multi-instance deployments:** All metadata retrieval and deploy operations must use:\n"
+        f"- Instance-isolated temp directory: `${{CASEOPS_OUTPUTS_DIR}}/../temp-retrieve`\n"
+        f"- Environment variable: `CASEOPS_OUTPUTS_DIR={str(OUTPUTS)}`\n"
+        f"- When using `sf project retrieve` or `sf project deploy`, ALWAYS pass:\n"
+        f"  `--output-dir \"${{CASEOPS_OUTPUTS_DIR}}/../temp-retrieve\"`\n"
+        f"- This prevents cross-instance metadata contamination (instance2 retrieving instance1's org metadata, etc.)\n"
+        f"- Sub-agents spawned in Steps 5, 6, 9 must reference this path (see sub-agent-prompts.md)\n\n"
         f"## Instruction\n"
         f"{instruction}\n\n"
         f"## Salesforce Queries: Use sf CLI + SOQL (DEFAULT)\n"

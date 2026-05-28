@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Queue xmlns="http://soap.sforce.com/2006/04/metadata">
+    <doesSendEmailToMembers>false</doesSendEmailToMembers>
+    <email>patientscheduling@10xhealtsystem.com</email>
+    <name>Patient Scheduling</name>
+    <queueSobject>
+        <sobjectType>Appointment__c</sobjectType>
+    </queueSobject>
+</Queue>

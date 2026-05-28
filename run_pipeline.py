@@ -551,7 +551,7 @@ def run_nightly_precompute(outputs_dir: Path | None = None) -> tuple[int, int]:
         outputs_dir = PROJECT_ROOT / "outputs"
 
     start = _time.monotonic()
-    jira_dir = default_jira_dir()
+    jira_dir = outputs_dir / "jira"
     manifest_path = jira_dir / "manifest.csv"
 
     if not manifest_path.exists():
