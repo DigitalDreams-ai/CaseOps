@@ -537,9 +537,15 @@
   // Disable/enable the action buttons for a specific issue key.
   function setIssueRunning(runKey, running) {
     if (runKey === '__global__') {
+      // Only disable pipeline action buttons, not navigation
+      const actionButtonIds = ['topbar-actions'];
       document.querySelectorAll('#topbar .btn').forEach(b => {
-        if (b.id === 'topbar-overview-btn') return;
-        b.disabled = running;
+        // Disable only pipeline/action buttons: Sync, Fetch, Prepare, Auto-Process
+        if (['topbar-overview-btn', 'sidebar-toggle-btn', 'mobile-menu-btn'].includes(b.id)) return;
+        const text = (b.textContent || '').trim();
+        if (['Sync', 'Fetch', 'Prepare', 'Auto-Process', 'Overview'].some(s => text.includes(s))) {
+          b.disabled = running;
+        }
       });
     } else {
       document.querySelectorAll(`#detail-actions .btn[data-run-key="${runKey}"]`)

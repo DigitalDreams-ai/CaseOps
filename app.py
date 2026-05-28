@@ -14,6 +14,7 @@ import json
 import os
 import queue
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -2004,8 +2005,8 @@ def api_settings_status():
                             data = json.loads(json_str[idx:])
                             status["sf_sandbox"]["authenticated"] = True
                             status["sf_sandbox"]["username"] = data.get("result", {}).get("username", "")
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"DEBUG: sandbox auth check failed: {type(e).__name__}: {str(e)}", flush=True)
 
     # Check CCI
     if shutil.which("cumulusci") or shutil.which("cci"):

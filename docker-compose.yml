@@ -9,8 +9,8 @@ services:
     ports:
       - "5350:5000"
     volumes:
-      # Persistent output files
-      - /volume1/docker/appdata/caseops/outputs:/app/outputs
+      # Persistent output files (use ./outputs for local Windows, /volume1/... for NAS)
+      - ./outputs:/app/outputs
       # Mount .env.jira.nas for NAS/Linux (use .env.jira for local Windows dev)
       - ./.env.jira.nas:/app/.env.jira:ro
       # Mount app.py (override baked-in version from COPY . /app)
@@ -19,10 +19,10 @@ services:
       - ./templates:/app/templates:ro
       # Mount static assets (override baked-in version from COPY . /app)
       - ./static:/app/static:ro
-      # Mount Salesforce CLI auth (pre-authenticated orgs on host)
-      - /volume1/docker/appdata/caseops/.sfdx:/root/.sfdx
-      # Mount Claude Code CLI auth (pre-authenticated on host)
-      - /volume1/docker/appdata/caseops/.claude:/root/.claude
+      # Mount Salesforce CLI auth (pre-authenticated orgs on host - NAS docker user)
+      - ~/.sfdx:/home/caseops/.sfdx
+      # Mount Claude Code CLI auth (pre-authenticated on host - NAS docker user)
+      - ~/.claude:/home/caseops/.claude
       # (Optional) Mount workspace-specific .env.jira.{workspace} files
       # - ./.env.jira.production:/app/.env.jira.production:ro
     environment:

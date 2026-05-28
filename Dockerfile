@@ -25,8 +25,12 @@ COPY . /app
 # Install Python deps
 RUN pip install --no-cache-dir flask markdown anthropic
 
-# Create outputs volume mount point
-RUN mkdir -p /app/outputs
+# Create non-root user for Claude Code CLI (avoids root permission restrictions)
+RUN useradd -m -s /bin/bash -d /home/caseops caseops && \
+    chown -R caseops:caseops /app
+
+# Create outputs volume mount point with proper permissions
+RUN mkdir -p /app/outputs && chown caseops:caseops /app/outputs
 
 # Expose Flask port
 EXPOSE 5000
@@ -34,6 +38,9 @@ EXPOSE 5000
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/ || exit 1
+
+# Run as non-root user
+USER caseops
 
 # CaseOps runs on port 5000; Claude Code CLI will be invoked as subprocess
 # .env.jira is mounted at runtime (see docker-compose.yml)

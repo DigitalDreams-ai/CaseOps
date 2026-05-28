@@ -520,7 +520,8 @@
                     if (!elem) continue;
 
                     if (elem.type === 'radio') {
-                        document.querySelector(`[name="${key}"][value="${value}"]`).checked = true;
+                        const radio = document.querySelector(`[name="${key}"][value="${value}"]`);
+                        if (radio) radio.checked = true;
                     } else {
                         elem.value = value || '';
                     }
