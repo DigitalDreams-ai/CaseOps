@@ -582,9 +582,11 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
             run_key,
             "CaseOps LLM: Claude Code CLI (CASEOPS_LLM_AUTH=claude_code; ANTHROPIC_API_KEY omitted).",
         )
+        env = _claude_process_env()
+        env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
         proc = subprocess.Popen(
             cmd,
-            env=_claude_process_env(),
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.DEVNULL,
@@ -854,6 +856,9 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
     skill_md = (ROOT / "skills" / "jira-salesforce-fix-pipeline" / "SKILL.md").resolve()
     skill_line = str(skill_md) if skill_md.is_file() else f"(missing) {skill_md}"
 
+    # Instance-specific outputs directory (may differ from ROOT/outputs in multi-instance setup)
+    outputs_dir_relative = OUTPUTS.relative_to(ROOT).as_posix() if OUTPUTS.is_relative_to(ROOT) else str(OUTPUTS)
+
     core = (
         f"Issue: {key} — {summary}\n"
         f"Status: {status}\n\n"
@@ -866,6 +871,10 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
         f"  {skill_line}\n"
         f"Use `references/sub-agent-prompts.md`, `references/safety-policy.md`, `references/quality-checklist.md`, "
         f"and `assets/` under that skill when the playbook points to them.\n\n"
+        f"## Instance Output Directory\n"
+        f"**CRITICAL for multi-instance deployments:** All file paths in this run must use:\n"
+        f"`{outputs_dir_relative}/` instead of the generic `outputs/` references in the playbook.\n"
+        f"Example: Instead of `outputs/investigations/{{KEY}}.md`, use `{outputs_dir_relative}/investigations/{{KEY}}.md`\n\n"
         f"## Instruction\n"
         f"{instruction}\n\n"
         f"## Salesforce Queries: Use sf CLI + SOQL (DEFAULT)\n"
@@ -883,14 +892,15 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
         f"\n{_salesforce_browser_prompt_section()}"
         f"## CaseOps Output Files (update these when your task is complete)\n"
         f"You can read and write these files directly for issue {key}:\n"
+        f"(Use `{outputs_dir_relative}/` prefix for multi-instance deployments)\n"
         f"\n"
         f"| File | Purpose | When to Update |\n"
         f"|------|---------|----------------|\n"
-        f"| `outputs/investigations/{key}.md` | Investigation record (issue understanding, Salesforce problem, similar items analysis) | After diagnosis, before drafting notes |\n"
-        f"| `outputs/internal-notes/{key}.md` | Internal notes for operator (root cause, escalation decision, fix notes) | When you've diagnosed the issue |\n"
-        f"| `outputs/jira-messages/{key}.md` | Customer-facing Jira message (confirmed fix OR engineering escalation) | When ready to respond to customer |\n"
-        f"| `outputs/test-reports/{key}.md` | Test cases, results, and fix validation | After testing the fix in Sandbox |\n"
-        f"| `outputs/engineering-escalations/{key}.md` | Engineering handoff (if escalating) | When escalating to Engineering team |\n"
+        f"| `{outputs_dir_relative}/investigations/{key}.md` | Investigation record (issue understanding, Salesforce problem, similar items analysis) | After diagnosis, before drafting notes |\n"
+        f"| `{outputs_dir_relative}/internal-notes/{key}.md` | Internal notes for operator (root cause, escalation decision, fix notes) | When you've diagnosed the issue |\n"
+        f"| `{outputs_dir_relative}/jira-messages/{key}.md` | Customer-facing Jira message (confirmed fix OR engineering escalation) | When ready to respond to customer |\n"
+        f"| `{outputs_dir_relative}/test-reports/{key}.md` | Test cases, results, and fix validation | After testing the fix in Sandbox |\n"
+        f"| `{outputs_dir_relative}/engineering-escalations/{key}.md` | Engineering handoff (if escalating) | When escalating to Engineering team |\n"
         f"\n"
         f"**Update guidance:**\n"
         f"- Read existing files first (if they exist) to preserve prior work\n"
@@ -900,9 +910,9 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
         f"\n"
         f"## Rules\n"
         f"- Do not ask the user to pick a workflow or skill; the playbook above is the workflow.\n"
-        f"- Proceed with the next pipeline steps implied by the playbook and by which outputs/ files "
-        f"already exist for {key}.\n"
-        f"- Create or update outputs/ artifacts this issue needs (paths as defined in the playbook).\n"
+        f"- Proceed with the next pipeline steps implied by the playbook and by which files "
+        f"already exist for {key} in `{outputs_dir_relative}/`.\n"
+        f"- Create or update artifacts in `{outputs_dir_relative}/` that this issue needs (paths as shown above).\n"
         f"- In every confirmed solution, state **Production vs Sandbox** clearly: what Production has (read-only verification), "
         f"what is **Sandbox-only**, and whether **Production metadata deploy** is required (**Yes — e.g. Gearset** / **No** / **N/A**). "
         f"Never imply Production has new metadata just because Sandbox validation passed. Do not deploy to Production unless the operator explicitly requests it.\n"
