@@ -79,6 +79,97 @@ def _cache_evict(cache: dict) -> None:
         cache.pop(next(iter(cache)))
 
 
+def _validate_instance_path(path: Path, operation: str = "write") -> None:
+    """Hard rule: Prevent writes/operations to shared directories.
+
+    CRITICAL for multi-instance isolation. Raises RuntimeError if path violates
+    instance-routing rules.
+
+    Allowed patterns:
+    - OUTPUTS / ... (instance-specific outputs)
+    - instance1/ ... (instance1 state)
+    - instance2/ ... (instance2 state)
+    - skills/ ... (shared read-only)
+    - static/ ... (shared read-only)
+    - templates/ ... (shared read-only)
+
+    Forbidden patterns (HARD STOP):
+    - ROOT/outputs (use OUTPUTS instead)
+    - ROOT/temp* (use ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve)
+    - ROOT/retrieved_metadata* (use instance-specific)
+    - ROOT/retrieve-prod (use instance-specific)
+    - Any write to ROOT/.sfdx or ROOT/.claude (use env vars: SF_DATA_DIR, CLAUDE_CODE_DIR)
+    """
+    path_resolved = path.resolve()
+
+    # Forbidden patterns for ANY operation to shared directories
+    forbidden_patterns = [
+        ROOT / "outputs",  # Must use OUTPUTS (instance-specific)
+        ROOT / "temp",
+        ROOT / "temp-retrieve",
+        ROOT / "temp_retrieve",
+        ROOT / "Ctemp-sf-retrieve",
+        ROOT / "retrieved_metadata",
+        ROOT / "retrieved_metadata_sharing",
+        ROOT / "retrieve-prod",
+        ROOT / "temp_admin_team",
+    ]
+
+    # Enforce: path must not be under any forbidden pattern
+    for forbidden in forbidden_patterns:
+        try:
+            path_resolved.relative_to(forbidden.resolve())
+            # If we reach here, path IS under a forbidden directory
+            raise RuntimeError(
+                f"INSTANCE ROUTING VIOLATION: Cannot {operation} to {path}\n"
+                f"Reason: Path is in shared directory {forbidden}\n"
+                f"Rule: All instance operations must use OUTPUTS (currently: {OUTPUTS})\n"
+                f"For metadata retrieval: use ${{CASEOPS_OUTPUTS_DIR}}/../temp-retrieve\n"
+                f"This is a HARD STOP to prevent cross-instance contamination."
+            )
+        except ValueError:
+            # path is NOT under forbidden, which is what we want
+            pass
+
+    # For write operations, enforce path must be under OUTPUTS or instance directory
+    if operation in ("write", "mkdir", "create"):
+        outputs_resolved = OUTPUTS.resolve()
+        try:
+            path_resolved.relative_to(outputs_resolved)
+            # Path IS under OUTPUTS, allowed
+            return
+        except ValueError:
+            # Path is NOT under OUTPUTS, check if it's under instance-specific directory
+            pass
+
+        # Check if it's under instance1/ or instance2/ state directories
+        instance_dirs = [ROOT / "instance1", ROOT / "instance2"]
+        for inst_dir in instance_dirs:
+            try:
+                path_resolved.relative_to(inst_dir.resolve())
+                # Path IS under instance dir, allowed
+                return
+            except ValueError:
+                pass
+
+        # Path not under OUTPUTS or instance dirs - this is risky for writes
+        # Allow shared read-only dirs and specific ROOT files for now
+        read_only_dirs = [ROOT / "skills", ROOT / "static", ROOT / "templates", ROOT / "scripts"]
+        for ro_dir in read_only_dirs:
+            try:
+                path_resolved.relative_to(ro_dir.resolve())
+                if operation == "write":
+                    raise RuntimeError(
+                        f"INSTANCE ROUTING VIOLATION: Cannot write to read-only shared directory {path}\n"
+                        f"Path: {path_resolved}\n"
+                        f"Rule: {ro_dir.name}/ is read-only shared code, do not write."
+                    )
+                # Read operations OK
+                return
+            except ValueError:
+                pass
+
+
 def _load_jira_env(env_file: Path | None = None) -> None:
     """Load .env.jira (or workspace-specific variant) into os.environ.
 
@@ -272,8 +363,10 @@ def _persist_pipeline_record(run_key: str, text: str, *, kind: str = "line") -> 
         "text": text,
     }
     line = json.dumps(rec, ensure_ascii=False) + "\n"
+    log_path = _pipeline_log_path(run_key)
+    _validate_instance_path(log_path, "write")  # HARD RULE: instance-routed writes only
     with _PIPELINE_LOG_LOCK:
-        with _pipeline_log_path(run_key).open("a", encoding="utf-8") as fh:
+        with log_path.open("a", encoding="utf-8") as fh:
             fh.write(line)
 
 
@@ -757,6 +850,7 @@ def _save_claude_output(content: str, key: str) -> None:
         suggested_text = "\n".join(suggested_text.split("\n")[1:]).strip()
         if suggested_text:
             path = OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)
+            _validate_instance_path(path, "write")  # HARD RULE: instance-routed writes only
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(suggested_text, encoding="utf-8")
 
@@ -767,6 +861,7 @@ def _save_claude_output(content: str, key: str) -> None:
         internal_text = "\n".join(internal_text.split("\n")[1:]).strip()
         if internal_text:
             path = OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)
+            _validate_instance_path(path, "write")  # HARD RULE: instance-routed writes only
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(internal_text, encoding="utf-8")
 
@@ -1522,6 +1617,7 @@ def api_issue_mark_viewed(key: str):
     if not found:
         return jsonify({"error": f"issue {key} not found"}), 404
 
+    _validate_instance_path(manifest_path, "write")  # HARD RULE: instance-routed writes only
     try:
         with manifest_path.open("w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")

@@ -1,0 +1,767 @@
+{
+  "issue": {
+    "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations,customfield_10010.requestTypePractice",
+    "id": "11388",
+    "self": "https://shulman-hill.atlassian.net/rest/api/3/issue/11388",
+    "key": "SH-99",
+    "fields": {
+      "summary": "WCB Mail / FAI: EC-88 updated automation",
+      "attachment": [
+        {
+          "self": "https://shulman-hill.atlassian.net/rest/api/3/attachment/10694",
+          "id": "10694",
+          "filename": "image-20251024-150216.png",
+          "author": {
+            "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+            "accountId": "62211bc76a4c4c0070ae90a2",
+            "avatarUrls": {
+              "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+              "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+              "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+              "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+            },
+            "displayName": "David Schleider",
+            "active": true,
+            "timeZone": "America/Phoenix",
+            "accountType": "atlassian"
+          },
+          "created": "2025-10-24T09:48:46.323-0700",
+          "size": 67258,
+          "mimeType": "image/png",
+          "content": "https://shulman-hill.atlassian.net/rest/api/3/attachment/content/10694",
+          "thumbnail": "https://shulman-hill.atlassian.net/rest/api/3/attachment/thumbnail/10694"
+        }
+      ],
+      "created": "2025-10-24T09:48:46.104-0700",
+      "duedate": null,
+      "description": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "This will foucs on updating the task tree currently triggering off the File Info Object through the Foundation AI / WCB Mail process. The main change here is that we added a subcategory to the Document Type EC-88. We need to now account for different tasks that will trigger dependent on the sub-type. "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "We will be reorganizing this piece of the File Info After Save flow to account for the below "
+              }
+            ]
+          },
+          {
+            "type": "mediaSingle",
+            "attrs": {
+              "width": 671,
+              "widthType": "pixel",
+              "layout": "align-start"
+            },
+            "content": [
+              {
+                "type": "media",
+                "attrs": {
+                  "type": "file",
+                  "id": "40a8afc3-4035-41fc-9eef-333fdfc2ce87",
+                  "alt": "image-20251024-150216.png",
+                  "collection": "",
+                  "height": 489,
+                  "width": 1120
+                }
+              }
+            ]
+          },
+          {
+            "type": "paragraph"
+          },
+          {
+            "type": "orderedList",
+            "attrs": {
+              "order": 1
+            },
+            "content": [
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "EC-88 / PON (compare to Notice of Assembly automation)"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "bulletList",
+                    "content": [
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "If Related Matter_WCB Number is blank, update WC Number from file info object (WCB#)"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "If Related Matter_WCB_Retainer_Status__c != On Notice, update to “On Notice”"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "EC-88 / FeeAPP"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "bulletList",
+                    "content": [
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Create Task id a04TV000007ZCQTYA4"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Override Subject: “AT01: Review EC-88 - Fee App”",
+                                "marks": [
+                                  {
+                                    "type": "strong"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Assign Task to WC Attorney Queue"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Set Due Date on task to TODAY"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "EC-88 / NOS"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "bulletList",
+                    "content": [
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Create Task id a04TV000007ZCQTYA4"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Override Subject: PL05: Review EC-88 - Notice of Sub",
+                                "marks": [
+                                  {
+                                    "type": "strong"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Assign Task to Paralegal"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Set Due Date on task to TODAY"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "EC-88 / Review"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "bulletList",
+                    "content": [
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "If Matter_Case Stage/Active Stage = Settlement OR Permenancy"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "orderedList",
+                            "attrs": {
+                              "order": 1
+                            },
+                            "content": [
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "Create Task id a04TV000007ZCQTYA4"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "Assign Task to Settlement Coordinator"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "Set Due Date on task to TODAY"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Else"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "orderedList",
+                            "attrs": {
+                              "order": 1
+                            },
+                            "content": [
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "Create Task id a04TV000007ZCQTYA4"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "Assign Task to Paralegal"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "Set Due Date on task to TODAY"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "EC-88 blank/null sub type (just in case)"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "orderedList",
+                    "attrs": {
+                      "order": 1
+                    },
+                    "content": [
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Same logic as EC-88/Review"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "customfield_10010": null,
+      "reporter": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "assignee": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "priority": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/priority/3",
+        "iconUrl": "https://shulman-hill.atlassian.net/images/icons/priorities/medium_new.svg",
+        "name": "Medium",
+        "id": "3"
+      },
+      "updated": "2025-10-31T12:13:26.977-0700",
+      "status": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/status/10035",
+        "description": "",
+        "iconUrl": "https://shulman-hill.atlassian.net/",
+        "name": "Selected for Development",
+        "id": "10035",
+        "statusCategory": {
+          "self": "https://shulman-hill.atlassian.net/rest/api/3/statuscategory/2",
+          "id": 2,
+          "key": "new",
+          "colorName": "blue-gray",
+          "name": "To Do"
+        }
+      }
+    }
+  },
+  "comments": [],
+  "changelog": [
+    {
+      "id": "12797",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2025-10-24T10:03:46.298-0700",
+      "items": [
+        {
+          "field": "Rank",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10019",
+          "from": "",
+          "fromString": "",
+          "to": "",
+          "toString": "Ranked higher"
+        }
+      ]
+    },
+    {
+      "id": "12798",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2025-10-24T10:03:48.690-0700",
+      "items": [
+        {
+          "field": "Rank",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10019",
+          "from": "",
+          "fromString": "",
+          "to": "",
+          "toString": "Ranked higher"
+        }
+      ]
+    },
+    {
+      "id": "12828",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "created": "2025-10-24T11:06:41.417-0700",
+      "items": [
+        {
+          "field": "Sprint",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10020",
+          "from": "",
+          "fromString": "",
+          "to": "366",
+          "toString": "SH Sprint 12"
+        }
+      ]
+    },
+    {
+      "id": "12829",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "app"
+      },
+      "created": "2025-10-24T11:06:43.791-0700",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10040",
+          "fromString": "To Do",
+          "to": "10035",
+          "toString": "Selected for Development"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "12835",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2025-10-24T11:21:06.886-0700",
+      "items": [
+        {
+          "field": "description",
+          "fieldtype": "jira",
+          "fieldId": "description",
+          "from": null,
+          "fromString": "This will foucs on updating the task tree currently triggering off the File Info Object through the Foundation AI / WCB Mail process. The main change here is that we added a subcategory to the Document Type EC-88. We need to now account for different tasks that will trigger dependent on the sub-type. \n\nWe will be reorganizing this piece of the flow to account for the below \n\n!image-20251024-150216.png|width=671,alt=\"image-20251024-150216.png\"!\n\n\n\n# EC-88 / PON\n#* If Related Matter_WCB Number is blank, update value from file\n#* Update Related Matter_WCB_Retainer_Status__c\n# EC-88 / Fee App\n#* Create Task \n#* Assign Task to WC Attorney Queue\n#* Set Due Date on task to TODAY\n# EC-88 / NOS or Review\n#* Create Task \n#* Assign Task to Paralegal\n#* Set Due Date on task to TODAY",
+          "to": null,
+          "toString": "This will foucs on updating the task tree currently triggering off the File Info Object through the Foundation AI / WCB Mail process. The main change here is that we added a subcategory to the Document Type EC-88. We need to now account for different tasks that will trigger dependent on the sub-type. \n\nWe will be reorganizing this piece of the File Info After Save flow to account for the below \n\n!image-20251024-150216.png|width=671,alt=\"image-20251024-150216.png\"!\n\n\n\n# EC-88 / PON (compare to Notice of Assembly automation)\n#* If Related Matter_WCB Number is blank, update WC Number from file info object (WCB#)\n#* If Related Matter_WCB_Retainer_Status__c != On Notice, update to “On Notice”\n# EC-88 / FeeAPP\n#* Create Task id a04TV000007ZCQTYA4\n#* *Override Subject: “AT01: Review EC-88 - Fee App”*\n#* Assign Task to WC Attorney Queue\n#* Set Due Date on task to TODAY\n# EC-88 / NOS\n#* Create Task id a04TV000007ZCQTYA4\n#* *Override Subject: PL05: Review EC-88 - Notice of Sub*\n#* Assign Task to Paralegal\n#* Set Due Date on task to TODAY\n# EC-88 / Review\n#* If Matter_Case Stage/Active Stage = Settlement OR Permenancy\n#*# Create Task id a04TV000007ZCQTYA4\n#*# Assign Task to Settlement Coordinator\n#*# Set Due Date on task to TODAY\n#* Else\n#*# Create Task id a04TV000007ZCQTYA4\n#*# Assign Task to Paralegal\n#*# Set Due Date on task to TODAY\n# EC-88 blank/null sub type (just in case)\n## Same logic as EC-88/Review"
+        }
+      ]
+    },
+    {
+      "id": "13073",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2025-10-31T12:13:26.977-0700",
+      "items": [
+        {
+          "field": "Sprint",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10020",
+          "from": "366",
+          "fromString": "SH Sprint 12",
+          "to": "",
+          "toString": ""
+        }
+      ]
+    }
+  ],
+  "worklogs": [],
+  "attachments": [
+    {
+      "id": "10694",
+      "filename": "image-20251024-150216.png",
+      "mimeType": "image/png",
+      "size": 67258,
+      "created": "2025-10-24T09:48:46.323-0700",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "content": "https://shulman-hill.atlassian.net/rest/api/3/attachment/content/10694",
+      "thumbnail": "https://shulman-hill.atlassian.net/rest/api/3/attachment/thumbnail/10694",
+      "localPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/attachments/SH-99/10694-image-20251024-150216.png"
+    }
+  ],
+  "forms": [
+    {
+      "scope": "request",
+      "error": {
+        "status": 404,
+        "body": "{\"errors\":[{\"status\":404,\"code\":\"ISSUE_NOT_FOUND\",\"title\":\"Issue Not Found\",\"detail\":\"You do not have permission to access this resource, or it was not found.\",\"context\":[{\"type\":\"issue\",\"id\":\"SH-99\"}]}]}"
+      }
+    }
+  ],
+  "fieldNames": {
+    "summary": "Summary",
+    "status": "Status",
+    "priority": "Priority",
+    "duedate": "Due date",
+    "assignee": "Assignee",
+    "reporter": "Reporter",
+    "description": "Description",
+    "created": "Created",
+    "updated": "Updated",
+    "attachment": "Attachment",
+    "customfield_10010": "Request Type"
+  },
+  "fieldMapPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/field-map.json",
+  "cloudId": "ecbca877-4e34-466a-b0d2-027f5e000302",
+  "syncedAt": "2026-05-28T20:56:03+00:00"
+}

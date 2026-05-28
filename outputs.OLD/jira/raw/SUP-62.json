@@ -1,0 +1,199 @@
+{
+  "issue": {
+    "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations,customfield_10010.requestTypePractice",
+    "id": "13204",
+    "self": "https://shulman-hill.atlassian.net/rest/api/3/issue/13204",
+    "key": "SUP-62",
+    "fields": {
+      "summary": "Consolidate Login Authentication",
+      "attachment": [],
+      "created": "2026-05-28T13:43:38.304-0700",
+      "duedate": null,
+      "description": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "The analytics team had a quick question regarding our current Salesforce access. At the moment, we are required to go through two-factor authentication each time we log in. The team wanted to check whether the authentication code could be sent directly to "
+              },
+              {
+                "type": "text",
+                "text": "analytics@hennessey.com",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "mailto:analytics@hennessey.com"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " instead of needing to reach out to your team for the code each time."
+              }
+            ],
+            "attrs": {
+              "localId": "7d09edcae2c7"
+            }
+          }
+        ]
+      },
+      "reporter": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "customfield_10010": {
+        "_links": {
+          "jiraRest": "https://shulman-hill.atlassian.net/rest/api/2/issue/13204",
+          "web": "https://shulman-hill.atlassian.net/servicedesk/customer/portal/1/SUP-62",
+          "agent": "https://shulman-hill.atlassian.net/browse/SUP-62",
+          "self": "https://shulman-hill.atlassian.net/rest/servicedeskapi/request/13204"
+        },
+        "requestType": {
+          "_expands": [
+            "field"
+          ],
+          "id": "5",
+          "_links": {
+            "self": "https://shulman-hill.atlassian.net/rest/servicedeskapi/servicedesk/1/requesttype/5"
+          },
+          "name": "Emailed request",
+          "description": "Request received from your email support channel.",
+          "helpText": "",
+          "defaultName": "Emailed request",
+          "issueTypeId": "10068",
+          "serviceDeskId": "1",
+          "portalId": "1",
+          "groupIds": [],
+          "icon": {
+            "id": "10527",
+            "_links": {
+              "iconUrls": {
+                "48x48": "https://shulman-hill.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10527?size=large",
+                "24x24": "https://shulman-hill.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10527?size=small",
+                "16x16": "https://shulman-hill.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10527?size=xsmall",
+                "32x32": "https://shulman-hill.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10527?size=medium"
+              }
+            }
+          }
+        },
+        "currentStatus": {
+          "status": "Waiting for support",
+          "statusCategory": "INDETERMINATE",
+          "statusDate": {
+            "iso8601": "2026-05-28T13:43:38-0700",
+            "jira": "2026-05-28T13:43:38.304-0700",
+            "friendly": "Today 1:43 PM",
+            "epochMillis": 1780001018304
+          }
+        }
+      },
+      "assignee": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "priority": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/priority/3",
+        "iconUrl": "https://shulman-hill.atlassian.net/images/icons/priorities/medium_new.svg",
+        "name": "Medium",
+        "id": "3"
+      },
+      "updated": "2026-05-28T13:54:48.805-0700",
+      "status": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/status/10099",
+        "description": "This was auto-generated by Jira Service Management during workflow import",
+        "iconUrl": "https://shulman-hill.atlassian.net/images/icons/status_generic.gif",
+        "name": "Waiting for support",
+        "id": "10099",
+        "statusCategory": {
+          "self": "https://shulman-hill.atlassian.net/rest/api/3/statuscategory/4",
+          "id": 4,
+          "key": "indeterminate",
+          "colorName": "yellow",
+          "name": "In Progress"
+        }
+      }
+    }
+  },
+  "comments": [],
+  "changelog": [
+    {
+      "id": "16670",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-28T13:54:48.805-0700",
+      "items": [
+        {
+          "field": "assignee",
+          "fieldtype": "jira",
+          "fieldId": "assignee",
+          "from": null,
+          "fromString": null,
+          "to": "712020:92952c29-caed-42f5-a852-103162f84724",
+          "toString": "Sean Bingham",
+          "tmpFromAccountId": null,
+          "tmpToAccountId": "712020:92952c29-caed-42f5-a852-103162f84724"
+        }
+      ]
+    }
+  ],
+  "worklogs": [],
+  "attachments": [],
+  "forms": [],
+  "fieldNames": {
+    "summary": "Summary",
+    "status": "Status",
+    "priority": "Priority",
+    "duedate": "Due date",
+    "assignee": "Assignee",
+    "reporter": "Reporter",
+    "description": "Description",
+    "created": "Created",
+    "updated": "Updated",
+    "attachment": "Attachment",
+    "customfield_10010": "Request Type"
+  },
+  "fieldMapPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/field-map.json",
+  "cloudId": "ecbca877-4e34-466a-b0d2-027f5e000302",
+  "syncedAt": "2026-05-28T20:56:39+00:00"
+}

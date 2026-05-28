@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Social_Sales_Channel__c</fullName>
+    <description>Social Sales Channel through which an order was sold (e.g., TikTok, Google, Youtube, Instagram, Facebook)
+So that we can accurately report and audit sales data across different social sales channels without altering the existing transaction source value.</description>
+    <label>Social Sales Channel</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetName>Social_Sales_Channel</valueSetName>
+    </valueSet>
+</CustomField>

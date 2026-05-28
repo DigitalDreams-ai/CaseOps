@@ -1,0 +1,473 @@
+{
+  "issue": {
+    "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations,customfield_10010.requestTypePractice",
+    "id": "11896",
+    "self": "https://shulman-hill.atlassian.net/rest/api/3/issue/11896",
+    "key": "SH-124",
+    "fields": {
+      "summary": "Fix Broken \"Create Internal Link\" Function ",
+      "attachment": [
+        {
+          "self": "https://shulman-hill.atlassian.net/rest/api/3/attachment/10965",
+          "id": "10965",
+          "filename": "Screenshot 2025-12-26 102856.png",
+          "author": {
+            "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62ec0cd625abc07e51c6671e",
+            "accountId": "62ec0cd625abc07e51c6671e",
+            "avatarUrls": {
+              "48x48": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+              "24x24": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+              "16x16": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+              "32x32": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png"
+            },
+            "displayName": "Juan Carlos Gutierrez",
+            "active": true,
+            "timeZone": "America/Phoenix",
+            "accountType": "atlassian"
+          },
+          "created": "2025-12-26T08:35:13.884-0700",
+          "size": 257228,
+          "mimeType": "image/png",
+          "content": "https://shulman-hill.atlassian.net/rest/api/3/attachment/content/10965",
+          "thumbnail": "https://shulman-hill.atlassian.net/rest/api/3/attachment/thumbnail/10965"
+        },
+        {
+          "self": "https://shulman-hill.atlassian.net/rest/api/3/attachment/10964",
+          "id": "10964",
+          "filename": "Screenshot 2025-12-26 103230.PNG",
+          "author": {
+            "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62ec0cd625abc07e51c6671e",
+            "accountId": "62ec0cd625abc07e51c6671e",
+            "avatarUrls": {
+              "48x48": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+              "24x24": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+              "16x16": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+              "32x32": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png"
+            },
+            "displayName": "Juan Carlos Gutierrez",
+            "active": true,
+            "timeZone": "America/Phoenix",
+            "accountType": "atlassian"
+          },
+          "created": "2025-12-26T08:35:13.609-0700",
+          "size": 514520,
+          "mimeType": "image/png",
+          "content": "https://shulman-hill.atlassian.net/rest/api/3/attachment/content/10964",
+          "thumbnail": "https://shulman-hill.atlassian.net/rest/api/3/attachment/thumbnail/10964"
+        }
+      ],
+      "created": "2025-12-26T08:35:13.224-0700",
+      "duedate": null,
+      "description": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "The link this creates is the clients matter where I created the link from : "
+              },
+              {
+                "type": "text",
+                "text": "https://shulman-hill.lightning.force.com/lightning/r/litify_pm__Matter__c/a0L6R00000Z3vh8UAB/view?c__fileIds=[\"a2VUo000000qKfNMAU\"]&c__folderPathObjects=[{\"name\"%3A\"Cases(Litify)\"%2C\"recordId\"%3A\"a0L6R00000Z3vh8UAB\"%2C\"type\"%3A\"object\"%2C\"objectApiName\"%3A\"litify_pm__Matter__c\"}%2C{\"name\"%3A\"Juan Jose Blandon 1%2F11%2F2023 (WC %26 PI)\"%2C\"recordId\"%3A\"a0L6R00000Z3vh8UAB\"%2C\"type\"%3A\"record\"%2C\"objectApiName\"%3A\"litify_pm__Matter__c\"}%2C{\"name\"%3A\"Litigation\"%2C\"objectApiName\"%3A\"litify_pm__Matter__c\"%2C\"recordId\"%3A\"a0L6R00000Z3vh8UAB\"%2C\"type\"%3A\"file\"}]",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://shulman-hill.lightning.force.com/lightning/r/litify_pm__Matter__c/a0L6R00000Z3vh8UAB/view?c__fileIds=%5B%22a2VUo000000qKfNMAU%22%5D&c__folderPathObjects=%5B%7B%22name%22%3A%22Cases(Litify)%22%2C%22recordId%22%3A%22a0L6R00000Z3vh8UAB%22%2C%22type%22%3A%22object%22%2C%22objectApiName%22%3A%22litify_pm__Matter__c%22%7D%2C%7B%22name%22%3A%22Juan%20Jose%20Blandon%201%2F11%2F2023%20(WC%20%26%20PI)%22%2C%22recordId%22%3A%22a0L6R00000Z3vh8UAB%22%2C%22type%22%3A%22record%22%2C%22objectApiName%22%3A%22litify_pm__Matter__c%22%7D%2C%7B%22name%22%3A%22Litigation%22%2C%22objectApiName%22%3A%22litify_pm__Matter__c%22%2C%22recordId%22%3A%22a0L6R00000Z3vh8UAB%22%2C%22type%22%3A%22file%22%7D%5D"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "mediaSingle",
+            "attrs": {
+              "width": 307,
+              "widthType": "pixel",
+              "layout": "align-start"
+            },
+            "content": [
+              {
+                "type": "media",
+                "attrs": {
+                  "type": "file",
+                  "id": "36dc1109-15d9-4403-b345-3bebfe23e566",
+                  "alt": "Screenshot 2025-12-26 102856.png",
+                  "collection": "",
+                  "height": 629,
+                  "width": 1147
+                }
+              }
+            ]
+          },
+          {
+            "type": "paragraph"
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "The reference pointer is wrong and should instead point to the internal link I was referring to: "
+              },
+              {
+                "type": "text",
+                "text": "https://shulman-hill.lightning.force.com/lightning/r/litify_docs__File_Info__c/a2VUo000000qKfNMAU/view",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://shulman-hill.lightning.force.com/lightning/r/litify_docs__File_Info__c/a2VUo000000qKfNMAU/view"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "The above link is obtained by opening the file with the below option:"
+              }
+            ]
+          },
+          {
+            "type": "mediaSingle",
+            "attrs": {
+              "width": 315,
+              "widthType": "pixel",
+              "layout": "align-start"
+            },
+            "content": [
+              {
+                "type": "media",
+                "attrs": {
+                  "type": "file",
+                  "id": "cfc33833-3e35-47b8-965b-030debcdd3f8",
+                  "alt": "Screenshot 2025-12-26 103230.PNG",
+                  "collection": "",
+                  "height": 1284,
+                  "width": 1481
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "customfield_10010": null,
+      "reporter": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62ec0cd625abc07e51c6671e",
+        "accountId": "62ec0cd625abc07e51c6671e",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+          "24x24": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+          "16x16": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+          "32x32": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png"
+        },
+        "displayName": "Juan Carlos Gutierrez",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "assignee": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "priority": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/priority/3",
+        "iconUrl": "https://shulman-hill.atlassian.net/images/icons/priorities/medium_new.svg",
+        "name": "Medium",
+        "id": "3"
+      },
+      "updated": "2026-01-15T13:10:36.439-0700",
+      "status": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/status/10035",
+        "description": "",
+        "iconUrl": "https://shulman-hill.atlassian.net/",
+        "name": "Selected for Development",
+        "id": "10035",
+        "statusCategory": {
+          "self": "https://shulman-hill.atlassian.net/rest/api/3/statuscategory/2",
+          "id": 2,
+          "key": "new",
+          "colorName": "blue-gray",
+          "name": "To Do"
+        }
+      }
+    }
+  },
+  "comments": [],
+  "changelog": [
+    {
+      "id": "14274",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "app"
+      },
+      "created": "2025-12-26T08:35:17.964-0700",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10040",
+          "fromString": "To Do",
+          "to": "10035",
+          "toString": "Selected for Development"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "14662",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "created": "2026-01-12T13:41:19.464-0700",
+      "items": [
+        {
+          "field": "Sprint",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10020",
+          "from": "465",
+          "fromString": "SH Sprint 15",
+          "to": "",
+          "toString": ""
+        }
+      ]
+    },
+    {
+      "id": "14663",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "created": "2026-01-12T13:41:19.763-0700",
+      "items": [
+        {
+          "field": "Sprint",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10020",
+          "from": "",
+          "fromString": "",
+          "to": "498",
+          "toString": "SH Sprint 16"
+        }
+      ]
+    },
+    {
+      "id": "14664",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "created": "2026-01-12T13:41:20.101-0700",
+      "items": [
+        {
+          "field": "Rank",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10019",
+          "from": "",
+          "fromString": "",
+          "to": "",
+          "toString": "Ranked higher"
+        }
+      ]
+    },
+    {
+      "id": "14790",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2026-01-15T13:10:36.082-0700",
+      "items": [
+        {
+          "field": "Sprint",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10020",
+          "from": "498",
+          "fromString": "SH Sprint 16",
+          "to": "",
+          "toString": ""
+        }
+      ]
+    },
+    {
+      "id": "14791",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2026-01-15T13:10:36.439-0700",
+      "items": [
+        {
+          "field": "Rank",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10019",
+          "from": "",
+          "fromString": "",
+          "to": "",
+          "toString": "Ranked lower"
+        }
+      ]
+    }
+  ],
+  "worklogs": [],
+  "attachments": [
+    {
+      "id": "10965",
+      "filename": "Screenshot 2025-12-26 102856.png",
+      "mimeType": "image/png",
+      "size": 257228,
+      "created": "2025-12-26T08:35:13.884-0700",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62ec0cd625abc07e51c6671e",
+        "accountId": "62ec0cd625abc07e51c6671e",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+          "24x24": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+          "16x16": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+          "32x32": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png"
+        },
+        "displayName": "Juan Carlos Gutierrez",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "content": "https://shulman-hill.atlassian.net/rest/api/3/attachment/content/10965",
+      "thumbnail": "https://shulman-hill.atlassian.net/rest/api/3/attachment/thumbnail/10965",
+      "localPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/attachments/SH-124/10965-Screenshot 2025-12-26 102856.png"
+    },
+    {
+      "id": "10964",
+      "filename": "Screenshot 2025-12-26 103230.PNG",
+      "mimeType": "image/png",
+      "size": 514520,
+      "created": "2025-12-26T08:35:13.609-0700",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62ec0cd625abc07e51c6671e",
+        "accountId": "62ec0cd625abc07e51c6671e",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+          "24x24": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+          "16x16": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png",
+          "32x32": "https://secure.gravatar.com/avatar/8a7b00b5349d670fecaac09424225d07?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FJG-2.png"
+        },
+        "displayName": "Juan Carlos Gutierrez",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "content": "https://shulman-hill.atlassian.net/rest/api/3/attachment/content/10964",
+      "thumbnail": "https://shulman-hill.atlassian.net/rest/api/3/attachment/thumbnail/10964",
+      "localPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/attachments/SH-124/10964-Screenshot 2025-12-26 103230.PNG"
+    }
+  ],
+  "forms": [
+    {
+      "scope": "request",
+      "error": {
+        "status": 404,
+        "body": "{\"errors\":[{\"status\":404,\"code\":\"ISSUE_NOT_FOUND\",\"title\":\"Issue Not Found\",\"detail\":\"You do not have permission to access this resource, or it was not found.\",\"context\":[{\"type\":\"issue\",\"id\":\"SH-124\"}]}]}"
+      }
+    }
+  ],
+  "fieldNames": {
+    "summary": "Summary",
+    "status": "Status",
+    "priority": "Priority",
+    "duedate": "Due date",
+    "assignee": "Assignee",
+    "reporter": "Reporter",
+    "description": "Description",
+    "created": "Created",
+    "updated": "Updated",
+    "attachment": "Attachment",
+    "customfield_10010": "Request Type"
+  },
+  "fieldMapPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/field-map.json",
+  "cloudId": "ecbca877-4e34-466a-b0d2-027f5e000302",
+  "syncedAt": "2026-05-28T20:56:18+00:00"
+}

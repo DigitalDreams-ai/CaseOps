@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Kit_ID_Required_if_Not_Shipping</fullName>
+    <active>false</active>
+    <errorConditionFormula>IF(
+    /* Check if Kit_Id__c is being edited and Requires_Shipping__c is true */
+    AND(
+								NOT($UserRole.Id = &quot;00E5a000001BBHR&quot;),
+        ISCHANGED(Kit_Id__c), 
+								NOT(ISCHANGED(Genetic_Test_ReShip_Attempt__c)),
+        Requires_Shipping__c
+    ), 
+    TRUE, /* If both conditions are true, block the change */
+    
+    /* Else, evaluate further conditions */
+    AND(
+								ISCHANGED(Kit_Id__c),
+								NOT(ISCHANGED(Genetic_Test_ReShip_Attempt__c)),
+        /* Ensure the user&apos;s role is not the one exempted from this rule */
+        NOT($UserRole.Id = &quot;00E5a000001BBHR&quot;),
+        
+        OR(
+            /* If &quot;Need More Information&quot;, ensure Opportunity_Status__c is not &quot;Kit Id Missing&quot; */
+            AND(
+                ISPICKVAL(StageName, &quot;Need More Information&quot;),
+                NOT(ISPICKVAL(Opportunity_Status__c, &quot;Kit Id Missing&quot;))
+            ),
+            
+            /* Block if the stage is neither &quot;New Purchase&quot; nor &quot;Need More Information&quot; */
+            NOT(
+                OR(
+                    ISPICKVAL(StageName, &quot;New Purchase&quot;),
+                    ISPICKVAL(StageName, &quot;Need More Information&quot;),
+                    ISPICKVAL(StageName, &quot;Pending Results&quot;)
+                )
+            )
+        )
+    ) /* If further conditions are met, block the change. Otherwise, allow it. */
+)</errorConditionFormula>
+    <errorDisplayField>Kit_Id__c</errorDisplayField>
+    <errorMessage>Kit ID can only be edited in the &apos;New Purchase&apos; or &apos;Needs More Information&apos; stages with no shipping required. For &apos;Need More Information&apos;, the Opportunity Status must be &apos;Kit Id Missing&apos;.</errorMessage>
+</ValidationRule>

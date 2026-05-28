@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Track_2nd_Package__c</fullName>
+    <externalId>false</externalId>
+    <formula>HYPERLINK(Second_Tracking_URL__c, IMAGE(&quot;servlet/servlet.ImageServer?id=0150b000002pqC9&amp;oid=00D0b000000vHFc&amp;lastMod=1555533033000&quot;, &quot;Track Package&quot;))</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Track Package</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

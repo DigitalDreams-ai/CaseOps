@@ -1,0 +1,3546 @@
+{
+  "issue": {
+    "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations,customfield_10010.requestTypePractice",
+    "id": "72903",
+    "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/72903",
+    "key": "HEAL-32789",
+    "fields": {
+      "summary": "Consents are not automatically sending to all new patients",
+      "created": "2026-03-26T12:32:38.152-0400",
+      "customfield_10194": null,
+      "customfield_10195": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Please see list of SF links where patient agreements were not sent to new patients.  This is a critical issue and needs escalation ASAP.  Our current “work around” is not compliant enough.  We are using emailed PDF forms to collect consent, but it is not a guarantee that we will receive it before treatment.  We are working on getting necessary team members licenses to Adobe Sign, but it’s taking time."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Not seeing the auto triggered email for the portal activation email and no consents were sent."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "inlineCard",
+                "attrs": {
+                  "url": "https://10xhealth.lightning.force.com/lightning/r/Account/001Rh0000072TY9IAM/view"
+                }
+              },
+              {
+                "type": "text",
+                "text": " "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "portal instructions were sent, nothing else was sent"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "inlineCard",
+                "attrs": {
+                  "url": "https://10xhealth.lightning.force.com/lightning/r/Account/001Ql00000v8ykaIAA/view"
+                }
+              },
+              {
+                "type": "text",
+                "text": " "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "noting has been sent to this patient "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "inlineCard",
+                "attrs": {
+                  "url": "https://10xhealth.lightning.force.com/lightning/r/Account/001Ql00000v94S3IAI/view"
+                }
+              },
+              {
+                "type": "text",
+                "text": " "
+              }
+            ]
+          }
+        ]
+      },
+      "description": null,
+      "customfield_10032": [],
+      "reporter": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A6c4b89ac-42aa-4cff-8cc2-27a4e5e80c2c",
+        "accountId": "712020:6c4b89ac-42aa-4cff-8cc2-27a4e5e80c2c",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/56aa2bce001ddbe1a7fcec63429c1564?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FCF-5.png",
+          "24x24": "https://secure.gravatar.com/avatar/56aa2bce001ddbe1a7fcec63429c1564?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FCF-5.png",
+          "16x16": "https://secure.gravatar.com/avatar/56aa2bce001ddbe1a7fcec63429c1564?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FCF-5.png",
+          "32x32": "https://secure.gravatar.com/avatar/56aa2bce001ddbe1a7fcec63429c1564?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FCF-5.png"
+        },
+        "displayName": "Carlin French",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "customfield_10010": {
+        "_links": {
+          "jiraRest": "https://10xhealthsystem.atlassian.net/rest/api/2/issue/72903",
+          "web": "https://10xhealthsystem.atlassian.net/servicedesk/customer/portal/1/HEAL-32789",
+          "agent": "https://10xhealthsystem.atlassian.net/browse/HEAL-32789",
+          "self": "https://10xhealthsystem.atlassian.net/rest/servicedeskapi/request/72903"
+        },
+        "requestType": {
+          "_expands": [
+            "field"
+          ],
+          "id": "22",
+          "_links": {
+            "self": "https://10xhealthsystem.atlassian.net/rest/servicedeskapi/servicedesk/1/requesttype/22"
+          },
+          "name": "General Help Desk Request",
+          "description": "Submit a Request or report and issue; fields below are based upon your selection.",
+          "helpText": "",
+          "defaultName": "General Help Desk Request",
+          "issueTypeId": "10003",
+          "serviceDeskId": "1",
+          "portalId": "1",
+          "groupIds": [
+            "4"
+          ],
+          "icon": {
+            "id": "10547",
+            "_links": {
+              "iconUrls": {
+                "48x48": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10547?size=large",
+                "24x24": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10547?size=small",
+                "16x16": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10547?size=xsmall",
+                "32x32": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10547?size=medium"
+              }
+            }
+          }
+        },
+        "currentStatus": {
+          "status": "Escalated to Engineering",
+          "statusCategory": "INDETERMINATE",
+          "statusDate": {
+            "iso8601": "2026-03-30T18:05:59-0400",
+            "jira": "2026-03-30T18:05:59.989-0400",
+            "friendly": "30/Mar/26 6:05 PM",
+            "epochMillis": 1774908359989
+          }
+        }
+      },
+      "priority": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/priority/3",
+        "iconUrl": "https://10xhealthsystem.atlassian.net/images/icons/priorities/medium_new.svg",
+        "name": "Medium",
+        "id": "3"
+      },
+      "attachment": [],
+      "duedate": null,
+      "assignee": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "updated": "2026-03-30T18:24:03.822-0400",
+      "status": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/status/10344",
+        "description": "",
+        "iconUrl": "https://10xhealthsystem.atlassian.net/",
+        "name": "Escalated to Engineering",
+        "id": "10344",
+        "statusCategory": {
+          "self": "https://10xhealthsystem.atlassian.net/rest/api/3/statuscategory/4",
+          "id": 4,
+          "key": "indeterminate",
+          "colorName": "yellow",
+          "name": "In Progress"
+        }
+      }
+    }
+  },
+  "comments": [
+    {
+      "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/72903/comment/110117",
+      "id": "110117",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello Carlin French ,"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "We have assigned your request "
+              },
+              {
+                "type": "text",
+                "text": "HEAL-32789"
+              },
+              {
+                "type": "text",
+                "text": " to an appropriate Help Desk team member. They will reach out to you shortly with an update.  "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": " "
+              }
+            ]
+          },
+          {
+            "type": "paragraph"
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Regards, ",
+                "marks": [
+                  {
+                    "type": "em"
+                  },
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Genevieve Aguilar"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Tier 1 Tech Support",
+                "marks": [
+                  {
+                    "type": "em"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "10x Health Help Desk Support",
+                "marks": [
+                  {
+                    "type": "em"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-26T12:37:50.668-0400",
+      "updated": "2026-03-26T12:37:50.668-0400",
+      "jsdPublic": true
+    },
+    {
+      "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/72903/comment/110264",
+      "id": "110264",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A5f665a0c-8994-4bac-b06f-424d8b492903",
+        "accountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png"
+        },
+        "displayName": "Danielle Cress",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hi Carlin, "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "I’ve assigned this to our SF Admin to investigate. We will update you as soon as we have more information about this bug. "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Best,"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Danielle Cress"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Technical Support Manager"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "10x Health Help Desk Support"
+              }
+            ]
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A5f665a0c-8994-4bac-b06f-424d8b492903",
+        "accountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png"
+        },
+        "displayName": "Danielle Cress",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-27T11:09:53.965-0400",
+      "updated": "2026-03-27T11:09:53.965-0400",
+      "jsdPublic": true
+    },
+    {
+      "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/72903/comment/110353",
+      "id": "110353",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A5f665a0c-8994-4bac-b06f-424d8b492903",
+        "accountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png"
+        },
+        "displayName": "Danielle Cress",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "mention",
+                "attrs": {
+                  "id": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+                  "text": "@Sean Bingham",
+                  "accessLevel": "",
+                  "localId": "6b90729a-dcfb-41af-8f74-f094d898d14a"
+                }
+              },
+              {
+                "type": "text",
+                "text": " The engineering team was able to fix the issue with Informed Consents not being assigned for new patients, I have closed that ticket. However, the issue with Informed Consents being assigned to patients who have signed an Informed Consent within the last year is still occurring. "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "We’d like to change the logic so that new informed consents can be assigned for the calendar year they are created. For example, an Informed Consent 2026 should be able to be assigned in 2026 even if the patient signed an Informed Consent 2025 in December of 2025. "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "The use case is that new informed consents are created each year, and they make the old consents out of date, even if they were recently signed. To be compliant, we need to have the new consents for the year available to assign anytime between Jan 1-Dec 31  of that calendar year. Can you please scope this out and escalate to engineering if needed? This is a critical priority. "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Best,"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Danielle Cress"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Technical Support Manager"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "10x Health Help Desk Support"
+              }
+            ]
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A5f665a0c-8994-4bac-b06f-424d8b492903",
+        "accountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png"
+        },
+        "displayName": "Danielle Cress",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-27T17:13:13.748-0400",
+      "updated": "2026-03-27T17:13:13.748-0400",
+      "jsdPublic": false
+    },
+    {
+      "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/72903/comment/110394",
+      "id": "110394",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "mention",
+                "attrs": {
+                  "id": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+                  "text": "@Danielle Cress",
+                  "accessLevel": "",
+                  "localId": "e4c489be-b2f8-49a2-a6c2-0f89325efcbe"
+                }
+              },
+              {
+                "type": "text",
+                "text": " "
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Here’s my proposed solution so it it no longer matches every agreement name that includes “Informed Consent.” It now requires the current calendar year in the name, an unexpired agreement (expiration on or after today). Still drops the PGT matches so an older year’s consent does not prevent assigning this year’s consent form."
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Flow: Autolaunch_Send_Patient_Agreements_to_Patient"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Element: Collection_Informed_Consents"
+              }
+            ]
+          },
+          {
+            "type": "bulletList",
+            "content": [
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "#1 No Change: Name(Patient Agreement) CONTAINS ‘Informed Consent’"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "#2 New Condition Logic: Name(Patient Agreement) CONTAINS txt_CurrentYear"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "bulletList",
+                    "content": [
+                      {
+                        "type": "listItem",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Text formula: txt_CurrentYear = TEXT(YEAR($Flow.CurrentDate))"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "#3 No Change: Name(Patient Agreement) CONTAINS ‘PGT’"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "#4 Update Condition: Expiration_Date__c LESS THAN $Flow.CurrentDate >>> Expiration_Date__c GREATER THAN OR EQUAL $Flow.CurrentDate"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Condition Logic: (1 AND 2 AND 4) AND NOT(3)"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "paragraph"
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Best Regards,"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Sean Bingham",
+                "marks": [
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Salesforce Administrator",
+                "marks": [
+                  {
+                    "type": "em"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "10X",
+                "marks": [
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " Health Help Desk Support "
+              }
+            ]
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-27T19:33:58.705-0400",
+      "updated": "2026-03-27T19:34:58.316-0400",
+      "jsdPublic": false
+    },
+    {
+      "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/72903/comment/110624",
+      "id": "110624",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A5f665a0c-8994-4bac-b06f-424d8b492903",
+        "accountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png"
+        },
+        "displayName": "Danielle Cress",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "mention",
+                "attrs": {
+                  "id": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+                  "text": "@Sean Bingham",
+                  "accessLevel": "",
+                  "localId": "2c056f07-6e0b-4485-9f4e-258875d31591"
+                }
+              },
+              {
+                "type": "text",
+                "text": " This looks good, please escalate this to engineering.  "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Best,"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Danielle Cress"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Technical Support Manager"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "10x Health Help Desk Support"
+              }
+            ]
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A5f665a0c-8994-4bac-b06f-424d8b492903",
+        "accountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png"
+        },
+        "displayName": "Danielle Cress",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-30T16:37:59.248-0400",
+      "updated": "2026-03-30T16:37:59.248-0400",
+      "jsdPublic": false
+    },
+    {
+      "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/72903/comment/110631",
+      "id": "110631",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Steps to reproduce:"
+              }
+            ]
+          },
+          {
+            "type": "orderedList",
+            "attrs": {
+              "order": 1
+            },
+            "content": [
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Open an Opportunity record that has a Patient Agreement named ‘Informed Consent_[CURRENT_YEAR]’"
+                      },
+                      {
+                        "type": "hardBreak"
+                      },
+                      {
+                        "type": "text",
+                        "text": "Example: "
+                      },
+                      {
+                        "type": "text",
+                        "text": "https://10xhealth.lightning.force.com/lightning/r/Order/801Ql00000v0QZdIAM/view",
+                        "marks": [
+                          {
+                            "type": "link",
+                            "attrs": {
+                              "href": "https://10xhealth.lightning.force.com/lightning/r/Order/801Ql00000v0QZdIAM/view"
+                            }
+                          },
+                          {
+                            "type": "underline"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Click the button ‘Send Patient Agreements’"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Select ‘Informed Consent’ and click Send."
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "You will receive a Sent successfully prompt "
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Nothing is actually sent."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "paragraph"
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Best Regards,"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Sean Bingham",
+                "marks": [
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Salesforce Administrator",
+                "marks": [
+                  {
+                    "type": "em"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "10X",
+                "marks": [
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " Health Help Desk Support "
+              }
+            ]
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-30T18:02:13.562-0400",
+      "updated": "2026-03-30T18:02:13.562-0400",
+      "jsdPublic": false
+    },
+    {
+      "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/72903/comment/110633",
+      "id": "110633",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A04363ae2-ad05-451d-9459-6e56f43ac4ad",
+        "accountId": "712020:04363ae2-ad05-451d-9459-6e56f43ac4ad",
+        "avatarUrls": {
+          "48x48": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:04363ae2-ad05-451d-9459-6e56f43ac4ad/fc900b61-b682-4975-b917-94d26273c3df/48",
+          "24x24": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:04363ae2-ad05-451d-9459-6e56f43ac4ad/fc900b61-b682-4975-b917-94d26273c3df/24",
+          "16x16": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:04363ae2-ad05-451d-9459-6e56f43ac4ad/fc900b61-b682-4975-b917-94d26273c3df/16",
+          "32x32": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:04363ae2-ad05-451d-9459-6e56f43ac4ad/fc900b61-b682-4975-b917-94d26273c3df/32"
+        },
+        "displayName": "Capybara: GitHub, Linear, Azure DevOps for Jira & JSM",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "New comment on "
+              },
+              {
+                "type": "text",
+                "text": "Bug #20965 \"BUG: Consents are not automatically sending to all new patients (HEAL-32789)\"",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://dev.azure.com/10XHealth/9c219285-e6c8-4666-bf74-ea3c919676db/_workitems/edit/20965"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " added by Nathaniel Cooper: "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "@Ali Saeed",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "#"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A04363ae2-ad05-451d-9459-6e56f43ac4ad",
+        "accountId": "712020:04363ae2-ad05-451d-9459-6e56f43ac4ad",
+        "avatarUrls": {
+          "48x48": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:04363ae2-ad05-451d-9459-6e56f43ac4ad/fc900b61-b682-4975-b917-94d26273c3df/48",
+          "24x24": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:04363ae2-ad05-451d-9459-6e56f43ac4ad/fc900b61-b682-4975-b917-94d26273c3df/24",
+          "16x16": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:04363ae2-ad05-451d-9459-6e56f43ac4ad/fc900b61-b682-4975-b917-94d26273c3df/16",
+          "32x32": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:04363ae2-ad05-451d-9459-6e56f43ac4ad/fc900b61-b682-4975-b917-94d26273c3df/32"
+        },
+        "displayName": "Capybara: GitHub, Linear, Azure DevOps for Jira & JSM",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-03-30T18:24:03.822-0400",
+      "updated": "2026-03-30T18:24:03.822-0400",
+      "jsdPublic": false
+    }
+  ],
+  "changelog": [
+    {
+      "id": "317099",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-03-26T12:32:40.900-0400",
+      "items": [
+        {
+          "field": "Date/Time Created",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10521",
+          "from": null,
+          "fromString": null,
+          "to": "2026-03-26T12:32:00-0400",
+          "toString": "26/Mar/26 12:32 PM"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "317100",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-03-26T12:32:41.184-0400",
+      "items": [
+        {
+          "field": "Impact",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10004",
+          "from": null,
+          "fromString": null,
+          "to": "10000",
+          "toString": "Extensive / Widespread"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "317101",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-03-26T12:32:41.293-0400",
+      "items": [
+        {
+          "field": "Urgency",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10037",
+          "from": null,
+          "fromString": null,
+          "to": "10022",
+          "toString": "Medium"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "317111",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-26T12:37:53.059-0400",
+      "items": [
+        {
+          "field": "Tier",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10064",
+          "from": null,
+          "fromString": null,
+          "to": "10111",
+          "toString": "Tier 2"
+        }
+      ]
+    },
+    {
+      "id": "317112",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-03-26T12:37:53.589-0400",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10001",
+          "fromString": "Waiting for support",
+          "to": "10002",
+          "toString": "Waiting for customer"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "317113",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-26T12:37:54.857-0400",
+      "items": [
+        {
+          "field": "Team",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10065",
+          "from": null,
+          "fromString": null,
+          "to": "10114",
+          "toString": "Tech Team"
+        }
+      ]
+    },
+    {
+      "id": "317114",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-03-26T12:37:55.886-0400",
+      "items": [
+        {
+          "field": "Ticket Priority",
+          "fieldtype": "custom",
+          "fieldId": "customfield_11701",
+          "from": null,
+          "fromString": null,
+          "to": "12146",
+          "toString": "Critical"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "317115",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-26T12:37:57.477-0400",
+      "items": [
+        {
+          "field": "assignee",
+          "fieldtype": "jira",
+          "fieldId": "assignee",
+          "from": null,
+          "fromString": null,
+          "to": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+          "toString": "Danielle Cress",
+          "tmpFromAccountId": null,
+          "tmpToAccountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903"
+        }
+      ]
+    },
+    {
+      "id": "317116",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-26T12:38:00.840-0400",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10002",
+          "fromString": "Waiting for customer",
+          "to": "10001",
+          "toString": "Waiting for support"
+        }
+      ]
+    },
+    {
+      "id": "317368",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A5f665a0c-8994-4bac-b06f-424d8b492903",
+        "accountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png"
+        },
+        "displayName": "Danielle Cress",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-27T11:05:54.688-0400",
+      "items": [
+        {
+          "field": "reporter",
+          "fieldtype": "jira",
+          "fieldId": "reporter",
+          "from": "712020:6c4b89ac-42aa-4cff-8cc2-27a4e5e80c2c",
+          "fromString": "Carlin French",
+          "to": "712020:50aa00f6-4d07-4d52-bf2f-e8e96bc22b3a",
+          "toString": "Sean Leute",
+          "tmpFromAccountId": "712020:6c4b89ac-42aa-4cff-8cc2-27a4e5e80c2c",
+          "tmpToAccountId": "712020:50aa00f6-4d07-4d52-bf2f-e8e96bc22b3a"
+        }
+      ]
+    },
+    {
+      "id": "317369",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A5f665a0c-8994-4bac-b06f-424d8b492903",
+        "accountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png"
+        },
+        "displayName": "Danielle Cress",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-27T11:05:59.542-0400",
+      "items": [
+        {
+          "field": "reporter",
+          "fieldtype": "jira",
+          "fieldId": "reporter",
+          "from": "712020:50aa00f6-4d07-4d52-bf2f-e8e96bc22b3a",
+          "fromString": "Sean Leute",
+          "to": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+          "toString": "Sean Bingham",
+          "tmpFromAccountId": "712020:50aa00f6-4d07-4d52-bf2f-e8e96bc22b3a",
+          "tmpToAccountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff"
+        }
+      ]
+    },
+    {
+      "id": "317371",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-03-27T11:09:57.010-0400",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10001",
+          "fromString": "Waiting for support",
+          "to": "10002",
+          "toString": "Waiting for customer"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "317372",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A5f665a0c-8994-4bac-b06f-424d8b492903",
+        "accountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png"
+        },
+        "displayName": "Danielle Cress",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-27T11:10:09.193-0400",
+      "items": [
+        {
+          "field": "reporter",
+          "fieldtype": "jira",
+          "fieldId": "reporter",
+          "from": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+          "fromString": "Sean Bingham",
+          "to": "712020:6c4b89ac-42aa-4cff-8cc2-27a4e5e80c2c",
+          "toString": "Carlin French",
+          "tmpFromAccountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+          "tmpToAccountId": "712020:6c4b89ac-42aa-4cff-8cc2-27a4e5e80c2c"
+        }
+      ]
+    },
+    {
+      "id": "317373",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A5f665a0c-8994-4bac-b06f-424d8b492903",
+        "accountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png"
+        },
+        "displayName": "Danielle Cress",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-27T11:10:13.867-0400",
+      "items": [
+        {
+          "field": "assignee",
+          "fieldtype": "jira",
+          "fieldId": "assignee",
+          "from": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+          "fromString": "Danielle Cress",
+          "to": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+          "toString": "Sean Bingham",
+          "tmpFromAccountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+          "tmpToAccountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff"
+        }
+      ]
+    },
+    {
+      "id": "317881",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A1d4964e6-a6b4-40f1-838f-35449d0deb74",
+        "accountId": "712020:1d4964e6-a6b4-40f1-838f-35449d0deb74",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/dc96795a94a7320e0acc904b55957652?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FCM-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/dc96795a94a7320e0acc904b55957652?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FCM-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/dc96795a94a7320e0acc904b55957652?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FCM-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/dc96795a94a7320e0acc904b55957652?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FCM-3.png"
+        },
+        "displayName": "Courtney Marlin",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-30T16:00:38.410-0400",
+      "items": [
+        {
+          "field": "resolution",
+          "fieldtype": "jira",
+          "fieldId": "resolution",
+          "from": null,
+          "fromString": null,
+          "to": "10000",
+          "toString": "Done"
+        },
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10002",
+          "fromString": "Waiting for customer",
+          "to": "5",
+          "toString": "Resolved"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "317899",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A5f665a0c-8994-4bac-b06f-424d8b492903",
+        "accountId": "712020:5f665a0c-8994-4bac-b06f-424d8b492903",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/ced973c8e4e2aaa92fda24a8ea1925b4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDC-3.png"
+        },
+        "displayName": "Danielle Cress",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-30T16:38:17.272-0400",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "5",
+          "fromString": "Resolved",
+          "to": "3",
+          "toString": "In Progress"
+        }
+      ]
+    },
+    {
+      "id": "317900",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-30T16:39:25.237-0400",
+      "items": [
+        {
+          "field": "Escalation Priority",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10818",
+          "from": null,
+          "fromString": null,
+          "to": "11039",
+          "toString": "Medium"
+        }
+      ]
+    },
+    {
+      "id": "317901",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-30T16:39:30.913-0400",
+      "items": [
+        {
+          "field": "Escalation Team",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10819",
+          "from": null,
+          "fromString": null,
+          "to": "[11045]",
+          "toString": "Salesforce"
+        }
+      ]
+    },
+    {
+      "id": "317902",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-30T16:39:39.355-0400",
+      "items": [
+        {
+          "field": "Escalated To Party",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10323",
+          "from": null,
+          "fromString": null,
+          "to": "[712020:1dafdc4a-0c7c-4da3-a26e-fd86aa618d98]",
+          "toString": "[Nathaniel Cooper]"
+        }
+      ]
+    },
+    {
+      "id": "317906",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-30T16:40:00.934-0400",
+      "items": [
+        {
+          "field": "ADO Work Item",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10324",
+          "from": null,
+          "fromString": null,
+          "to": null,
+          "toString": "https://dev.azure.com/10XHealth/10X%20Health%20Technology/_workitems/edit/20965"
+        }
+      ]
+    },
+    {
+      "id": "317907",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-30T16:40:08.199-0400",
+      "items": [
+        {
+          "field": "Tier",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10064",
+          "from": "10111",
+          "fromString": "Tier 2",
+          "to": "10112",
+          "toString": "Tier 3"
+        }
+      ]
+    },
+    {
+      "id": "317925",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-03-30T18:05:59.989-0400",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "3",
+          "fromString": "In Progress",
+          "to": "10344",
+          "toString": "Escalated to Engineering"
+        }
+      ]
+    }
+  ],
+  "worklogs": [],
+  "attachments": [],
+  "forms": [
+    {
+      "scope": "issue",
+      "index": {
+        "id": "722fabca-910c-47ea-922a-9a2dfb4a72e6",
+        "formTemplate": {
+          "id": "e7138258-6580-4839-b272-ec813dd12487"
+        },
+        "internal": false,
+        "submitted": true,
+        "lock": false,
+        "name": "General Help Desk Request",
+        "updated": "2026-03-26T16:32:37.867Z"
+      },
+      "form": {
+        "id": "722fabca-910c-47ea-922a-9a2dfb4a72e6",
+        "updated": "2026-03-26T16:32:37.867Z",
+        "design": {
+          "conditions": {},
+          "layout": [
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 17
+                    },
+                    "layout": "default",
+                    "localId": "4c41f8a2-e7fa-4d93-a2cf-a51aee5e05c2"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 15
+                    },
+                    "layout": "default",
+                    "localId": "68ad9d69-2a0c-48ee-844f-50d603581733"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 21
+                    },
+                    "layout": "default",
+                    "localId": "1df3c31d-161c-4417-a02d-6ae0ad2c5479"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 16
+                    },
+                    "layout": "default",
+                    "localId": "51028043-a7e3-4154-930d-e074b38eb417"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 22
+                    },
+                    "layout": "default",
+                    "localId": "6fd2e0a0-3d7a-4c61-ba65-70888eac7e97"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 23
+                    },
+                    "layout": "default",
+                    "localId": "3a65277c-1518-48a0-bafb-9710fe066cf1"
+                  }
+                }
+              ]
+            },
+            {
+              "version": 1,
+              "type": "doc",
+              "content": [
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 5
+                    },
+                    "layout": "default",
+                    "localId": "e0574df2-0675-4c1f-9c33-a03ae2d30355"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 7
+                    },
+                    "layout": "default",
+                    "localId": "47f37110-d801-43ad-8525-1dd0fc0b0df9"
+                  }
+                },
+                {
+                  "type": "extension",
+                  "attrs": {
+                    "extensionKey": "question",
+                    "extensionType": "com.thinktilt.proforma",
+                    "parameters": {
+                      "id": 14
+                    },
+                    "layout": "default",
+                    "localId": "30f10c35-7432-41fc-8747-52bafe6cd432"
+                  }
+                }
+              ]
+            }
+          ],
+          "questions": {
+            "23": {
+              "choices": [
+                {
+                  "id": "12075",
+                  "label": "My work is not affected"
+                },
+                {
+                  "id": "12076",
+                  "label": "I can continue with a workaround"
+                },
+                {
+                  "id": "12077",
+                  "label": "I am completely blocked"
+                }
+              ],
+              "description": "",
+              "jiraField": "customfield_11668",
+              "label": "How does this impact your work?",
+              "questionKey": "",
+              "type": "cd",
+              "validation": {
+                "rq": true
+              }
+            },
+            "15": {
+              "choices": [
+                {
+                  "id": "10478",
+                  "label": "Clinical"
+                },
+                {
+                  "id": "10477",
+                  "label": "Accounting"
+                },
+                {
+                  "id": "10479",
+                  "label": "Customer Support"
+                },
+                {
+                  "id": "10480",
+                  "label": "Finance"
+                },
+                {
+                  "id": "10481",
+                  "label": "Legal"
+                },
+                {
+                  "id": "10482",
+                  "label": "Marketing"
+                },
+                {
+                  "id": "10483",
+                  "label": "Operations"
+                },
+                {
+                  "id": "10484",
+                  "label": "Supply Chain"
+                },
+                {
+                  "id": "10485",
+                  "label": "Technology"
+                },
+                {
+                  "id": "10486",
+                  "label": "Wellness"
+                }
+              ],
+              "description": "Select your own department here",
+              "jiraField": "customfield_10158",
+              "label": " Department",
+              "questionKey": "",
+              "type": "cd",
+              "validation": {
+                "rq": true
+              }
+            },
+            "22": {
+              "choices": [
+                {
+                  "id": "12072",
+                  "label": "Only me or one record"
+                },
+                {
+                  "id": "12073",
+                  "label": "A small team or multiple records"
+                },
+                {
+                  "id": "12074",
+                  "label": "Multiple teams, departments, or large numbers of records"
+                }
+              ],
+              "description": "",
+              "jiraField": "customfield_11667",
+              "label": "How many people or records are affected?",
+              "questionKey": "",
+              "type": "cd",
+              "validation": {
+                "rq": true
+              }
+            },
+            "16": {
+              "choices": [
+                {
+                  "id": "10250",
+                  "label": "Active Campaign",
+                  "children": [
+                    {
+                      "id": "10289",
+                      "label": "Access issues"
+                    },
+                    {
+                      "id": "10290",
+                      "label": "Technical issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "10253",
+                  "label": "Alloware",
+                  "children": [
+                    {
+                      "id": "10283",
+                      "label": "Access Issues"
+                    },
+                    {
+                      "id": "10284",
+                      "label": "Connectivity Issues"
+                    },
+                    {
+                      "id": "10285",
+                      "label": "Phone issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "10248",
+                  "label": "Bright Pattern/ Alloware",
+                  "children": [
+                    {
+                      "id": "10280",
+                      "label": "Access Issues"
+                    },
+                    {
+                      "id": "10281",
+                      "label": "Connectivity Issues"
+                    },
+                    {
+                      "id": "10282",
+                      "label": "Phone issues"
+                    },
+                    {
+                      "id": "10615",
+                      "label": "Other"
+                    }
+                  ]
+                },
+                {
+                  "id": "10245",
+                  "label": "DBSync/ Quickbooks",
+                  "children": [
+                    {
+                      "id": "10273",
+                      "label": "Errors"
+                    },
+                    {
+                      "id": "10274",
+                      "label": "Feature request"
+                    },
+                    {
+                      "id": "10272",
+                      "label": "Server down"
+                    },
+                    {
+                      "id": "10271",
+                      "label": "Software down"
+                    }
+                  ]
+                },
+                {
+                  "id": "10247",
+                  "label": "DocGen",
+                  "children": [
+                    {
+                      "id": "10278",
+                      "label": "Errors"
+                    }
+                  ]
+                },
+                {
+                  "id": "10241",
+                  "label": "DrChrono",
+                  "children": [
+                    {
+                      "id": "10612",
+                      "label": "Blood Lab Order Issues"
+                    },
+                    {
+                      "id": "10306",
+                      "label": "BUG"
+                    },
+                    {
+                      "id": "10305",
+                      "label": "Create User"
+                    },
+                    {
+                      "id": "10257",
+                      "label": "Errors"
+                    },
+                    {
+                      "id": "10258",
+                      "label": "Feature Request"
+                    },
+                    {
+                      "id": "10261",
+                      "label": "Outage"
+                    },
+                    {
+                      "id": "10304",
+                      "label": "Patient sync issue"
+                    },
+                    {
+                      "id": "10256",
+                      "label": "PW/Access Issues"
+                    },
+                    {
+                      "id": "10338",
+                      "label": "Report Issues"
+                    },
+                    {
+                      "id": "10611",
+                      "label": "SSO Access"
+                    },
+                    {
+                      "id": "10259",
+                      "label": "Other"
+                    }
+                  ]
+                },
+                {
+                  "id": "10318",
+                  "label": "Hardware",
+                  "children": [
+                    {
+                      "id": "10321",
+                      "label": "Computer"
+                    },
+                    {
+                      "id": "10616",
+                      "label": "iPad"
+                    },
+                    {
+                      "id": "10617",
+                      "label": "iPhone"
+                    },
+                    {
+                      "id": "10320",
+                      "label": "Phone/Headset"
+                    },
+                    {
+                      "id": "10319",
+                      "label": "Printer"
+                    },
+                    {
+                      "id": "10618",
+                      "label": "POS Device"
+                    },
+                    {
+                      "id": "10322",
+                      "label": "Other"
+                    }
+                  ]
+                },
+                {
+                  "id": "10254",
+                  "label": "Marketing Cloud",
+                  "children": []
+                },
+                {
+                  "id": "10244",
+                  "label": "Office365",
+                  "children": [
+                    {
+                      "id": "10613",
+                      "label": "Distro List"
+                    },
+                    {
+                      "id": "10614",
+                      "label": "Inbox Access"
+                    },
+                    {
+                      "id": "10265",
+                      "label": "PW/Access Issues"
+                    },
+                    {
+                      "id": "10268",
+                      "label": "Sharepoint Requests/ Issues"
+                    },
+                    {
+                      "id": "10270",
+                      "label": "SSO Issues"
+                    },
+                    {
+                      "id": "10267",
+                      "label": "Other"
+                    }
+                  ]
+                },
+                {
+                  "id": "10252",
+                  "label": "Patient Portal",
+                  "children": [
+                    {
+                      "id": "10642",
+                      "label": "MGT Results Issues"
+                    },
+                    {
+                      "id": "10643",
+                      "label": "PGT Result Issues"
+                    },
+                    {
+                      "id": "10644",
+                      "label": "360 Result issues"
+                    },
+                    {
+                      "id": "10645",
+                      "label": "Gut Health Result Issues"
+                    },
+                    {
+                      "id": "10646",
+                      "label": "Patient Agreement Issues"
+                    },
+                    {
+                      "id": "10337",
+                      "label": "Account Corrections"
+                    },
+                    {
+                      "id": "10309",
+                      "label": "BUG"
+                    },
+                    {
+                      "id": "10341",
+                      "label": "MyWellness Login Issues"
+                    },
+                    {
+                      "id": "10378",
+                      "label": "MyWellness PGT Registration"
+                    }
+                  ]
+                },
+                {
+                  "id": "10251",
+                  "label": "Product Requests",
+                  "children": [
+                    {
+                      "id": "10291",
+                      "label": "Add"
+                    },
+                    {
+                      "id": "10292",
+                      "label": "Change"
+                    },
+                    {
+                      "id": "10293",
+                      "label": "Remove"
+                    }
+                  ]
+                },
+                {
+                  "id": "10255",
+                  "label": "Salesforce",
+                  "children": [
+                    {
+                      "id": "10317",
+                      "label": "BUG"
+                    },
+                    {
+                      "id": "10296",
+                      "label": "Commission"
+                    },
+                    {
+                      "id": "10297",
+                      "label": "Duplicates"
+                    },
+                    {
+                      "id": "10298",
+                      "label": "Errors"
+                    },
+                    {
+                      "id": "10299",
+                      "label": "Feature/ Change Requests"
+                    },
+                    {
+                      "id": "10312",
+                      "label": "GT Issues"
+                    },
+                    {
+                      "id": "10336",
+                      "label": "Lab Order Issues"
+                    },
+                    {
+                      "id": "10311",
+                      "label": "Opp/Account corrections"
+                    },
+                    {
+                      "id": "10294",
+                      "label": "SF Report Request"
+                    },
+                    {
+                      "id": "10295",
+                      "label": "Permissions/ Access Issues"
+                    },
+                    {
+                      "id": "10313",
+                      "label": "Refund"
+                    },
+                    {
+                      "id": "10609",
+                      "label": "SMS/ Phone Issues"
+                    },
+                    {
+                      "id": "10314",
+                      "label": "Transaction Issue"
+                    },
+                    {
+                      "id": "10610",
+                      "label": "User Creation/ Employee Account Issues"
+                    },
+                    {
+                      "id": "10303",
+                      "label": "Other Issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "10340",
+                  "label": "Security Concern",
+                  "children": []
+                },
+                {
+                  "id": "10246",
+                  "label": "ShipStation/Lacore",
+                  "children": [
+                    {
+                      "id": "10276",
+                      "label": "API connection"
+                    },
+                    {
+                      "id": "10308",
+                      "label": "BUG"
+                    },
+                    {
+                      "id": "10275",
+                      "label": "Errors"
+                    },
+                    {
+                      "id": "10277",
+                      "label": "Feature request"
+                    }
+                  ]
+                },
+                {
+                  "id": "11985",
+                  "label": "SMS Magic",
+                  "children": [
+                    {
+                      "id": "11993",
+                      "label": "Access Issues"
+                    },
+                    {
+                      "id": "11994",
+                      "label": "Bug/ Error"
+                    },
+                    {
+                      "id": "11996",
+                      "label": "Technical Issue"
+                    },
+                    {
+                      "id": "11997",
+                      "label": "Other"
+                    }
+                  ]
+                },
+                {
+                  "id": "10242",
+                  "label": "Shopify/POS",
+                  "children": [
+                    {
+                      "id": "10262",
+                      "label": "Access Issues"
+                    },
+                    {
+                      "id": "10263",
+                      "label": "Order issues"
+                    },
+                    {
+                      "id": "10264",
+                      "label": "API/ Development request"
+                    },
+                    {
+                      "id": "10307",
+                      "label": "BUG"
+                    }
+                  ]
+                },
+                {
+                  "id": "10619",
+                  "label": "Software Access",
+                  "children": [
+                    {
+                      "id": "10620",
+                      "label": "Request Access"
+                    }
+                  ]
+                },
+                {
+                  "id": "11205",
+                  "label": "Vonage",
+                  "children": [
+                    {
+                      "id": "11206",
+                      "label": "Access Issues"
+                    },
+                    {
+                      "id": "11207",
+                      "label": "Connectivity Issues"
+                    },
+                    {
+                      "id": "11208",
+                      "label": "Phone Issues"
+                    },
+                    {
+                      "id": "11209",
+                      "label": "Reporting"
+                    },
+                    {
+                      "id": "11210",
+                      "label": "Other"
+                    }
+                  ]
+                },
+                {
+                  "id": "10249",
+                  "label": "Zoom",
+                  "children": [
+                    {
+                      "id": "10286",
+                      "label": "Access issues"
+                    },
+                    {
+                      "id": "10287",
+                      "label": "License issues"
+                    },
+                    {
+                      "id": "10288",
+                      "label": "Technical issues"
+                    }
+                  ]
+                },
+                {
+                  "id": "10301",
+                  "label": "Other",
+                  "children": [
+                    {
+                      "id": "10302",
+                      "label": "Other Issues"
+                    }
+                  ]
+                }
+              ],
+              "description": "Ex: Salesforce, Dr. Chrono, etc.",
+              "jiraField": "customfield_10087",
+              "label": "System affected",
+              "questionKey": "",
+              "type": "cc",
+              "validation": {
+                "rq": true
+              }
+            },
+            "5": {
+              "choices": [],
+              "description": "Please link only one record here, add secondary links to the Description of the Problem field.",
+              "label": "Record Link ",
+              "questionKey": "",
+              "type": "tu",
+              "validation": {
+                "rq": true
+              }
+            },
+            "21": {
+              "description": "Select users that you would like to have the ability to view this ticket.",
+              "jiraField": "customfield_10032",
+              "label": "Stakeholders/Watchers",
+              "questionKey": "",
+              "type": "um",
+              "validation": {
+                "rq": false
+              }
+            },
+            "7": {
+              "description": "",
+              "jiraField": "customfield_10195",
+              "label": "Description of problem",
+              "questionKey": "",
+              "type": "rt",
+              "validation": {
+                "rq": true
+              }
+            },
+            "17": {
+              "description": "",
+              "jiraField": "summary",
+              "label": "Subject ",
+              "questionKey": "",
+              "type": "tl",
+              "validation": {
+                "rq": true
+              }
+            },
+            "14": {
+              "choices": [],
+              "description": "",
+              "label": "Attachments",
+              "questionKey": "",
+              "type": "at",
+              "validation": {
+                "rq": false
+              }
+            }
+          },
+          "sections": {
+            "1": {
+              "sectionType": "b",
+              "name": "SF record information",
+              "conditions": []
+            }
+          },
+          "settings": {
+            "name": "General Help Desk Request",
+            "submit": {
+              "lock": false,
+              "pdf": false
+            }
+          }
+        },
+        "state": {
+          "visibility": "e",
+          "status": "s",
+          "answers": {
+            "23": {
+              "text": "",
+              "choices": [
+                "12076"
+              ]
+            },
+            "15": {
+              "text": "",
+              "choices": [
+                "10478"
+              ]
+            },
+            "22": {
+              "text": "",
+              "choices": [
+                "12074"
+              ]
+            },
+            "16": {
+              "choices": [
+                "10255:10317"
+              ]
+            },
+            "5": {
+              "text": "https://10xhealth.lightning.force.com/lightning/r/Account/001Ql00000vOfMFIA0/view"
+            },
+            "21": {
+              "users": []
+            },
+            "7": {
+              "adf": {
+                "version": 1,
+                "type": "doc",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Please see list of SF links where patient agreements were not sent to new patients.  This is a critical issue and needs escalation ASAP.  Our current “work around” is not compliant enough.  We are using emailed PDF forms to collect consent, but it is not a guarantee that we will receive it before treatment.  We are working on getting necessary team members licenses to Adobe Sign, but it’s taking time."
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Not seeing the auto triggered email for the portal activation email and no consents were sent."
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "inlineCard",
+                        "attrs": {
+                          "url": "https://10xhealth.lightning.force.com/lightning/r/Account/001Rh0000072TY9IAM/view"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "text": " "
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "portal instructions were sent, nothing else was sent"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "inlineCard",
+                        "attrs": {
+                          "url": "https://10xhealth.lightning.force.com/lightning/r/Account/001Ql00000v8ykaIAA/view"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "text": " "
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "noting has been sent to this patient "
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "inlineCard",
+                        "attrs": {
+                          "url": "https://10xhealth.lightning.force.com/lightning/r/Account/001Ql00000v94S3IAI/view"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "text": " "
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "17": {
+              "text": "Consents are not automatically sending to all new patients"
+            },
+            "14": {
+              "files": []
+            }
+          }
+        }
+      },
+      "answers": [
+        {
+          "label": "Attachments",
+          "answer": ""
+        },
+        {
+          "label": "Stakeholders/Watchers",
+          "fieldKey": "customfield_10032",
+          "answer": ""
+        },
+        {
+          "label": "Subject ",
+          "fieldKey": "summary",
+          "answer": "Consents are not automatically sending to all new patients"
+        },
+        {
+          "label": "Description of problem",
+          "fieldKey": "customfield_10195",
+          "answer": "Please see list of SF links where patient agreements were not sent to new patients.  This is a critical issue and needs escalation ASAP.  Our current “work around” is not compliant enough.  We are using emailed PDF forms to collect consent, but it is not a guarantee that we will receive it before treatment.  We are working on getting necessary team members licenses to Adobe Sign, but it’s taking time.\nNot seeing the auto triggered email for the portal activation email and no consents were sent.\nhttps://10xhealth.lightning.force.com/lightning/r/Account/001Rh0000072TY9IAM/view \nportal instructions were sent, nothing else was sent\nhttps://10xhealth.lightning.force.com/lightning/r/Account/001Ql00000v8ykaIAA/view \nnoting has been sent to this patient \nhttps://10xhealth.lightning.force.com/lightning/r/Account/001Ql00000v94S3IAI/view"
+        },
+        {
+          "label": "Record Link ",
+          "answer": "https://10xhealth.lightning.force.com/lightning/r/Account/001Ql00000vOfMFIA0/view"
+        },
+        {
+          "label": " Department",
+          "fieldKey": "customfield_10158",
+          "answer": "Clinical",
+          "choice": "10478"
+        },
+        {
+          "label": "How many people or records are affected?",
+          "fieldKey": "customfield_11667",
+          "answer": "Multiple teams, departments, or large numbers of records",
+          "choice": "12074"
+        },
+        {
+          "label": "How does this impact your work?",
+          "fieldKey": "customfield_11668",
+          "answer": "I can continue with a workaround",
+          "choice": "12076"
+        },
+        {
+          "label": "System affected",
+          "fieldKey": "customfield_10087",
+          "answer": "Salesforce - BUG",
+          "choice": "10255:10317"
+        }
+      ],
+      "externalData": {
+        "fields": {
+          "23": {
+            "choices": [
+              {
+                "id": "12075",
+                "name": "My work is not affected"
+              },
+              {
+                "id": "12076",
+                "name": "I can continue with a workaround"
+              },
+              {
+                "id": "12077",
+                "name": "I am completely blocked"
+              }
+            ],
+            "jiraField": {
+              "id": "customfield_11668",
+              "configId": "11908",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:select",
+              "type": "option"
+            },
+            "answer": {
+              "choices": [
+                {
+                  "id": "12076",
+                  "name": "I can continue with a workaround"
+                }
+              ]
+            }
+          },
+          "15": {
+            "choices": [
+              {
+                "id": "10478",
+                "name": "Clinical"
+              },
+              {
+                "id": "10477",
+                "name": "Accounting"
+              },
+              {
+                "id": "10479",
+                "name": "Customer Support"
+              },
+              {
+                "id": "10480",
+                "name": "Finance"
+              },
+              {
+                "id": "10481",
+                "name": "Legal"
+              },
+              {
+                "id": "10482",
+                "name": "Marketing"
+              },
+              {
+                "id": "10483",
+                "name": "Operations"
+              },
+              {
+                "id": "10484",
+                "name": "Supply Chain"
+              },
+              {
+                "id": "10485",
+                "name": "Technology"
+              },
+              {
+                "id": "10486",
+                "name": "Wellness"
+              }
+            ],
+            "jiraField": {
+              "id": "customfield_10158",
+              "configId": "10266",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:select",
+              "type": "option"
+            },
+            "answer": {
+              "choices": [
+                {
+                  "id": "10478",
+                  "name": "Clinical"
+                }
+              ]
+            }
+          },
+          "22": {
+            "choices": [
+              {
+                "id": "12072",
+                "name": "Only me or one record"
+              },
+              {
+                "id": "12073",
+                "name": "A small team or multiple records"
+              },
+              {
+                "id": "12074",
+                "name": "Multiple teams, departments, or large numbers of records"
+              }
+            ],
+            "jiraField": {
+              "id": "customfield_11667",
+              "configId": "11907",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:select",
+              "type": "option"
+            },
+            "answer": {
+              "choices": [
+                {
+                  "id": "12074",
+                  "name": "Multiple teams, departments, or large numbers of records"
+                }
+              ]
+            }
+          },
+          "16": {
+            "choices": [
+              {
+                "id": "10250",
+                "name": "Active Campaign",
+                "children": [
+                  {
+                    "id": "10289",
+                    "name": "Access issues"
+                  },
+                  {
+                    "id": "10290",
+                    "name": "Technical issues"
+                  }
+                ]
+              },
+              {
+                "id": "10253",
+                "name": "Alloware",
+                "children": [
+                  {
+                    "id": "10283",
+                    "name": "Access Issues"
+                  },
+                  {
+                    "id": "10284",
+                    "name": "Connectivity Issues"
+                  },
+                  {
+                    "id": "10285",
+                    "name": "Phone issues"
+                  }
+                ]
+              },
+              {
+                "id": "10248",
+                "name": "Bright Pattern/ Alloware",
+                "children": [
+                  {
+                    "id": "10280",
+                    "name": "Access Issues"
+                  },
+                  {
+                    "id": "10281",
+                    "name": "Connectivity Issues"
+                  },
+                  {
+                    "id": "10282",
+                    "name": "Phone issues"
+                  },
+                  {
+                    "id": "10615",
+                    "name": "Other"
+                  }
+                ]
+              },
+              {
+                "id": "10245",
+                "name": "DBSync/ Quickbooks",
+                "children": [
+                  {
+                    "id": "10273",
+                    "name": "Errors"
+                  },
+                  {
+                    "id": "10274",
+                    "name": "Feature request"
+                  },
+                  {
+                    "id": "10272",
+                    "name": "Server down"
+                  },
+                  {
+                    "id": "10271",
+                    "name": "Software down"
+                  }
+                ]
+              },
+              {
+                "id": "10247",
+                "name": "DocGen",
+                "children": [
+                  {
+                    "id": "10278",
+                    "name": "Errors"
+                  }
+                ]
+              },
+              {
+                "id": "10241",
+                "name": "DrChrono",
+                "children": [
+                  {
+                    "id": "10612",
+                    "name": "Blood Lab Order Issues"
+                  },
+                  {
+                    "id": "10306",
+                    "name": "BUG"
+                  },
+                  {
+                    "id": "10305",
+                    "name": "Create User"
+                  },
+                  {
+                    "id": "10257",
+                    "name": "Errors"
+                  },
+                  {
+                    "id": "10258",
+                    "name": "Feature Request"
+                  },
+                  {
+                    "id": "10261",
+                    "name": "Outage"
+                  },
+                  {
+                    "id": "10304",
+                    "name": "Patient sync issue"
+                  },
+                  {
+                    "id": "10256",
+                    "name": "PW/Access Issues"
+                  },
+                  {
+                    "id": "10338",
+                    "name": "Report Issues"
+                  },
+                  {
+                    "id": "10611",
+                    "name": "SSO Access"
+                  },
+                  {
+                    "id": "10259",
+                    "name": "Other"
+                  }
+                ]
+              },
+              {
+                "id": "10318",
+                "name": "Hardware",
+                "children": [
+                  {
+                    "id": "10321",
+                    "name": "Computer"
+                  },
+                  {
+                    "id": "10616",
+                    "name": "iPad"
+                  },
+                  {
+                    "id": "10617",
+                    "name": "iPhone"
+                  },
+                  {
+                    "id": "10320",
+                    "name": "Phone/Headset"
+                  },
+                  {
+                    "id": "10319",
+                    "name": "Printer"
+                  },
+                  {
+                    "id": "10618",
+                    "name": "POS Device"
+                  },
+                  {
+                    "id": "10322",
+                    "name": "Other"
+                  }
+                ]
+              },
+              {
+                "id": "10254",
+                "name": "Marketing Cloud",
+                "children": []
+              },
+              {
+                "id": "10244",
+                "name": "Office365",
+                "children": [
+                  {
+                    "id": "10613",
+                    "name": "Distro List"
+                  },
+                  {
+                    "id": "10614",
+                    "name": "Inbox Access"
+                  },
+                  {
+                    "id": "10265",
+                    "name": "PW/Access Issues"
+                  },
+                  {
+                    "id": "10268",
+                    "name": "Sharepoint Requests/ Issues"
+                  },
+                  {
+                    "id": "10270",
+                    "name": "SSO Issues"
+                  },
+                  {
+                    "id": "10267",
+                    "name": "Other"
+                  }
+                ]
+              },
+              {
+                "id": "10252",
+                "name": "Patient Portal",
+                "children": [
+                  {
+                    "id": "10642",
+                    "name": "MGT Results Issues"
+                  },
+                  {
+                    "id": "10643",
+                    "name": "PGT Result Issues"
+                  },
+                  {
+                    "id": "10644",
+                    "name": "360 Result issues"
+                  },
+                  {
+                    "id": "10645",
+                    "name": "Gut Health Result Issues"
+                  },
+                  {
+                    "id": "10646",
+                    "name": "Patient Agreement Issues"
+                  },
+                  {
+                    "id": "10337",
+                    "name": "Account Corrections"
+                  },
+                  {
+                    "id": "10309",
+                    "name": "BUG"
+                  },
+                  {
+                    "id": "10341",
+                    "name": "MyWellness Login Issues"
+                  },
+                  {
+                    "id": "10378",
+                    "name": "MyWellness PGT Registration"
+                  }
+                ]
+              },
+              {
+                "id": "10251",
+                "name": "Product Requests",
+                "children": [
+                  {
+                    "id": "10291",
+                    "name": "Add"
+                  },
+                  {
+                    "id": "10292",
+                    "name": "Change"
+                  },
+                  {
+                    "id": "10293",
+                    "name": "Remove"
+                  }
+                ]
+              },
+              {
+                "id": "10255",
+                "name": "Salesforce",
+                "children": [
+                  {
+                    "id": "10317",
+                    "name": "BUG"
+                  },
+                  {
+                    "id": "10296",
+                    "name": "Commission"
+                  },
+                  {
+                    "id": "10297",
+                    "name": "Duplicates"
+                  },
+                  {
+                    "id": "10298",
+                    "name": "Errors"
+                  },
+                  {
+                    "id": "10299",
+                    "name": "Feature/ Change Requests"
+                  },
+                  {
+                    "id": "10312",
+                    "name": "GT Issues"
+                  },
+                  {
+                    "id": "10336",
+                    "name": "Lab Order Issues"
+                  },
+                  {
+                    "id": "10311",
+                    "name": "Opp/Account corrections"
+                  },
+                  {
+                    "id": "10294",
+                    "name": "SF Report Request"
+                  },
+                  {
+                    "id": "10295",
+                    "name": "Permissions/ Access Issues"
+                  },
+                  {
+                    "id": "10313",
+                    "name": "Refund"
+                  },
+                  {
+                    "id": "10609",
+                    "name": "SMS/ Phone Issues"
+                  },
+                  {
+                    "id": "10314",
+                    "name": "Transaction Issue"
+                  },
+                  {
+                    "id": "10610",
+                    "name": "User Creation/ Employee Account Issues"
+                  },
+                  {
+                    "id": "10303",
+                    "name": "Other Issues"
+                  }
+                ]
+              },
+              {
+                "id": "10340",
+                "name": "Security Concern",
+                "children": []
+              },
+              {
+                "id": "10246",
+                "name": "ShipStation/Lacore",
+                "children": [
+                  {
+                    "id": "10276",
+                    "name": "API connection"
+                  },
+                  {
+                    "id": "10308",
+                    "name": "BUG"
+                  },
+                  {
+                    "id": "10275",
+                    "name": "Errors"
+                  },
+                  {
+                    "id": "10277",
+                    "name": "Feature request"
+                  }
+                ]
+              },
+              {
+                "id": "11985",
+                "name": "SMS Magic",
+                "children": [
+                  {
+                    "id": "11993",
+                    "name": "Access Issues"
+                  },
+                  {
+                    "id": "11994",
+                    "name": "Bug/ Error"
+                  },
+                  {
+                    "id": "11996",
+                    "name": "Technical Issue"
+                  },
+                  {
+                    "id": "11997",
+                    "name": "Other"
+                  }
+                ]
+              },
+              {
+                "id": "10242",
+                "name": "Shopify/POS",
+                "children": [
+                  {
+                    "id": "10262",
+                    "name": "Access Issues"
+                  },
+                  {
+                    "id": "10263",
+                    "name": "Order issues"
+                  },
+                  {
+                    "id": "10264",
+                    "name": "API/ Development request"
+                  },
+                  {
+                    "id": "10307",
+                    "name": "BUG"
+                  }
+                ]
+              },
+              {
+                "id": "10619",
+                "name": "Software Access",
+                "children": [
+                  {
+                    "id": "10620",
+                    "name": "Request Access"
+                  }
+                ]
+              },
+              {
+                "id": "11205",
+                "name": "Vonage",
+                "children": [
+                  {
+                    "id": "11206",
+                    "name": "Access Issues"
+                  },
+                  {
+                    "id": "11207",
+                    "name": "Connectivity Issues"
+                  },
+                  {
+                    "id": "11208",
+                    "name": "Phone Issues"
+                  },
+                  {
+                    "id": "11209",
+                    "name": "Reporting"
+                  },
+                  {
+                    "id": "11210",
+                    "name": "Other"
+                  }
+                ]
+              },
+              {
+                "id": "10249",
+                "name": "Zoom",
+                "children": [
+                  {
+                    "id": "10286",
+                    "name": "Access issues"
+                  },
+                  {
+                    "id": "10287",
+                    "name": "License issues"
+                  },
+                  {
+                    "id": "10288",
+                    "name": "Technical issues"
+                  }
+                ]
+              },
+              {
+                "id": "10301",
+                "name": "Other",
+                "children": [
+                  {
+                    "id": "10302",
+                    "name": "Other Issues"
+                  }
+                ]
+              }
+            ],
+            "jiraField": {
+              "id": "customfield_10087",
+              "configId": "10190",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:cascadingselect",
+              "type": "option-with-child"
+            },
+            "answer": {
+              "choices": [
+                {
+                  "id": "10255:10317",
+                  "name": "Salesforce - BUG"
+                }
+              ]
+            }
+          },
+          "21": {
+            "jiraField": {
+              "id": "customfield_10032",
+              "configId": "10132",
+              "custom": "com.atlassian.servicedesk:sd-request-participants",
+              "type": "array"
+            },
+            "answer": {
+              "users": []
+            }
+          },
+          "17": {
+            "jiraField": {
+              "id": "summary",
+              "system": "summary",
+              "type": "string"
+            },
+            "answer": {
+              "text": "Consents are not automatically sending to all new patients"
+            }
+          },
+          "7": {
+            "jiraField": {
+              "id": "customfield_10195",
+              "configId": "10304",
+              "custom": "com.atlassian.jira.plugin.system.customfieldtypes:textarea",
+              "type": "string"
+            },
+            "answer": {
+              "adf": {
+                "type": "doc",
+                "version": 1,
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Please see list of SF links where patient agreements were not sent to new patients.  This is a critical issue and needs escalation ASAP.  Our current “work around” is not compliant enough.  We are using emailed PDF forms to collect consent, but it is not a guarantee that we will receive it before treatment.  We are working on getting necessary team members licenses to Adobe Sign, but it’s taking time."
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Not seeing the auto triggered email for the portal activation email and no consents were sent."
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "inlineCard",
+                        "attrs": {
+                          "url": "https://10xhealth.lightning.force.com/lightning/r/Account/001Rh0000072TY9IAM/view"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "text": " "
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "portal instructions were sent, nothing else was sent"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "inlineCard",
+                        "attrs": {
+                          "url": "https://10xhealth.lightning.force.com/lightning/r/Account/001Ql00000v8ykaIAA/view"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "text": " "
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "noting has been sent to this patient "
+                      }
+                    ]
+                  },
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "inlineCard",
+                        "attrs": {
+                          "url": "https://10xhealth.lightning.force.com/lightning/r/Account/001Ql00000v94S3IAI/view"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "text": " "
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "attachmentMetadata": {
+        "fields": {}
+      }
+    }
+  ],
+  "fieldNames": {
+    "summary": "Summary",
+    "status": "Status",
+    "priority": "Priority",
+    "duedate": "Due date",
+    "assignee": "Assignee",
+    "reporter": "Reporter",
+    "description": "Description",
+    "created": "Created",
+    "updated": "Updated",
+    "attachment": "Attachment",
+    "customfield_10010": "Request Type",
+    "customfield_10032": "Request participants",
+    "customfield_10194": "Summary",
+    "customfield_10195": "Description"
+  },
+  "fieldMapPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/field-map.json",
+  "cloudId": "9fb9876a-39bd-4ca8-93e6-30f1ac1ecc84",
+  "syncedAt": "2026-05-24T19:16:21+00:00"
+}

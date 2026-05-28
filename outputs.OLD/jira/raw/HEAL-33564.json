@@ -1,0 +1,1220 @@
+{
+  "issue": {
+    "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations,customfield_10010.requestTypePractice",
+    "id": "76996",
+    "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/76996",
+    "key": "HEAL-33564",
+    "fields": {
+      "summary": "Re: HEAL-33418 Unable to send a informed consent",
+      "attachment": [],
+      "created": "2026-05-11T11:40:30.298-0400",
+      "customfield_10194": null,
+      "customfield_10195": null,
+      "description": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hi!",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#172b4d"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "  "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "When I send a patient consent, I use the sf tab to send. I will click the informed consent and click send but then I do not see it shown as sent on the list.",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#172b4d"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "  "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "From:",
+                "marks": [
+                  {
+                    "type": "strong"
+                  },
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#172b4d"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "  Sean Bingham <jira@10xhealthsystem.atlassian.net>",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#172b4d"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Date:",
+                "marks": [
+                  {
+                    "type": "strong"
+                  },
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#172b4d"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "  Monday, May 11, 2026 at 11:25 AM",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#172b4d"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "To:",
+                "marks": [
+                  {
+                    "type": "strong"
+                  },
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#172b4d"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "  Stephanie Silva <SSilva@10xhealthsystem.com>",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#172b4d"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Subject:",
+                "marks": [
+                  {
+                    "type": "strong"
+                  },
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#172b4d"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "  ",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#172b4d"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "inlineCard",
+                "attrs": {
+                  "url": "https://10xhealthsystem.atlassian.net/browse/HEAL-33418#icft=HEAL-33418"
+                }
+              },
+              {
+                "type": "text",
+                "text": " Unable to send a informed consent",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#172b4d"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "—-—-—-—",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#999999"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Reply above this line.",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#999999"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "  "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Sean Bingham commented: "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "_Hey Steph, "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Is this similar to a previous issue, "
+              },
+              {
+                "type": "text",
+                "text": "https://10xhealthsystem.atlassian.net/browse/HEAL-32649",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://10xhealthsystem.atlassian.net/browse/HEAL-32649"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " , or something different? "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Can you please explain the steps you are taking and which part is not working? Any errors or alerts? "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Thank you, "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Sean Bingham"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Salesforce Administrator",
+                "marks": [
+                  {
+                    "type": "em"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "10X Health Help Desk Support_ "
+              }
+            ]
+          },
+          {
+            "type": "rule"
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "HEAL-33418:",
+                "marks": [
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " Unable to send a informed consent "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Current Status:",
+                "marks": [
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "   "
+              },
+              {
+                "type": "text",
+                "text": "In Progress",
+                "marks": [
+                  {
+                    "type": "strong"
+                  },
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#4c9aff"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "View Ticket:",
+                "marks": [
+                  {
+                    "type": "em"
+                  },
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              },
+              {
+                "type": "text",
+                "text": "https://10xhealthsystem.atlassian.net/servicedesk/customer/portal/1/HEAL-33418?sda_source=notification-email",
+                "marks": [
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://10xhealthsystem.atlassian.net/servicedesk/customer/portal/1/HEAL-33418?sda_source=notification-email"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "  "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "View request",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#3572b0"
+                    }
+                  },
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://10xhealthsystem.atlassian.net/servicedesk/customer/portal/1/HEAL-33418?sda_source=notification-email"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " · "
+              },
+              {
+                "type": "text",
+                "text": "Turn off this request's notifications",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#3572b0"
+                    }
+                  },
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://10xhealthsystem.atlassian.net/servicedesk/customer/portal/1/HEAL-33418/unsubscribe?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0Z3QiOiJhbm9ueW1vdXMtbGluayIsInFzaCI6ImEwMjEwYTM5NGQ2YTMzNGZmNTMwMDdhYTM1Nzk2OTJiYTRjN2FlNDcwNzEzZDlhODIyMTE2M2Y5M2NlZWVkMmYiLCJpc3MiOiJzZXJ2aWNlZGVzay1qd3QtdG9rZW4taXNzdWVyIiwiY29udGV4dCI6eyJ1c2VyIjoicW06MWQ5MjVhMDctMDcxZC00M2M5LWI5N2EtNWFiNjFlYThkYTU5OmUzYTkxNzI5LWQ4ZjctNDdjZS1hMGE0LTk4ZWE3NTE3NDAxMSIsImlzc3VlIjoiSEVBTC0zMzQxOCJ9LCJleHAiOjE3ODA5MzIzMTMsImlhdCI6MTc3ODUxMzExM30.nCtXVswwYgAr5QUjmsXtEl_X1eUEMO3tiKMHvP1iRBs"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "This is shared with Steph SIlva.",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#707070"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Powered by Jira Service Management",
+                "marks": [
+                  {
+                    "type": "textColor",
+                    "attrs": {
+                      "color": "#707070"
+                    }
+                  },
+                  {
+                    "type": "link",
+                    "attrs": {
+                      "href": "https://www.atlassian.com/software/jira/service-desk/powered-by?utm_medium=jira-in-product&utm_source=jira_service_desk_email_footer&utm_content=10xhealthsystem"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "expand",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Many thanks,",
+                    "marks": [
+                      {
+                        "type": "strong"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " "
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Steph Silva",
+                    "marks": [
+                      {
+                        "type": "strong"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " "
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Lead Lab Coordinator",
+                    "marks": [
+                      {
+                        "type": "textColor",
+                        "attrs": {
+                          "color": "#172b4d"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " "
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "10",
+                    "marks": [
+                      {
+                        "type": "strong"
+                      },
+                      {
+                        "type": "textColor",
+                        "attrs": {
+                          "color": "#222222"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " "
+                  },
+                  {
+                    "type": "text",
+                    "text": "X",
+                    "marks": [
+                      {
+                        "type": "strong"
+                      },
+                      {
+                        "type": "textColor",
+                        "attrs": {
+                          "color": "#ff0000"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": " "
+                  },
+                  {
+                    "type": "text",
+                    "text": "Health",
+                    "marks": [
+                      {
+                        "type": "textColor",
+                        "attrs": {
+                          "color": "#172b4d"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "text": "  "
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "10xhealthsystem.com",
+                    "marks": [
+                      {
+                        "type": "textColor",
+                        "attrs": {
+                          "color": "#1155cc"
+                        }
+                      },
+                      {
+                        "type": "link",
+                        "attrs": {
+                          "href": "https://10xhealthsystem.com/"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "attrs": {
+              "title": "Signature"
+            }
+          }
+        ]
+      },
+      "customfield_10032": [],
+      "reporter": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ad8665556-d63c-48a8-8fe4-88e43803ddad",
+        "accountId": "712020:d8665556-d63c-48a8-8fe4-88e43803ddad",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/0d30776f62d9babc923be22c7c24b4eb?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSS-5.png",
+          "24x24": "https://secure.gravatar.com/avatar/0d30776f62d9babc923be22c7c24b4eb?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSS-5.png",
+          "16x16": "https://secure.gravatar.com/avatar/0d30776f62d9babc923be22c7c24b4eb?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSS-5.png",
+          "32x32": "https://secure.gravatar.com/avatar/0d30776f62d9babc923be22c7c24b4eb?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSS-5.png"
+        },
+        "displayName": "Steph Silva",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "customfield_10010": {
+        "_links": {
+          "jiraRest": "https://10xhealthsystem.atlassian.net/rest/api/2/issue/76996",
+          "web": "https://10xhealthsystem.atlassian.net/servicedesk/customer/portal/1/HEAL-33564",
+          "agent": "https://10xhealthsystem.atlassian.net/browse/HEAL-33564",
+          "self": "https://10xhealthsystem.atlassian.net/rest/servicedeskapi/request/76996"
+        },
+        "requestType": {
+          "_expands": [
+            "field"
+          ],
+          "id": "3",
+          "_links": {
+            "self": "https://10xhealthsystem.atlassian.net/rest/servicedeskapi/servicedesk/1/requesttype/3"
+          },
+          "name": "Emailed request",
+          "description": "Request received from your email support channel.",
+          "helpText": "",
+          "defaultName": "Emailed request",
+          "issueTypeId": "10003",
+          "serviceDeskId": "1",
+          "portalId": "1",
+          "groupIds": [],
+          "icon": {
+            "id": "10527",
+            "_links": {
+              "iconUrls": {
+                "48x48": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10527?size=large",
+                "24x24": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10527?size=small",
+                "16x16": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10527?size=xsmall",
+                "32x32": "https://10xhealthsystem.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10527?size=medium"
+              }
+            }
+          }
+        },
+        "currentStatus": {
+          "status": "Canceled",
+          "statusCategory": "DONE",
+          "statusDate": {
+            "iso8601": "2026-05-12T18:06:54-0400",
+            "jira": "2026-05-12T18:06:54.365-0400",
+            "friendly": "Today 6:06 PM",
+            "epochMillis": 1778623614365
+          }
+        }
+      },
+      "assignee": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "updated": "2026-05-12T18:06:54.365-0400",
+      "status": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/status/10004",
+        "description": "This was auto-generated by Jira Service Management during workflow import",
+        "iconUrl": "https://10xhealthsystem.atlassian.net/images/icons/status_generic.gif",
+        "name": "Canceled",
+        "id": "10004",
+        "statusCategory": {
+          "self": "https://10xhealthsystem.atlassian.net/rest/api/3/statuscategory/3",
+          "id": 3,
+          "key": "done",
+          "colorName": "green",
+          "name": "Done"
+        }
+      }
+    }
+  },
+  "comments": [
+    {
+      "self": "https://10xhealthsystem.atlassian.net/rest/api/3/issue/76996/comment/114924",
+      "id": "114924",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Hello Steph Silva ,"
+              }
+            ],
+            "attrs": {
+              "localId": "52d99299fd70"
+            }
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "We have assigned your request HEAL-33564 to an appropriate Help Desk team member. They will reach out to you shortly with an update.  "
+              }
+            ],
+            "attrs": {
+              "localId": "6dd8646cf8a4"
+            }
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": " "
+              }
+            ],
+            "attrs": {
+              "localId": "52d99299fd70"
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "localId": "9f8dc63f5907"
+            }
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Regards, ",
+                "marks": [
+                  {
+                    "type": "em"
+                  },
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Genevieve Aguilar"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Tier 1 Tech Support",
+                "marks": [
+                  {
+                    "type": "em"
+                  }
+                ]
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "10x Health Help Desk Support",
+                "marks": [
+                  {
+                    "type": "em"
+                  }
+                ]
+              }
+            ],
+            "attrs": {
+              "localId": "105881242c38"
+            }
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-11T11:44:00.605-0400",
+      "updated": "2026-05-11T11:44:00.605-0400",
+      "jsdPublic": true
+    }
+  ],
+  "changelog": [
+    {
+      "id": "328731",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-05-11T11:40:33.610-0400",
+      "items": [
+        {
+          "field": "Date/Time Created",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10521",
+          "from": null,
+          "fromString": null,
+          "to": "2026-05-11T11:40:00-0400",
+          "toString": "11/May/26 11:40 AM"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "328733",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "app"
+      },
+      "created": "2026-05-11T11:44:03.313-0400",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10001",
+          "fromString": "Waiting for support",
+          "to": "10002",
+          "toString": "Waiting for customer"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "328734",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-11T11:44:30.374-0400",
+      "items": [
+        {
+          "field": "Issue Category",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10087",
+          "from": null,
+          "fromString": null,
+          "to": null,
+          "toString": "Parent values: Salesforce(10255)Level 1 values: Errors(10298)"
+        }
+      ]
+    },
+    {
+      "id": "328735",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-11T11:44:32.830-0400",
+      "items": [
+        {
+          "field": "Tier",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10064",
+          "from": null,
+          "fromString": null,
+          "to": "10110",
+          "toString": "Tier 1"
+        }
+      ]
+    },
+    {
+      "id": "328736",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-11T11:44:34.614-0400",
+      "items": [
+        {
+          "field": "Tier",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10064",
+          "from": "10110",
+          "fromString": "Tier 1",
+          "to": "10111",
+          "toString": "Tier 2"
+        }
+      ]
+    },
+    {
+      "id": "328737",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-11T11:44:36.186-0400",
+      "items": [
+        {
+          "field": "Team",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10065",
+          "from": null,
+          "fromString": null,
+          "to": "10114",
+          "toString": "Tech Team"
+        }
+      ]
+    },
+    {
+      "id": "328738",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-11T11:44:42.213-0400",
+      "items": [
+        {
+          "field": "assignee",
+          "fieldtype": "jira",
+          "fieldId": "assignee",
+          "from": null,
+          "fromString": null,
+          "to": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+          "toString": "Sean Bingham",
+          "tmpFromAccountId": null,
+          "tmpToAccountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff"
+        }
+      ]
+    },
+    {
+      "id": "328739",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3A0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "accountId": "712020:0a9c2154-ca6f-4d34-8177-6c8b01cc8f19",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/f4ffaa40c94344090eed97729bbcc028?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FGA-1.png"
+        },
+        "displayName": "Genevieve Aguilar",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-11T11:44:44.932-0400",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10002",
+          "fromString": "Waiting for customer",
+          "to": "10001",
+          "toString": "Waiting for support"
+        }
+      ]
+    },
+    {
+      "id": "329315",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-12T18:06:54.365-0400",
+      "items": [
+        {
+          "field": "resolution",
+          "fieldtype": "jira",
+          "fieldId": "resolution",
+          "from": null,
+          "fromString": null,
+          "to": "10002",
+          "toString": "Duplicate"
+        },
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10001",
+          "fromString": "Waiting for support",
+          "to": "10004",
+          "toString": "Canceled"
+        }
+      ]
+    },
+    {
+      "id": "329313",
+      "author": {
+        "self": "https://10xhealthsystem.atlassian.net/rest/api/3/user?accountId=712020%3Ab3573639-a431-4ec3-9922-f8f4205342ff",
+        "accountId": "712020:b3573639-a431-4ec3-9922-f8f4205342ff",
+        "emailAddress": "sbingham@10xhealthsystem.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "24x24": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "16x16": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png",
+          "32x32": "https://secure.gravatar.com/avatar/4a9f76674b894776c7c2f0e9aa758214?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-4.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "America/New_York",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-12T18:06:54.380-0400",
+      "items": [
+        {
+          "field": "Link",
+          "fieldtype": "jira",
+          "from": null,
+          "fromString": null,
+          "to": "HEAL-33418",
+          "toString": "This work item duplicates HEAL-33418"
+        }
+      ]
+    }
+  ],
+  "worklogs": [],
+  "attachments": [],
+  "forms": [],
+  "fieldNames": {
+    "summary": "Summary",
+    "status": "Status",
+    "assignee": "Assignee",
+    "reporter": "Reporter",
+    "description": "Description",
+    "created": "Created",
+    "updated": "Updated",
+    "attachment": "Attachment",
+    "customfield_10010": "Request Type",
+    "customfield_10032": "Request participants",
+    "customfield_10194": "Summary",
+    "customfield_10195": "Description"
+  },
+  "fieldMapPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/field-map.json",
+  "cloudId": "9fb9876a-39bd-4ca8-93e6-30f1ac1ecc84",
+  "syncedAt": "2026-05-12T22:07:48+00:00"
+}

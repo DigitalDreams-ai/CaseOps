@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Completed_No_EDIT</fullName>
+    <active>true</active>
+    <description>This validation rule will prevent users from editing Telehealth records after it has been completed
+
+Operations Admin
+System Administrator
+HG SysAdmin
+Finance
+New_Finance
+Shipping Coordinator
+Patient Support Rep
+Nico Cortes</description>
+    <errorConditionFormula>AND(
+ISPICKVAL(PRIORVALUE(StageName),&quot;Completed&quot;),
+NOT($Profile.Id = &quot;00e5a0000018d9a&quot;),
+NOT($UserRole.Id = &quot;00E5a000001BBHR&quot;),
+NOT($Profile.Id = &quot;00e5a000001OuCRAA0&quot;),
+NOT($Profile.Id = &quot;00e0b000001nOvl&quot;),
+NOT($Profile.Id = &quot;00e5a0000018d9G&quot;),
+NOT($UserRole.Id = &quot;00E5a000001QTSr&quot;),
+NOT($UserRole.Id = &quot;00E5a000001QTT6&quot;),
+NOT($User.Id = &quot;0055a000007g7PV&quot;)
+)</errorConditionFormula>
+    <errorMessage>You Can Not Edit This Opportunity Because Has Been Completed.</errorMessage>
+</ValidationRule>

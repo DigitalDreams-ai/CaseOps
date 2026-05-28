@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Triad_RX_Orders</fullName>
+    <columns>ORDERS.ORDER_NUMBER</columns>
+    <columns>ORDERS.CREATED_DATE</columns>
+    <columns>Vendor_Name__c</columns>
+    <columns>SALES.ACCOUNT.NAME</columns>
+    <columns>ORDERS.TOTAL_AMOUNT</columns>
+    <columns>Partial__c</columns>
+    <columns>Accounting_Note__c</columns>
+    <columns>Partial_By__c</columns>
+    <columns>Partial_Date__c</columns>
+    <columns>Reconciled__c</columns>
+    <columns>ORDERS.STATUS</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Vendor_Name__c</field>
+        <operation>contains</operation>
+        <value>TriadRx,Inc.</value>
+    </filters>
+    <filters>
+        <field>Reconciled__c</field>
+        <operation>equals</operation>
+        <value>0</value>
+    </filters>
+    <filters>
+        <field>Shipped_Date__c</field>
+        <operation>notEqual</operation>
+    </filters>
+    <label>Triad RX Orders</label>
+    <sharedTo>
+        <roleAndSubordinates>CFO_New</roleAndSubordinates>
+    </sharedTo>
+</ListView>

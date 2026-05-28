@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Financial_Responsible_Party__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <label>Financial Responsible Party</label>
+    <referenceTo>Account</referenceTo>
+    <relationshipLabel>Funded Opportunities</relationshipLabel>
+    <relationshipName>SponsoredServices</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

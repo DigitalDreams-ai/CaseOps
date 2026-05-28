@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fields>
+        <fullName>Cardone_Ventures_Employee__c</fullName>
+        <defaultValue>false</defaultValue>
+        <description>Source-of-truth flag identifying patient accounts that are Cardone Ventures employees.</description>
+        <label>Cardone Ventures Employee</label>
+        <trackFeedHistory>false</trackFeedHistory>
+        <trackHistory>true</trackHistory>
+        <type>Checkbox</type>
+    </fields>
+</CustomObject>

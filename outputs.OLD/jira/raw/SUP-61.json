@@ -1,0 +1,607 @@
+{
+  "issue": {
+    "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations,customfield_10010.requestTypePractice",
+    "id": "13171",
+    "self": "https://shulman-hill.atlassian.net/rest/api/3/issue/13171",
+    "key": "SUP-61",
+    "fields": {
+      "summary": "test",
+      "attachment": [
+        {
+          "self": "https://shulman-hill.atlassian.net/rest/api/3/attachment/11547",
+          "id": "11547",
+          "filename": "Jira Diagnostic Session - a7ZUo000000tRlxMAE - 20260528-192905.json",
+          "author": {
+            "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3Ab0091450-c9df-460d-b946-bee465fc3119",
+            "accountId": "712020:b0091450-c9df-460d-b946-bee465fc3119",
+            "avatarUrls": {
+              "48x48": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+              "24x24": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+              "16x16": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+              "32x32": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png"
+            },
+            "displayName": "Salesforce Integration",
+            "active": true,
+            "timeZone": "America/Phoenix",
+            "accountType": "atlassian"
+          },
+          "created": "2026-05-28T12:29:19.646-0700",
+          "size": 6979,
+          "mimeType": "application/json",
+          "content": "https://shulman-hill.atlassian.net/rest/api/3/attachment/content/11547"
+        }
+      ],
+      "created": "2026-05-28T12:29:17.957-0700",
+      "duedate": null,
+      "description": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Reporter: Sean Bingham"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Request Type: Bug"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Source Record: https://shulman-hill.lightning.force.com/lightning/r/litify_pm__Referral_Transaction__c/a0SUo000003s3ATMAY/view"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Description: test"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "Diagnostic session:"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Started: 2026-05-28 12:28:56"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Stopped: 2026-05-28 12:29:04"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Salesforce record: litify_pm__Referral_Transaction__c a0SUo000003s3ATMAY"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Source URL: https://shulman-hill.lightning.force.com/lightning/r/litify_pm__Referral_Transaction__c/a0SUo000003s3ATMAY/view"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Page layout ID: 00h2E00000dwyZMQAY"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Tooling logs: Enabled"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Client events: 2"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Visible errors captured: 0"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Apex logs: 1"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Apex log capture: found=1, captured=1, omitted=0, chars=78890, bodyLimitReached=false, metadataLimitReached=false"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Errors detected: fatal=0, exceptions=0, validation=0, flowMarkers=0"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "text",
+                "text": "- Full bundle attached: yes"
+              }
+            ]
+          }
+        ]
+      },
+      "reporter": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3Ab0091450-c9df-460d-b946-bee465fc3119",
+        "accountId": "712020:b0091450-c9df-460d-b946-bee465fc3119",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png"
+        },
+        "displayName": "Salesforce Integration",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "customfield_10010": {
+        "_links": {
+          "jiraRest": "https://shulman-hill.atlassian.net/rest/api/2/issue/13171",
+          "web": "https://shulman-hill.atlassian.net/servicedesk/customer/portal/1/SUP-61",
+          "agent": "https://shulman-hill.atlassian.net/browse/SUP-61",
+          "self": "https://shulman-hill.atlassian.net/rest/servicedeskapi/request/13171"
+        },
+        "requestType": {
+          "_expands": [
+            "field"
+          ],
+          "id": "6",
+          "_links": {
+            "self": "https://shulman-hill.atlassian.net/rest/servicedeskapi/servicedesk/1/requesttype/6"
+          },
+          "name": "Report a system problem",
+          "description": "Let us know if something isn't working properly and we'll aim to get it back up and running quickly.",
+          "helpText": "",
+          "defaultName": "Report a system problem",
+          "issueTypeId": "10067",
+          "serviceDeskId": "1",
+          "portalId": "1",
+          "groupIds": [
+            "1",
+            "4",
+            "5"
+          ],
+          "icon": {
+            "id": "10521",
+            "_links": {
+              "iconUrls": {
+                "48x48": "https://shulman-hill.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10521?size=large",
+                "24x24": "https://shulman-hill.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10521?size=small",
+                "16x16": "https://shulman-hill.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10521?size=xsmall",
+                "32x32": "https://shulman-hill.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10521?size=medium"
+              }
+            }
+          }
+        },
+        "currentStatus": {
+          "status": "Work in progress",
+          "statusCategory": "INDETERMINATE",
+          "statusDate": {
+            "iso8601": "2026-05-28T12:31:19-0700",
+            "jira": "2026-05-28T12:31:19.791-0700",
+            "friendly": "Today 12:31 PM",
+            "epochMillis": 1779996679791
+          }
+        }
+      },
+      "assignee": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "priority": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/priority/3",
+        "iconUrl": "https://shulman-hill.atlassian.net/images/icons/priorities/medium_new.svg",
+        "name": "Medium",
+        "id": "3"
+      },
+      "updated": "2026-05-28T12:31:32.332-0700",
+      "status": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/status/10105",
+        "description": "This was auto-generated by Jira Service Management during workflow import",
+        "iconUrl": "https://shulman-hill.atlassian.net/images/icons/status_generic.gif",
+        "name": "Work in progress",
+        "id": "10105",
+        "statusCategory": {
+          "self": "https://shulman-hill.atlassian.net/rest/api/3/statuscategory/4",
+          "id": 4,
+          "key": "indeterminate",
+          "colorName": "yellow",
+          "name": "In Progress"
+        }
+      }
+    }
+  },
+  "comments": [
+    {
+      "self": "https://shulman-hill.atlassian.net/rest/api/3/issue/13171/comment/11490",
+      "id": "11490",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3Ab0091450-c9df-460d-b946-bee465fc3119",
+        "accountId": "712020:b0091450-c9df-460d-b946-bee465fc3119",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png"
+        },
+        "displayName": "Salesforce Integration",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Attachments submitted with the original request."
+              }
+            ]
+          },
+          {
+            "type": "mediaGroup",
+            "content": [
+              {
+                "type": "media",
+                "attrs": {
+                  "type": "file",
+                  "id": "a75cfe43-4ac2-46fa-a542-b9b9a4f959da",
+                  "collection": ""
+                }
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": " "
+              },
+              {
+                "type": "text",
+                "text": "(7 kB)",
+                "marks": [
+                  {
+                    "type": "em"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3Ab0091450-c9df-460d-b946-bee465fc3119",
+        "accountId": "712020:b0091450-c9df-460d-b946-bee465fc3119",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png"
+        },
+        "displayName": "Salesforce Integration",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-28T12:29:20.270-0700",
+      "updated": "2026-05-28T12:29:20.270-0700",
+      "jsdPublic": true
+    },
+    {
+      "self": "https://shulman-hill.atlassian.net/rest/api/3/issue/13171/comment/11491",
+      "id": "11491",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Got it!"
+              }
+            ]
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-28T12:31:19.765-0700",
+      "updated": "2026-05-28T12:31:19.765-0700",
+      "jsdPublic": false
+    },
+    {
+      "self": "https://shulman-hill.atlassian.net/rest/api/3/issue/13171/comment/11492",
+      "id": "11492",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "looking into this"
+              }
+            ],
+            "attrs": {
+              "localId": "c75b7b46bffb"
+            }
+          }
+        ]
+      },
+      "updateAuthor": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-28T12:31:32.332-0700",
+      "updated": "2026-05-28T12:31:32.332-0700",
+      "jsdPublic": true
+    }
+  ],
+  "changelog": [
+    {
+      "id": "16634",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3Ab0091450-c9df-460d-b946-bee465fc3119",
+        "accountId": "712020:b0091450-c9df-460d-b946-bee465fc3119",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png"
+        },
+        "displayName": "Salesforce Integration",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-28T12:29:20.505-0700",
+      "items": [
+        {
+          "field": "Attachment",
+          "fieldtype": "jira",
+          "fieldId": "attachment",
+          "from": null,
+          "fromString": null,
+          "to": "11547",
+          "toString": "Jira Diagnostic Session - a7ZUo000000tRlxMAE - 20260528-192905.json"
+        }
+      ]
+    },
+    {
+      "id": "16635",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-28T12:31:19.791-0700",
+      "items": [
+        {
+          "field": "assignee",
+          "fieldtype": "jira",
+          "fieldId": "assignee",
+          "from": null,
+          "fromString": null,
+          "to": "712020:92952c29-caed-42f5-a852-103162f84724",
+          "toString": "Sean Bingham",
+          "tmpFromAccountId": null,
+          "tmpToAccountId": "712020:92952c29-caed-42f5-a852-103162f84724"
+        },
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "1",
+          "fromString": "Open",
+          "to": "10105",
+          "toString": "Work in progress"
+        }
+      ]
+    },
+    {
+      "id": "16636",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "created": "2026-05-28T12:31:23.359-0700",
+      "items": [
+        {
+          "field": "Responders",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10334",
+          "from": null,
+          "fromString": null,
+          "to": null,
+          "toString": "[ari:cloud:identity::user/712020:92952c29-caed-42f5-a852-103162f84724]"
+        }
+      ]
+    }
+  ],
+  "worklogs": [],
+  "attachments": [
+    {
+      "id": "11547",
+      "filename": "Jira Diagnostic Session - a7ZUo000000tRlxMAE - 20260528-192905.json",
+      "mimeType": "application/json",
+      "size": 6979,
+      "created": "2026-05-28T12:29:19.646-0700",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3Ab0091450-c9df-460d-b946-bee465fc3119",
+        "accountId": "712020:b0091450-c9df-460d-b946-bee465fc3119",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "24x24": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "16x16": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png",
+          "32x32": "https://secure.gravatar.com/avatar/483724fa62d4bf1fe23480127790ee5e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSI-3.png"
+        },
+        "displayName": "Salesforce Integration",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "content": "https://shulman-hill.atlassian.net/rest/api/3/attachment/content/11547",
+      "thumbnail": null,
+      "localPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/attachments/SUP-61/11547-Jira Diagnostic Session - a7ZUo000000tRlxMAE - 20260528-192905.json"
+    }
+  ],
+  "forms": [],
+  "fieldNames": {
+    "summary": "Summary",
+    "status": "Status",
+    "priority": "Priority",
+    "duedate": "Due date",
+    "assignee": "Assignee",
+    "reporter": "Reporter",
+    "description": "Description",
+    "created": "Created",
+    "updated": "Updated",
+    "attachment": "Attachment",
+    "customfield_10010": "Request Type"
+  },
+  "fieldMapPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/field-map.json",
+  "cloudId": "ecbca877-4e34-466a-b0d2-027f5e000302",
+  "syncedAt": "2026-05-28T20:56:38+00:00"
+}

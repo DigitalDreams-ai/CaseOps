@@ -1,0 +1,482 @@
+{
+  "issue": {
+    "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations,customfield_10010.requestTypePractice",
+    "id": "11488",
+    "self": "https://shulman-hill.atlassian.net/rest/api/3/issue/11488",
+    "key": "SH-103",
+    "fields": {
+      "summary": "WC: LMA Tracking",
+      "attachment": [
+        {
+          "self": "https://shulman-hill.atlassian.net/rest/api/3/attachment/10761",
+          "id": "10761",
+          "filename": "image-20251031-182957.png",
+          "author": {
+            "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+            "accountId": "62211bc76a4c4c0070ae90a2",
+            "avatarUrls": {
+              "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+              "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+              "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+              "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+            },
+            "displayName": "David Schleider",
+            "active": true,
+            "timeZone": "America/Phoenix",
+            "accountType": "atlassian"
+          },
+          "created": "2025-10-31T11:30:52.157-0700",
+          "size": 57958,
+          "mimeType": "image/png",
+          "content": "https://shulman-hill.atlassian.net/rest/api/3/attachment/content/10761",
+          "thumbnail": "https://shulman-hill.atlassian.net/rest/api/3/attachment/thumbnail/10761"
+        }
+      ],
+      "created": "2025-10-31T11:30:51.974-0700",
+      "duedate": null,
+      "description": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Context",
+                "marks": [
+                  {
+                    "type": "strong"
+                  },
+                  {
+                    "type": "underline"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": ": In WC there is a concept of “Labor Market Attachment” where a client is found to have a  partial disability and therefore is under an obligation to look for work. We have no real way of tracking this outside of a task tree. "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "User Story",
+                "marks": [
+                  {
+                    "type": "strong"
+                  },
+                  {
+                    "type": "underline"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": ": As paralegal I want to track cases where work search has been directed by the Judge and when I submit evidence of the client’s wokr search. "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Requirement",
+                "marks": [
+                  {
+                    "type": "strong"
+                  },
+                  {
+                    "type": "underline"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": ": "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "New Fields",
+                "marks": [
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": ":"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Work Search Directed - Date Field"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Work Search Last Submitted - Date Field"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Automation",
+                "marks": [
+                  {
+                    "type": "strong"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": ": "
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "In the WC Hearing Note flow there is a dropdown on the Task section that includes an option for Work Search. "
+              }
+            ]
+          },
+          {
+            "type": "mediaSingle",
+            "attrs": {
+              "width": 671,
+              "widthType": "pixel",
+              "layout": "align-start"
+            },
+            "content": [
+              {
+                "type": "media",
+                "attrs": {
+                  "type": "file",
+                  "id": "acb6b4de-2b71-43db-8b56-90a6e86d5976",
+                  "alt": "image-20251031-182957.png",
+                  "collection": "",
+                  "height": 515,
+                  "width": 1034
+                }
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "This currently triggers a task tree. We also want to add an additional update to the matter to fill the Work Search Directed date field with the Scheduled Date field from the Hearing record. "
+              }
+            ]
+          }
+        ]
+      },
+      "customfield_10010": null,
+      "reporter": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "assignee": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=712020%3A92952c29-caed-42f5-a852-103162f84724",
+        "accountId": "712020:92952c29-caed-42f5-a852-103162f84724",
+        "emailAddress": "sbingham@shulman-hill.com",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "24x24": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "16x16": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png",
+          "32x32": "https://secure.gravatar.com/avatar/1a7b059a60aa9a4c0de1bc7ff39a7e7a?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FSB-6.png"
+        },
+        "displayName": "Sean Bingham",
+        "active": true,
+        "timeZone": "US/Arizona",
+        "accountType": "atlassian"
+      },
+      "priority": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/priority/3",
+        "iconUrl": "https://shulman-hill.atlassian.net/images/icons/priorities/medium_new.svg",
+        "name": "Medium",
+        "id": "3"
+      },
+      "updated": "2025-10-31T12:13:23.578-0700",
+      "status": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/status/10035",
+        "description": "",
+        "iconUrl": "https://shulman-hill.atlassian.net/",
+        "name": "Selected for Development",
+        "id": "10035",
+        "statusCategory": {
+          "self": "https://shulman-hill.atlassian.net/rest/api/3/statuscategory/2",
+          "id": 2,
+          "key": "new",
+          "colorName": "blue-gray",
+          "name": "To Do"
+        }
+      }
+    }
+  },
+  "comments": [],
+  "changelog": [
+    {
+      "id": "13031",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2025-10-31T11:30:54.744-0700",
+      "items": [
+        {
+          "field": "Rank",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10019",
+          "from": "",
+          "fromString": "",
+          "to": "",
+          "toString": "Ranked higher"
+        }
+      ]
+    },
+    {
+      "id": "13032",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2025-10-31T11:31:05.365-0700",
+      "items": [
+        {
+          "field": "labels",
+          "fieldtype": "jira",
+          "fieldId": "labels",
+          "from": null,
+          "fromString": "",
+          "to": null,
+          "toString": "MiscConfig WC"
+        }
+      ]
+    },
+    {
+      "id": "13037",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2025-10-31T11:31:22.781-0700",
+      "items": [
+        {
+          "field": "Sprint",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10020",
+          "from": "",
+          "fromString": "",
+          "to": "366",
+          "toString": "SH Sprint 12"
+        }
+      ]
+    },
+    {
+      "id": "13038",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2025-10-31T11:31:23.156-0700",
+      "items": [
+        {
+          "field": "Rank",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10019",
+          "from": "",
+          "fromString": "",
+          "to": "",
+          "toString": "Ranked higher"
+        }
+      ]
+    },
+    {
+      "id": "13039",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+          "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+        },
+        "displayName": "Automation for Jira",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "app"
+      },
+      "created": "2025-10-31T11:31:25.051-0700",
+      "items": [
+        {
+          "field": "status",
+          "fieldtype": "jira",
+          "fieldId": "status",
+          "from": "10040",
+          "fromString": "To Do",
+          "to": "10035",
+          "toString": "Selected for Development"
+        }
+      ],
+      "historyMetadata": {}
+    },
+    {
+      "id": "13072",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "created": "2025-10-31T12:13:23.578-0700",
+      "items": [
+        {
+          "field": "Sprint",
+          "fieldtype": "custom",
+          "fieldId": "customfield_10020",
+          "from": "366",
+          "fromString": "SH Sprint 12",
+          "to": "",
+          "toString": ""
+        }
+      ]
+    }
+  ],
+  "worklogs": [],
+  "attachments": [
+    {
+      "id": "10761",
+      "filename": "image-20251031-182957.png",
+      "mimeType": "image/png",
+      "size": 57958,
+      "created": "2025-10-31T11:30:52.157-0700",
+      "author": {
+        "self": "https://shulman-hill.atlassian.net/rest/api/3/user?accountId=62211bc76a4c4c0070ae90a2",
+        "accountId": "62211bc76a4c4c0070ae90a2",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "24x24": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "16x16": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png",
+          "32x32": "https://secure.gravatar.com/avatar/ebef14ad1088bd727f7c8c5f4dad4c0b?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FDS-1.png"
+        },
+        "displayName": "David Schleider",
+        "active": true,
+        "timeZone": "America/Phoenix",
+        "accountType": "atlassian"
+      },
+      "content": "https://shulman-hill.atlassian.net/rest/api/3/attachment/content/10761",
+      "thumbnail": "https://shulman-hill.atlassian.net/rest/api/3/attachment/thumbnail/10761",
+      "localPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/attachments/SH-103/10761-image-20251031-182957.png"
+    }
+  ],
+  "forms": [
+    {
+      "scope": "request",
+      "error": {
+        "status": 404,
+        "body": "{\"errors\":[{\"status\":404,\"code\":\"ISSUE_NOT_FOUND\",\"title\":\"Issue Not Found\",\"detail\":\"You do not have permission to access this resource, or it was not found.\",\"context\":[{\"type\":\"issue\",\"id\":\"SH-103\"}]}]}"
+      }
+    }
+  ],
+  "fieldNames": {
+    "summary": "Summary",
+    "status": "Status",
+    "priority": "Priority",
+    "duedate": "Due date",
+    "assignee": "Assignee",
+    "reporter": "Reporter",
+    "description": "Description",
+    "created": "Created",
+    "updated": "Updated",
+    "attachment": "Attachment",
+    "customfield_10010": "Request Type"
+  },
+  "fieldMapPath": "C:/Users/sean/Projects/Salesforce/DigitalDreams/CaseOps/outputs/jira/field-map.json",
+  "cloudId": "ecbca877-4e34-466a-b0d2-027f5e000302",
+  "syncedAt": "2026-05-28T20:56:05+00:00"
+}

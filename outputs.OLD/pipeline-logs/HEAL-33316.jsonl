@@ -1,0 +1,37 @@
+{"ts": "2026-05-22T21:35:15.268822+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "-- Setup Stage 1: Syncing from Jira ------"}
+{"ts": "2026-05-22T21:35:15.433830+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "Connecting to https://10xhealthsystem.atlassian.net..."}
+{"ts": "2026-05-22T21:35:15.434443+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "JQL: assignee = \"sbingham@10xhealthsystem.com\" AND statusCategory != Done ORDER BY created ASC"}
+{"ts": "2026-05-22T21:35:15.960393+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "Found 1 issue(s). Syncing..."}
+{"ts": "2026-05-22T21:35:15.960896+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "[1/1] HEAL-33316 - fetching..."}
+{"ts": "2026-05-22T21:35:16.323830+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "[1/1] HEAL-33316 - Resolved: cannot generate pharmacy order"}
+{"ts": "2026-05-22T21:35:16.324343+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "[1/1] HEAL-33316 - fetching comments, changelog, worklogs..."}
+{"ts": "2026-05-22T21:35:17.277818+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "[1/1] HEAL-33316 - downloading attachments..."}
+{"ts": "2026-05-22T21:35:18.326031+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "[1/1] HEAL-33316 - fetching forms..."}
+{"ts": "2026-05-22T21:35:22.040378+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "[1/1] HEAL-33316 - written (3 comments, 1 attachments, 1 forms)"}
+{"ts": "2026-05-22T21:35:22.043400+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "Synced 1 issue(s) into C:\\Users\\sean\\Projects\\Salesforce\\DigitalDreams\\CaseOps\\outputs\\jira"}
+{"ts": "2026-05-22T21:35:22.078170+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "Manifest merged: 52 total issue(s)."}
+{"ts": "2026-05-22T21:35:22.079189+00:00", "run_key": "HEAL-33316", "kind": "line", "text": ""}
+{"ts": "2026-05-22T21:35:22.079189+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "-- Setup Stage 2: Triaging issues --------"}
+{"ts": "2026-05-22T21:35:22.088760+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "  Total synced:             1"}
+{"ts": "2026-05-22T21:35:22.088760+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "  Closed / Resolved / Canceled: 1"}
+{"ts": "2026-05-22T21:35:22.090272+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "  Escalated to Engineering: 0"}
+{"ts": "2026-05-22T21:35:22.090272+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "  Active (needs processing): 0"}
+{"ts": "2026-05-22T21:35:22.091993+00:00", "run_key": "HEAL-33316", "kind": "line", "text": ""}
+{"ts": "2026-05-22T21:35:22.093498+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "-- Setup Stage 3: Archiving Closed/Resolved --------"}
+{"ts": "2026-05-22T21:35:22.100119+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "  HEAL-33316  ->  outputs\\closed-resolved\\HEAL-33316.md"}
+{"ts": "2026-05-22T21:35:22.100623+00:00", "run_key": "HEAL-33316", "kind": "line", "text": ""}
+{"ts": "2026-05-22T21:35:22.102133+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "-- Setup Stage 4: Archiving pre-escalated issues --"}
+{"ts": "2026-05-22T21:35:22.103135+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-22T21:35:22.103639+00:00", "run_key": "HEAL-33316", "kind": "line", "text": ""}
+{"ts": "2026-05-22T21:35:22.103639+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "-- Setup Stage 5: Scaffolding investigation records --"}
+{"ts": "2026-05-22T21:35:22.105773+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "  (none)"}
+{"ts": "2026-05-22T21:35:22.106276+00:00", "run_key": "HEAL-33316", "kind": "line", "text": ""}
+{"ts": "2026-05-22T21:35:22.107791+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "-- Setup Stage 6: Updating dated summary ------"}
+{"ts": "2026-05-22T21:35:22.107791+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "  outputs\\issue-summary-2026-05-22.md"}
+{"ts": "2026-05-22T21:35:22.110308+00:00", "run_key": "HEAL-33316", "kind": "line", "text": ""}
+{"ts": "2026-05-22T21:35:22.110810+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "-- AI Workflow: Handoff to jira-salesforce-fix-pipeline --"}
+{"ts": "2026-05-22T21:35:22.112324+00:00", "run_key": "HEAL-33316", "kind": "line", "text": ""}
+{"ts": "2026-05-22T21:35:22.113351+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "  No active issues to process."}
+{"ts": "2026-05-22T21:35:22.117397+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "-- exit code 0 --"}
+{"ts": "2026-05-22T21:35:22.118909+00:00", "run_key": "HEAL-33316", "kind": "line", "text": "Done: HEAL-33316"}
+{"ts": "2026-05-22T21:35:22.120418+00:00", "run_key": "HEAL-33316", "kind": "done", "text": ""}

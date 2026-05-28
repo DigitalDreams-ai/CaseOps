@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Kit_Id__c</fullName>
+    <description>There are 2 places where this number will be populated.
+When creating an &quot;in person&quot; GT opp in Shopify, we will be sending this KitID along in the Opportunity we create in SF.
+When creating a &quot;virtual&quot; GT Opp in Shopify, we will NOT be sending this KitID in the creation of the Opportunity (hence it needs to allow for null) but rather, when the Lab sends us the &quot;tracking information&quot; via the REST API, they will provide both the tracking numbers (Fedex numbers for example) plus this KitID</description>
+    <encryptionScheme>None</encryptionScheme>
+    <externalId>true</externalId>
+    <label>Kit Id</label>
+    <length>50</length>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

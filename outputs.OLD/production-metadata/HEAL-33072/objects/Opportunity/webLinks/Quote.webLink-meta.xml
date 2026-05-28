@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WebLink xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Quote</fullName>
+    <availability>online</availability>
+    <displayType>button</displayType>
+    <encodingKey>UTF-8</encodingKey>
+    <linkType>url</linkType>
+    <masterLabel>Quote</masterLabel>
+    <openType>replace</openType>
+    <protected>false</protected>
+    <url>/lightning/o/Quote/new?defaultFieldValues=Name={!URLENCODE(Opportunity.Name)},OpportunityId={!Opportunity.Id},AccountId={!Opportunity.AccountId},BillingName={!Opportunity.Account},ShippingName={!Opportunity.Account},BillingCity={!URLENCODE(Opportunity.Shipping_City__c)},BillingState={!URLENCODE(Opportunity.Shipping_State__c)},BillingCountry={!URLENCODE(Opportunity.Shipping_Country__c)},BillingStreet={!URLENCODE(Opportunity.Shipping_Street_Address__c)},BillingPostalCode={!URLENCODE(Opportunity.Shipping_Zip_Code__c)},ShippingCity={!URLENCODE(Opportunity.Shipping_City__c)},ShippingState={!URLENCODE(Opportunity.Shipping_State__c)},ShippingCountry={!URLENCODE(Opportunity.Shipping_Country__c)},ShippingStreet={!URLENCODE(Opportunity.Shipping_Street_Address__c)},ShippingPostalCode={!URLENCODE(Opportunity.Shipping_Zip_Code__c)}</url>
+</WebLink>

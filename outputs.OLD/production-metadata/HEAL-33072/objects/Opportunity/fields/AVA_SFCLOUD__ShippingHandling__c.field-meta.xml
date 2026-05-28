@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AVA_SFCLOUD__ShippingHandling__c</fullName>
+    <deprecated>false</deprecated>
+    <description>Enter the amount for the Shipping and Handling.</description>
+    <inlineHelpText>Enter the amount for the Shipping and Handling.</inlineHelpText>
+    <label>Shipping and Handling</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Currency</type>
+</CustomField>
