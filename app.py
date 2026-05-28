@@ -1967,9 +1967,19 @@ def api_settings_status():
                     capture_output=True, text=True, timeout=5
                 )
                 if result.returncode == 0:
-                    data = json.loads(result.stdout)
-                    status["sf_prod"]["authenticated"] = True
-                    status["sf_prod"]["username"] = data.get("result", {}).get("username", "")
+                    # Skip warning lines, find JSON start
+                    json_str = result.stdout.strip()
+                    if json_str.startswith('{'):
+                        data = json.loads(json_str)
+                        status["sf_prod"]["authenticated"] = True
+                        status["sf_prod"]["username"] = data.get("result", {}).get("username", "")
+                    else:
+                        # Find first { and parse from there
+                        idx = json_str.find('{')
+                        if idx >= 0:
+                            data = json.loads(json_str[idx:])
+                            status["sf_prod"]["authenticated"] = True
+                            status["sf_prod"]["username"] = data.get("result", {}).get("username", "")
             except Exception:
                 pass
 
@@ -1981,9 +1991,19 @@ def api_settings_status():
                     capture_output=True, text=True, timeout=5
                 )
                 if result.returncode == 0:
-                    data = json.loads(result.stdout)
-                    status["sf_sandbox"]["authenticated"] = True
-                    status["sf_sandbox"]["username"] = data.get("result", {}).get("username", "")
+                    # Skip warning lines, find JSON start
+                    json_str = result.stdout.strip()
+                    if json_str.startswith('{'):
+                        data = json.loads(json_str)
+                        status["sf_sandbox"]["authenticated"] = True
+                        status["sf_sandbox"]["username"] = data.get("result", {}).get("username", "")
+                    else:
+                        # Find first { and parse from there
+                        idx = json_str.find('{')
+                        if idx >= 0:
+                            data = json.loads(json_str[idx:])
+                            status["sf_sandbox"]["authenticated"] = True
+                            status["sf_sandbox"]["username"] = data.get("result", {}).get("username", "")
             except Exception:
                 pass
 
