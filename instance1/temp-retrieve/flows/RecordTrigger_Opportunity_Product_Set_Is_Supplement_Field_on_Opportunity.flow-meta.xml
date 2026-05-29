@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>56.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Set_Is_Supplement_to_True_Default</name>
+        <label>Set Is Supplement to True - Default</label>
+        <locationX>176</locationX>
+        <locationY>431</locationY>
+        <assignmentItems>
+            <assignToReference>boolIsSupplement</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Loop_Through_Products</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Set_IsSupplement_to_False</name>
+        <label>Set IsSupplement to False</label>
+        <locationX>440</locationX>
+        <locationY>755</locationY>
+        <assignmentItems>
+            <assignToReference>boolIsSupplement</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Loop_Through_Products</targetReference>
+        </connector>
+    </assignments>
+    <decisions>
+        <description>Check if the Product belongs to the Supplement family, Shipping or Sales Tax. 
+If true do nothing
+If false, set IsSupplement flag to false</description>
+        <name>Is_Product_A_Supplement</name>
+        <label>Is Product A Supplement</label>
+        <locationX>352</locationX>
+        <locationY>647</locationY>
+        <defaultConnector>
+            <targetReference>Set_IsSupplement_to_False</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Non Supplement Product</defaultConnectorLabel>
+        <rules>
+            <name>Supplement_Product</name>
+            <conditionLogic>or</conditionLogic>
+            <conditions>
+                <leftValueReference>Loop_Through_Products.Product2.Family</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Supplements</stringValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>Loop_Through_Products.Product2.Name</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Sales Tax</stringValue>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>Loop_Through_Products.Product2.Sub_Product_Family__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Shipping</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Loop_Through_Products</targetReference>
+            </connector>
+            <label>Supplement Product</label>
+        </rules>
+    </decisions>
+    <description>This flow will run every time a new product is added to the opportunity and either set the Is Supplement to true or false depending on if there are only supplement products on the opportunity.</description>
+    <environments>Default</environments>
+    <interviewLabel>RecordTrigger - Opportunity Product - Set Is Supplement Field on Opportunity {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>RecordTrigger - Opportunity Product - Set Is Supplement Field on Opportunity</label>
+    <loops>
+        <name>Loop_Through_Products</name>
+        <label>Loop Through Products</label>
+        <locationX>176</locationX>
+        <locationY>539</locationY>
+        <collectionReference>Get_All_Products_on_Oppty</collectionReference>
+        <iterationOrder>Asc</iterationOrder>
+        <nextValueConnector>
+            <targetReference>Is_Product_A_Supplement</targetReference>
+        </nextValueConnector>
+        <noMoreValuesConnector>
+            <targetReference>Update_Opportunity</targetReference>
+        </noMoreValuesConnector>
+    </loops>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordLookups>
+        <name>Get_All_Products_on_Oppty</name>
+        <label>Get All Products on Oppty</label>
+        <locationX>176</locationX>
+        <locationY>323</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Set_Is_Supplement_to_True_Default</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>OpportunityId</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.OpportunityId</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>false</getFirstRecordOnly>
+        <object>OpportunityLineItem</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordUpdates>
+        <name>Update_Opportunity</name>
+        <label>Update Opportunity</label>
+        <locationX>176</locationX>
+        <locationY>1031</locationY>
+        <inputAssignments>
+            <field>IsSupplement__c</field>
+            <value>
+                <elementReference>boolIsSupplement</elementReference>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record.Opportunity</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Get_All_Products_on_Oppty</targetReference>
+        </connector>
+        <filterFormula>{!$Record.Opportunity.RecordType.DeveloperName} = &apos;Medication_Opportunity_Record_Type&apos;</filterFormula>
+        <object>OpportunityLineItem</object>
+        <recordTriggerType>Create</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <variables>
+        <name>boolIsSupplement</name>
+        <dataType>Boolean</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <value>
+            <booleanValue>true</booleanValue>
+        </value>
+    </variables>
+</Flow>

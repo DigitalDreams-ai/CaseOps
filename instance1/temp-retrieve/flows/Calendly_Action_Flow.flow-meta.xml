@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <description>This automation will run for all of the calendly action records that were created and create appointments/events when it meets the criteria.</description>
+    <environments>Default</environments>
+    <formulas>
+        <name>form_dateTimeNow</name>
+        <dataType>DateTime</dataType>
+        <expression>NOW()</expression>
+    </formulas>
+    <formulas>
+        <name>form_numDuration</name>
+        <dataType>Number</dataType>
+        <expression>{!rec_Appointment.Start_Date__c}-{!rec_Appointment.End_Date__c}</expression>
+        <scale>0</scale>
+    </formulas>
+    <formulas>
+        <name>form_txtAppointmentName</name>
+        <dataType>String</dataType>
+        <expression>LEFT({!$Record.Calendly__EventSubject__c} &amp;&quot; - Calendly - &quot;&amp; {!$Record.Calendly__InviteeUuid__c},80)</expression>
+    </formulas>
+    <formulas>
+        <description>This will get everything left of the &quot;-&quot; in the name as everything after the &quot;-&quot; is the state name.</description>
+        <name>form_txtCalendlyFormNameLeft</name>
+        <dataType>String</dataType>
+        <expression>IF(
+FIND(&quot;-&quot;,{!$Record.Calendly__EventTypeName__c}) &gt; 0,
+TRIM(LEFT({!$Record.Calendly__EventTypeName__c}, FIND(&quot;-&quot;, {!$Record.Calendly__EventTypeName__c}) - 1)),
+{!$Record.Calendly__EventTypeName__c}
+)</expression>
+    </formulas>
+    <formulas>
+        <name>form_txtCalendlyResponses</name>
+        <dataType>String</dataType>
+        <expression>IF(ISBLANK({!$Record.Calendly__CustomQuestion1__c}), &quot;&quot;, 
+    {!$Record.Calendly__CustomQuestion1__c} &amp; &quot; - &quot; &amp; {!$Record.Calendly__CustomResponse1__c} &amp; BR()) &amp; 
+IF(ISBLANK({!$Record.Calendly__CustomQuestion2__c}), &quot;&quot;, 
+    {!$Record.Calendly__CustomQuestion2__c} &amp; &quot; - &quot; &amp; {!$Record.Calendly__CustomResponse2__c} &amp; BR()) &amp; 
+IF(ISBLANK({!$Record.Calendly__CustomQuestion3__c}), &quot;&quot;, 
+    {!$Record.Calendly__CustomQuestion3__c} &amp; &quot; - &quot; &amp; {!$Record.Calendly__CustomResponse3__c} &amp; BR()) &amp; 
+IF(ISBLANK({!$Record.Calendly__CustomQuestion4__c}), &quot;&quot;, 
+    {!$Record.Calendly__CustomQuestion4__c} &amp; &quot; - &quot; &amp; {!$Record.Calendly__CustomResponse4__c} &amp; BR()) &amp; 
+IF(ISBLANK({!$Record.Calendly__CustomQuestion5__c}), &quot;&quot;, 
+    {!$Record.Calendly__CustomQuestion5__c} &amp; &quot; - &quot; &amp; {!$Record.Calendly__CustomResponse5__c} &amp; BR()) &amp; 
+IF(ISBLANK({!$Record.Calendly__CustomQuestion6__c}), &quot;&quot;, 
+    {!$Record.Calendly__CustomQuestion6__c} &amp; &quot; - &quot; &amp; {!$Record.Calendly__CustomResponse6__c} &amp; BR()) &amp; 
+IF(ISBLANK({!$Record.Calendly__CustomQuestion7__c}), &quot;&quot;, 
+    {!$Record.Calendly__CustomQuestion7__c} &amp; &quot; - &quot; &amp; {!$Record.Calendly__CustomResponse7__c} &amp; BR()) &amp; 
+IF(ISBLANK({!$Record.Calendly__CustomQuestion8__c}), &quot;&quot;, 
+    {!$Record.Calendly__CustomQuestion8__c} &amp; &quot; - &quot; &amp; {!$Record.Calendly__CustomResponse8__c} &amp; BR()) &amp; 
+IF(ISBLANK({!$Record.Calendly__CustomQuestion9__c}), &quot;&quot;, 
+    {!$Record.Calendly__CustomQuestion9__c} &amp; &quot; - &quot; &amp; {!$Record.Calendly__CustomResponse9__c} &amp; BR()) &amp; 
+IF(ISBLANK({!$Record.Calendly__CustomQuestion10__c}), &quot;&quot;, 
+    {!$Record.Calendly__CustomQuestion10__c} &amp; &quot; - &quot; &amp; {!$Record.Calendly__CustomResponse10__c})</expression>
+    </formulas>
+    <interviewLabel>Calendly Action Flow {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Calendly Action Flow</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <sourceTemplate>Calendly__CreateEventTemplate</sourceTemplate>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Name</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>invitee.created</stringValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Calendly__ObjectId__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <object>Calendly__CalendlyAction__c</object>
+        <recordTriggerType>Create</recordTriggerType>
+        <scheduledPaths>
+            <name>X1_Min_Delay</name>
+            <connector>
+                <targetReference>Create_Salesforce_Appointment</targetReference>
+            </connector>
+            <label>1 Min Delay</label>
+            <offsetNumber>1</offsetNumber>
+            <offsetUnit>Minutes</offsetUnit>
+            <timeSource>RecordTriggerEvent</timeSource>
+        </scheduledPaths>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <subflows>
+        <name>Create_Salesforce_Appointment</name>
+        <label>Create Salesforce Appointment</label>
+        <locationX>308</locationX>
+        <locationY>276</locationY>
+        <flowName>Autolaunch_Create_Salesforce_Appointment</flowName>
+        <inputAssignments>
+            <name>rec_CalendyAction</name>
+            <value>
+                <elementReference>$Record</elementReference>
+            </value>
+        </inputAssignments>
+    </subflows>
+    <textTemplates>
+        <name>txt_AppointmentFlowError</name>
+        <isViewedAsPlainText>true</isViewedAsPlainText>
+        <text>Error Trying to Set Appointment Conflicts.
+{!$Flow.FaultMessage}</text>
+    </textTemplates>
+    <textTemplates>
+        <name>txt_AppointmentUpdateError</name>
+        <isViewedAsPlainText>true</isViewedAsPlainText>
+        <text>Error Updating Appointment.
+{!$Flow.FaultMessage}</text>
+    </textTemplates>
+    <textTemplates>
+        <name>txt_DuplicateAppointments</name>
+        <isViewedAsPlainText>true</isViewedAsPlainText>
+        <text>Booking Error: More than one appointment has been scheduled for the same opportunity. Each opportunity is limited to a single appointment. Please review the appointments and make any necessary adjustments.</text>
+    </textTemplates>
+    <textTemplates>
+        <name>txt_DuplicateEventTemplate</name>
+        <isViewedAsPlainText>false</isViewedAsPlainText>
+        <text>&lt;p&gt;This Opportunity has Duplicated Clarity Call Event&lt;/p&gt;</text>
+    </textTemplates>
+    <textTemplates>
+        <name>txt_OpportunityUpdateError</name>
+        <isViewedAsPlainText>true</isViewedAsPlainText>
+        <text>Error Updating Opportunity:
+{!$Flow.FaultMessage}</text>
+    </textTemplates>
+    <textTemplates>
+        <name>txt_PatientDemographic_ErrorMessage</name>
+        <isViewedAsPlainText>true</isViewedAsPlainText>
+        <text>Patient Demographic Data Mismatch Error: The demographic information submitted during appointment scheduling does not align with the patient&apos;s existing record. Please advise the patient to verify their details and ensure accuracy in alignment with their official patient profile.</text>
+    </textTemplates>
+    <textTemplates>
+        <name>txt_UnsupportedForm</name>
+        <isViewedAsPlainText>true</isViewedAsPlainText>
+        <text>No Appointment Created Because the Calendly Form, {!form_txtCalendlyFormNameLeft}, is unsupported.</text>
+    </textTemplates>
+    <triggerOrder>500</triggerOrder>
+    <variables>
+        <name>ConvertedContactId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>LeadConvertedAt</name>
+        <dataType>DateTime</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>num_NumberOfAppointments</name>
+        <dataType>Number</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <scale>0</scale>
+        <value>
+            <numberValue>0.0</numberValue>
+        </value>
+    </variables>
+    <variables>
+        <name>OwnerId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>rec_Account</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Account</objectType>
+    </variables>
+    <variables>
+        <name>rec_Appointment</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Appointment__c</objectType>
+    </variables>
+    <variables>
+        <name>rec_Event</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Event</objectType>
+    </variables>
+    <variables>
+        <description>This is the opportunity that is updated</description>
+        <name>rec_UpdatedOpportunity</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>Opportunity</objectType>
+    </variables>
+    <variables>
+        <name>WhatRecordId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>WhoRecordId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+</Flow>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Lab_Provider__c</fullName>
+    <description>What lab provider this configuration is for</description>
+    <label>Lab Provider</label>
+    <referenceTo>Lab_Provider__c</referenceTo>
+    <relationshipLabel>Product Lab Order Configurations</relationshipLabel>
+    <relationshipName>Product_Lab_Order_Configurations</relationshipName>
+    <relationshipOrder>0</relationshipOrder>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>

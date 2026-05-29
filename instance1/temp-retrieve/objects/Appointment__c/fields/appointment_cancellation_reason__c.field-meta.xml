@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>appointment_cancellation_reason__c</fullName>
+    <label>Cancellation Reason</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Cancelled Via Calendly</fullName>
+                <default>false</default>
+                <label>Cancelled Via Calendly</label>
+            </value>
+            <value>
+                <fullName>Covid-19 Concerns</fullName>
+                <default>false</default>
+                <label>Covid-19 Concerns</label>
+            </value>
+            <value>
+                <fullName>Emergency Situations</fullName>
+                <default>false</default>
+                <label>Emergency Situations</label>
+            </value>
+            <value>
+                <fullName>Fear or Anxiety</fullName>
+                <default>false</default>
+                <label>Fear or Anxiety</label>
+            </value>
+            <value>
+                <fullName>Financial Reasons</fullName>
+                <default>false</default>
+                <label>Financial Reasons</label>
+            </value>
+            <value>
+                <fullName>Forgot Appointment</fullName>
+                <default>false</default>
+                <label>Forgot Appointment</label>
+            </value>
+            <value>
+                <fullName>Health Improvement</fullName>
+                <default>false</default>
+                <label>Health Improvement</label>
+            </value>
+            <value>
+                <fullName>Insurance Issues</fullName>
+                <default>false</default>
+                <label>Insurance Issues</label>
+            </value>
+            <value>
+                <fullName>Long Wait Times</fullName>
+                <default>false</default>
+                <label>Long Wait Times</label>
+            </value>
+            <value>
+                <fullName>Miscommunication or Misunderstanding</fullName>
+                <default>false</default>
+                <label>Miscommunication or Misunderstanding</label>
+            </value>
+            <value>
+                <fullName>No Longer a Patient</fullName>
+                <default>false</default>
+                <label>No Longer a Patient</label>
+            </value>
+            <value>
+                <fullName>Patient Illness</fullName>
+                <default>false</default>
+                <label>Patient Illness</label>
+            </value>
+            <value>
+                <fullName>Provider Preference</fullName>
+                <default>false</default>
+                <label>Provider Preference</label>
+            </value>
+            <value>
+                <fullName>Resolved Issue</fullName>
+                <default>false</default>
+                <label>Resolved Issue</label>
+            </value>
+            <value>
+                <fullName>Scheduling Conflicts</fullName>
+                <default>false</default>
+                <label>Scheduling Conflicts</label>
+            </value>
+            <value>
+                <fullName>Service Dissatisfaction</fullName>
+                <default>false</default>
+                <label>Service Dissatisfaction</label>
+            </value>
+            <value>
+                <fullName>Transportation Issues</fullName>
+                <default>false</default>
+                <label>Transportation Issues</label>
+            </value>
+            <value>
+                <fullName>Weather Conditions</fullName>
+                <default>false</default>
+                <label>Weather Conditions</label>
+            </value>
+            <value>
+                <fullName>Rescheduled via Calendly</fullName>
+                <default>false</default>
+                <label>Rescheduled via Calendly</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

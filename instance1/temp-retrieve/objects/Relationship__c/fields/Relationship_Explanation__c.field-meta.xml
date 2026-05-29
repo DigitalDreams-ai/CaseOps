@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Relationship_Explanation__c</fullName>
+    <description>Text formula that constructs a sentence explaining the relationship between the two Accounts</description>
+    <externalId>false</externalId>
+    <formula>IF(
+Account__r.IsPersonAccount,
+/* If Primary Account is a Person */
+TEXT(Account__r.Salutation) + &quot; &quot; + Account__r.FirstName + &quot; &quot; + Account__r.LastName
++ &quot; is &quot; +
+IF(
+Related_Account__r.IsPersonAccount,
+/* If Related Account is a Person */
+TEXT(Related_Account__r.Salutation) + &quot; &quot; + Related_Account__r.FirstName + &quot; &quot; + Related_Account__r.LastName,
+Related_Account__r.Name
+)
++ &quot;&apos;s &quot; +
+/* Use the reciprocal relationship type if it exists, otherwise use this record&apos;s type */
+IF(
+ISBLANK(Reciprocal_Relationship__c),
+TEXT(Relationship__c),
+TEXT(Reciprocal_Relationship__r.Relationship__c)
+),
+
+/* If Related Account is a Business */
+Related_Account__r.Name + &quot; is &quot; +
+IF(
+Account__r.IsPersonAccount,
+/* If Primary Account is a Person */
+TEXT(Account__r.Salutation) + &quot; &quot; + Account__r.FirstName + &quot; &quot; + Account__r.LastName,
+Account__r.Name
+)
++ &quot;&apos;s &quot; +
+/* Use the reciprocal relationship type if it exists, otherwise use this record&apos;s type */
+IF(
+ISBLANK(Reciprocal_Relationship__c),
+TEXT(Relationship__c),
+TEXT(Reciprocal_Relationship__r.Relationship__c)
+)
+
+)</formula>
+    <inlineHelpText>Text formula that constructs a sentence explaining the relationship between the two Accounts</inlineHelpText>
+    <label>Relationship Explanation</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

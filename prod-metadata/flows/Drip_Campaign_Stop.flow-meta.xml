@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>49.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <decisions>
+        <description>This allows the flow to handle either Delete unSent Scheduled SMS where a specific Drip Campaign is supplied OR if the parameter is left blank then it will simply find any unsent Scheduled SMS where Drip Campaign Is Not null and delete those. The null parameter is useful for more generic stopping of drip campaigns since it&apos;s not likely that the customer is on more than one drip campaign.  Important to only for for Scheduled SMS with the Drip Campaign set so we don&apos;t accidentally delete birthday SMS and other manual scheduled SMS.</description>
+        <name>DripCampaign_Supplied</name>
+        <label>DripCampaign Supplied</label>
+        <locationX>230</locationX>
+        <locationY>40</locationY>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>Yes</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>vDripCampaignId</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Sched_SMS_by_Drip</targetReference>
+            </connector>
+            <label>Yes</label>
+        </rules>
+        <rules>
+            <name>No</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>vDripCampaignId</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Sched_SMS_w_o_Drip</targetReference>
+            </connector>
+            <label>No</label>
+        </rules>
+    </decisions>
+    <description>Loops through the Scheduled SMS records linked to a contact and deletes them.</description>
+    <formulas>
+        <description>Handles the Contact or Lead Id in one variable to we can Delete the Scheduled SMS records in one command by searching on the ScheduledSMS.Related_Object_Id field rather than the individual ContactId or LeadId Fields.</description>
+        <name>fRecordId</name>
+        <dataType>String</dataType>
+        <expression>IF( ISNULL({!vContactId}) || ISBLANK({!vContactId}),{!vLeadId},{!vContactId})</expression>
+    </formulas>
+    <interviewLabel>Drip Campaign Stop {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Drip Campaign Stop</label>
+    <loops>
+        <description>Loop through the scheduled SMS where no drip campaign supplied</description>
+        <name>Loop</name>
+        <label>Loop</label>
+        <locationX>223</locationX>
+        <locationY>357</locationY>
+        <assignNextValueToReference>recScheduleSMS_NoDripSupplied</assignNextValueToReference>
+        <collectionReference>colScheduledSMS_NoDripSupplied</collectionReference>
+        <iterationOrder>Asc</iterationOrder>
+        <nextValueConnector>
+            <targetReference>Delete</targetReference>
+        </nextValueConnector>
+    </loops>
+    <loops>
+        <description>Loop through the found scheduled SMS records and delete them.</description>
+        <name>Scheduled_SMS_Loop</name>
+        <label>Scheduled SMS Loop</label>
+        <locationX>697</locationX>
+        <locationY>39</locationY>
+        <assignNextValueToReference>recScheduledSMS</assignNextValueToReference>
+        <collectionReference>colScheduledSMS</collectionReference>
+        <iterationOrder>Asc</iterationOrder>
+        <nextValueConnector>
+            <targetReference>Delete_Scheduled_SMS</targetReference>
+        </nextValueConnector>
+    </loops>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordDeletes>
+        <name>Delete</name>
+        <label>Delete</label>
+        <locationX>240</locationX>
+        <locationY>480</locationY>
+        <connector>
+            <targetReference>Loop</targetReference>
+        </connector>
+        <inputReference>colScheduledSMS_NoDripSupplied</inputReference>
+    </recordDeletes>
+    <recordDeletes>
+        <name>Delete_Scheduled_SMS</name>
+        <label>Delete Scheduled SMS</label>
+        <locationX>697</locationX>
+        <locationY>250</locationY>
+        <connector>
+            <targetReference>Scheduled_SMS_Loop</targetReference>
+        </connector>
+        <inputReference>recScheduledSMS</inputReference>
+    </recordDeletes>
+    <recordLookups>
+        <description>Get the Scheduled SMS for the Contact for the given Drip Campaign.
+Handles the Contact or Lead Id in one variable (fRecordId) so we can delete the Scheduled SMS records in one command by searching on the ScheduledSMS.Related_Object_Id field rather than the individual ContactId or LeadId Fields.</description>
+        <name>Sched_SMS_by_Drip</name>
+        <label>Sched SMS by Drip</label>
+        <locationX>437</locationX>
+        <locationY>31</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Scheduled_SMS_Loop</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Drip_Campaign__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>vDripCampaignId</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>tdc_tsw__Related_Object_Id__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>fRecordId</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>tdc_tsw__isSent__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <object>tdc_tsw__Scheduled_Sms__c</object>
+        <outputReference>colScheduledSMS</outputReference>
+        <queriedFields>Id</queriedFields>
+    </recordLookups>
+    <recordLookups>
+        <description>No specific drip campaign was supplied so just find all Scheduled SMS where Drip Campaign is not null and delete them all.</description>
+        <name>Sched_SMS_w_o_Drip</name>
+        <label>Sched SMS w/o Drip</label>
+        <locationX>222</locationX>
+        <locationY>198</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Loop</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Drip_Campaign__c</field>
+            <operator>IsNull</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <filters>
+            <field>tdc_tsw__Related_Object_Id__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>fRecordId</elementReference>
+            </value>
+        </filters>
+        <filters>
+            <field>tdc_tsw__isSent__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <object>tdc_tsw__Scheduled_Sms__c</object>
+        <outputReference>colScheduledSMS_NoDripSupplied</outputReference>
+        <queriedFields>Id</queriedFields>
+    </recordLookups>
+    <start>
+        <locationX>50</locationX>
+        <locationY>50</locationY>
+        <connector>
+            <targetReference>DripCampaign_Supplied</targetReference>
+        </connector>
+    </start>
+    <status>Active</status>
+    <variables>
+        <description>collection of the found scheduled sms records that need to be deleted - this is the query where the Drip Campaign parameter was supplied.</description>
+        <name>colScheduledSMS</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>tdc_tsw__Scheduled_Sms__c</objectType>
+    </variables>
+    <variables>
+        <description>This is the separate query of Scheduled SMS records without the DripCampaign Parameter</description>
+        <name>colScheduledSMS_NoDripSupplied</name>
+        <dataType>SObject</dataType>
+        <isCollection>true</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>tdc_tsw__Scheduled_Sms__c</objectType>
+    </variables>
+    <variables>
+        <description>The individual scheduled SMS record which will be deleted</description>
+        <name>recScheduledSMS</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>tdc_tsw__Scheduled_Sms__c</objectType>
+    </variables>
+    <variables>
+        <description>the collection of records from the query where no drip campaign was supplied.</description>
+        <name>recScheduleSMS_NoDripSupplied</name>
+        <dataType>SObject</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <objectType>tdc_tsw__Scheduled_Sms__c</objectType>
+    </variables>
+    <variables>
+        <description>Input variable passed in from the process builder</description>
+        <name>vContactId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <description>Input variable passed in from the process builder when the campaign is marked Stop</description>
+        <name>vDripCampaignId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <description>Input parameter supplied by the calling process builder</description>
+        <name>vLeadId</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+</Flow>

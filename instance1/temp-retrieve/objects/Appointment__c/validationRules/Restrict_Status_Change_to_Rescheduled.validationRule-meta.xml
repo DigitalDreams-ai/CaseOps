@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Restrict_Status_Change_to_Rescheduled</fullName>
+    <active>true</active>
+    <description>Restrict_Status_Change_Rescheduled</description>
+    <errorConditionFormula>AND(
+    ISPICKVAL(Sub_Status__c, &quot;Rescheduled&quot;),
+    NOT($Profile.Name = &quot;System Administrator&quot;),
+    DATETIMEVALUE(Start_Date__c) &lt; NOW()
+)</errorConditionFormula>
+    <errorMessage>It is not possible to mark the Appointment as &quot;Rescheduled&quot; after appointment Start Date has passed</errorMessage>
+</ValidationRule>

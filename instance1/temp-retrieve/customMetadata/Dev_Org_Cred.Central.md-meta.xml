@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Central</label>
+    <protected>false</protected>
+    <values>
+        <field>client_id__c</field>
+        <value xsi:type="xsd:string">3MVG9x3BHiue58jXd5Rfz63mDsdL4Ib0INykPGhi.PGd0BWBN3K6dqxvUYWztNHP1mVgzFcLSrYSToePd1enm</value>
+    </values>
+    <values>
+        <field>client_secret__c</field>
+        <value xsi:type="xsd:string">C4E1DD1185FE8D6990F68811C5DBFF536F717C165B5E253B780603E8B1D5828B</value>
+    </values>
+    <values>
+        <field>create_products__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>endpoint__c</field>
+        <value xsi:type="xsd:string">https://10xhealth--centraldev.sandbox.my.salesforce.com/services/oauth2/token</value>
+    </values>
+    <values>
+        <field>sandbox_name__c</field>
+        <value xsi:type="xsd:string">Central Dev</value>
+    </values>
+    <values>
+        <field>update_products__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+</CustomMetadata>

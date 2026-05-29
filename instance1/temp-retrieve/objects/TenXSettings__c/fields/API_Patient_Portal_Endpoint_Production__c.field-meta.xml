@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>API_Patient_Portal_Endpoint_Production__c</fullName>
+    <encryptionScheme>None</encryptionScheme>
+    <label>API Patient Portal Endpoint Production</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Url</type>
+</CustomField>

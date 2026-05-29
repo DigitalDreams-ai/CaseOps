@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Holds feature toggles and reference names that control promotion-related automation. This metadata lets admins enable/disable the “Free PGT Book” logic without a deployment and provides a text name to locate the target Promotion record (avoiding hard-coded IDs). Flows and Invocable Apex read these values at runtime.</description>
+    <label>Promotion Configuration</label>
+    <pluralLabel>Promotions Configuration</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

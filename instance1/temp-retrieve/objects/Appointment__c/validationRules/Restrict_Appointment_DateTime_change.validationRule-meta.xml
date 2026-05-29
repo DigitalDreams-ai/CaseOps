@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Restrict_Appointment_DateTime_change</fullName>
+    <active>true</active>
+    <description>Restrict Appointment Date/Time change if the appointment is in &quot;No Show&quot; or &quot;Abandoned&quot; sub status</description>
+    <errorConditionFormula>AND(
+    OR(
+        ISPICKVAL(Sub_Status__c, &quot;Patient No Show&quot;),
+        ISPICKVAL(Sub_Status__c, &quot;Abandoned&quot;)
+    ),
+    NOT($Profile.Name = &quot;System Administrator&quot;),
+    OR(
+        ISCHANGED(Start_Date__c),
+        ISCHANGED(End_Date__c)
+    )
+)</errorConditionFormula>
+    <errorMessage>It is not possible to change Start or End Date &amp; Time if the Appointment is in a No Show or Abandoned sub status</errorMessage>
+</ValidationRule>

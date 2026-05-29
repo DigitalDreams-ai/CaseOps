@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Height_Conversion_Factor__c</fullName>
+    <description>This will be used in automations to convert the patient height that is stored on the opportunity line item to the correct value to be submitted via the API.</description>
+    <inlineHelpText>Enter the factor to convert height from inches to the lab&apos;s required unit. Set once based on lab standards.</inlineHelpText>
+    <label>Height Conversion Factor</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetName>Height_Units</valueSetName>
+    </valueSet>
+</CustomField>

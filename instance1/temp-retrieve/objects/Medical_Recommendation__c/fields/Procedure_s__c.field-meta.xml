@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Procedure_s__c</fullName>
+    <label>Procedure(s)</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>MultiselectPicklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Annual Physical</fullName>
+                <default>false</default>
+                <label>Annual Physical</label>
+            </value>
+            <value>
+                <fullName>Blood Draw</fullName>
+                <default>false</default>
+                <label>Blood Draw</label>
+            </value>
+            <value>
+                <fullName>Botox</fullName>
+                <default>false</default>
+                <label>Botox</label>
+            </value>
+            <value>
+                <fullName>Cases</fullName>
+                <default>false</default>
+                <label>Cases</label>
+            </value>
+            <value>
+                <fullName>Comprehensive Physical</fullName>
+                <default>false</default>
+                <label>Comprehensive Physical</label>
+            </value>
+            <value>
+                <fullName>FemiWave Therapy</fullName>
+                <default>false</default>
+                <label>FemiWave Therapy</label>
+            </value>
+            <value>
+                <fullName>GAINSWave Therapy</fullName>
+                <default>false</default>
+                <label>GAINSWave Therapy</label>
+            </value>
+            <value>
+                <fullName>In Person Consult</fullName>
+                <default>false</default>
+                <label>In Person Consult</label>
+            </value>
+            <value>
+                <fullName>Inbody</fullName>
+                <default>false</default>
+                <label>Inbody</label>
+            </value>
+            <value>
+                <fullName>Injection</fullName>
+                <default>false</default>
+                <label>Injection</label>
+            </value>
+            <value>
+                <fullName>Labs Review</fullName>
+                <default>false</default>
+                <label>Labs Review</label>
+            </value>
+            <value>
+                <fullName>O-Shot</fullName>
+                <default>false</default>
+                <label>O-Shot</label>
+            </value>
+            <value>
+                <fullName>Phone Consult</fullName>
+                <default>false</default>
+                <label>Phone Consult</label>
+            </value>
+            <value>
+                <fullName>PRP Face</fullName>
+                <default>false</default>
+                <label>PRP Face</label>
+            </value>
+            <value>
+                <fullName>PRP Hair</fullName>
+                <default>false</default>
+                <label>PRP Hair</label>
+            </value>
+            <value>
+                <fullName>Stem Cell Therapy</fullName>
+                <default>false</default>
+                <label>Stem Cell Therapy</label>
+            </value>
+            <value>
+                <fullName>Thermiva</fullName>
+                <default>false</default>
+                <label>Thermiva</label>
+            </value>
+            <value>
+                <fullName>Vampire Face Lift</fullName>
+                <default>false</default>
+                <label>Vampire Face Lift</label>
+            </value>
+            <value>
+                <fullName>VSEE Consult</fullName>
+                <default>false</default>
+                <label>VSEE Consult</label>
+            </value>
+            <value>
+                <fullName>Consultation</fullName>
+                <default>false</default>
+                <label>Consultation</label>
+            </value>
+            <value>
+                <fullName>EMSculpt</fullName>
+                <default>false</default>
+                <label>EMSculpt</label>
+            </value>
+            <value>
+                <fullName>P-Shot</fullName>
+                <default>false</default>
+                <label>P-Shot</label>
+            </value>
+            <value>
+                <fullName>I.V Therapy</fullName>
+                <default>false</default>
+                <label>I.V Therapy</label>
+            </value>
+            <value>
+                <fullName>JuveDerm Injections</fullName>
+                <default>false</default>
+                <label>JuveDerm Injections</label>
+            </value>
+            <value>
+                <fullName>Comprehensive lab review and PE</fullName>
+                <default>false</default>
+                <label>Comprehensive lab review and PE</label>
+            </value>
+            <value>
+                <fullName>Troche Review</fullName>
+                <default>false</default>
+                <label>Troche Review</label>
+            </value>
+            <value>
+                <fullName>Dexa Scan</fullName>
+                <default>false</default>
+                <label>Dexa Scan</label>
+            </value>
+            <value>
+                <fullName>COVID Testing</fullName>
+                <default>false</default>
+                <label>COVID Testing</label>
+            </value>
+            <value>
+                <fullName>Annual PE &amp; Lab Review</fullName>
+                <default>false</default>
+                <label>Annual PE &amp; Lab Review</label>
+            </value>
+            <value>
+                <fullName>Medication Instructions</fullName>
+                <default>false</default>
+                <label>Medication Instructions</label>
+            </value>
+            <value>
+                <fullName>Procedure Follow-Up Call</fullName>
+                <default>false</default>
+                <label>Procedure Follow-Up Call</label>
+            </value>
+            <value>
+                <fullName>ThermiSmooth</fullName>
+                <default>false</default>
+                <label>ThermiSmooth</label>
+            </value>
+            <value>
+                <fullName>VSee Consult for BP Reading</fullName>
+                <default>false</default>
+                <label>VSee Consult for BP Reading</label>
+            </value>
+            <value>
+                <fullName>Exosome Therapy</fullName>
+                <default>false</default>
+                <label>Exosome Therapy</label>
+            </value>
+            <value>
+                <fullName>Gains Enhancement</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Gains Enhancement</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+    <visibleLines>4</visibleLines>
+</CustomField>

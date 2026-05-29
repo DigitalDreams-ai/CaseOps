@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Question__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>The first question of a Survey. Uses a filtered lookup so if you choose the survey first you have a fighting chance to pick the question since it&apos;s impossible to pick due to the auto-number of it&apos;s name.
+
+Eventually, this will be hidden from the user and instead we&apos;ll use flows/triggers to allow choosing the Survey instead of making them choose from the question field.</description>
+    <inlineHelpText>Choose the survey first and then the question will filter to only show the first question of that survey</inlineHelpText>
+    <label>Question</label>
+    <lookupFilter>
+        <active>true</active>
+        <errorMessage>Filtered to show only the first question of a Survey. Choose the Survey field first.</errorMessage>
+        <filterItems>
+            <field>tdc_tsw__Question__c.tdc_tsw__Survey__c</field>
+            <operation>equals</operation>
+            <valueField>tdc_tsw__Question__c.tdc_tsw__Survey__c</valueField>
+        </filterItems>
+        <filterItems>
+            <field>tdc_tsw__Question__c.tdc_tsw__First_Question__c</field>
+            <operation>equals</operation>
+            <value>True</value>
+        </filterItems>
+        <isOptional>false</isOptional>
+    </lookupFilter>
+    <referenceTo>tdc_tsw__Question__c</referenceTo>
+    <relationshipLabel>Drip Campaign Messages</relationshipLabel>
+    <relationshipName>Drip_Campaign_Messages</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>60.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <description>When a new Campaign Employee is created and both the Campaign and Employee&apos;s codes are filled in this will automatically create the Short Link that will be needed to create the QR Code.</description>
+    <environments>Default</environments>
+    <interviewLabel>Record Trigger - Campaign Employee - Create Short Link {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Campaign Employee - Create Short Link</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <filterFormula>AND(
+NOT(ISBLANK({!$Record.Campaign__r.Affiliate_Code__c})),
+NOT(ISBLANK({!$Record.Employee__r.Referral_Code__c}))
+)</filterFormula>
+        <object>Campaign_Employee__c</object>
+        <recordTriggerType>Create</recordTriggerType>
+        <scheduledPaths>
+            <connector>
+                <targetReference>Create_Short_Link</targetReference>
+            </connector>
+            <pathType>AsyncAfterCommit</pathType>
+        </scheduledPaths>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Draft</status>
+    <subflows>
+        <name>Create_Short_Link</name>
+        <label>Create Short Link</label>
+        <locationX>308</locationX>
+        <locationY>276</locationY>
+        <flowName>Autolaunch_Create_Bitly_Short_Link</flowName>
+        <inputAssignments>
+            <name>rec_CampaignEmployee</name>
+            <value>
+                <elementReference>$Record</elementReference>
+            </value>
+        </inputAssignments>
+    </subflows>
+</Flow>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Simon</label>
+    <protected>false</protected>
+    <values>
+        <field>client_id__c</field>
+        <value xsi:type="xsd:string">3MVG9EJ2FoGDnkgVQC0uA9g7Mopd4NP1XnkIM11vmQH8NA9LSbMaOMH8xBAElk_Mv3DFCBDXXaqwtmbxcMwle</value>
+    </values>
+    <values>
+        <field>client_secret__c</field>
+        <value xsi:type="xsd:string">24977393926DA4CBE2FABD11474F7073888B8662F38391A19AC5FCFD628B2869</value>
+    </values>
+    <values>
+        <field>create_products__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>endpoint__c</field>
+        <value xsi:type="xsd:string">https://10xhealth--simondev.sandbox.my.salesforce.com/services/oauth2/token</value>
+    </values>
+    <values>
+        <field>sandbox_name__c</field>
+        <value xsi:type="xsd:string">Simon Dev</value>
+    </values>
+    <values>
+        <field>update_products__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+</CustomMetadata>

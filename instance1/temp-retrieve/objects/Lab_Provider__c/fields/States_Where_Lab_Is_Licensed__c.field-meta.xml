@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>States_Where_Lab_Is_Licensed__c</fullName>
+    <description>List of states that the Lab is licensed</description>
+    <label>State(s) Where Lab Is Licensed</label>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>MultiselectPicklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetName>States</valueSetName>
+    </valueSet>
+    <visibleLines>4</visibleLines>
+</CustomField>

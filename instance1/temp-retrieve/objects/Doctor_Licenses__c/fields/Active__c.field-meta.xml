@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Active__c</fullName>
+    <formula>AND(
+				NOT(ISPICKVAL( License_Status__c, &quot;Inactive&quot;)),
+OR(
+    ISBLANK(Expiration_Date__c), 
+    Expiration_Date__c &gt; TODAY()
+)
+)</formula>
+    <label>Active</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

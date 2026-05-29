@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Recurrence_Schedule__c</fullName>
+    <description>How often does this consent form need signed</description>
+    <label>Recurrence Schedule</label>
+    <required>true</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Once</fullName>
+                <default>false</default>
+                <label>Once</label>
+            </value>
+            <value>
+                <fullName>Per Visit</fullName>
+                <default>false</default>
+                <label>Per Visit</label>
+            </value>
+            <value>
+                <fullName>Per Request</fullName>
+                <default>false</default>
+                <label>Per Request</label>
+            </value>
+            <value>
+                <fullName>X Months</fullName>
+                <default>false</default>
+                <label>X Months</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

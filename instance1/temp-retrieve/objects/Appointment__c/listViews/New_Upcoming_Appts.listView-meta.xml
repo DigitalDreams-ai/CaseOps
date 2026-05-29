@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>New_Upcoming_Appts</fullName>
+    <columns>Account__c</columns>
+    <columns>NAME</columns>
+    <columns>Start_Date__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Start_Date__c</field>
+        <operation>equals</operation>
+        <value>TOMORROW</value>
+    </filters>
+    <filters>
+        <field>NAME</field>
+        <operation>contains</operation>
+        <value>precision wellness</value>
+    </filters>
+    <label>New Patient Upcoming Appts</label>
+</ListView>

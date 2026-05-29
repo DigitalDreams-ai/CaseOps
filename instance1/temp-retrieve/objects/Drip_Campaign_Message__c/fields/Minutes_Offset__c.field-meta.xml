@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Minutes_Offset__c</fullName>
+    <description>SR: Sometimes you want a days offset of 0 but you don&apos;t want the SMS to trigger to quickly. So works in conjunction with Days Offset to add x minutes to the time.
+
+Setting the TIME value overrides this setting though.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>SR: Sometimes you want a days offset of 0 but you don&apos;t want the SMS to trigger to quickly. So works in conjunction with Days Offset to add x minutes to the time.
+
+Setting the TIME value overrides this setting though.</inlineHelpText>
+    <label>Minutes Offset</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

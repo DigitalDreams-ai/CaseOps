@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Commission_Rejected_By_Required</fullName>
+    <active>true</active>
+    <description>Commission_Rejected_By_Required</description>
+    <errorConditionFormula>AND(
+ISPICKVAL( Status__c , &apos;Commission Rejected&apos;),
+ISBLANK( Rejected_By__c )
+)</errorConditionFormula>
+    <errorDisplayField>Rejected_By__c</errorDisplayField>
+    <errorMessage>Rejected By must be filled in when status is rejected</errorMessage>
+</ValidationRule>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Date_Product_Sent_to_Distribution_Center__c</fullName>
+    <description>Automatically populated with the current date when Status Reason is set to &quot;Sent to Distribution Center&quot; on a Lab Order.</description>
+    <encryptionScheme>None</encryptionScheme>
+    <inlineHelpText>Date product was sent to the distribution center based on Status Reason change to &quot;Sent to Distribution Center&quot;.</inlineHelpText>
+    <label>Date Product Sent to Distribution Center</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

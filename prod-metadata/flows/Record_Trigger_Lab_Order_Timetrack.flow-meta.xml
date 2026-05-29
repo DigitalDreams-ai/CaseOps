@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>64.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Asn_Stamp_Analysis_in_Progress</name>
+        <label>Stamp - Analysis in Progress Date</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Analysis_in_Progress_Date__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Flow.CurrentDateTime</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <assignments>
+        <name>Asn_Stamp_Kit_Sent_to_Patient</name>
+        <label>Stamp - Kit Sent to Patient Date</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Kit_Sent_to_Patient_Date__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Flow.CurrentDateTime</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <assignments>
+        <name>Asn_Stamp_Order_Held</name>
+        <label>Stamp - Order Held Date</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Order_Held_Date__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Flow.CurrentDateTime</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Was_Status_Reason_Changed_As_Well</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Asn_Stamp_Product_Sent_to_Distribution_Center</name>
+        <label>Stamp - Date Product Sent to Distribution Center</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Date_Product_Sent_to_Distribution_Center__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Flow.CurrentDateTime</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <assignments>
+        <name>Asn_Stamp_Results_Delivered</name>
+        <label>Stamp - Results Delivered Date</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Results_Delivered_Date__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Flow.CurrentDateTime</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Was_Status_Reason_Changed_As_Well</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Asn_Stamp_Sample_Received</name>
+        <label>Stamp - Sample Received Date</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Sample_Received_Date__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Flow.CurrentDateTime</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Was_Status_Reason_Changed_As_Well</targetReference>
+        </connector>
+    </assignments>
+    <assignments>
+        <name>Asn_Stamp_Sample_Received_by_Distribution</name>
+        <label>Stamp - Sample Received by Distribution Date</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Sample_Received_by_Distribution_Date__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Flow.CurrentDateTime</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <assignments>
+        <name>Asn_Stamp_Supplement_Production_Started</name>
+        <label>Stamp - Date Supplement Production Started</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Date_Supplement_Production_Started__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>$Flow.CurrentDateTime</elementReference>
+            </value>
+        </assignmentItems>
+    </assignments>
+    <decisions>
+        <name>Dec_Did_Status_or_Reason_Change</name>
+        <label>Did Status or Reason Change?</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnectorLabel>No Change</defaultConnectorLabel>
+        <rules>
+            <name>Yes_Changed</name>
+            <conditionLogic>1 OR 2</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status__c</leftValueReference>
+                <operator>NotEqualTo</operator>
+                <rightValue>
+                    <elementReference>$Record__Prior.Status__c</elementReference>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>$Record.Status_Reason__c</leftValueReference>
+                <operator>NotEqualTo</operator>
+                <rightValue>
+                    <elementReference>$Record__Prior.Status_Reason__c</elementReference>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Which_Field_Changed</targetReference>
+            </connector>
+            <label>Yes - Changed</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Dec_Which_Stamp_Status_Changes</name>
+        <label>Which Stamp for Status Changes?</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnector>
+            <targetReference>Was_Status_Reason_Changed_As_Well</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>No Match</defaultConnectorLabel>
+        <rules>
+            <name>Status_Results_Delivered</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Results Delivered</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Asn_Stamp_Results_Delivered</targetReference>
+            </connector>
+            <label>Status - Results Delivered</label>
+        </rules>
+        <rules>
+            <name>Status_Reason_Order_Held</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Order Held</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Asn_Stamp_Order_Held</targetReference>
+            </connector>
+            <label>Status Reason - Order Held</label>
+        </rules>
+        <rules>
+            <name>Status_Sample_Received</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Sample Received</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Asn_Stamp_Sample_Received</targetReference>
+            </connector>
+            <label>Status - Sample Received</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Dec_Which_Stamp_Status_Reason_Changes</name>
+        <label>Which Stamp for Status Reason Changes?</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnectorLabel>No Match</defaultConnectorLabel>
+        <rules>
+            <name>Status_Reason_Kit_Sent_to_Patient</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status_Reason__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Kit Sent To Patient</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Asn_Stamp_Kit_Sent_to_Patient</targetReference>
+            </connector>
+            <label>Status Reason - Kit Sent to Patient (Status Reason Path)</label>
+        </rules>
+        <rules>
+            <name>Status_Reason_Analysis_in_Progress</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status_Reason__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Analysis In Progress</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Asn_Stamp_Analysis_in_Progress</targetReference>
+            </connector>
+            <label>Status Reason - Analysis in Progress (Status Reason Path)</label>
+        </rules>
+        <rules>
+            <name>Status_Reason_Order_Processing</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status_Reason__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Supplement Production Started</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Asn_Stamp_Supplement_Production_Started</targetReference>
+            </connector>
+            <label>Status Reason - Order Processing (Status Reason Path)</label>
+        </rules>
+        <rules>
+            <name>Status_Reason_Sent_to_Distribution_Center</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status_Reason__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Product Sent to Distribution Center</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Asn_Stamp_Product_Sent_to_Distribution_Center</targetReference>
+            </connector>
+            <label>Status Reason - Sent to Distribution Center (Status Reason Path)</label>
+        </rules>
+        <rules>
+            <name>Status_Reason_Sample_Received_by_Distribution</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status_Reason__c</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <stringValue>Sample Received by Distribution</stringValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Asn_Stamp_Sample_Received_by_Distribution</targetReference>
+            </connector>
+            <label>Status Reason - Sample Received by Distribution (Status Reason Path)</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <description>Here we check if the Status Reason changed as well; if so we need to evaluate those statues as well.</description>
+        <name>Was_Status_Reason_Changed_As_Well</name>
+        <label>Was Status Reason Changed As Well</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnectorLabel>Status Reason NOT Changed</defaultConnectorLabel>
+        <rules>
+            <name>Status_Reason_Changed</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status_Reason__c</leftValueReference>
+                <operator>IsChanged</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Dec_Which_Stamp_Status_Reason_Changes</targetReference>
+            </connector>
+            <label>Status Reason Changed</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <description>This will navigate to the correct stamp to hit</description>
+        <name>Which_Field_Changed</name>
+        <label>Which Field Changed</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnectorLabel>Not Tracked</defaultConnectorLabel>
+        <rules>
+            <name>Status</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status__c</leftValueReference>
+                <operator>IsChanged</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Dec_Which_Stamp_Status_Changes</targetReference>
+            </connector>
+            <label>Status</label>
+        </rules>
+        <rules>
+            <name>Status_Reason</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Status_Reason__c</leftValueReference>
+                <operator>IsChanged</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Dec_Which_Stamp_Status_Reason_Changes</targetReference>
+            </connector>
+            <label>Status Reason</label>
+        </rules>
+    </decisions>
+    <description>Stamp Date/Time fields on Lab_Order__c when Status__c or Status_Reason__c changes.</description>
+    <environments>Default</environments>
+    <interviewLabel>Record Trigger - Lab Order - Timetrack {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Lab Order - Timetrack</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Dec_Did_Status_or_Reason_Change</targetReference>
+        </connector>
+        <filterLogic>or</filterLogic>
+        <filters>
+            <field>Status__c</field>
+            <operator>IsChanged</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Status_Reason__c</field>
+            <operator>IsChanged</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </filters>
+        <object>Lab_Order__c</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordBeforeSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

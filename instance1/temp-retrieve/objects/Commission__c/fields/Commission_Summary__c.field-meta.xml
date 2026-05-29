@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Commission_Summary__c</fullName>
+    <description>The link to where the Commissions have been summarized for review by finance to pay out commissions.</description>
+    <label>Commission Period</label>
+    <referenceTo>Commission_Summary__c</referenceTo>
+    <relationshipLabel>Commission</relationshipLabel>
+    <relationshipName>Commission_Summary</relationshipName>
+    <relationshipOrder>0</relationshipOrder>
+    <reparentableMasterDetail>true</reparentableMasterDetail>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>

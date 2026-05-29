@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Cant_Edit_Commish_Sum_After_App_Rej</fullName>
+    <active>true</active>
+    <description>Can&apos;t edit the Commission Summary after the record has been approved or rejected. This will prevent users from changing anything on the commission summary after the record has been approved or rejected.</description>
+    <errorConditionFormula>AND(
+				OR(
+				    ISPICKVAL(PRIORVALUE(Status__c),&quot;Commission Approved&quot;),
+				    ISPICKVAL(PRIORVALUE(Status__c),&quot;Commission Rejected&quot;)
+				),
+				$Profile.Name &lt;&gt; &apos;System Administrator&apos;
+)</errorConditionFormula>
+    <errorMessage>Commission Period has already been approved or rejected. No changes can be made to the commission period record.</errorMessage>
+</ValidationRule>

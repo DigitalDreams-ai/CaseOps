@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Practitioner_Name__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <label>Practitioner Name</label>
+    <lookupFilter>
+        <active>true</active>
+        <errorMessage>Practitioner must be active and be a doctor.</errorMessage>
+        <filterItems>
+            <field>Account.RecordTypeId</field>
+            <operation>equals</operation>
+            <value>Affiliate Doctor Account Record Type</value>
+        </filterItems>
+        <filterItems>
+            <field>Account.Account_Status__c</field>
+            <operation>equals</operation>
+            <value>Active</value>
+        </filterItems>
+        <filterItems>
+            <field>Account.Practice_Group__c</field>
+            <operation>notEqual</operation>
+            <value></value>
+        </filterItems>
+        <isOptional>false</isOptional>
+    </lookupFilter>
+    <referenceTo>Account</referenceTo>
+    <relationshipLabel>Medical Recommendations (Practitioner Name)</relationshipLabel>
+    <relationshipName>Medical_Recommendations1</relationshipName>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

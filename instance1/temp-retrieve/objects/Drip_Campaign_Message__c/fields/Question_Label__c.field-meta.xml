@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Question_Label__c</fullName>
+    <description>Formula field to the question label because of the atrocious use of auto-number fields by the Survey Question object. :-(</description>
+    <externalId>false</externalId>
+    <formula>Question__r.tdc_tsw__Question_Label__c</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Question Label</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

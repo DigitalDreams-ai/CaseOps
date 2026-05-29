@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Child_Approved__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>This checkbox will denote if any one of the primary patient agreements had been approved this will be marked true.</description>
+    <inlineHelpText>If this is checked a Child Patient Agreement has been Approved</inlineHelpText>
+    <label>Child Approved</label>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Split_Commission_Owner_100</fullName>
+    <active>false</active>
+    <errorConditionFormula>Split_Commission__c == TRUE 
+&amp;&amp;
+Total_Commissionable_Percentage__c == 1</errorConditionFormula>
+    <errorDisplayField>Total_Commissionable_Percentage__c</errorDisplayField>
+    <errorMessage>Please Choose The Percentage Amount For Opp Owner</errorMessage>
+</ValidationRule>

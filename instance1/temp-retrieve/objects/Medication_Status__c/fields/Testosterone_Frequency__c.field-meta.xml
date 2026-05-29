@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Testosterone_Frequency__c</fullName>
+    <label>Testosterone Frequency</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Once a Week</fullName>
+                <default>false</default>
+                <label>Once a Week</label>
+            </value>
+            <value>
+                <fullName>Twice a Week</fullName>
+                <default>false</default>
+                <label>Twice a Week</label>
+            </value>
+            <value>
+                <fullName>Three Times a Week</fullName>
+                <default>false</default>
+                <label>Three Times a Week</label>
+            </value>
+            <value>
+                <fullName>Other</fullName>
+                <default>false</default>
+                <label>Other</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Tier_2_Sequence</fullName>
+    <columns>NAME</columns>
+    <columns>Tier_Group__c</columns>
+    <columns>Sequence_Number__c</columns>
+    <columns>Out_of_Office__c</columns>
+    <filterScope>Everything</filterScope>
+    <filters>
+        <field>Tier_Group__c</field>
+        <operation>equals</operation>
+        <value>Tier Two</value>
+    </filters>
+    <label>Tier 2 Sequence</label>
+</ListView>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Audience__c</fullName>
+    <label>Audience</label>
+    <required>false</required>
+    <type>MultiselectPicklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>External Only</fullName>
+                <default>false</default>
+                <label>External Only</label>
+            </value>
+            <value>
+                <fullName>Internal Only</fullName>
+                <default>false</default>
+                <label>Internal Only</label>
+            </value>
+            <value>
+                <fullName>CX T1</fullName>
+                <default>false</default>
+                <label>CX T1</label>
+            </value>
+            <value>
+                <fullName>CX T2</fullName>
+                <default>false</default>
+                <label>CX T2</label>
+            </value>
+            <value>
+                <fullName>Sales</fullName>
+                <default>false</default>
+                <label>Sales</label>
+            </value>
+            <value>
+                <fullName>Clinical</fullName>
+                <default>false</default>
+                <label>Clinical</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+    <visibleLines>4</visibleLines>
+</CustomField>

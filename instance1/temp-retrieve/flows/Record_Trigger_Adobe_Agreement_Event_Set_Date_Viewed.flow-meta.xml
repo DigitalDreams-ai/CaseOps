@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>59.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <description>When the email is viewed it will update the date viewed on the Patient Agreement</description>
+    <environments>Default</environments>
+    <interviewLabel>Record Trigger - Adobe Agreement Event - Set Date Viewed {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Record Trigger - Adobe Agreement Event - Set Date Viewed</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordUpdates>
+        <name>Set_Date_Viewed_on_Patient_Agreement</name>
+        <label>Set Date Viewed on Patient Agreement</label>
+        <locationX>176</locationX>
+        <locationY>323</locationY>
+        <inputAssignments>
+            <field>Date_Viewed__c</field>
+            <value>
+                <elementReference>$Flow.CurrentDateTime</elementReference>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record.echosign_dev1__SIGN_Agreement__r.Patient_Agreement__r</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Set_Date_Viewed_on_Patient_Agreement</targetReference>
+        </connector>
+        <filterLogic>or</filterLogic>
+        <filters>
+            <field>echosign_dev1__Event_Type__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>EMAIL_VIEWED</stringValue>
+            </value>
+        </filters>
+        <object>echosign_dev1__SIGN_AgreementEvent__c</object>
+        <recordTriggerType>Create</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

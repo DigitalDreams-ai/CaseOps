@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PGT_Supplements_Reason_Change_NotAllowed</fullName>
+    <active>true</active>
+    <description>For Lab Orders related to PGT Supplements, no updates should be allowed when the Status Reason is set to &quot;Supplement Production Started.&quot;  $UserRole.Id =System Administration</description>
+    <errorConditionFormula>AND(
+				$UserRole.Id != &apos;00E5a000001BBHR&apos;,
+				ISCHANGED(Status__c),
+    ISPICKVAL(PRIORVALUE(Status_Reason__c), &apos;Supplement Production Started&apos;)
+)</errorConditionFormula>
+    <errorDisplayField>Status__c</errorDisplayField>
+    <errorMessage>The lab has already started processing this order and can not be cancelled or updated</errorMessage>
+</ValidationRule>

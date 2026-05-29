@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Commissions_SHP_with_the_Transaction_sou__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>If checked, this will turn on the function where the Product Family is Superhuman Protocol and the Transaction Source is Store or POS and the Commission is Auto Approved.</description>
+    <inlineHelpText>If checked, this will turn on the function where the Product Family is Superhuman Protocol and the Transaction Source is Store or POS and the Commission is Auto Approved.</inlineHelpText>
+    <label>Commissions SHP with TX source Store/POS</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

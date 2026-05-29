@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Auto_Reship_on_Rejection__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>This field will signify that when the Sample is Rejected by the lab, a new test will be auto-shipped out. If this is unchecked, then the Lab Order will stay in rejected status, and a PSR will need to manage this manually.</description>
+    <inlineHelpText>Check this box to allow this lab provider to auto reship when the lab rejects the test</inlineHelpText>
+    <label>Auto Reship on Rejection</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

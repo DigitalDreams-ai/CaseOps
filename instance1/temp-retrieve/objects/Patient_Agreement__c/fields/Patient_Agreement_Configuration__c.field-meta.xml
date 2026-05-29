@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Patient_Agreement_Configuration__c</fullName>
+    <deleteConstraint>Restrict</deleteConstraint>
+    <description>The type of agreement sent to the customer. This configuration record will hold what document and different reasons why this client got this document.</description>
+    <label>Patient Agreement Configuration</label>
+    <lookupFilter>
+        <active>false</active>
+        <errorMessage>Patient Agreement Must Be Active to be assigned to this agreeemnt</errorMessage>
+        <filterItems>
+            <field>Patient_Agreement_Configuration__c.IsActive__c</field>
+            <operation>equals</operation>
+            <value>True</value>
+        </filterItems>
+        <isOptional>false</isOptional>
+    </lookupFilter>
+    <referenceTo>Patient_Agreement_Configuration__c</referenceTo>
+    <relationshipLabel>Patient Agreements</relationshipLabel>
+    <relationshipName>Agreement</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

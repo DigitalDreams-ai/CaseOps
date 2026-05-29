@@ -59,6 +59,7 @@
 - [ ] Rationale: [Why this config makes sense for consistency]
 
 **Similar items found:**
+
 | Item Name | Type | FLS | Layouts | Record Types | Notes |
 | --- | --- | --- | --- | --- | --- |
 | [example] | Field | Read-Write | [list] | [list] | Used for similar purpose |

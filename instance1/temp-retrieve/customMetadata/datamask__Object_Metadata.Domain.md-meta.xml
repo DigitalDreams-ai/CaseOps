@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Domain</label>
+    <protected>false</protected>
+    <values>
+        <field>datamask__API_Name__c</field>
+        <value xsi:type="xsd:string">Domain</value>
+    </values>
+    <values>
+        <field>datamask__Feed_History_Deactivated__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>datamask__Field_History_Deactivated__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>datamask__Id__c</field>
+        <value xsi:type="xsd:string">https://10xhealth.lightning.force.com</value>
+    </values>
+    <values>
+        <field>datamask__Masking_Object__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>datamask__Status__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>datamask__Type__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>datamask__Version_Number__c</field>
+        <value xsi:nil="true"/>
+    </values>
+</CustomMetadata>

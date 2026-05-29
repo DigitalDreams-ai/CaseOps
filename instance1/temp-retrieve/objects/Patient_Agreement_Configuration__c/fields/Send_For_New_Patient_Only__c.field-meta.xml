@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Send_For_New_Patient_Only__c</fullName>
+    <defaultValue>false</defaultValue>
+    <inlineHelpText>If this is checked this will only send this agreement when the patient is brand new.</inlineHelpText>
+    <label>Send For New Patient Only</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

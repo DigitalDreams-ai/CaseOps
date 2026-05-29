@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Edit_only_Retirement_date_and_Replacemen</fullName>
+    <active>false</active>
+    <description>Once the Effective Date passes, only the Retirement Date and Replacement Version fields remain editable</description>
+    <errorConditionFormula>NOT(ISNEW()) &amp;&amp;
+(Effective_Date__c &lt;= TODAY()) &amp;&amp;
+(ISCHANGED(Retirement_Date__c) == FALSE &amp;&amp; ISCHANGED(Replacement_Version__c) == FALSE)</errorConditionFormula>
+    <errorMessage>Only Retirement Date and Replacement Version can be edited after Effective Date has passed!</errorMessage>
+</ValidationRule>

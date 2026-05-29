@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Vendor__c</fullName>
+    <label>Vendor</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Predictive Biotech</fullName>
+                <default>false</default>
+                <label>Predictive Biotech</label>
+            </value>
+            <value>
+                <fullName>Nutritional Frontier</fullName>
+                <default>false</default>
+                <label>Nutritional Frontier</label>
+            </value>
+            <value>
+                <fullName>Medical Spa Rx</fullName>
+                <default>false</default>
+                <label>Medical Spa Rx</label>
+            </value>
+            <value>
+                <fullName>Dr. Joel Kaplan, Inc.</fullName>
+                <default>false</default>
+                <label>Dr. Joel Kaplan, Inc.</label>
+            </value>
+            <value>
+                <fullName>Moore Medical</fullName>
+                <default>false</default>
+                <label>Moore Medical</label>
+            </value>
+            <value>
+                <fullName>Nutrafol</fullName>
+                <default>false</default>
+                <label>Nutrafol</label>
+            </value>
+            <value>
+                <fullName>Phallosan</fullName>
+                <default>false</default>
+                <label>Phallosan</label>
+            </value>
+            <value>
+                <fullName>Eclipse Aesthetics</fullName>
+                <default>false</default>
+                <label>Eclipse Aesthetics</label>
+            </value>
+            <value>
+                <fullName>Terumo BCT</fullName>
+                <default>false</default>
+                <label>Terumo BCT</label>
+            </value>
+            <value>
+                <fullName>PRP Science</fullName>
+                <default>false</default>
+                <label>PRP Science</label>
+            </value>
+            <value>
+                <fullName>Uberlube</fullName>
+                <default>false</default>
+                <label>Uberlube</label>
+            </value>
+            <value>
+                <fullName>Hallandale Pharmacy</fullName>
+                <default>false</default>
+                <label>Hallandale Pharmacy</label>
+            </value>
+            <value>
+                <fullName>Other</fullName>
+                <default>false</default>
+                <label>Other</label>
+            </value>
+            <value>
+                <fullName>AmnioWell</fullName>
+                <default>false</default>
+                <label>AmnioWell</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
