@@ -290,7 +290,26 @@
   function persistSelectedIssue(key) {
     try {
       sessionStorage.setItem(SESSION_ACTIVE_ISSUE, key);
+      // Update URL with current issue
+      const url = new URL(window.location);
+      if (key) {
+        url.searchParams.set('issue', key);
+      } else {
+        url.searchParams.delete('issue');
+      }
+      window.history.replaceState({ issue: key }, '', url.toString());
     } catch (_) {}
+  }
+
+  function loadIssueFromUrl() {
+    try {
+      const url = new URL(window.location);
+      const issueKey = url.searchParams.get('issue');
+      if (issueKey && issueKey.trim()) {
+        return issueKey.trim();
+      }
+    } catch (_) {}
+    return null;
   }
 
   function persistActiveTab(ftype) {
@@ -344,14 +363,20 @@
     void loadIssues();
   }
 
-  /** After manifest is loaded: reopen last issue from this tab (sessionStorage). */
+  /** After manifest is loaded: reopen last issue from URL param or sessionStorage. */
   async function restoreIssueFromSession() {
-    let key = null;
-    try {
-      key = sessionStorage.getItem(SESSION_ACTIVE_ISSUE);
-    } catch (_) {
-      return;
+    // First check URL parameter (takes precedence)
+    let key = loadIssueFromUrl();
+
+    // Fall back to sessionStorage if no URL param
+    if (!key) {
+      try {
+        key = sessionStorage.getItem(SESSION_ACTIVE_ISSUE);
+      } catch (_) {
+        return;
+      }
     }
+
     if (!key) return;
     if (!cachedIssues.some(i => i.key === key)) {
       clearSavedIssueSession();
@@ -2183,6 +2208,18 @@
       }
     });
   }
+
+  // ── URL handling ──────────────────────────────────────────
+
+  window.addEventListener('popstate', async (e) => {
+    const issueKey = e.state?.issue || loadIssueFromUrl();
+    if (issueKey && cachedIssues.some(i => i.key === issueKey)) {
+      activeKey = issueKey;
+      await selectIssue(issueKey);
+    } else {
+      resetMainToOverview();
+    }
+  });
 
   // ── Init ──────────────────────────────────────────────────
 
