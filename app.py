@@ -694,8 +694,10 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
             run_key,
             "CaseOps LLM: Claude Code CLI (CASEOPS_LLM_AUTH=claude_code; ANTHROPIC_API_KEY omitted).",
         )
+        _log_emit_line(run_key, f"Claude binary: {claude_bin}")
         env = _claude_process_env()
         env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
+        _log_emit_line(run_key, f"Invoking: {' '.join(cmd[:3])}...")
         proc = subprocess.Popen(
             cmd,
             env=env,
@@ -708,6 +710,7 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
             cwd=str(ROOT),
             bufsize=1,
         )
+        _log_emit_line(run_key, f"Process started (PID: {proc.pid})")
         assert proc.stdout
         assistant_text = []
         for raw in proc.stdout:
@@ -754,12 +757,22 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                 for line in err.splitlines():
                     _log_emit_line(run_key, f"ERR: {line}")
 
-        proc.wait()
-        if proc.returncode == 0 and issue_key and assistant_text:
+        try:
+            returncode = proc.wait(timeout=600)  # 10 min timeout
+        except subprocess.TimeoutExpired:
+            _log_emit_line(run_key, "ERROR: Claude process timeout (10 min) — killing subprocess")
+            proc.kill()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.terminate()
+            return
+
+        if returncode == 0 and issue_key and assistant_text:
             full_output = "\n".join(assistant_text)
             _save_claude_output(full_output, issue_key)
-        elif proc.returncode != 0:
-            _log_emit_line(run_key, f"-- exit code {proc.returncode} --")
+        elif returncode != 0:
+            _log_emit_line(run_key, f"-- exit code {returncode} --")
 
     except FileNotFoundError:
         _log_emit_line(run_key, "WARNING: 'claude' CLI not found on PATH")
