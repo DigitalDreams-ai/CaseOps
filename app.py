@@ -692,7 +692,7 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
     try:
         _log_emit_line(
             run_key,
-            "CaseOps LLM: Claude Code CLI (CASEOPS_LLM_AUTH=claude_code; ANTHROPIC_API_KEY omitted).",
+            "CaseOps LLM: Claude Code CLI (CASEOPS_LLM_AUTH=claude_code).",
         )
         _log_emit_line(run_key, f"Claude binary: {claude_bin}")
         env = _claude_process_env()
