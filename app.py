@@ -2026,10 +2026,10 @@ def api_post_settings():
     """Save settings to .env.jira. Preserves masked values (doesn't overwrite)."""
     body = request.get_json(silent=True) or {}
 
-    # Filter and validate
+    # Filter and validate (CASEOPS_LLM_AUTH is read-only, set via .env.jira only)
     updates = {}
     for key in ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
-                "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
+                "CASEOPS_ANTHROPIC_MODEL",
                 "CASEOPS_USE_CCI_FOR_AUTH",
                 "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
                 "CASEOPS_PRODUCTION_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL",

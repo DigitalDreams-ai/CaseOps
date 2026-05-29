@@ -367,16 +367,7 @@
             <!-- Claude Code CLI (Subscription) -->
             <div class="settings-section" id="claude-section">
                 <h2>Claude Code CLI</h2>
-                <div class="settings-field">
-                    <label>Authentication:</label>
-                    <div>
-                        <div class="lvm-option">
-                            <input type="radio" id="lvm-claude" name="CASEOPS_LLM_AUTH" value="claude_code" checked>
-                            <label for="lvm-claude">Claude Code CLI (subscription)</label>
-                        </div>
-                    </div>
-                </div>
-                <div id="claude-status" style="margin-top: 15px;">Loading...</div>
+                <div id="claude-status">Loading...</div>
                 <div class="status-note">
                     To authenticate Claude Code CLI: SSH to your NAS and run <code>claude login</code>
                 </div>
@@ -767,11 +758,6 @@
         }
 
         document.getElementById('test-jira').addEventListener('click', testJira);
-
-        // Update LLM visibility when mode changes
-        document.querySelectorAll('input[name="CASEOPS_LLM_AUTH"]').forEach(radio => {
-            radio.addEventListener('change', updateLLMVisibility);
-        });
 
         // Update instructions when auth method, aliases, or URLs change
         document.querySelectorAll('input[name="CASEOPS_USE_CCI_FOR_AUTH"]').forEach(radio => {
