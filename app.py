@@ -434,13 +434,12 @@ _manifest_q: queue.Queue[str] = queue.Queue()  # manifest change notifications
 def _claude_process_env() -> dict[str, str]:
     """Environment for Claude Code CLI subprocess.
 
-    Pass ANTHROPIC_API_KEY to subprocess in all modes. Claude Code CLI will
-    prefer subscription billing if account has active subscription.
+    Pass ANTHROPIC_API_KEY to subprocess. Claude Code CLI will authenticate with API key.
     Instance-specific output directories so Skill writes to correct location.
     """
     env = os.environ.copy()
-    # NOTE: ANTHROPIC_API_KEY is kept in env for all modes.
-    # Claude Code CLI uses subscription (not API billing) if account has active subscription.
+    # Keep ANTHROPIC_API_KEY for all modes to allow Claude Code CLI to authenticate
+
     chrome = (env.get("CASEOPS_CLAUDE_BROWSER") or "").strip()
     if chrome:
         env["BROWSER"] = chrome
@@ -2091,6 +2090,78 @@ def api_test_anthropic():
         return jsonify({"error": str(e)}), 400
 
 
+@app.route("/api/settings/canned-messages", methods=["GET"])
+def api_settings_get_canned_messages():
+    """Get current canned messages (instance-specific or default)."""
+    workspace = app.config.get("WORKSPACE", "default")
+    instance_messages = ROOT / workspace / "canned-messages.json" if workspace != "default" else None
+    messages_file = instance_messages if instance_messages and instance_messages.exists() else ROOT / "canned-messages.json"
+
+    try:
+        content = messages_file.read_text(encoding="utf-8")
+        json.loads(content)  # Validate JSON
+        return jsonify({
+            "content": content,
+            "is_custom": instance_messages and instance_messages.exists(),
+            "path": str(messages_file.relative_to(ROOT))
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/settings/canned-messages", methods=["POST"])
+def api_settings_set_canned_messages():
+    """Update canned messages (saves to instance-specific file)."""
+    data = request.get_json(silent=True) or {}
+    content = data.get("content", "").strip()
+
+    if not content:
+        return jsonify({"error": "content required"}), 400
+
+    # Validate JSON
+    try:
+        json.loads(content)
+    except json.JSONDecodeError as e:
+        return jsonify({"error": f"Invalid JSON: {str(e)}"}), 400
+
+    workspace = app.config.get("WORKSPACE", "default")
+    if workspace == "default":
+        messages_file = ROOT / "canned-messages.json"
+    else:
+        messages_file = ROOT / workspace / "canned-messages.json"
+
+    # Validate instance routing
+    _validate_instance_path(messages_file, "write")
+
+    try:
+        messages_file.parent.mkdir(parents=True, exist_ok=True)
+        messages_file.write_text(content, encoding="utf-8")
+        return jsonify({
+            "ok": True,
+            "path": str(messages_file.relative_to(ROOT)),
+            "is_custom": workspace != "default"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/settings/canned-messages/reset", methods=["POST"])
+def api_settings_reset_canned_messages():
+    """Reset to default canned messages (delete instance-specific file)."""
+    workspace = app.config.get("WORKSPACE", "default")
+    if workspace == "default":
+        return jsonify({"error": "Cannot reset default instance"}), 400
+
+    messages_file = ROOT / workspace / "canned-messages.json"
+
+    try:
+        if messages_file.exists():
+            messages_file.unlink()
+        return jsonify({"ok": True, "message": "Reset to default messages"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/settings/status", methods=["GET"])
 def api_settings_status():
     """Return status of Claude CLI, sf CLI, and Salesforce orgs."""
@@ -2232,6 +2303,8 @@ if __name__ == "__main__":
     WORKSPACE = _args.workspace
     if _args.outputs_dir:
         OUTPUTS = Path(_args.outputs_dir)
+    elif os.environ.get("CASEOPS_OUTPUTS_DIR"):
+        OUTPUTS = Path(os.environ["CASEOPS_OUTPUTS_DIR"])
     else:
         OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
     OUTPUTS.mkdir(parents=True, exist_ok=True)
@@ -2275,7 +2348,7 @@ if __name__ == "__main__":
         test_file = OUTPUTS / ".startup-test"
         test_file.write_text("test", encoding="utf-8")
         test_file.unlink()
-        print(f"✓ OUTPUTS directory is writable")
+        print(f"[OK] OUTPUTS directory is writable")
     except Exception as e:
         raise RuntimeError(f"OUTPUTS directory is not writable: {OUTPUTS}\nError: {e}") from e
 
@@ -2287,7 +2360,7 @@ if __name__ == "__main__":
 
     try:
         env_file_path.read_text(encoding="utf-8")
-        print(f"✓ .env.jira file is readable")
+        print(f"[OK] .env.jira file is readable")
     except Exception as e:
         raise RuntimeError(f".env.jira file is not readable: {env_file_path}\nError: {e}") from e
 
@@ -2302,30 +2375,30 @@ if __name__ == "__main__":
             raise RuntimeError(f"Required subdirectory missing: {subdir_path}")
         if not subdir_path.is_dir():
             raise RuntimeError(f"Subdirectory is not a directory: {subdir_path}")
-    print(f"✓ All required subdirectories exist ({len(required_subdirs)} dirs)")
+    print(f"[OK] All required subdirectories exist ({len(required_subdirs)} dirs)")
 
     # Validate app config is set
     if not app.config.get("WORKSPACE"):
         raise RuntimeError("WORKSPACE not set in app.config")
     if not app.config.get("ENV_FILE_PATH"):
         raise RuntimeError("ENV_FILE_PATH not set in app.config")
-    print(f"✓ App config set (WORKSPACE={app.config['WORKSPACE']})")
+    print(f"[OK] App config set (WORKSPACE={app.config['WORKSPACE']})")
 
     # Verify CASEOPS environment variables will be available to subprocesses
-    print(f"✓ Subprocess environment variables to be set:")
+    print(f"[OK] Subprocess environment variables to be set:")
     print(f"  - CASEOPS_OUTPUTS_DIR={OUTPUTS}")
     print(f"  - CASEOPS_JIRA_OUT_DIR={OUTPUTS / 'jira'}")
     print(f"  - CASEOPS_JIRA_ENV_FILE={env_file_path}")
     print(f"  - CASEOPS_WORKSPACE={WORKSPACE}")
 
     # Validate no hardcoded ROOT paths are being used for instance operations
-    print(f"✓ Instance routing validation:")
+    print(f"[OK] Instance routing validation:")
     print(f"  - ROOT/outputs isolation: OUTPUTS={OUTPUTS.relative_to(ROOT) if OUTPUTS.is_relative_to(ROOT) else OUTPUTS}")
     print(f"  - Jira directory: {(OUTPUTS / 'jira').relative_to(ROOT) if (OUTPUTS / 'jira').is_relative_to(ROOT) else OUTPUTS / 'jira'}")
     print(f"  - Pipeline logs: {(OUTPUTS / 'pipeline-logs').relative_to(ROOT) if (OUTPUTS / 'pipeline-logs').is_relative_to(ROOT) else OUTPUTS / 'pipeline-logs'}")
 
     print(f"\n{'='*70}")
-    print(f"✓ Startup validation PASSED — instance isolation ready")
+    print(f"[OK] Startup validation PASSED - instance isolation ready")
     print(f"{'='*70}\n")
 
     # use_reloader=False prevents the dev reloader from killing SSE streams
