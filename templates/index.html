@@ -19,31 +19,31 @@
     <span id="status-text">Idle</span>
   </div>
   <div id="topbar-actions">
-    <button class="btn" onclick="runAction('sync_new')">Sync New Issues</button>
-    <button class="btn" onclick="runAction('sync')">Fetch from Jira</button>
-    <button class="btn" onclick="runAction('triage')">Prepare Issues</button>
-    <button class="btn primary" onclick="runAction('full')">Auto-Process All</button>
-    <button type="button" class="btn" id="topbar-overview-btn" onclick="showOverview()">Overview</button>
+    <button class="btn" onclick="runAction('sync_new'); closeMobileMenu();">Sync New Issues</button>
+    <button class="btn" onclick="runAction('sync'); closeMobileMenu();">Fetch from Jira</button>
+    <button class="btn" onclick="runAction('triage'); closeMobileMenu();">Prepare Issues</button>
+    <button class="btn primary" onclick="runAction('full'); closeMobileMenu();">Auto-Process All</button>
+    <button type="button" class="btn" id="topbar-overview-btn" onclick="showOverview(); closeMobileMenu();">Overview</button>
   </div>
   <!-- Mobile: issue actions button (in topbar, left of menu) -->
   <div id="issue-actions-container" style="position:relative;">
     <button type="button" class="btn primary mobile-only" id="issue-actions-topbar-btn" onclick="toggleIssueActionsMenu()" style="display:none;">Actions ▼</button>
     <div id="issue-actions-topbar-menu" class="menu" style="display:none;">
-      <button class="menu-item" id="sync-issue-btn" onclick="runAction('sync_issue',activeKey)">Sync This Issue</button>
-      <button class="menu-item primary" id="run-issue-btn" onclick="runAction('full_issue',activeKey)">Run Pipeline For This Issue</button>
+      <button class="menu-item" id="sync-issue-btn" onclick="runAction('sync_issue',activeKey); closeIssueActionsMenu();">Sync This Issue</button>
+      <button class="menu-item primary" id="run-issue-btn" onclick="runAction('full_issue',activeKey); closeIssueActionsMenu();">Run Pipeline For This Issue</button>
       <div style="border-top:1px solid var(--color-border); margin:6px 0; padding:0 12px;">
         <select id="transition-select-topbar" class="menu-select" style="margin-bottom:4px; width:100%;"><option value="">Change status…</option></select>
-        <button class="menu-item" id="transition-btn-topbar" onclick="applyTransitionTopbar(activeKey)" disabled>Apply</button>
+        <button class="menu-item" id="transition-btn-topbar" onclick="applyTransitionTopbar(activeKey); closeIssueActionsMenu();" disabled>Apply</button>
         <span id="transition-status-topbar" style="font-size:11px; display:block; margin-top:4px;"></span>
       </div>
       <div style="border-top:1px solid var(--color-border); margin:6px 0; padding:0 12px;">
         <select id="message-select-topbar" class="menu-select" style="margin-bottom:4px; width:100%;"><option value="">Send message…</option></select>
-        <button class="menu-item" id="message-btn-topbar" onclick="sendCannedMessageTopbar(activeKey)" disabled>Send</button>
+        <button class="menu-item" id="message-btn-topbar" onclick="sendCannedMessageTopbar(activeKey); closeIssueActionsMenu();" disabled>Send</button>
         <span id="message-status-topbar" style="font-size:11px; display:block; margin-top:4px;"></span>
       </div>
       <div style="border-top:1px solid var(--color-border); margin:6px 0; padding:0 12px;">
-        <button class="menu-item" id="view-jira-btn" onclick="window.open(document.getElementById('issue-jira-url').value,'_blank')">View in Jira</button>
-        <button class="menu-item" onclick="copyFullPrompt(activeKey)">Copy Claude Prompt</button>
+        <button class="menu-item" id="view-jira-btn" onclick="window.open(document.getElementById('issue-jira-url').value,'_blank'); closeIssueActionsMenu();">View in Jira</button>
+        <button class="menu-item" onclick="copyFullPrompt(activeKey); closeIssueActionsMenu();">Copy Claude Prompt</button>
       </div>
     </div>
   </div>
@@ -2254,6 +2254,20 @@
     const btn = document.getElementById('mobile-menu-btn');
     const open = actions.classList.toggle('mobile-open');
     btn.textContent = open ? '✕' : '⋮';
+  }
+
+  function closeMobileMenu() {
+    const actions = document.getElementById('topbar-actions');
+    const btn = document.getElementById('mobile-menu-btn');
+    actions.classList.remove('mobile-open');
+    btn.textContent = '⋮';
+  }
+
+  function closeIssueActionsMenu() {
+    const menu = document.getElementById('issue-actions-topbar-menu');
+    const btn = document.getElementById('issue-actions-topbar-btn');
+    menu.style.display = 'none';
+    btn.textContent = 'Actions ▼';
   }
 
   function toggleSidebar() {
