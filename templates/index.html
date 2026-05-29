@@ -137,7 +137,7 @@
       <div id="instruction-panel">
         <div id="instruction-context"></div>
         <div id="instruction-row">
-          <textarea id="instruction-input" placeholder="Instruct Claude on what to do next…&#10;e.g. &quot;Draft the Jira message based on the investigation&quot;" onkeydown="handleInstructionKeydown(event)"></textarea>
+          <textarea id="instruction-input" placeholder="Instruct CaseOps on what to do next for this issue…" onkeydown="handleInstructionKeydown(event)"></textarea>
           <button id="send-claude-btn" class="btn primary" onclick="sendInstruction()">Send to Claude</button>
         </div>
       </div>
@@ -571,6 +571,23 @@
       setTimeout(initIssuesSSE, 5000);
     };
   }
+
+  // Close SSE streams when tab hidden, reopen when visible
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      if (issuesEventSource) {
+        issuesEventSource.close();
+        issuesEventSource = null;
+      }
+    } else {
+      initStream();
+      initIssuesSSE();
+    }
+  });
 
   function updateStatus() {
     const n = activeRuns.size;
@@ -2142,7 +2159,7 @@
     const btn = document.getElementById('log-collapse-btn');
     if (!pane || !handle || !btn) return;
 
-    let savedH = parseInt(localStorage.getItem(LOG_PANE_H_KEY) || '', 10);
+    let savedH = parseInt(sessionStorage.getItem(LOG_PANE_H_KEY) || '', 10);
     if (!Number.isFinite(savedH) || savedH < 80) savedH = 180;
     const maxH = () => Math.max(120, Math.floor(window.innerHeight * 0.88));
 
@@ -2150,7 +2167,7 @@
 
     // On mobile, collapse log pane by default
     const isMobile = window.innerWidth <= 768;
-    const shouldCollapse = isMobile || localStorage.getItem(LOG_PANE_COLLAPSE_KEY) === '1';
+    const shouldCollapse = isMobile || sessionStorage.getItem(LOG_PANE_COLLAPSE_KEY) === '1';
 
     const adjustPaddingForLogPane = (isCollapsed) => {
       const issueList = document.getElementById('issue-list');
@@ -2179,8 +2196,8 @@
     btn.addEventListener('click', () => {
       if (pane.classList.contains('collapsed')) {
         pane.classList.remove('collapsed');
-        localStorage.setItem(LOG_PANE_COLLAPSE_KEY, '0');
-        let h = parseInt(localStorage.getItem(LOG_PANE_H_KEY) || '', 10);
+        sessionStorage.setItem(LOG_PANE_COLLAPSE_KEY, '0');
+        let h = parseInt(sessionStorage.getItem(LOG_PANE_H_KEY) || '', 10);
         if (!Number.isFinite(h) || h < 80) h = savedH;
         savedH = Math.min(h, maxH());
         pane.style.height = savedH + 'px';
@@ -2189,9 +2206,9 @@
         adjustPaddingForLogPane(false);
       } else {
         savedH = Math.round(pane.getBoundingClientRect().height);
-        localStorage.setItem(LOG_PANE_H_KEY, String(savedH));
+        sessionStorage.setItem(LOG_PANE_H_KEY, String(savedH));
         pane.classList.add('collapsed');
-        localStorage.setItem(LOG_PANE_COLLAPSE_KEY, '1');
+        sessionStorage.setItem(LOG_PANE_COLLAPSE_KEY, '1');
         pane.style.height = '';
         btn.textContent = '▶';
         btn.title = 'Expand log';
@@ -2225,7 +2242,7 @@
       dragging = false;
       document.body.style.userSelect = '';
       if (!pane.classList.contains('collapsed'))
-        localStorage.setItem(LOG_PANE_H_KEY, String(savedH));
+        sessionStorage.setItem(LOG_PANE_H_KEY, String(savedH));
     };
 
     handle.addEventListener('mousedown', e => {
@@ -2251,7 +2268,7 @@
       if (pane.getBoundingClientRect().height > cap) {
         savedH = cap;
         pane.style.height = savedH + 'px';
-        localStorage.setItem(LOG_PANE_H_KEY, String(savedH));
+        sessionStorage.setItem(LOG_PANE_H_KEY, String(savedH));
       }
     });
   }

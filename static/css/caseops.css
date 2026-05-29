@@ -846,6 +846,7 @@ select.desktop-only {
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 #instruction-context {
@@ -895,7 +896,7 @@ select.desktop-only {
   position: sticky;
   top: 0;
   z-index: 40;
-  overflow-x: hidden;
+  overflow: hidden;
   margin: 0;
 }
 
@@ -1683,6 +1684,58 @@ select.desktop-only {
   select,
   textarea {
     min-height: 40px;
+  }
+
+  /* Mobile content padding to prevent edge spanning */
+  #content-area {
+    padding: 0 16px 12px 16px;
+  }
+
+  /* Mobile issue summary heading - smaller, no top gap */
+  #issue-body h1 {
+    font-size: 18px;
+    margin: 0 0 6px 0;
+  }
+
+  /* Smaller status badges on mobile */
+  .detail-badge {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+
+  /* Compact instruction panel for mobile - pin under tabs */
+  #instruction-panel {
+    padding: 8px 12px;
+    position: sticky;
+    top: 0;
+    margin-top: 0;
+    z-index: 39;
+    background: var(--color-surface);
+    overflow: hidden;
+  }
+
+  #tabs {
+    overflow: hidden;
+  }
+
+  #instruction-row {
+    gap: 6px;
+  }
+
+  #instruction-context {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  #instruction-input {
+    min-height: 40px;
+    padding: 6px;
+    font-size: 13px;
+  }
+
+  #send-claude-btn {
+    padding: 6px 12px;
+    font-size: 12px;
   }
 
   #issue-body table {
