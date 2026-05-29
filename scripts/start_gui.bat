@@ -9,8 +9,10 @@ echo CaseOps Multi-Instance Launcher
 echo ============================================
 echo.
 
-:: Stop any existing Flask servers on port 5000 and 5351
+:: Close old terminal windows and stop any existing Flask servers
 echo Stopping any existing CaseOps instances...
+
+:: Kill processes on ports 5000 and 5351
 for /f "tokens=5" %%p in ('netstat -ano 2^>nul ^| findstr ":5000 " ^| findstr "LISTENING"') do (
     taskkill /PID %%p /F >nul 2>&1
     echo - Killed process on port 5000 (PID: %%p)
@@ -19,6 +21,12 @@ for /f "tokens=5" %%p in ('netstat -ano 2^>nul ^| findstr ":5351 " ^| findstr "L
     taskkill /PID %%p /F >nul 2>&1
     echo - Killed process on port 5351 (PID: %%p)
 )
+
+:: Close old terminal windows by title using PowerShell
+powershell -NoProfile -Command "Get-Process powershell 2>$null | Where-Object { $_.MainWindowTitle -match 'CaseOps Instance|Comments Poller' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
+if not errorlevel 1 echo - Closed old terminal windows
+
+timeout /t 2 /nobreak >nul 2>&1
 
 :: Change to root directory
 cd /d "%ROOT_DIR%"
