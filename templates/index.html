@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>CaseOps{% if workspace and workspace != 'default' %} — {{ workspace }}{% endif %}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/caseops.css') }}">
@@ -98,6 +98,13 @@
       <div id="detail-meta"></div>
     </div>
     <div id="tabs" style="display:none"></div>
+    <div id="instruction-panel">
+      <div id="instruction-context"></div>
+      <div id="instruction-row">
+        <textarea id="instruction-input" placeholder="Instruct CaseOps on what to do next for this issue…" onkeydown="handleInstructionKeydown(event)"></textarea>
+        <button id="send-claude-btn" class="btn primary" onclick="sendInstruction()">Send Request</button>
+      </div>
+    </div>
     <div id="content-area">
       <div id="detail-actions" style="display:flex; padding:12px 16px; border-bottom:1px solid var(--color-border); gap:8px; align-items:center; flex-wrap:wrap; background:rgba(0,0,0,0.1);">
         <!-- Desktop: always visible -->
@@ -128,17 +135,10 @@
               <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
                 <button class="action-menu-item" onclick="window.open(document.getElementById('issue-jira-url').value,'_blank')" style="width:100%; padding:6px 8px;">View in Jira</button>
                 <button class="action-menu-item" onclick="copyFullPrompt(activeKey); closeDetailActionsMenu();" style="width:100%; padding:6px 8px;">Copy Claude Prompt</button>
-                <button class="action-menu-item" onclick="sendInstruction(); closeDetailActionsMenu();" style="width:100%; padding:6px 8px;">Send to Claude</button>
+                <button class="action-menu-item" onclick="sendInstruction(); closeDetailActionsMenu();" style="width:100%; padding:6px 8px;">Send Request</button>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      <div id="instruction-panel">
-        <div id="instruction-context"></div>
-        <div id="instruction-row">
-          <textarea id="instruction-input" placeholder="Instruct CaseOps on what to do next for this issue…" onkeydown="handleInstructionKeydown(event)"></textarea>
-          <button id="send-claude-btn" class="btn primary" onclick="sendInstruction()">Send to Claude</button>
         </div>
       </div>
       <div id="dashboard">
@@ -1077,18 +1077,17 @@
 
     const metaEl = document.getElementById('detail-meta');
     if (metaEl) {
-      metaEl.textContent = `Status: ${issue.status}   |   Updated: ${issue.updated || '—'}`;
+      const updated = issue.updated ? issue.updated.split('.')[0] : '—';
+      metaEl.textContent = `Status: ${issue.status}   |   Updated: ${updated}`;
     }
 
     const headerEl = document.getElementById('detail-header');
     if (headerEl) headerEl.style.display = 'block';
 
-    // Mobile: hide badges and meta to save space
+    // Mobile: hide badges but show meta (status)
     if (window.innerWidth <= 768) {
       const badges = document.getElementById('detail-badges');
-      const meta = document.getElementById('detail-meta');
       if (badges) badges.style.display = 'none';
-      if (meta) meta.style.display = 'none';
     }
 
     // Show issue-actions in topbar and load transitions/messages
@@ -1132,9 +1131,8 @@
       tabsEl.appendChild(el);
     });
 
-    // Restore previously active tab if it still exists, else default to first.
-    const preferred = activeTab && issue.tabs.find(t => t.id === activeTab);
-    const targetTab = preferred || issue.tabs[0];
+    // Always default to jira_summary tab when switching issues
+    const targetTab = issue.tabs.find(t => t.id === 'jira_summary') || issue.tabs[0];
     const targetEl = tabsEl.querySelector(`[data-ftype="${targetTab.id}"]`);
     if (targetEl) selectTab(key, targetTab.id, targetEl);
 
@@ -2326,6 +2324,21 @@
     actions.classList.remove('mobile-open');
     btn.textContent = '⋮';
   }
+
+  // Prevent scroll on pinned sections from scrolling parent
+  if (window.innerWidth <= 768) {
+    ['#tabs', '#instruction-panel'].forEach(sel => {
+      const el = document.querySelector(sel);
+      if (el) {
+        el.addEventListener('touchmove', e => {
+          if (e.target.closest(sel)) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+      }
+    });
+  }
+
 
   function closeIssueActionsMenu() {
     const menu = document.getElementById('issue-actions-topbar-menu');

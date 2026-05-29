@@ -34,8 +34,46 @@ from jira_sync import JiraClient, update_manifest_status
 
 try:
     import markdown as md_lib
+    import re
+
+    def _fix_single_line_tables(text: str) -> str:
+        """Convert single-line markdown tables to multi-line format."""
+        # Pattern: | col1 | col2 | | --- | --- | | val1 | val2 |
+        # Convert to proper multi-line table
+        lines = text.split('\n')
+        result = []
+        for line in lines:
+            # Check if line contains table pipes but is clearly single-line table
+            if '|' in line and ' | --- |' in line:
+                # Split by pipe, filter empty, reconstruct as rows
+                parts = [p.strip() for p in line.split('|')]
+                parts = [p for p in parts if p]  # Remove empty parts
+
+                # Find separator row (contains dashes)
+                sep_idx = next((i for i, p in enumerate(parts) if all(c in '-:' for c in p.strip())), -1)
+                if sep_idx > 0:
+                    # Split into header, separator, and data rows
+                    header = parts[:sep_idx]
+                    separator = parts[sep_idx]
+                    data_rows = parts[sep_idx+1:]
+
+                    # Reconstruct as proper markdown table
+                    result.append('| ' + ' | '.join(header) + ' |')
+                    result.append('| ' + ' | '.join(['---'] * len(header)) + ' |')
+
+                    # Add data rows (every len(header) items is one row)
+                    for i in range(0, len(data_rows), len(header)):
+                        row = data_rows[i:i+len(header)]
+                        if len(row) == len(header):
+                            result.append('| ' + ' | '.join(row) + ' |')
+                else:
+                    result.append(line)
+            else:
+                result.append(line)
+        return '\n'.join(result)
 
     def render_md(text: str) -> str:
+        text = _fix_single_line_tables(text)
         return md_lib.markdown(text, extensions=["tables", "fenced_code"])
 
 except ImportError:
@@ -1708,10 +1746,14 @@ def api_send_canned_message(key: str):
 
     body = template.replace("{{issueReporter}}", reporter).replace("{{issueKey}}", key)
 
-    if "[insert signature]" in body:
-        sig_file = ROOT / "jira-signature.txt"
-        sig = sig_file.read_text(encoding="utf-8").strip() if sig_file.exists() else ""
-        body = body.replace("[insert signature]", sig)
+    # Add signature: replace placeholder if present, otherwise append at end
+    sig_file = ROOT / "jira-signature.txt"
+    sig = sig_file.read_text(encoding="utf-8").strip() if sig_file.exists() else ""
+    if sig:
+        if "[insert signature]" in body:
+            body = body.replace("[insert signature]", sig)
+        else:
+            body = body.rstrip() + "\n\n" + sig
 
     if not JIRA_BASE_URL:
         return jsonify({"error": "JIRA_BASE_URL not configured"}), 500
@@ -2018,15 +2060,13 @@ def api_get_settings():
         "CASEOPS_USE_CCI_FOR_AUTH",
         "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
         "CASEOPS_PRODUCTION_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL",
-        "AZURE_DEVOPS_ORG", "AZURE_DEVOPS_PROJECT", "AZURE_DEVOPS_PAT",
-        "CASEOPS_PRODUCTION_MAGIC_LINK", "CASEOPS_SANDBOX_MAGIC_LINK",
     }
 
     response = {}
     for key in exposed_keys:
         value = settings.get(key, "")
         # Mask secrets (but not URLs, aliases, or boolean flags)
-        if key in ("JIRA_API_TOKEN", "AZURE_DEVOPS_PAT"):
+        if key in ("JIRA_API_TOKEN",):
             response[key] = _mask_secret(value)
         else:
             response[key] = value
@@ -2045,9 +2085,7 @@ def api_post_settings():
                 "CASEOPS_ANTHROPIC_MODEL",
                 "CASEOPS_USE_CCI_FOR_AUTH",
                 "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
-                "CASEOPS_PRODUCTION_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL",
-                "AZURE_DEVOPS_ORG", "AZURE_DEVOPS_PROJECT", "AZURE_DEVOPS_PAT",
-                "CASEOPS_PRODUCTION_MAGIC_LINK", "CASEOPS_SANDBOX_MAGIC_LINK"]:
+                "CASEOPS_PRODUCTION_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL"]:
         value = body.get(key, "").strip()
         # Skip masked values (user didn't change them)
         if value.startswith("••••"):

@@ -6,6 +6,10 @@
     <title>CaseOps Settings</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/caseops.css') }}">
     <style>
+        html, body {
+            overflow-y: auto !important;
+            overflow-x: hidden;
+        }
         body {
             background: var(--color-bg);
             color: var(--color-text);
@@ -444,26 +448,6 @@
                     <h2 style="display: inline; margin: 0;">Advanced</h2>
                 </div>
                 <div id="advanced-content" class="section-collapsed">
-                    <div class="settings-field">
-                        <label for="azure-org">Azure DevOps Org:</label>
-                        <input type="text" id="azure-org" name="AZURE_DEVOPS_ORG" placeholder="myorg">
-                    </div>
-                    <div class="settings-field">
-                        <label for="azure-project">Azure DevOps Project:</label>
-                        <input type="text" id="azure-project" name="AZURE_DEVOPS_PROJECT" placeholder="myproject">
-                    </div>
-                    <div class="settings-field">
-                        <label for="azure-pat">Azure DevOps PAT:</label>
-                        <input type="password" id="azure-pat" name="AZURE_DEVOPS_PAT" placeholder="••••••••" autocomplete="off">
-                    </div>
-                    <div class="settings-field">
-                        <label for="prod-magic-link">Production Magic Link:</label>
-                        <input type="text" id="prod-magic-link" name="CASEOPS_PRODUCTION_MAGIC_LINK" placeholder="https://...">
-                    </div>
-                    <div class="settings-field">
-                        <label for="sand-magic-link">Sandbox Magic Link:</label>
-                        <input type="text" id="sand-magic-link" name="CASEOPS_SANDBOX_MAGIC_LINK" placeholder="https://...">
-                    </div>
                 </div>
             </div>
 

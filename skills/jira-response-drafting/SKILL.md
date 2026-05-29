@@ -54,8 +54,17 @@ Every customer-facing draft must pass **all** of these:
 3. Summarize the fix or Engineering escalation reason.
 4. List changed metadata/code, or affected metadata/code for Engineering.
 5. Summarize Sandbox testing or read-only validation evidence.
-6. Draft internal notes. For Engineering escalations, the handoff file at `outputs/engineering-escalations/<KEY>.md` was already created by the pipeline's escalation gate — read it for context and append any additional details that emerged during analysis, but do not recreate it.
-7. **Draft both sections:**
+6. **For Engineering escalations:** read the handoff file at `outputs/engineering-escalations/<KEY>.md` created by the pipeline's escalation gate. Use the structure in `assets/engineering-handoff-template.md`:
+   - **Summary & Description** (with root cause)
+   - **Reproduction Steps** (with examples)
+   - **Expected vs. Actual Results** (with evidence)
+   - **Proposed Fix**
+   - **Environment/Version Details**
+   - **Attachments** (logs, screenshots, debug output)
+   - **Open Questions** (clarifications needed for Engineering)
+   - **Investigation Summary** (recap of findings and validation)
+7. Draft internal notes and append additional details that emerged, but do not recreate the handoff.
+8. **Draft both sections:**
    - **Suggested reply** (customer message) — apply voice rules checklist
    - **[INTERNAL]** (Sean's memo) — lean root-cause memo
 
@@ -82,7 +91,19 @@ Never imply Production includes new metadata just because Sandbox validation pas
 - Always separate **Sandbox-validated** work from **Production state**: say **Gearset (or deploy) required** vs **no Production metadata deploy** vs **N/A**.
 - Avoid phrasing that sounds like a component “is in Production” when it was only created/deployed in Sandbox.
 - Include Sandbox validation details.
-- For Engineering escalations, the handoff file is created by the pipeline escalation gate, not this skill. Only append details if new information emerged during drafting.
+
+### Engineering Handoff Checklist (if escalating)
+
+- ✓ **Summary includes clear root cause** — avoid vague language; be specific about the underlying problem
+- ✓ **Reproduction steps are numbered and complete** — include examples that reliably reproduce the issue
+- ✓ **Expected vs. Actual clearly separated** — with supporting evidence (logs, screenshots, error messages)
+- ✓ **Proposed Fix includes implementation details** — specific components/files affected, estimated effort
+- ✓ **Environment details filled in** — version, relevant objects, production vs sandbox state
+- ✓ **Attachments documented** — logs, screenshots, configuration files noted or attached
+- ✓ **Open Questions listed** — clarifications needed from Engineering or product
+- ✓ **Investigation Summary provided** — recap of findings and any Sandbox validation done
+
+- The handoff file is created by the pipeline escalation gate, not this skill. Append details if new information emerged during drafting, but do not recreate it.
 - Include any remaining risks or follow-up.
 
 ## Examples: Good vs Bad Voice

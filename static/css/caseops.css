@@ -25,6 +25,7 @@ html, body {
   color: var(--color-text);
   line-height: 1.5;
   overflow-x: hidden;
+  overflow-y: hidden;
   touch-action: pan-y;
 }
 
@@ -744,7 +745,7 @@ select.desktop-only {
   position: sticky;
   top: 0;
   background: var(--color-surface);
-  z-index: 50;
+  z-index: 10;
   margin: 0;
 }
 
@@ -790,12 +791,32 @@ select.desktop-only {
 
 @media (max-width: 768px) {
   #detail-header {
-    position: static;
+    position: static !important;
+    z-index: auto !important;
+    order: 2;
   }
 
-  #detail-badges,
-  #detail-meta {
+  #tabs {
+    order: 3;
+  }
+
+  #instruction-panel {
+    order: 4;
+  }
+
+  #content-area {
+    order: 5;
+  }
+
+  #detail-badges {
     display: none;
+  }
+
+  #detail-meta {
+    display: block;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-top: 4px;
   }
 }
 
@@ -847,6 +868,7 @@ select.desktop-only {
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
   overflow: hidden;
+  position: static;
 }
 
 #instruction-context {
@@ -869,8 +891,8 @@ select.desktop-only {
   border-radius: 4px;
   font-size: 12px;
   font-family: inherit;
-  resize: vertical;
-  min-height: 60px;
+  resize: none;
+  min-height: 40px;
   max-height: 300px;
 }
 
@@ -881,7 +903,10 @@ select.desktop-only {
 }
 
 #send-claude-btn {
-  align-self: flex-end;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ── Tabs ───────────────────────────────────────────────────── */
@@ -1626,6 +1651,15 @@ select.desktop-only {
 /* ── Mobile Responsive (768px and below) ───────────────────── */
 
 @media (max-width: 768px) {
+  #main {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  #content-area {
+    overflow: visible;
+  }
+
   .mobile-only {
     display: inline-flex !important;
   }
@@ -1686,15 +1720,16 @@ select.desktop-only {
     min-height: 40px;
   }
 
-  /* Mobile content padding to prevent edge spanning */
+  /* Mobile content padding to prevent edge spanning and log-pane overlap */
   #content-area {
-    padding: 0 16px 12px 16px;
+    padding: 0 16px 220px 16px;
   }
 
-  /* Mobile issue summary heading - smaller, no top gap */
+  /* Mobile issue summary heading - smaller, no top gap, scrolls immediately */
   #issue-body h1 {
     font-size: 18px;
     margin: 0 0 6px 0;
+    position: static !important;
   }
 
   /* Smaller status badges on mobile */
@@ -1703,19 +1738,20 @@ select.desktop-only {
     font-size: 11px;
   }
 
-  /* Compact instruction panel for mobile - pin under tabs */
+  /* Compact instruction panel for mobile - pin at top, layer over tabs */
   #instruction-panel {
     padding: 8px 12px;
     position: sticky;
     top: 0;
-    margin-top: 0;
-    z-index: 39;
+    z-index: 41;
     background: var(--color-surface);
     overflow: hidden;
+    touch-action: none;
   }
 
   #tabs {
     overflow: hidden;
+    touch-action: none;
   }
 
   #instruction-row {
