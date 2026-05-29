@@ -371,31 +371,10 @@
                     <label>Authentication:</label>
                     <div>
                         <div class="lvm-option">
-                            <input type="radio" id="lvm-api" name="CASEOPS_LLM_AUTH" value="api_key">
-                            <label for="lvm-api">Anthropic API Key (pay-per-use)</label>
-                        </div>
-                        <div class="lvm-option">
-                            <input type="radio" id="lvm-claude" name="CASEOPS_LLM_AUTH" value="claude_code">
+                            <input type="radio" id="lvm-claude" name="CASEOPS_LLM_AUTH" value="claude_code" checked>
                             <label for="lvm-claude">Claude Code CLI (subscription)</label>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Anthropic API -->
-            <div class="settings-section hidden" id="anthropic-section">
-                <h2>Anthropic API</h2>
-                <div class="settings-field">
-                    <label for="anthropic-key">API Key:</label>
-                    <div style="display: flex; gap: 5px;">
-                        <input type="password" id="anthropic-key" name="ANTHROPIC_API_KEY" placeholder="sk-••••••••" autocomplete="off">
-                        <button type="button" class="test-button" id="test-anthropic">Test API</button>
-                        <span id="anthropic-test-result" class="test-result"></span>
-                    </div>
-                </div>
-                <div class="settings-field">
-                    <label for="anthropic-model">Model:</label>
-                    <input type="text" id="anthropic-model" name="CASEOPS_ANTHROPIC_MODEL" placeholder="claude-sonnet-4-6">
                 </div>
             </div>
 
@@ -651,38 +630,6 @@
             }
         }
 
-        async function testAnthropicAPI() {
-            const apiKey = document.getElementById('anthropic-key').value;
-
-            const result = document.getElementById('anthropic-test-result');
-            const btn = document.getElementById('test-anthropic');
-            btn.disabled = true;
-            result.textContent = '...';
-            result.className = 'test-result pending';
-
-            try {
-                const resp = await fetch('/api/settings/test-anthropic', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ANTHROPIC_API_KEY: apiKey }),
-                });
-
-                if (resp.ok) {
-                    result.textContent = '✓ Valid';
-                    result.className = 'test-result success';
-                } else {
-                    const data = await resp.json();
-                    result.textContent = '✗ ' + (data.error || 'Error');
-                    result.className = 'test-result error';
-                }
-            } catch (e) {
-                result.textContent = '✗ ' + e.message;
-                result.className = 'test-result error';
-            } finally {
-                btn.disabled = false;
-            }
-        }
-
         // Handle display label changes (localStorage, no API)
         const displayLabelInput = document.getElementById('instance-display-label');
         displayLabelInput.addEventListener('change', () => {
@@ -818,21 +765,13 @@
         }
 
         function updateLLMVisibility() {
-            const selectedMode = document.querySelector('input[name="CASEOPS_LLM_AUTH"]:checked')?.value;
-            const anthropicSection = document.getElementById('anthropic-section');
             const claudeSection = document.getElementById('claude-section');
-
-            if (selectedMode === 'api_key') {
-                anthropicSection.classList.remove('hidden');
-                claudeSection.classList.add('hidden');
-            } else if (selectedMode === 'claude_code') {
-                anthropicSection.classList.add('hidden');
+            if (claudeSection) {
                 claudeSection.classList.remove('hidden');
             }
         }
 
         document.getElementById('test-jira').addEventListener('click', testJira);
-        document.getElementById('test-anthropic').addEventListener('click', testAnthropicAPI);
 
         // Update LLM visibility when mode changes
         document.querySelectorAll('input[name="CASEOPS_LLM_AUTH"]').forEach(radio => {

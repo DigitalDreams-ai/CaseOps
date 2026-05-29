@@ -434,11 +434,20 @@ _manifest_q: queue.Queue[str] = queue.Queue()  # manifest change notifications
 def _claude_process_env() -> dict[str, str]:
     """Environment for Claude Code CLI subprocess.
 
-    Pass ANTHROPIC_API_KEY to subprocess. Claude Code CLI will authenticate with API key.
+    For claude_code mode: omit ANTHROPIC_API_KEY. Claude Code CLI uses pre-authenticated
+    credentials from ~/.claude/.credentials.json (mounted from host).
+    For api_key mode: pass ANTHROPIC_API_KEY (API billing auth).
     Instance-specific output directories so Skill writes to correct location.
+
+    Reference: https://github.com/cabinlab/claude-code-sdk-docker/blob/main/docs/AUTHENTICATION.md
     """
     env = os.environ.copy()
-    # Keep ANTHROPIC_API_KEY for all modes to allow Claude Code CLI to authenticate
+    if not caseops_llm_auth_uses_anthropic_api_key():
+        # Claude Code subscription mode: use pre-authenticated credentials file (~/.claude/.credentials.json)
+        # Don't pass ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN — Claude Code CLI will use the mounted credentials
+        env.pop("ANTHROPIC_API_KEY", None)
+        env.pop("OAUTH_TOKEN", None)
+        env.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
 
     chrome = (env.get("CASEOPS_CLAUDE_BROWSER") or "").strip()
     if chrome:
@@ -669,8 +678,10 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
 
     Falls back to spawning Claude in a new PowerShell window if direct subprocess fails.
     """
+    # Use full path to claude binary (PATH may not include /usr/local/bin in subprocess)
+    claude_bin = shutil.which("claude") or "/usr/local/bin/claude"
     cmd = [
-        "claude",
+        claude_bin,
         "-p",
         prompt,
         "--output-format",
@@ -908,7 +919,8 @@ def _stream_full_issue(key: str, run_key: str) -> None:
         # Safety check: if claude_code mode, verify `claude` CLI is available
         if not caseops_llm_auth_uses_anthropic_api_key():
             try:
-                subprocess.run(["claude", "--version"], capture_output=True, timeout=5, check=True)
+                claude_bin = shutil.which("claude") or "/usr/local/bin/claude"
+                subprocess.run([claude_bin, "--version"], capture_output=True, timeout=5, check=True)
             except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
                 _log_emit_line(run_key, "ERROR: `claude` CLI not found or not responding")
                 _log_emit_line(run_key, "       CASEOPS_LLM_AUTH=claude_code requires Claude Code installed.")
@@ -1989,7 +2001,7 @@ def api_get_settings():
     # Settings to expose in UI
     exposed_keys = {
         "JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
-        "ANTHROPIC_API_KEY", "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
+        "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
         "CASEOPS_USE_CCI_FOR_AUTH",
         "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
         "CASEOPS_PRODUCTION_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL",
@@ -2001,7 +2013,7 @@ def api_get_settings():
     for key in exposed_keys:
         value = settings.get(key, "")
         # Mask secrets (but not URLs, aliases, or boolean flags)
-        if key in ("JIRA_API_TOKEN", "ANTHROPIC_API_KEY", "AZURE_DEVOPS_PAT"):
+        if key in ("JIRA_API_TOKEN", "AZURE_DEVOPS_PAT"):
             response[key] = _mask_secret(value)
         else:
             response[key] = value
@@ -2017,7 +2029,7 @@ def api_post_settings():
     # Filter and validate
     updates = {}
     for key in ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
-                "ANTHROPIC_API_KEY", "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
+                "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
                 "CASEOPS_USE_CCI_FOR_AUTH",
                 "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
                 "CASEOPS_PRODUCTION_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL",
@@ -2064,30 +2076,6 @@ def api_test_jira():
         return jsonify({"error": str(e)}), 400
 
     return jsonify({"error": "Unknown error"}), 500
-
-
-@app.route("/api/settings/test-anthropic", methods=["POST"])
-def api_test_anthropic():
-    """Test Anthropic API with provided key."""
-    body = request.get_json(silent=True) or {}
-    api_key = body.get("ANTHROPIC_API_KEY", "").strip()
-
-    if not api_key:
-        return jsonify({"error": "Missing API key"}), 400
-
-    try:
-        if not Anthropic:
-            return jsonify({"error": "Anthropic SDK not installed"}), 500
-
-        client = Anthropic(api_key=api_key)
-        resp = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=10,
-            messages=[{"role": "user", "content": "hi"}],
-        )
-        return jsonify({"ok": True, "model": resp.model})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
 
 
 @app.route("/api/settings/canned-messages", methods=["GET"])
