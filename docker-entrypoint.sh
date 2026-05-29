@@ -1,11 +1,9 @@
 #!/bin/bash
 set -e
 
-# Load specific environment variables from .env.jira (some values have spaces, so can't use 'source')
+# Load LLM auth mode from .env.jira (Claude Code CLI mode only, no API keys)
 if [ -f /app/.env.jira ]; then
-  # Extract and EXPORT variables individually so they persist to subprocess
   export CASEOPS_LLM_AUTH=$(grep "^CASEOPS_LLM_AUTH=" /app/.env.jira | sed 's/^CASEOPS_LLM_AUTH=//' | tr -d ' ')
-  export ANTHROPIC_API_KEY=$(grep "^ANTHROPIC_API_KEY=" /app/.env.jira | sed 's/^ANTHROPIC_API_KEY=//')
   if [ -n "$CASEOPS_LLM_AUTH" ]; then
     echo "Loaded .env.jira: CASEOPS_LLM_AUTH=$CASEOPS_LLM_AUTH"
   fi
@@ -25,7 +23,7 @@ fi
 # Verify environment is set before running Flask
 echo "Final env check:"
 echo "  CASEOPS_LLM_AUTH=$CASEOPS_LLM_AUTH"
-echo "  ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:0:10}***"
+echo "  Claude Code CLI will use ~/.claude/.credentials.json (mounted from host)"
 
 # Run Flask app with arguments
 exec python app.py "$@"
