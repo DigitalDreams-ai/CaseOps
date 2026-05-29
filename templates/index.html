@@ -1352,29 +1352,43 @@
     let startY = 0;
     let startHeight = 0;
 
-    handle.addEventListener('mousedown', (e) => {
+    const startResize = (clientY) => {
       isResizing = true;
-      startY = e.clientY;
+      startY = clientY;
       startHeight = panel.offsetHeight;
       document.body.style.userSelect = 'none';
       document.body.style.cursor = 'row-resize';
-    });
+    };
 
-    document.addEventListener('mousemove', (e) => {
+    const moveResize = (clientY) => {
       if (!isResizing) return;
-      // Drag UP = negative delta = increase height (sections below shift down)
-      // Drag DOWN = positive delta = decrease height (sections below shift up)
-      const delta = e.clientY - startY;
+      const delta = clientY - startY;
       const newHeight = Math.max(200, startHeight - delta);
       panel.style.height = newHeight + 'px';
-    });
+    };
 
-    document.addEventListener('mouseup', () => {
+    const endResize = () => {
       if (!isResizing) return;
       isResizing = false;
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
+    };
+
+    handle.addEventListener('mousedown', (e) => {
+      startResize(e.clientY);
     });
+    handle.addEventListener('touchstart', (e) => {
+      startResize(e.touches[0].clientY);
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => moveResize(e.clientY));
+    document.addEventListener('touchmove', (e) => {
+      if (isResizing) moveResize(e.touches[0].clientY);
+    }, { passive: false });
+
+    document.addEventListener('mouseup', endResize);
+    document.addEventListener('touchend', endResize);
   }
 
   async function postToJira(key, ftype, isPublic) {
@@ -2138,16 +2152,28 @@
     const isMobile = window.innerWidth <= 768;
     const shouldCollapse = isMobile || localStorage.getItem(LOG_PANE_COLLAPSE_KEY) === '1';
 
+    const adjustPaddingForLogPane = (isCollapsed) => {
+      const issueList = document.getElementById('issue-list');
+      if (!issueList) return;
+      if (isCollapsed) {
+        issueList.style.paddingBottom = '60px';
+      } else {
+        issueList.style.paddingBottom = '210px';
+      }
+    };
+
     if (shouldCollapse) {
       pane.classList.add('collapsed');
       btn.textContent = '▶';
       btn.title = 'Expand log';
       pane.style.height = '';
+      adjustPaddingForLogPane(true);
     } else {
       pane.classList.remove('collapsed');
       btn.textContent = '▼';
       btn.title = 'Collapse log';
       pane.style.height = savedH + 'px';
+      adjustPaddingForLogPane(false);
     }
 
     btn.addEventListener('click', () => {
@@ -2160,6 +2186,7 @@
         pane.style.height = savedH + 'px';
         btn.textContent = '▼';
         btn.title = 'Collapse log';
+        adjustPaddingForLogPane(false);
       } else {
         savedH = Math.round(pane.getBoundingClientRect().height);
         localStorage.setItem(LOG_PANE_H_KEY, String(savedH));
@@ -2168,35 +2195,55 @@
         pane.style.height = '';
         btn.textContent = '▶';
         btn.title = 'Expand log';
+        adjustPaddingForLogPane(true);
       }
     });
 
     let dragging = false;
     let startY = 0;
     let startH = 0;
-    handle.addEventListener('mousedown', e => {
+
+    const startDrag = (clientY) => {
       if (pane.classList.contains('collapsed')) return;
       dragging = true;
-      startY = e.clientY;
+      startY = clientY;
       startH = pane.getBoundingClientRect().height;
-      e.preventDefault();
       document.body.style.userSelect = 'none';
-    });
-    document.addEventListener('mousemove', e => {
+    };
+
+    const moveDrag = (clientY) => {
       if (!dragging) return;
-      const dy = startY - e.clientY;
+      const dy = startY - clientY;
       let h = Math.round(startH + dy);
       h = Math.max(80, Math.min(h, maxH()));
       pane.style.height = h + 'px';
       savedH = h;
-    });
-    document.addEventListener('mouseup', () => {
+    };
+
+    const endDrag = () => {
       if (!dragging) return;
       dragging = false;
       document.body.style.userSelect = '';
       if (!pane.classList.contains('collapsed'))
         localStorage.setItem(LOG_PANE_H_KEY, String(savedH));
+    };
+
+    handle.addEventListener('mousedown', e => {
+      startDrag(e.clientY);
+      e.preventDefault();
     });
+    handle.addEventListener('touchstart', e => {
+      startDrag(e.touches[0].clientY);
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => moveDrag(e.clientY));
+    document.addEventListener('touchmove', e => {
+      if (dragging) moveDrag(e.touches[0].clientY);
+    }, { passive: false });
+
+    document.addEventListener('mouseup', endDrag);
+    document.addEventListener('touchend', endDrag);
 
     window.addEventListener('resize', () => {
       if (pane.classList.contains('collapsed')) return;
