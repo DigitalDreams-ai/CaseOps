@@ -22,9 +22,20 @@ for /f "tokens=5" %%p in ('netstat -ano 2^>nul ^| findstr ":5351 " ^| findstr "L
     echo - Killed process on port 5351 (PID: %%p)
 )
 
-:: Close old terminal windows by title using PowerShell
-powershell -NoProfile -Command "Get-Process powershell 2>$null | Where-Object { $_.MainWindowTitle -match 'CaseOps Instance|Comments Poller' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
-if not errorlevel 1 echo - Closed old terminal windows
+:: Close old terminal windows by looking for powershell processes with launch.ps1
+echo - Closing old terminal windows...
+for /f "tokens=2" %%p in ('wmic process where "name='powershell.exe' AND CommandLine LIKE '%%launch.ps1%%'" get ProcessId 2^>nul') do (
+    if not "%%p"=="" (
+        taskkill /PID %%p /F >nul 2>&1
+        echo - Closed powershell window (PID: %%p)
+    )
+)
+for /f "tokens=2" %%p in ('wmic process where "name='python.exe' AND CommandLine LIKE '%%comments_poller%%'" get ProcessId 2^>nul') do (
+    if not "%%p"=="" (
+        taskkill /PID %%p /F >nul 2>&1
+        echo - Closed comments poller (PID: %%p)
+    )
+)
 
 timeout /t 2 /nobreak >nul 2>&1
 
