@@ -1181,7 +1181,7 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
         has_solution = cached["has_solution"]
     else:
         has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
-        has_solution = (OUTPUTS / "solutions" / key).exists()
+        has_solution = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
         investigation_cache[cache_key] = {"has_investigation": has_investigation, "has_solution": has_solution}
         _cache_evict(investigation_cache)
 
