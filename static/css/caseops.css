@@ -1758,6 +1758,17 @@ select.desktop-only {
     padding-bottom: 210px;
   }
 
+  /* Mobile: larger touch target for log resize handle */
+  #log-resize-handle {
+    height: 12px;
+    cursor: grab;
+  }
+
+  #log-resize-handle:active {
+    cursor: grabbing;
+    background: var(--color-primary);
+  }
+
   .btn {
     min-height: 40px;
     font-size: 13px;
