@@ -152,8 +152,8 @@ select.desktop-only {
 }
 
 .badge.state-analyzed {
-  background: rgba(210, 153, 34, 0.2);
-  color: #d29922;
+  background: rgba(217, 119, 182, 0.2);
+  color: #d977b6;
   font-weight: 600;
 }
 
@@ -183,8 +183,8 @@ select.desktop-only {
 }
 
 .badge.badge-needs-escalation {
-  background: rgba(217, 119, 182, 0.2);
-  color: #d977b6;
+  background: rgba(210, 153, 34, 0.2);
+  color: #d29922;
   font-weight: 600;
 }
 
