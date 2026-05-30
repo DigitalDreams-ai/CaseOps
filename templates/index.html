@@ -982,6 +982,7 @@
 
   async function selectIssue(key) {
     const seq = ++selectIssueSeq;
+    console.log('selectIssue called:', key, 'viewport:', window.innerWidth);
 
     // Close sidebar on mobile after selecting issue
     if (window.innerWidth <= 768) closeSidebar();
@@ -1029,8 +1030,9 @@
 
     const dash = document.getElementById('dashboard');
     const issueBody = document.getElementById('issue-body');
-    if (dash) dash.style.display = 'none';
-    if (issueBody) issueBody.style.display = 'block';
+    console.log('Setting display:', { dash: !!dash, issueBody: !!issueBody });
+    if (dash) { dash.style.display = 'none'; console.log('Dashboard hidden'); }
+    if (issueBody) { issueBody.style.display = 'block'; console.log('Issue body shown'); }
     const titleEl = document.getElementById('detail-title');
     if (titleEl) {
       titleEl.textContent = `${issue.key} — ${issue.summary}`;
