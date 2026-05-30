@@ -1012,6 +1012,54 @@ def _stream_full_issue(key: str, run_key: str) -> None:
         _log_emit_done(run_key)
 
 
+def _stream_global_skill(instruction: str, run_key: str) -> None:
+    """Run global CaseOps pipeline via jira-salesforce-fix-pipeline Skill (full or reprocess mode).
+
+    This invokes the Skill for global actions like "full" (sync + process all)
+    or "reprocess" (process existing without sync).
+    """
+    try:
+        _log_emit_line(run_key, f"-- Running CaseOps pipeline: {instruction.split(':')[1].strip() if ':' in instruction else instruction} --")
+
+        # Safety check: CASEOPS_SANDBOX_TARGET_ORG must be set before Step 9
+        sandbox_target = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
+        if not sandbox_target:
+            _log_emit_line(run_key, "ERROR: CASEOPS_SANDBOX_TARGET_ORG not set in .env.jira")
+            _log_emit_line(run_key, "       Step 9 (deploy+test) requires an allowlisted Sandbox org.")
+            _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env.jira and retry.")
+            return
+
+        # Safety check: if claude_code mode, verify `claude` CLI is available
+        if not caseops_llm_auth_uses_anthropic_api_key():
+            try:
+                claude_bin = shutil.which("claude") or "/usr/local/bin/claude"
+                subprocess.run([claude_bin, "--version"], capture_output=True, timeout=5, check=True)
+            except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                _log_emit_line(run_key, "ERROR: `claude` CLI not found or not responding")
+                _log_emit_line(run_key, "       CASEOPS_LLM_AUTH=claude_code requires Claude Code installed.")
+                _log_emit_line(run_key, "       Verify: `claude --version` runs, and `claude login` succeeded.")
+                return
+
+        # Safety check: if api_key mode, verify API key is set
+        if caseops_llm_auth_uses_anthropic_api_key():
+            api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+            if not api_key:
+                _log_emit_line(run_key, "WARNING: CASEOPS_LLM_AUTH=api_key but ANTHROPIC_API_KEY not set")
+                _log_emit_line(run_key, "         Sub-agents (Steps 3–10) will not execute. Text-only response only.")
+
+        prompt = (
+            f"Run the jira-salesforce-fix-pipeline Skill with instruction:\n\n{instruction}\n\n"
+            f"Use the Skill entrypoint at skills/jira-salesforce-fix-pipeline/SKILL.md and read "
+            f"ORCHESTRATOR-PROMPT.md for decision logic."
+        )
+        _do_stream_claude(prompt, run_key, issue_key=None)
+    finally:
+        with _state_lock:
+            _active_keys.discard(run_key)
+        _log_emit_line(run_key, f"Done: {run_key}")
+        _log_emit_done(run_key)
+
+
 def _build_claude_prompt(key: str, instruction: str) -> str:
     """Build a context-rich prompt for CaseOps LLM runs (API or Claude Code CLI)."""
     issues = _read_manifest()
@@ -1481,6 +1529,7 @@ def api_run():
     env_file = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
     use_claude_cli = False
     use_full_issue = False
+    use_global_skill = False
 
     if action == "sync":
         cmd = [sys.executable, "jira_sync.py", "--env-file", env_file, "--out-dir", str(OUTPUTS / "jira")]
@@ -1501,18 +1550,11 @@ def api_run():
             "--no-agents",
         ]
     elif action == "reprocess":
-        cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file, "--jira-dir", str(OUTPUTS / "jira"), "--no-sync", "--outputs-dir", str(OUTPUTS)]
+        use_global_skill = True
+        instruction = "Run the full CaseOps fix pipeline: reprocess all active issues without re-syncing from Jira. Use the jira-salesforce-fix-pipeline Skill with 'reprocess' mode."
     elif action == "full":
-        cmd = [
-            sys.executable,
-            "run_pipeline.py",
-            "--env-file",
-            env_file,
-            "--jira-dir",
-            str(OUTPUTS / "jira"),
-            "--outputs-dir",
-            str(OUTPUTS),
-        ]
+        use_global_skill = True
+        instruction = "Run the full CaseOps fix pipeline: sync all issues from Jira and process all active issues through completion. Use the jira-salesforce-fix-pipeline Skill with 'full' mode."
     elif action == "full_issue" and key:
         use_full_issue = True
     elif action == "claude_instruction" and key:
@@ -1534,6 +1576,8 @@ def api_run():
 
     if use_full_issue:
         t = threading.Thread(target=_stream_full_issue, args=(key, run_key), daemon=True)
+    elif use_global_skill:
+        t = threading.Thread(target=_stream_global_skill, args=(instruction, run_key), daemon=True)
     elif use_claude_cli:
         t = threading.Thread(target=_stream_claude_proc, args=(prompt, run_key), daemon=True)
     else:
