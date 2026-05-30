@@ -765,7 +765,7 @@
             '</a><span class="overview-rollup-hint"> · markdown file</span>';
         } else {
           rollupEl.innerHTML =
-            '<p class="overview-empty">No issue-summary-YYYY-MM-DD.md yet. Run triage or sync.</p>';
+            '<p class="overview-empty">No issue-summary-YYYY-MM-DD.md yet. Run sync or reprocess.</p>';
         }
       })
       .catch(() => {
@@ -1825,7 +1825,7 @@
   // ── Pipeline actions ───────────────────────────────────────
 
   async function runAction(action, key, instruction) {
-    const runKey = (action === 'sync' || action === 'triage' || action === 'full')
+    const runKey = (action === 'sync' || action === 'full' || action === 'reprocess')
       ? '__global__' : (key || '__global__');
 
     if (activeRuns.has(runKey)) {

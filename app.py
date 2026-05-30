@@ -1475,7 +1475,7 @@ def api_run():
     action = data.get("action", "full")
     key = data.get("key", "")
 
-    is_global = action in ("sync", "triage", "full", "sync_new")
+    is_global = action in ("sync", "full", "reprocess", "sync_new")
     run_key = _GLOBAL_KEY if is_global else key
 
     env_file = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
@@ -1500,8 +1500,6 @@ def api_run():
             key,
             "--no-agents",
         ]
-    elif action == "triage":
-        cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file, "--jira-dir", str(OUTPUTS / "jira"), "--no-sync", "--no-agents", "--outputs-dir", str(OUTPUTS)]
     elif action == "reprocess":
         cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file, "--jira-dir", str(OUTPUTS / "jira"), "--no-sync", "--outputs-dir", str(OUTPUTS)]
     elif action == "full":
