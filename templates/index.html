@@ -917,15 +917,11 @@
         if (state === 'untriaged') {
           stateBadge = '<span class="badge state-untriaged" title="No pipeline work started. Run investigation.">Not Triaged</span>';
         } else if (state === 'investigating') {
-          stateBadge = '<span class="badge state-investigating" title="Analysis in progress. Drafting investigation.">In Progress</span>';
-        } else if (state === 'awaiting_customer_notification') {
-          stateBadge = '<span class="badge state-awaiting" title="Analysis complete, decision made. Awaiting customer notification.">Awaiting Notification</span>';
-        } else if (state === 'communicated') {
-          stateBadge = '<span class="badge state-communicated" title="Customer notified of solution/escalation.">Processed</span>';
+          stateBadge = '<span class="badge state-investigating" title="Investigation in progress. Analyzing issue.">In Progress</span>';
+        } else if (state === 'analyzed') {
+          stateBadge = '<span class="badge state-analyzed" title="Analysis complete. Decision made (fix or escalate).">Analyzed</span>';
         } else if (state === 'validated') {
-          stateBadge = '<span class="badge state-validated" title="Solution tested and confirmed in Sandbox.">Confirmed Fix</span>';
-        } else if (state === 'ready_for_production') {
-          stateBadge = '<span class="badge state-ready" title="Validated and ready for Production deployment.">Ready for Deploy</span>';
+          stateBadge = '<span class="badge state-validated" title="Solution tested and confirmed in Sandbox.">Validated</span>';
         } else if (state === 'escalated_to_engineering') {
           stateBadge = '<span class="badge state-escalated" title="Handed off to Engineering team.">Escalated to Engineering</span>';
         }

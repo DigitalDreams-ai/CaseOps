@@ -38,10 +38,8 @@ class PipelineState(Enum):
     """Pipeline progression states (mutually exclusive)."""
     UNTRIAGED = "untriaged"
     INVESTIGATING = "investigating"
-    AWAITING_CUSTOMER_NOTIFICATION = "awaiting_customer_notification"
-    COMMUNICATED = "communicated"
+    ANALYZED = "analyzed"
     VALIDATED = "validated"
-    READY_FOR_PRODUCTION = "ready_for_production"
     ESCALATED_TO_ENGINEERING = "escalated_to_engineering"
 
 try:
@@ -1248,10 +1246,8 @@ def _test_report_is_data_only(key: str) -> bool:
 
 def _calculate_pipeline_state(key: str) -> PipelineState:
     """Calculate current pipeline state based on file existence."""
-    has_jira_summary = (OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key)).exists()
     has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
-    has_jira_message = (OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)).exists()
     has_confirmed_solution = _test_report_confirms_fix(key)
     has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
     is_escalation_path = _internal_notes_indicates_escalation(key) if has_internal_notes else False
@@ -1260,15 +1256,13 @@ def _calculate_pipeline_state(key: str) -> PipelineState:
     if is_escalation_path and has_eng_handoff:
         return PipelineState.ESCALATED_TO_ENGINEERING
 
-    # Normal progression
+    # Normal progression (message sending not a state factor)
     if not has_investigation:
         return PipelineState.UNTRIAGED
     elif not has_internal_notes:
         return PipelineState.INVESTIGATING
-    elif not has_jira_message:
-        return PipelineState.AWAITING_CUSTOMER_NOTIFICATION
     elif not has_confirmed_solution:
-        return PipelineState.COMMUNICATED
+        return PipelineState.ANALYZED
     else:
         return PipelineState.VALIDATED
 
