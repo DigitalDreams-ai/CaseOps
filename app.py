@@ -1245,7 +1245,6 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
 
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
     has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
-    is_escalation_path = _internal_notes_indicates_escalation(key) if has_internal_notes else False
     state = _calculate_pipeline_state(key)
 
     return {
@@ -1258,11 +1257,11 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
         "has_eng_handoff": has_eng_handoff,
         "has_confirmed_solution": _test_report_confirms_fix(key),
         "has_solution": has_solution,
-        "needs_escalation": is_escalation_path,
+        "needs_escalation": has_eng_handoff,  # Issue is on escalation path
 
         # New state machine
         "pipeline_state": state.value,
-        "is_escalation_path": is_escalation_path,
+        "is_escalation_path": has_eng_handoff,  # Ground truth: file existence, not sniffing
         "is_blocked": _investigation_indicates_blocked(key),
         "is_data_only": _test_report_is_data_only(key),
     }
@@ -1293,38 +1292,29 @@ def _test_report_is_data_only(key: str) -> bool:
 
 
 def _calculate_pipeline_state(key: str) -> PipelineState:
-    """Calculate current pipeline state based on file existence."""
+    """Calculate current pipeline state based on file existence.
+
+    Both support-resolvable and engineering-escalation paths run Steps 8-9.
+    The only difference is: escalation path creates engineering_escalations file.
+    """
     has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
-    has_confirmed_solution = _test_report_confirms_fix(key)
+    has_test_report = (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists()
     has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
-    is_escalation_path = _internal_notes_indicates_escalation(key) if has_internal_notes else False
 
-    # Terminal escalation state (takes precedence)
-    if is_escalation_path and has_eng_handoff:
+    # Escalation state (terminal, takes precedence)
+    if has_eng_handoff:
         return PipelineState.ESCALATED_TO_ENGINEERING
 
-    # Normal progression (message sending not a state factor)
+    # Support-resolvable progression
     if not has_investigation:
         return PipelineState.UNTRIAGED
     elif not has_internal_notes:
         return PipelineState.INVESTIGATING
-    elif not has_confirmed_solution:
+    elif not has_test_report:
         return PipelineState.ANALYZED
     else:
         return PipelineState.VALIDATED
-
-
-def _internal_notes_indicates_escalation(key: str) -> bool:
-    """True when outputs/internal-notes/<KEY>.md indicates escalation to Engineering."""
-    path = OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)
-    if not path.is_file():
-        return False
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return False
-    return bool(re.search(r"(?im)escalat[a-z]*\s+to\s+engineer|requires?\s+engineer", text))
 
 
 def _test_report_confirms_fix(key: str) -> bool:
