@@ -139,6 +139,62 @@ select.desktop-only {
   color: var(--color-danger);
 }
 
+/* Pipeline State Badges */
+.badge.state-untriaged {
+  background: rgba(111, 111, 111, 0.2);
+  color: #666;
+}
+
+.badge.state-investigating {
+  background: rgba(31, 111, 235, 0.2);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.badge.state-awaiting {
+  background: rgba(210, 153, 34, 0.2);
+  color: var(--color-warn);
+}
+
+.badge.state-communicated {
+  background: rgba(63, 185, 80, 0.2);
+  color: var(--color-success);
+}
+
+.badge.state-validated {
+  background: rgba(63, 185, 80, 0.3);
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.badge.state-ready {
+  background: rgba(63, 185, 80, 0.3);
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.badge.state-escalated {
+  background: rgba(210, 153, 34, 0.2);
+  color: var(--color-warn);
+}
+
+/* Secondary Flag Badges */
+.badge.badge-blocked {
+  background: rgba(248, 81, 73, 0.2);
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.badge.badge-data-only {
+  background: rgba(150, 110, 220, 0.2);
+  color: #9a6ed4;
+}
+
+.badge.badge-needs-escalation {
+  background: rgba(210, 153, 34, 0.2);
+  color: var(--color-warn);
+}
+
 /* Link button style */
 .link-btn {
   background: none;
