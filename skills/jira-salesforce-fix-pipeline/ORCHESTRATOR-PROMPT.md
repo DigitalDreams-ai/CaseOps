@@ -61,16 +61,11 @@ From Step 6 problem location, decide:
 - Read-only metadata investigation (no changes)
 
 ### Decision: Escalate
-1. Create `outputs/engineering-escalations/{key}.md` with:
-   - Problem location (from Step 6)
-   - Root cause (from Step 4)
-   - Proposed fix (what you would attempt if it were Support-resolvable)
-   - Why it requires Engineering
-2. Skip Steps 8-9 (no Support implementation).
-3. Proceed to Step 10 (messaging).
+1. Mark as engineering-escalation path (will route messaging differently).
+2. Proceed to Steps 8-9 (implementation + test to generate proposed solution).
 
 ### Decision: Support-Resolvable
-1. Skip escalation file creation.
+1. Mark as support-resolution path.
 2. Proceed to Steps 8-9 (implementation + test).
 
 ### Step 8-9: Implementation + Test (DELEGATE)
@@ -90,12 +85,20 @@ From Step 6 problem location, decide:
 ### Step 10: Messaging (DELEGATE)
 1. Spawn jira-response-drafting sub-agent with:
    - Issue context
-   - Test results (if Support-resolved) or "N/A - Engineering escalation" (if escalated)
+   - Test results (from Step 9, both paths)
    - Analysis notes
+   - **Routing info:** Is this support-resolved or engineering-escalation?
 2. Receive two files:
    - `outputs/jira-messages/{key}.md` (customer-facing only, no [INTERNAL] markers)
    - `outputs/internal-notes/{key}.md` (internal analysis, allowed to reference escalation)
 3. **Validation checkpoint:** Verify file separation (no [INTERNAL] in jira-messages; no customer greeting in internal-notes).
+4. **If engineering-escalation path:**
+   - Create `outputs/engineering-escalations/{key}.md` with:
+     - Problem location (from Step 6)
+     - Root cause (from Step 4)
+     - Proposed solution (from Step 9 test results)
+     - Why it requires Engineering
+   - This file signals handoff to Engineering team.
 
 ### Step 11: Dated Summary (You do this)
 After all active issues processed through Steps 3-10:
@@ -146,16 +149,13 @@ Your routing decisions are driven by file existence:
 ```
 if issue_closed_or_resolved:
   skip this issue
-elif issue_status == "Escalated to Engineering":
-  archive to engineering-escalations/
-  skip this issue
-elif engineering_escalations/{key}.md exists:
-  skip Steps 8-9, go directly to Step 10
 elif test_reports/{key}.md exists:
-  issue already tested, skip Steps 8-9
+  issue already tested, skip Steps 8-9, go directly to Step 10
 else:
-  process through full Steps 3-10
+  process through full Steps 3-10 (including Steps 8-9 for both support and escalation paths)
 ```
+
+**Note:** `engineering_escalations/{key}.md` is created in Step 10 after implementation + test, so it is NOT used for routing decisions. Both support-resolvable and engineering-escalation paths run Steps 8-9.
 
 ## Error Handling
 
@@ -230,11 +230,14 @@ ORCHESTRATOR:
 9. STEP_6 HEAL-33753 → Invoke metadata investigation (drilling)
 10. Receive: "Failure at condition node. Missing record type 'Phone Order'. Fix = add OR condition."
 11. STEP_7 HEAL-33753 → Decide: Flow modification = Engineering-required. ESCALATE.
-12. Create engineering-escalations/HEAL-33753.md with problem + proposed fix
-13. STEP_10 HEAL-33753 → Invoke jira-response-drafting (escalation variant)
-14. Receive: jira-messages/HEAL-33753.md and internal-notes/HEAL-33753.md
-15. STEP_11 → Update issue-summary-YYYY-MM-DD.md: add to Escalated section
-16. STEP_12 → Print completion report
+12. STEP_8-9 HEAL-33753 → Invoke salesforce-implementation (generate proposed solution)
+13. Receive: test results (Flow modification would fix the condition node), propose adding OR clause
+14. Save to test-reports/HEAL-33753.md
+15. STEP_10 HEAL-33753 → Invoke jira-response-drafting (escalation variant)
+16. Receive: jira-messages/HEAL-33753.md and internal-notes/HEAL-33753.md
+17. Create engineering-escalations/HEAL-33753.md with problem + proposed solution + test results
+18. STEP_11 → Update issue-summary-YYYY-MM-DD.md: add to Escalated section
+19. STEP_12 → Print completion report
 
-Result: Engineering handoff ready, customer notified of escalation.
+Result: Engineering handoff ready with proposed solution, customer notified of escalation.
 ```
