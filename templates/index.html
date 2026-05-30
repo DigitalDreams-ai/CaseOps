@@ -906,8 +906,8 @@
       const isChecked = selectedIssues.has(issue.key);
 
       const needsTriage =
-        label === 'Active' && !issue.has_jira_summary
-          ? '<span class="badge needs-triage" title="No synced Jira summary on disk yet (outputs/jira/summary). Run Sync This Issue or Full Jira Sync — same as overview &quot;Needs summary&quot;.">Not triaged</span>'
+        label === 'Active' && issue.has_jira_summary && !issue.has_investigation && !issue.has_internal_notes && !issue.has_jira_message && !issue.has_test_report && !issue.has_eng_handoff
+          ? '<span class="badge needs-triage" title="Only Jira summary exists; no pipeline work done yet (outputs/jira/summary only). No investigation, analysis, or customer message drafted.">Not triaged</span>'
           : '';
       const engEsc =
         label === 'Active' && issue.needs_escalation
