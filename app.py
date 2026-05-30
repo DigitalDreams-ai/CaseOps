@@ -23,6 +23,7 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
+from enum import Enum
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,17 @@ from flask import Flask, Response, jsonify, render_template, request, send_file,
 
 from caseops_paths import default_jira_dir
 from jira_sync import JiraClient, update_manifest_status
+
+
+class PipelineState(Enum):
+    """Pipeline progression states (mutually exclusive)."""
+    UNTRIAGED = "untriaged"
+    INVESTIGATING = "investigating"
+    AWAITING_CUSTOMER_NOTIFICATION = "awaiting_customer_notification"
+    COMMUNICATED = "communicated"
+    VALIDATED = "validated"
+    READY_FOR_PRODUCTION = "ready_for_production"
+    ESCALATED_TO_ENGINEERING = "escalated_to_engineering"
 
 try:
     import markdown as md_lib
@@ -1186,19 +1198,27 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
         _cache_evict(investigation_cache)
 
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
+    has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
+    is_escalation_path = _internal_notes_indicates_escalation(key) if has_internal_notes else False
+    state = _calculate_pipeline_state(key)
+
     return {
+        # Legacy flags (kept for backward compatibility during transition)
         "has_jira_summary": (OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key)).exists(),
         "has_investigation": has_investigation,
         "has_internal_notes": has_internal_notes,
         "has_jira_message": (OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)).exists(),
         "has_test_report": (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists(),
-        "has_eng_handoff": (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists(),
+        "has_eng_handoff": has_eng_handoff,
         "has_confirmed_solution": _test_report_confirms_fix(key),
         "has_solution": has_solution,
-        "needs_escalation": _internal_notes_indicates_escalation(key),
-        "is_data_only": _test_report_is_data_only(key),
-        "in_progress": has_investigation and not has_internal_notes,
+        "needs_escalation": is_escalation_path,
+
+        # New state machine
+        "pipeline_state": state.value,
+        "is_escalation_path": is_escalation_path,
         "is_blocked": _investigation_indicates_blocked(key),
+        "is_data_only": _test_report_is_data_only(key),
     }
 
 
@@ -1224,6 +1244,33 @@ def _test_report_is_data_only(key: str) -> bool:
     except OSError:
         return False
     return bool(re.search(r"(?im)data.?only|no\s+metadata|no\s+deploy|permission\s+set|report|record\s+update", text))
+
+
+def _calculate_pipeline_state(key: str) -> PipelineState:
+    """Calculate current pipeline state based on file existence."""
+    has_jira_summary = (OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key)).exists()
+    has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
+    has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
+    has_jira_message = (OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)).exists()
+    has_confirmed_solution = _test_report_confirms_fix(key)
+    has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
+    is_escalation_path = _internal_notes_indicates_escalation(key) if has_internal_notes else False
+
+    # Terminal escalation state (takes precedence)
+    if is_escalation_path and has_eng_handoff:
+        return PipelineState.ESCALATED_TO_ENGINEERING
+
+    # Normal progression
+    if not has_investigation:
+        return PipelineState.UNTRIAGED
+    elif not has_internal_notes:
+        return PipelineState.INVESTIGATING
+    elif not has_jira_message:
+        return PipelineState.AWAITING_CUSTOMER_NOTIFICATION
+    elif not has_confirmed_solution:
+        return PipelineState.COMMUNICATED
+    else:
+        return PipelineState.VALIDATED
 
 
 def _internal_notes_indicates_escalation(key: str) -> bool:

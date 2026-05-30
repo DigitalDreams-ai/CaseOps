@@ -905,34 +905,42 @@
       item.dataset.key = issue.key;
       const isChecked = selectedIssues.has(issue.key);
 
-      const needsTriage =
-        label === 'Active' && issue.has_jira_summary && !issue.has_investigation && !issue.has_internal_notes && !issue.has_jira_message && !issue.has_test_report && !issue.has_eng_handoff
-          ? '<span class="badge needs-triage" title="Only Jira summary exists; no pipeline work done yet (outputs/jira/summary only). No investigation, analysis, or customer message drafted.">Not triaged</span>'
-          : '';
-      const inProgress =
-        label === 'Active' && issue.in_progress
-          ? '<span class="badge in-progress" title="Investigation exists but analysis incomplete (no outputs/internal-notes yet). Currently being worked.">In Progress</span>'
-          : '';
-      const blocked =
-        label === 'Active' && issue.is_blocked
-          ? '<span class="badge blocked" title="Investigation indicates issue is blocked/waiting (waiting for customer, missing info, on hold, etc.).">Blocked</span>'
-          : '';
-      const engEsc =
-        label === 'Active' && issue.needs_escalation
-          ? '<span class="badge eng-escalation" title="Internal notes indicate escalation to Engineering needed. Action required: escalate per playbook.">Escalate to Engineering</span>'
-          : '';
-      const confirmed =
-        label === 'Active' && issue.has_confirmed_solution
-          ? '<span class="badge confirmed-solution" title="Sandbox test report marks the issue fixed (outputs/test-reports). Does not mean Production is updated — see investigation / Jira draft for Gearset vs already-in-Prod.">Confirmed fix</span>'
-          : '';
-      const dataOnly =
-        label === 'Active' && issue.is_data_only
-          ? '<span class="badge data-only" title="Fix is data-only (no metadata deployment): update records, permissions, reports, etc. No Gearset/metadata deploy needed.">Data Only</span>'
-          : '';
-      const solution =
-        label === 'Active' && issue.has_solution
-          ? '<span class="badge solution" title="Issue processed: analysis complete (outputs/internal-notes) and customer notified (outputs/jira-messages). May be fix, escalation, or data-only change.">Processed</span>'
-          : '';
+      // State machine badge display
+      let stateBadge = '';
+      let secondaryBadges = '';
+
+      if (label === 'Active') {
+        const state = issue.pipeline_state;
+
+        // Primary state badge
+        if (state === 'untriaged') {
+          stateBadge = '<span class="badge state-untriaged" title="No pipeline work started. Run investigation.">Not Triaged</span>';
+        } else if (state === 'investigating') {
+          stateBadge = '<span class="badge state-investigating" title="Analysis in progress. Drafting investigation.">In Progress</span>';
+        } else if (state === 'awaiting_customer_notification') {
+          stateBadge = '<span class="badge state-awaiting" title="Analysis complete, decision made. Awaiting customer notification.">Awaiting Notification</span>';
+        } else if (state === 'communicated') {
+          stateBadge = '<span class="badge state-communicated" title="Customer notified of solution/escalation.">Processed</span>';
+        } else if (state === 'validated') {
+          stateBadge = '<span class="badge state-validated" title="Solution tested and confirmed in Sandbox.">Confirmed Fix</span>';
+        } else if (state === 'ready_for_production') {
+          stateBadge = '<span class="badge state-ready" title="Validated and ready for Production deployment.">Ready for Deploy</span>';
+        } else if (state === 'escalated_to_engineering') {
+          stateBadge = '<span class="badge state-escalated" title="Handed off to Engineering team.">Escalated to Engineering</span>';
+        }
+
+        // Secondary flags (non-exclusive)
+        if (issue.is_blocked) {
+          secondaryBadges += '<span class="badge badge-blocked" title="Issue is blocked/waiting. Action required.">Blocked</span>';
+        }
+        if (issue.is_data_only) {
+          secondaryBadges += '<span class="badge badge-data-only" title="Data-only fix (no metadata deploy).">Data Only</span>';
+        }
+        if (issue.is_escalation_path && state !== 'escalated_to_engineering') {
+          secondaryBadges += '<span class="badge badge-needs-escalation" title="Escalation needed. Create engineering-escalations document.">Needs Escalation</span>';
+        }
+      }
+
       const newCommentsIndicator =
         issue.hasNewComments
           ? '<div class="new-comments-indicator" title="New Jira comments since last view"></div>'
@@ -944,13 +952,8 @@
           <div class="issue-summary">${escHtml(issue.summary)}</div>
           <div class="issue-item-meta">
             <span class="badge ${issue.disposition}">${escHtml(issue.status)}</span>
-            ${needsTriage}
-            ${inProgress}
-            ${blocked}
-            ${solution}
-            ${confirmed}
-            ${dataOnly}
-            ${engEsc}
+            ${stateBadge}
+            ${secondaryBadges}
           </div>
         </div>
         <div class="issue-indicator" data-key="${escHtml(issue.key)}"></div>
