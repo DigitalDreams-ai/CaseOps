@@ -188,6 +188,12 @@ select.desktop-only {
   font-weight: 600;
 }
 
+.badge.badge-escalated-jira {
+  background: rgba(3, 188, 184, 0.2);
+  color: #03bcb8;
+  font-weight: 600;
+}
+
 /* Link button style */
 .link-btn {
   background: none;
