@@ -933,8 +933,8 @@
         if (issue.is_data_only) {
           secondaryBadges += '<span class="badge badge-data-only" title="Data-only fix (no metadata deploy).">Data Only</span>';
         }
-        if (issue.is_escalation_path && state !== 'escalated_to_engineering') {
-          secondaryBadges += '<span class="badge badge-needs-escalation" title="Escalation needed. Create engineering-escalations document.">Needs Escalation</span>';
+        if (issue.has_eng_handoff) {
+          secondaryBadges += '<span class="badge badge-needs-escalation" title="Escalated to Engineering team.">Escalated</span>';
         }
       }
 

@@ -1153,17 +1153,13 @@ def _disposition(status: str) -> str:
     return "active"
 
 
-def _available_tabs(key: str, is_escalation_path: bool = False) -> list[dict[str, str]]:
+def _available_tabs(key: str) -> list[dict[str, str]]:
     tabs = []
     for ftype, rel in FILE_LOCATIONS.items():
         if ftype == "attachments":
             continue
         path = OUTPUTS / rel.format(key=key)
-        # eng_handoff tab shows if file exists OR if issue needs escalation
-        if ftype == "eng_handoff":
-            if path.exists() or is_escalation_path:
-                tabs.append({"id": ftype, "label": FILE_LABELS[ftype]})
-        elif path.exists():
+        if path.exists():
             tabs.append({"id": ftype, "label": FILE_LABELS[ftype]})
     return tabs
 
@@ -1429,7 +1425,7 @@ def api_issue(key: str):
         return jsonify({"error": "not found"}), 404
     due = row.get("Due", "") or ""
     flags = _pipeline_file_flags(key)
-    tabs = _available_tabs(key, is_escalation_path=flags.get("is_escalation_path", False))
+    tabs = _available_tabs(key)
     return jsonify({
         "key": key,
         "status": row.get("Status", ""),
