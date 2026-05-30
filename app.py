@@ -1185,17 +1185,32 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
         investigation_cache[cache_key] = {"has_investigation": has_investigation, "has_solution": has_solution}  # has_solution: analysis complete + customer notified
         _cache_evict(investigation_cache)
 
+    has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
     return {
         "has_jira_summary": (OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key)).exists(),
         "has_investigation": has_investigation,
-        "has_internal_notes": (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists(),
+        "has_internal_notes": has_internal_notes,
         "has_jira_message": (OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)).exists(),
         "has_test_report": (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists(),
         "has_eng_handoff": (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists(),
         "has_confirmed_solution": _test_report_confirms_fix(key),
         "has_solution": has_solution,
         "needs_escalation": _internal_notes_indicates_escalation(key),
+        "in_progress": has_investigation and not has_internal_notes,
+        "is_blocked": _investigation_indicates_blocked(key),
     }
+
+
+def _investigation_indicates_blocked(key: str) -> bool:
+    """True when outputs/investigations/<KEY>.md indicates issue is blocked/waiting."""
+    path = OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)
+    if not path.is_file():
+        return False
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    return bool(re.search(r"(?im)waiting\s+for|blocked|on\s+hold|requires?\s+customer|pending\s+customer|awaiting", text))
 
 
 def _internal_notes_indicates_escalation(key: str) -> bool:

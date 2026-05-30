@@ -909,6 +909,14 @@
         label === 'Active' && issue.has_jira_summary && !issue.has_investigation && !issue.has_internal_notes && !issue.has_jira_message && !issue.has_test_report && !issue.has_eng_handoff
           ? '<span class="badge needs-triage" title="Only Jira summary exists; no pipeline work done yet (outputs/jira/summary only). No investigation, analysis, or customer message drafted.">Not triaged</span>'
           : '';
+      const inProgress =
+        label === 'Active' && issue.in_progress
+          ? '<span class="badge in-progress" title="Investigation exists but analysis incomplete (no outputs/internal-notes yet). Currently being worked.">In Progress</span>'
+          : '';
+      const blocked =
+        label === 'Active' && issue.is_blocked
+          ? '<span class="badge blocked" title="Investigation indicates issue is blocked/waiting (waiting for customer, missing info, on hold, etc.).">Blocked</span>'
+          : '';
       const engEsc =
         label === 'Active' && issue.needs_escalation
           ? '<span class="badge eng-escalation" title="Internal notes indicate escalation to Engineering needed. Action required: escalate per playbook.">Escalate to Engineering</span>'
@@ -933,6 +941,8 @@
           <div class="issue-item-meta">
             <span class="badge ${issue.disposition}">${escHtml(issue.status)}</span>
             ${needsTriage}
+            ${inProgress}
+            ${blocked}
             ${solution}
             ${confirmed}
             ${engEsc}
