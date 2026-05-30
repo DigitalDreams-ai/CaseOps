@@ -910,8 +910,8 @@
           ? '<span class="badge needs-triage" title="No synced Jira summary on disk yet (outputs/jira/summary). Run Sync This Issue or Full Jira Sync — same as overview &quot;Needs summary&quot;.">Not triaged</span>'
           : '';
       const engEsc =
-        label === 'Active' && issue.has_eng_handoff
-          ? '<span class="badge eng-escalation" title="Engineering handoff is on file (outputs/engineering-escalations). Treat as escalate to Engineering per playbook.">Eng escalation</span>'
+        label === 'Active' && (issue.has_eng_handoff || issue.needs_escalation)
+          ? '<span class="badge eng-escalation" title="' + (issue.has_eng_handoff ? 'Engineering handoff is on file (outputs/engineering-escalations).' : 'Internal notes indicate escalation to Engineering needed.') + ' Treat as escalate to Engineering per playbook.">Eng escalation</span>'
           : '';
       const confirmed =
         label === 'Active' && issue.has_confirmed_solution

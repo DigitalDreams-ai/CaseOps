@@ -1194,7 +1194,20 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
         "has_eng_handoff": (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists(),
         "has_confirmed_solution": _test_report_confirms_fix(key),
         "has_solution": has_solution,
+        "needs_escalation": _internal_notes_indicates_escalation(key),
     }
+
+
+def _internal_notes_indicates_escalation(key: str) -> bool:
+    """True when outputs/internal-notes/<KEY>.md indicates escalation to Engineering."""
+    path = OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)
+    if not path.is_file():
+        return False
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    return bool(re.search(r"(?im)escalat[a-z]*\s+to\s+engineer|requires?\s+engineer", text))
 
 
 def _test_report_confirms_fix(key: str) -> bool:
