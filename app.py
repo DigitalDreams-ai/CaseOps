@@ -1502,6 +1502,8 @@ def api_run():
         ]
     elif action == "triage":
         cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file, "--jira-dir", str(OUTPUTS / "jira"), "--no-sync", "--no-agents", "--outputs-dir", str(OUTPUTS)]
+    elif action == "reprocess":
+        cmd = [sys.executable, "run_pipeline.py", "--env-file", env_file, "--jira-dir", str(OUTPUTS / "jira"), "--no-sync", "--outputs-dir", str(OUTPUTS)]
     elif action == "full":
         cmd = [
             sys.executable,
