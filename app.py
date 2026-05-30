@@ -1182,7 +1182,7 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
     else:
         has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
         has_solution = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists() and (OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)).exists()
-        investigation_cache[cache_key] = {"has_investigation": has_investigation, "has_solution": has_solution}
+        investigation_cache[cache_key] = {"has_investigation": has_investigation, "has_solution": has_solution}  # has_solution: analysis complete + customer notified
         _cache_evict(investigation_cache)
 
     return {

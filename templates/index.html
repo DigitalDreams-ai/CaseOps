@@ -919,7 +919,7 @@
           : '';
       const solution =
         label === 'Active' && issue.has_solution
-          ? '<span class="badge solution" title="Agent has analyzed this issue and drafted a proposed solution (outputs/internal-notes + jira-messages). Solution may be local fix or escalation to Engineering.">Solution</span>'
+          ? '<span class="badge solution" title="Issue processed: analysis complete (outputs/internal-notes) and customer notified (outputs/jira-messages). May be fix, escalation, or data-only change.">Processed</span>'
           : '';
       const newCommentsIndicator =
         issue.hasNewComments
