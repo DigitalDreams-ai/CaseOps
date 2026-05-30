@@ -35,16 +35,8 @@ Thanks.
 ---
 
 <!-- ── ENGINEERING ESCALATION ────────────────────────────────── -->
-Hi [Name],
+Hi [Submitter],
 
-I investigated this issue. It requires an Engineering change and has been escalated.
+I have diagnosed the root cause and determined this requires engineering support and have escalated this to the Engineering Team.
 
-**Problem:**
-
-**What needs to change:**
-
-**Evidence:**
-
-**Escalation notes:**
-
-Thanks.
+Thank you!
