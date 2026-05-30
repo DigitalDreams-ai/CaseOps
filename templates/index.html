@@ -364,7 +364,10 @@
     const ca = document.getElementById('content-area');
     if (ca) ca.scrollTop = 0;
     void loadIssues();
-    window.history.replaceState({ view: 'overview' }, '', '/');
+    const url = new URL(window.location);
+    url.pathname = '/overview';
+    url.search = '';
+    window.history.replaceState({ view: 'overview' }, '', url.toString());
   }
 
   /** After manifest is loaded: reopen last issue from URL param or sessionStorage. */
@@ -1330,7 +1333,19 @@
     const data = await res.json();
     if (seq !== selectTabSeq || activeKey !== key) return;
     const area = issueBody;
-    area.innerHTML = data.html || '<p class="empty">Empty.</p>';
+
+    // For investigation tab, prepend blocker reason if present
+    let content = data.html || '<p class="empty">Empty.</p>';
+    if (ftype === 'investigation' && data.blocker_reason) {
+      const blockerAlert = `
+        <div style="background: rgba(248, 81, 73, 0.15); border-left: 4px solid #f85149; padding: 12px 16px; margin-bottom: 16px; border-radius: 4px;">
+          <div style="font-weight: 600; color: #f85149; margin-bottom: 6px;">Blocker</div>
+          <div style="color: #c5222b; font-size: 13px;">${escHtml(data.blocker_reason)}</div>
+        </div>
+      `;
+      content = blockerAlert + content;
+    }
+    area.innerHTML = content;
 
     // Linkify Salesforce artifacts
     linkifySalesforceArtifacts(area);

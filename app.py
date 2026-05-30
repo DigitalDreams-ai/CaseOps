@@ -1329,6 +1329,31 @@ def _investigation_indicates_blocked(key: str) -> bool:
     return bool(re.search(r"(?im)waiting\s+for|blocked|on\s+hold|requires?\s+customer|pending\s+customer|awaiting", text))
 
 
+def _extract_blocker_reason(key: str) -> str:
+    """Extract blocker reason from ## Blocker: section in investigation file."""
+    path = OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)
+    if not path.is_file():
+        return ""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    m = re.search(r"(?im)^##\s*Blocker\s*:?\s*$", text)
+    if not m:
+        return ""
+    after = text[m.end() :]
+    block_lines: list[str] = []
+    for raw in after.splitlines():
+        if re.match(r"^\s*##\s", raw) and block_lines:
+            break
+        s = raw.strip()
+        if s:
+            block_lines.append(s)
+        if len(block_lines) > 5:
+            break
+    return " ".join(block_lines) if block_lines else ""
+
+
 def _test_report_is_data_only(key: str) -> bool:
     """True when test report indicates fix is data-only (no metadata deployment)."""
     path = OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)
@@ -1437,6 +1462,7 @@ def _sla_remaining_ms(due_str: str) -> int | None:
 # -- routes ------------------------------------------------------------------
 
 @app.get("/")
+@app.get("/overview")
 def index():
     issues = _read_manifest()
     has_manifest = _manifest_path().exists()
@@ -1451,8 +1477,6 @@ def index():
         open_count=open_count,
         workspace=app.config.get("WORKSPACE", "default"),
     )
-
-
 
 
 @app.get("/api/issues")
@@ -1548,6 +1572,12 @@ def api_file(key: str, ftype: str):
         return jsonify({"html": "<p class='empty'>File not yet generated.</p>"})
     text = path.read_text(encoding="utf-8", errors="replace")
     result = {"html": render_md(text), "raw": text}
+
+    # Add blocker reason if investigation file
+    if ftype == "investigation":
+        blocker = _extract_blocker_reason(key)
+        if blocker:
+            result["blocker_reason"] = blocker
 
     # Phase 2: populate jira_summary cache
     if ftype == "jira_summary":
