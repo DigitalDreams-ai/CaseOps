@@ -1,6 +1,6 @@
 ---
 name: jira-salesforce-fix-pipeline
-description: Runs the CaseOps Jira-to-Salesforce fix pipeline. Use when the user asks to retrieve Jira issues, process and work assigned issues, diagnose Salesforce problems, investigate Production metadata, determine whether to escalate to Engineering, implement Support-owned fixes, **always** deploy and test only in the single Sandbox named by CASEOPS_SANDBOX_TARGET_ORG in .env.jira, iterate if needed, draft internal notes plus a Jira response, and produce a dated issue summary. Routes Closed/Resolved issues to outputs/closed-resolved/ and pre-escalated issues to outputs/engineering-escalations/ without processing.
+description: Runs the CaseOps Jira-to-Salesforce fix pipeline. Use when the user asks to retrieve Jira issues, process and work assigned issues, diagnose Salesforce problems, investigate Production metadata, determine whether to escalate to Engineering, implement fixes and generate proposed solutions in the Sandbox named by CASEOPS_SANDBOX_TARGET_ORG in .env.jira, iterate if needed, draft internal notes plus a Jira response, and produce a dated issue summary. Routes Closed/Resolved issues to outputs/closed-resolved/ and pre-escalated issues to outputs/engineering-escalations/ without processing. Both Support-resolvable and Engineering-escalation paths run implementation + testing to include proposed solutions.
 compatibility: CaseOps repo root, `.env.jira` (Jira credentials, JIRA_BASE_URL, CASEOPS_DEFAULT_ASSIGNEE, CASEOPS_SANDBOX_TARGET_ORG), Python 3 for `jira_sync.py`; Salesforce CLI optional for deploy/test sub-path.
 ---
 
@@ -133,35 +133,41 @@ For each active issue:
 1. **Emit to stdout:** `STEP_7 <ISSUE_KEY>`
 2. Using Step 6 problem location, classify:
 
-- **Support-resolvable:** Proceed to Step 8.
-- **Engineering-required:** Create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md`. Skip Steps 8–9, proceed to Step 10.
+- **Support-resolvable:** Mark as support path. Proceed to Step 8.
+- **Engineering-required:** Mark as escalation path. Proceed to Step 8 (both paths run implementation + test to generate proposed solution).
 
 Log decision in `outputs/pipeline-logs/<RUN_DATE>.log`.
 
-**Step 8 — Implement (Orchestrator)**
+**Step 8 — Implement (Sub-agent)**
 
-For Support-resolvable issues:
+For all active issues (both Support-resolvable and Engineering-required):
 1. **Emit to stdout:** `STEP_8 <ISSUE_KEY>`
-2. Make the fix in Sandbox only (see Step 9 allowlist check). Use Salesforce CLI, web UI, or declarative tools. Never touch Production. Document changed files.
+2. Spawn salesforce-implementation sub-agent. Make the fix in Sandbox only. Sandbox org name is `CASEOPS_SANDBOX_TARGET_ORG` from `.env.jira`. Never touch Production. Document test results.
 
-**Step 9 — Deploy and test (Sub-agent)**
+**Step 9 — Test results (Orchestrator)**
 
-**Before spawning:** Read `CASEOPS_SANDBOX_TARGET_ORG` from `.env.jira`. If missing or empty, STOP.
-
-For each Support-resolvable issue:
+For each active issue (all paths):
 1. **Emit to stdout:** `STEP_9 <ISSUE_KEY>`
-2. Spawn salesforce-sandbox-deploy-test sub-agent using **Step 9 prompt** from `references/sub-agent-prompts.md`. Pass the allowlisted Sandbox org value.
+2. Receive test results from Step 8 sub-agent.
+3. Save test results to `outputs/test-reports/<KEY>.md`.
 
 - **On Pass:** Proceed to Step 10.
-- **On Fail:** Revise Step 4 hypothesis, loop back to Step 5–6 if more metadata is needed, re-implement Step 8, re-run Step 9. Record iterations in `outputs/investigations/<KEY>.md`.
+- **On Fail:** Revise Step 4 hypothesis, loop back to Step 5–6 if more metadata is needed, re-run Step 8–9. Record iterations in `outputs/investigations/<KEY>.md`.
 
 **Step 10 — Draft messages (Sub-agent)**
 
 For each active issue:
 1. **Emit to stdout:** `STEP_10 <ISSUE_KEY>`
-2. Spawn jira-response-drafting sub-agent using **Step 10 prompt** from `references/sub-agent-prompts.md`. Creates `outputs/jira-messages/<KEY>.md` (customer-facing only) and `outputs/internal-notes/<KEY>.md` (internal diagnosis only).
+2. Spawn jira-response-drafting sub-agent using **Step 10 prompt** from `references/sub-agent-prompts.md`. Pass routing info (support vs. escalation). Creates `outputs/jira-messages/<KEY>.md` (customer-facing only) and `outputs/internal-notes/<KEY>.md` (internal diagnosis only).
 
 **Validation checkpoint:** Verify file separation (no [INTERNAL] sections in jira-messages; no customer greetings in internal-notes).
+
+**For Engineering-escalation path:**
+After messaging, create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with:
+- Problem location (from Step 6)
+- Root cause (from Step 4)
+- Proposed solution (from Step 8–9 test results)
+- Why it requires Engineering
 
 **Step 11 — Generate dated summary (Orchestrator)**
 
