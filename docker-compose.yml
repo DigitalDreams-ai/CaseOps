@@ -16,6 +16,8 @@ services:
       # Mount Salesforce CLI auth (pre-authenticated orgs on host - NAS docker user)
       # Synology path: /volume1/homes/docker/.sfdx
       - /volume1/homes/docker/.sfdx:/home/caseops/.sfdx
+      # Mount app.py to pick up code changes without rebuild
+      - /volume1/docker/caseops/app.py:/app/app.py:ro
       # Mount Claude Code CLI auth (pre-authenticated on host - NAS docker user)
       # Contains .credentials.json with Pro subscription tokens
       - /volume1/homes/docker/.claude:/home/caseops/.claude
