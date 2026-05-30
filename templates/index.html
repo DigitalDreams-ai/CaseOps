@@ -925,6 +925,10 @@
         label === 'Active' && issue.has_confirmed_solution
           ? '<span class="badge confirmed-solution" title="Sandbox test report marks the issue fixed (outputs/test-reports). Does not mean Production is updated — see investigation / Jira draft for Gearset vs already-in-Prod.">Confirmed fix</span>'
           : '';
+      const dataOnly =
+        label === 'Active' && issue.is_data_only
+          ? '<span class="badge data-only" title="Fix is data-only (no metadata deployment): update records, permissions, reports, etc. No Gearset/metadata deploy needed.">Data Only</span>'
+          : '';
       const solution =
         label === 'Active' && issue.has_solution
           ? '<span class="badge solution" title="Issue processed: analysis complete (outputs/internal-notes) and customer notified (outputs/jira-messages). May be fix, escalation, or data-only change.">Processed</span>'
@@ -945,6 +949,7 @@
             ${blocked}
             ${solution}
             ${confirmed}
+            ${dataOnly}
             ${engEsc}
           </div>
         </div>

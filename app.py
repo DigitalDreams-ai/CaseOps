@@ -1196,6 +1196,7 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
         "has_confirmed_solution": _test_report_confirms_fix(key),
         "has_solution": has_solution,
         "needs_escalation": _internal_notes_indicates_escalation(key),
+        "is_data_only": _test_report_is_data_only(key),
         "in_progress": has_investigation and not has_internal_notes,
         "is_blocked": _investigation_indicates_blocked(key),
     }
@@ -1211,6 +1212,18 @@ def _investigation_indicates_blocked(key: str) -> bool:
     except OSError:
         return False
     return bool(re.search(r"(?im)waiting\s+for|blocked|on\s+hold|requires?\s+customer|pending\s+customer|awaiting", text))
+
+
+def _test_report_is_data_only(key: str) -> bool:
+    """True when test report indicates fix is data-only (no metadata deployment)."""
+    path = OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)
+    if not path.is_file():
+        return False
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    return bool(re.search(r"(?im)data.?only|no\s+metadata|no\s+deploy|permission\s+set|report|record\s+update", text))
 
 
 def _internal_notes_indicates_escalation(key: str) -> bool:
