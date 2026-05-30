@@ -361,6 +361,7 @@
     const ca = document.getElementById('content-area');
     if (ca) ca.scrollTop = 0;
     void loadIssues();
+    window.history.replaceState({ view: 'overview' }, '', '/');
   }
 
   /** After manifest is loaded: reopen last issue from URL param or sessionStorage. */
