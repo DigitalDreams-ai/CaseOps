@@ -1278,7 +1278,7 @@ def _attachment_count(key: str) -> int:
 _ROLLUP_FILENAME = re.compile(r"^issue-summary-\d{4}-\d{2}-\d{2}\.md$")
 
 
-def _pipeline_file_flags(key: str) -> dict[str, bool]:
+def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
     """Which pipeline output files exist for this issue (for dashboard / API)."""
     # Phase 2: check investigation_cache before disk I/O for investigation/solution flags
     cache_key = _instance_cache_key(key)
@@ -1294,7 +1294,7 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
 
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
     has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
-    state = _calculate_pipeline_state(key)
+    state = _calculate_pipeline_state(key, status)
 
     return {
         # Legacy flags (kept for backward compatibility during transition)
@@ -1306,11 +1306,12 @@ def _pipeline_file_flags(key: str) -> dict[str, bool]:
         "has_eng_handoff": has_eng_handoff,
         "has_confirmed_solution": _test_report_confirms_fix(key),
         "has_solution": has_solution,
-        "needs_escalation": has_eng_handoff,  # Issue is on escalation path
+        "needs_escalation": has_eng_handoff,  # Issue needs escalation (has escalation handoff file)
 
         # New state machine
         "pipeline_state": state.value,
-        "is_escalation_path": has_eng_handoff,  # Ground truth: file existence, not sniffing
+        "is_escalation_path": has_eng_handoff,  # Ground truth: file existence
+        "is_jira_escalated": status == "Escalated to Engineering",  # Source of truth for Jira status
         "is_blocked": _investigation_indicates_blocked(key),
         "is_data_only": _test_report_is_data_only(key),
     }
@@ -1340,19 +1341,18 @@ def _test_report_is_data_only(key: str) -> bool:
     return bool(re.search(r"(?im)data.?only|no\s+metadata|no\s+deploy|permission\s+set|report|record\s+update", text))
 
 
-def _calculate_pipeline_state(key: str) -> PipelineState:
-    """Calculate current pipeline state based on file existence.
+def _calculate_pipeline_state(key: str, status: str = "") -> PipelineState:
+    """Calculate current pipeline state based on file existence and Jira status.
 
-    Both support-resolvable and engineering-escalation paths run Steps 8-9.
-    The only difference is: escalation path creates engineering_escalations file.
+    Escalation state is determined by Jira status = "Escalated to Engineering" (source of truth).
+    Support-resolvable progression based on pipeline file artifacts.
     """
     has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
     has_test_report = (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists()
-    has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
 
-    # Escalation state (terminal, takes precedence)
-    if has_eng_handoff:
+    # Escalation state: based on Jira status (source of truth)
+    if status == "Escalated to Engineering":
         return PipelineState.ESCALATED_TO_ENGINEERING
 
     # Support-resolvable progression
@@ -1462,7 +1462,7 @@ def api_issues():
     for row in issues:
         key = row.get("Key", "")
         status = row.get("Status", "")
-        flags = _pipeline_file_flags(key)
+        flags = _pipeline_file_flags(key, status)
         due = row.get("Due", "") or ""
         has_new_comments = row.get("HasNewComments", "false").lower() == "true"
         result.append({
@@ -1510,8 +1510,9 @@ def api_issue(key: str):
     row = next((r for r in issues if r.get("Key") == key), None)
     if not row:
         return jsonify({"error": "not found"}), 404
+    status = row.get("Status", "")
     due = row.get("Due", "") or ""
-    flags = _pipeline_file_flags(key)
+    flags = _pipeline_file_flags(key, status)
     tabs = _available_tabs(key)
     return jsonify({
         "key": key,

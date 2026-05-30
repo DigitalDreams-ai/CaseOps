@@ -31,7 +31,7 @@
     <div id="issue-actions-topbar-menu" class="menu" style="display:none;">
       <button class="menu-item" id="sync-issue-btn" onclick="runAction('sync_issue',activeKey); closeIssueActionsMenu();">Sync This Issue</button>
       <button class="menu-item primary" id="run-issue-btn" onclick="runAction('full_issue',activeKey); closeIssueActionsMenu();">Run Pipeline For This Issue</button>
-      <button class="menu-item" id="reprocess-issue-btn" onclick="runAction('reprocess_issue',activeKey); closeIssueActionsMenu();">Reprocess This Issue</button>
+      <button class="menu-item" id="reprocess-issue-btn" onclick="runAction('reprocess_issue',activeKey); closeIssueActionsMenu();">Reprocess Issue (No Sync)</button>
       <div style="border-top:1px solid var(--color-border); margin:6px 0; padding:0 12px;">
         <select id="transition-select-topbar" class="menu-select" style="margin-bottom:4px; width:100%;"><option value="">Change status…</option></select>
         <button class="menu-item" id="transition-btn-topbar" onclick="applyTransitionTopbar(activeKey); closeIssueActionsMenu();" disabled>Apply</button>
@@ -126,7 +126,7 @@
             <div style="padding:6px;">
               <button class="action-menu-item" onclick="runAction('sync_issue',activeKey)">Sync This Issue</button>
               <button class="action-menu-item primary" onclick="runAction('full_issue',activeKey)">Run Pipeline For This Issue</button>
-              <button class="action-menu-item" onclick="runAction('reprocess_issue',activeKey)">Reprocess This Issue</button>
+              <button class="action-menu-item" onclick="runAction('reprocess_issue',activeKey)">Reprocess Issue (No Sync)</button>
               <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
                 <select id="detail-transition-select-mobile" class="action-menu-select" style="width:100%; margin-bottom:4px; font-size:12px; padding:4px;"><option value="">Change status…</option></select>
                 <button class="action-menu-item" id="detail-transition-btn-mobile" onclick="applyTransitionDetailMobile(activeKey)" disabled style="width:100%; padding:6px 8px;">Apply</button>
@@ -916,7 +916,7 @@
       if (label === 'Active') {
         const state = issue.pipeline_state;
 
-        // Primary state badge
+        // Primary state badge (based on pipeline state and Jira status)
         if (state === 'untriaged') {
           stateBadge = '<span class="badge state-untriaged" title="No pipeline work started. Run investigation.">Not Triaged</span>';
         } else if (state === 'investigating') {
@@ -926,18 +926,23 @@
         } else if (state === 'validated') {
           stateBadge = '<span class="badge state-validated" title="Solution tested and confirmed in Sandbox.">Validated</span>';
         } else if (state === 'escalated_to_engineering') {
-          stateBadge = '<span class="badge state-escalated" title="Handed off to Engineering team.">Escalated to Engineering</span>';
+          stateBadge = '<span class="badge state-escalated" title="Jira status: Escalated to Engineering.">Escalated to Engineering</span>';
         }
 
-        // Secondary flags (non-exclusive)
-        if (issue.is_blocked) {
+        // Secondary flags: validated combinations only
+        // - Blocked and Data Only are mutually exclusive
+        // - Data Only and Escalation are mutually exclusive
+        if (issue.is_blocked && !issue.is_data_only) {
           secondaryBadges += '<span class="badge badge-blocked" title="Issue is blocked/waiting. Action required.">Blocked</span>';
         }
-        if (issue.is_data_only) {
+        if (issue.is_data_only && !issue.is_blocked && !issue.has_eng_handoff && !issue.is_jira_escalated) {
           secondaryBadges += '<span class="badge badge-data-only" title="Data-only fix (no metadata deploy).">Data Only</span>';
         }
-        if (issue.has_eng_handoff) {
-          secondaryBadges += '<span class="badge badge-needs-escalation" title="Escalated to Engineering team.">Escalated</span>';
+        if (issue.has_eng_handoff && !issue.is_data_only) {
+          secondaryBadges += '<span class="badge badge-needs-escalation" title="Needs escalation to Engineering team.">Needs Escalation</span>';
+        }
+        if (issue.is_jira_escalated && !issue.is_data_only) {
+          secondaryBadges += '<span class="badge badge-escalated-jira" title="Jira status: Escalated to Engineering.">Escalated to Engineering</span>';
         }
       }
 
