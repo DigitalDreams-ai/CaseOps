@@ -1512,7 +1512,6 @@ def api_run():
             str(OUTPUTS / "jira"),
             "--outputs-dir",
             str(OUTPUTS),
-            "--no-agents",
         ]
     elif action == "full_issue" and key:
         use_full_issue = True
