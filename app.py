@@ -2580,6 +2580,9 @@ def api_setup_salesforce_auth():
 
         if prod_token and prod_url:
             try:
+                # SF CLI expects token via SF_ACCESS_TOKEN env var, not as argument
+                env = os.environ.copy()
+                env["SF_ACCESS_TOKEN"] = prod_token
                 proc = subprocess.run(
                     [
                         "sf",
@@ -2590,14 +2593,13 @@ def api_setup_salesforce_auth():
                         "10xhealth",
                         "--instance-url",
                         prod_url,
-                        "--access-token",
-                        prod_token,
                         "--no-prompt",
                     ],
                     capture_output=True,
                     timeout=30,
                     check=False,
                     text=True,
+                    env=env,
                 )
                 if proc.returncode == 0:
                     results["10xhealth"] = "authenticated"
@@ -2616,6 +2618,9 @@ def api_setup_salesforce_auth():
 
         if sandbox_token and sandbox_url:
             try:
+                # SF CLI expects token via SF_ACCESS_TOKEN env var, not as argument
+                env = os.environ.copy()
+                env["SF_ACCESS_TOKEN"] = sandbox_token
                 proc = subprocess.run(
                     [
                         "sf",
@@ -2626,14 +2631,13 @@ def api_setup_salesforce_auth():
                         "10xhealth-sean",
                         "--instance-url",
                         sandbox_url,
-                        "--access-token",
-                        sandbox_token,
                         "--no-prompt",
                     ],
                     capture_output=True,
                     timeout=30,
                     check=False,
                     text=True,
+                    env=env,
                 )
                 if proc.returncode == 0:
                     results["10xhealth-sean"] = "authenticated"
