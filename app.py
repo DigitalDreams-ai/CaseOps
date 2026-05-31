@@ -128,6 +128,12 @@ skill_registry = SkillRegistry()
 # Maps skill_name → absolute path to skill directory
 SKILL_PATHS: dict[str, str] = {}
 
+# Salesforce org cache: one-time auth validation per run (prevents sf org list re-runs)
+# Stores: {"10xhealth": {...}, "10xhealth-sean": {...}}
+_sf_orgs_cache: dict[str, dict[str, str]] | None = None
+_sf_orgs_cache_time = 0
+_SF_ORGS_CACHE_TTL = 600  # Cache for 10 minutes
+
 
 def _cache_evict(cache: dict) -> None:
     """Evict oldest entries when cache exceeds _CACHE_MAX_KEYS."""
@@ -2647,9 +2653,17 @@ def api_setup_salesforce_auth():
         prod_ok, prod_msg = auth_org("10xhealth", prod_token, prod_url) if prod_token else (None, "skipped")
         sandbox_ok, sandbox_msg = auth_org("10xhealth-sean", sandbox_token, sandbox_url) if sandbox_token else (None, "skipped")
 
-        # Validate: run sf org list to verify orgs actually exist
+        # Validate: run sf org list to verify orgs actually exist (cached for 10 min)
         def verify_orgs() -> dict:
-            """Run sf org list and return authenticated orgs."""
+            """Run sf org list and return authenticated orgs. Use cache if available."""
+            global _sf_orgs_cache, _sf_orgs_cache_time
+            now = time.time()
+
+            # Check cache validity
+            if _sf_orgs_cache is not None and (now - _sf_orgs_cache_time) < _SF_ORGS_CACHE_TTL:
+                return _sf_orgs_cache
+
+            # Cache miss or expired: run sf org list
             try:
                 proc = subprocess.run(
                     ["sf", "org", "list", "--json"],
@@ -2668,6 +2682,9 @@ def api_setup_salesforce_auth():
                             "orgId": org.get("orgId"),
                             "instanceUrl": org.get("instanceUrl"),
                         }
+                    # Update cache
+                    _sf_orgs_cache = orgs
+                    _sf_orgs_cache_time = now
                     return orgs
                 return {}
             except Exception:
