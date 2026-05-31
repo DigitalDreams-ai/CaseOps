@@ -513,6 +513,7 @@ def _claude_process_env() -> dict[str, str]:
         env.pop("ANTHROPIC_API_KEY", None)
         env.pop("OAUTH_TOKEN", None)
         env.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
+        env["HOME"] = "/app"  # Claude CLI looks for credentials in $HOME/.claude/
 
     chrome = (env.get("CASEOPS_CLAUDE_BROWSER") or "").strip()
     if chrome:
@@ -595,6 +596,7 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
     try:
         env = os.environ.copy()
         env["COLUMNS"] = "999"  # Prevent terminal wrapping in subprocess output
+        env["HOME"] = "/app"  # Claude CLI looks for credentials in $HOME/.claude/
         env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")  # Instance-specific Jira output dir
         env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
         if TEMP_ROOT:
