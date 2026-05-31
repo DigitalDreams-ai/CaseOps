@@ -13,14 +13,10 @@ services:
       - ./instance1/outputs:/app/instance1/outputs
       # Mount .env.jira.nas for NAS/Linux (use .env.jira for local Windows dev)
       - ./.env.jira.nas:/app/.env.jira:ro
-      # Mount Salesforce CLI auth (pre-authenticated orgs on host - NAS docker user)
-      # Synology path: /volume1/homes/docker/.sfdx
-      - /volume1/homes/docker/.sfdx:/home/caseops/.sfdx
-      # Mount app.py to pick up code changes without rebuild
-      - /volume1/docker/caseops/app.py:/app/app.py:ro
-      # Mount Claude Code CLI auth (pre-authenticated on host - NAS docker user)
-      # Contains .credentials.json with Pro subscription tokens
-      - /volume1/homes/docker/.claude:/home/caseops/.claude
+      # Note: .sfdx and .claude mounted from NAS had permission conflicts.
+      # These are now managed via container-local storage + Flask API setup endpoints.
+      # Use /setup/claude-login to save Claude credentials.
+      # Use sf org login web in container or cci org connect for Salesforce auth.
       # (Optional) Mount workspace-specific .env.jira.{workspace} files
       # - ./.env.jira.production:/app/.env.jira.production:ro
     environment:

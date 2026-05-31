@@ -743,6 +743,16 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
             "CaseOps LLM: Claude Code CLI (CASEOPS_LLM_AUTH=claude_code).",
         )
         _log_emit_line(run_key, f"Claude binary: {claude_bin}")
+
+        # Check for credentials file availability before invoking CLI
+        if not caseops_llm_auth_uses_anthropic_api_key():
+            cred_file = Path.home() / ".claude" / ".credentials.json"
+            if cred_file.exists():
+                _log_emit_line(run_key, f"Credentials found: {cred_file}")
+            else:
+                _log_emit_line(run_key, f"WARNING: Credentials file not found at {cred_file}")
+                _log_emit_line(run_key, "Claude Code CLI will attempt to authenticate but may fail with 401.")
+
         env = _claude_process_env()
         env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
         _log_emit_line(run_key, f"Invoking: {' '.join(cmd[:3])}...")
@@ -2508,6 +2518,74 @@ def api_settings_status():
                 pass
 
     return jsonify(status)
+
+
+@app.get("/setup/claude-login")
+def setup_claude_login():
+    """Serve Claude Code token setup form."""
+    return render_template("claude-token-setup.html")
+
+
+@app.post("/api/setup/claude-credentials")
+def api_setup_claude_credentials():
+    """Save Claude Code credentials (OAuth token from claude setup-token)."""
+    try:
+        body = request.get_json(silent=True) or {}
+        credentials = body.get("credentials")
+
+        if not credentials:
+            return jsonify({
+                "error": "Missing 'credentials' in request body"
+            }), 400
+
+        # Parse credentials if it's a string, otherwise use as-is
+        if isinstance(credentials, str):
+            try:
+                cred_obj = json.loads(credentials)
+            except json.JSONDecodeError:
+                return jsonify({"error": "Invalid credentials JSON"}), 400
+        else:
+            cred_obj = credentials
+
+        cred_json = json.dumps(cred_obj)
+
+        # Write credentials file
+        cred_dir = Path.home() / ".claude"
+        cred_dir.mkdir(parents=True, exist_ok=True)
+        cred_file = cred_dir / ".credentials.json"
+        cred_file.write_text(cred_json, encoding="utf-8")
+        cred_file.chmod(0o600)
+
+        return jsonify({
+            "ok": True,
+            "message": f"Credentials saved to {cred_file}",
+            "path": str(cred_file)
+        })
+
+    except Exception as e:
+        return jsonify({
+            "error": f"Failed to save credentials: {str(e)}"
+        }), 500
+
+
+@app.post("/api/restart")
+def api_restart():
+    """Restart the CaseOps service. Returns immediately; actual restart happens in background."""
+    def restart_app():
+        import time
+        time.sleep(1)  # Give response time to send
+        import os
+        import signal
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    import threading
+    t = threading.Thread(target=restart_app, daemon=True)
+    t.start()
+
+    return jsonify({
+        "ok": True,
+        "message": "Restart initiated. Service will be back online in 10-30 seconds."
+    })
 
 
 if __name__ == "__main__":

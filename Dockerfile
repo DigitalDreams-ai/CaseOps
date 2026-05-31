@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y \
 # Install Claude Code CLI
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install Salesforce CLI
+RUN npm install -g @salesforce/cli
+
 # Install CumulusCI (for CI/CD, scratch orgs, sandboxes)
 RUN pip install --no-cache-dir cumulusci
 
@@ -38,6 +41,13 @@ EXPOSE 5000
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/ || exit 1
+
+# Create and set up Claude Code credentials before switching to caseops user
+RUN mkdir -p /home/caseops/.claude && \
+    chmod 700 /home/caseops/.claude && \
+    chown caseops:caseops /home/caseops/.claude
+
+# Credentials mounted at runtime via docker-compose volumes (not baked into image)
 
 # Copy entrypoint script and make executable (before switching to caseops user)
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh

@@ -370,10 +370,30 @@
 
             <!-- Claude Code CLI (Subscription) -->
             <div class="settings-section" id="claude-section">
-                <h2>Claude Code CLI</h2>
-                <div id="claude-status">Loading...</div>
-                <div class="status-note">
-                    To authenticate Claude Code CLI: SSH to your NAS and run <code>claude login</code>
+                <h2>Claude Code CLI Authentication</h2>
+                <div id="claude-status" style="margin-bottom: 15px; padding: 10px; border-radius: 4px; background: var(--color-bg); border: 1px solid var(--color-border);"></div>
+
+                <div style="text-align: center; padding: 20px 0;">
+                    <p style="font-size: 14px; margin-bottom: 16px; color: var(--color-text);">
+                        Setup Claude Code authentication in 3 steps:
+                    </p>
+                    <button type="button" class="button-primary" id="open-claude-wizard" style="padding: 12px 24px; font-size: 16px; cursor: pointer;">
+                        🔐 Setup Claude Token
+                    </button>
+                    <p style="font-size: 12px; color: var(--color-text-secondary); margin-top: 12px;">
+                        Run command locally, paste token. Works on mobile & desktop.
+                    </p>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid var(--color-border); margin: 20px 0;">
+
+                <div style="background: var(--color-bg); padding: 12px; border-radius: 4px; font-size: 12px; color: var(--color-text-secondary);">
+                    <strong>⚠️ Token Expired?</strong><br>
+                    If you see "401 Invalid authentication credentials" errors, your Claude token has expired.
+                    <br><br>
+                    On your local machine, run:
+                    <code style="display: block; margin-top: 8px; padding: 8px; background: var(--color-surface); border-radius: 2px; overflow-x: auto;">claude logout && claude login</code>
+                    Then use the Setup wizard above to update your credentials.
                 </div>
             </div>
 
@@ -449,6 +469,20 @@
                 </div>
                 <div id="advanced-content" class="section-collapsed">
                 </div>
+            </div>
+
+            <!-- System -->
+            <div class="settings-section">
+                <h2>System</h2>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <button type="button" class="button-primary" onclick="restartService()" id="restart-btn" style="background: #dc2626; border-color: #991b1b;">
+                        🔄 Restart CaseOps
+                    </button>
+                    <span id="restart-status" style="font-size: 13px; color: var(--color-text-secondary);"></span>
+                </div>
+                <p style="font-size: 12px; color: var(--color-text-secondary); margin-top: 12px;">
+                    Restarts the CaseOps service. May take 10-30 seconds. Connection will be restored automatically.
+                </p>
             </div>
 
             <!-- Buttons -->
@@ -843,11 +877,85 @@
             }
         });
 
+        // Claude Code Authentication - Open Wizard
+        document.getElementById('open-claude-wizard').addEventListener('click', () => {
+            window.open('/setup/claude-login', 'claude-wizard', 'width=600,height=800');
+        });
+
+        async function loadClaudeStatus() {
+            try {
+                const resp = await fetch('/api/settings/status');
+                const status = await resp.json();
+                const statusDiv = document.getElementById('claude-status');
+                if (status.claude && status.claude.installed && status.claude.version) {
+                    statusDiv.innerHTML = `<span style="color: var(--color-success);">✓ Claude CLI v${status.claude.version} - Authenticated</span>`;
+                } else if (status.claude && status.claude.installed) {
+                    statusDiv.innerHTML = '<span style="color: var(--color-warn);">⚠ Claude CLI installed but needs authentication</span>';
+                } else {
+                    statusDiv.innerHTML = '<span style="color: var(--color-danger);">✗ Claude CLI not available</span>';
+                }
+            } catch (e) {
+                document.getElementById('claude-status').textContent = 'Unable to check status';
+            }
+        }
+
+        async function restartService() {
+            const btn = document.getElementById('restart-btn');
+            const statusDiv = document.getElementById('restart-status');
+
+            if (!confirm('Restart CaseOps service? Connection will be restored in ~10-30 seconds.')) return;
+
+            btn.disabled = true;
+            statusDiv.textContent = 'Restarting...';
+            statusDiv.style.color = 'var(--color-warn)';
+
+            try {
+                const resp = await fetch('/api/restart', { method: 'POST' });
+                if (resp.ok) {
+                    statusDiv.textContent = 'Service restarting. Reconnecting...';
+
+                    // Poll for service to come back
+                    let attempts = 0;
+                    const maxAttempts = 60;
+                    while (attempts < maxAttempts) {
+                        try {
+                            const testResp = await fetch('/');
+                            if (testResp.ok) {
+                                statusDiv.textContent = '✓ Service restarted successfully';
+                                statusDiv.style.color = 'var(--color-success)';
+                                setTimeout(() => {
+                                    statusDiv.textContent = '';
+                                    btn.disabled = false;
+                                }, 3000);
+                                return;
+                            }
+                        } catch (e) {
+                            // Service not ready yet
+                        }
+                        await new Promise(r => setTimeout(r, 1000));
+                        attempts++;
+                    }
+                    statusDiv.textContent = '✗ Service restart timed out';
+                    statusDiv.style.color = 'var(--color-danger)';
+                } else {
+                    const error = await resp.json();
+                    statusDiv.textContent = '✗ Restart failed: ' + (error.error || 'Unknown error');
+                    statusDiv.style.color = 'var(--color-danger)';
+                }
+            } catch (e) {
+                statusDiv.textContent = '✗ Error: ' + e.message;
+                statusDiv.style.color = 'var(--color-danger)';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         // Load on page open
         loadSettings();
         loadStatus();
         loadDisplayLabel();
         loadCannedMessages();
+        loadClaudeStatus();
     </script>
 </body>
 </html>

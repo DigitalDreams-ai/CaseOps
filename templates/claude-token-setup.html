@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Claude Code - CaseOps</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .step {
+            margin-bottom: 32px;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        .step-title {
+            display: inline-block;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .step-desc {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+            margin-top: 12px;
+            margin-left: 38px;
+        }
+
+        .code-block {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin: 12px 0 12px 38px;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .copy-btn:hover {
+            background: #764ba2;
+        }
+
+        .copy-btn.copied {
+            background: #10b981;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+            margin-left: 38px;
+            margin-right: 0;
+            width: calc(100% - 38px);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 38px;
+            margin-top: 12px;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 16px;
+            margin-left: 38px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .status-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+
+        .status-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .info-box {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 12px 0 12px 38px;
+            font-size: 13px;
+            color: #92400e;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Setup Claude Code</h1>
+            <p>Authenticate for CaseOps pipeline</p>
+        </div>
+
+        <div class="step">
+            <span class="step-number">1</span><span class="step-title">Locate your credentials file</span>
+            <div class="step-desc">
+                On your authenticated local machine, find:
+            </div>
+            <div class="code-block">
+                <button class="copy-btn" onclick="copyCommand()">Copy Path</button>
+                <code>~/.claude/.credentials.json</code>
+            </div>
+            <div class="step-desc">
+                This file contains your complete authentication credentials (token + OAuth fields).
+            </div>
+        </div>
+
+        <div class="step">
+            <span class="step-number">2</span><span class="step-title">Read the full file</span>
+            <div class="step-desc">
+                Open the file in a text editor, or run in terminal:
+            </div>
+            <div class="code-block">
+                cat ~/.claude/.credentials.json
+            </div>
+            <div class="info-box">
+                ⚠️ Copy the ENTIRE file contents (JSON object with token, claudeAiOauth, accessToken, etc.), not just the token value.
+            </div>
+        </div>
+
+        <div class="step">
+            <span class="step-number">3</span><span class="step-title">Paste below</span>
+            <div class="step-desc">
+                Paste the token or JSON (we'll format it automatically):
+            </div>
+            <textarea id="token-input" placeholder='Paste your token here'></textarea>
+            <button class="btn" onclick="saveToken()" id="submit-btn">Save & Finish</button>
+            <div id="status-message" class="status-message"></div>
+        </div>
+    </div>
+
+    <script>
+        function copyCommand() {
+            const text = '~/.claude/.credentials.json';
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = 'Copy Path'; }, 2000);
+            });
+        }
+
+        async function saveToken() {
+            const textarea = document.getElementById('token-input');
+            const statusDiv = document.getElementById('status-message');
+            const tokenText = textarea.value.trim();
+
+            if (!tokenText) {
+                showStatus('Please paste your token', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+
+            try {
+                let credentials;
+
+                // Try to parse as JSON first (full credentials object)
+                try {
+                    credentials = JSON.parse(tokenText);
+                } catch (e) {
+                    // If not valid JSON, wrap as token string
+                    credentials = { token: tokenText };
+                }
+
+                const resp = await fetch('/api/setup/claude-credentials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ credentials })
+                });
+
+                const data = await resp.json();
+                if (resp.ok && data.ok) {
+                    showStatus('✓ Credentials saved! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/settings';
+                    }, 1500);
+                } else {
+                    showStatus('Error: ' + (data.error || 'Failed to save'), 'error');
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                showStatus('Error: ' + e.message, 'error');
+                btn.disabled = false;
+            }
+        }
+
+        function showStatus(msg, type) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = msg;
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
