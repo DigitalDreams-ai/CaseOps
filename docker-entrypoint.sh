@@ -1,11 +1,9 @@
 #!/bin/bash
 set -e
 
-# Load .env.jira config
-if [ -f /app/.env.jira ]; then
-  source /app/.env.jira
-  echo "Loaded .env.jira"
-fi
+# Note: .env.jira is loaded by docker-compose via env_file directive.
+# Variables like SF_PROD_*, SF_SANDBOX_*, CASEOPS_*, etc. are already in the environment.
+# No need to source here as it conflicts with comments containing special characters.
 
 # Initialize Claude Code settings and credentials
 mkdir -p ~/.claude 2>/dev/null || true
