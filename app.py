@@ -2568,6 +2568,99 @@ def api_setup_claude_credentials():
         }), 500
 
 
+@app.post("/api/setup/salesforce-auth")
+def api_setup_salesforce_auth():
+    """Authenticate Salesforce orgs using sf CLI with access tokens from environment variables."""
+    try:
+        results = {}
+
+        # Production org
+        prod_token = os.environ.get("SF_PROD_ACCESS_TOKEN")
+        prod_url = os.environ.get("SF_PROD_INSTANCE_URL")
+
+        if prod_token and prod_url:
+            try:
+                subprocess.run(
+                    [
+                        "sf",
+                        "org",
+                        "login",
+                        "access-token",
+                        "--alias",
+                        "10xhealth",
+                        "--instance-url",
+                        prod_url,
+                        "--access-token",
+                        prod_token,
+                        "--no-prompt",
+                    ],
+                    capture_output=True,
+                    timeout=30,
+                    check=False,
+                )
+                results["10xhealth"] = "authenticated"
+            except subprocess.TimeoutExpired:
+                results["10xhealth"] = "timeout"
+            except Exception as e:
+                results["10xhealth"] = f"error: {str(e)}"
+        else:
+            results["10xhealth"] = "skipped (missing env vars)"
+
+        # Sandbox org
+        sandbox_token = os.environ.get("SF_SANDBOX_ACCESS_TOKEN")
+        sandbox_url = os.environ.get("SF_SANDBOX_INSTANCE_URL")
+
+        if sandbox_token and sandbox_url:
+            try:
+                subprocess.run(
+                    [
+                        "sf",
+                        "org",
+                        "login",
+                        "access-token",
+                        "--alias",
+                        "10xhealth-sean",
+                        "--instance-url",
+                        sandbox_url,
+                        "--access-token",
+                        sandbox_token,
+                        "--no-prompt",
+                    ],
+                    capture_output=True,
+                    timeout=30,
+                    check=False,
+                )
+                results["10xhealth-sean"] = "authenticated"
+            except subprocess.TimeoutExpired:
+                results["10xhealth-sean"] = "timeout"
+            except Exception as e:
+                results["10xhealth-sean"] = f"error: {str(e)}"
+        else:
+            results["10xhealth-sean"] = "skipped (missing env vars)"
+
+        # Set default org to production
+        try:
+            subprocess.run(
+                ["sf", "config", "set", "defaultusername=10xhealth", "--global"],
+                capture_output=True,
+                timeout=10,
+                check=False,
+            )
+        except Exception:
+            pass
+
+        return jsonify({
+            "ok": True,
+            "orgs": results,
+            "message": "Salesforce org authentication completed"
+        })
+
+    except Exception as e:
+        return jsonify({
+            "error": f"Failed to authenticate Salesforce orgs: {str(e)}"
+        }), 500
+
+
 @app.post("/api/restart")
 def api_restart():
     """Restart the CaseOps service. Returns immediately; actual restart happens in background."""
