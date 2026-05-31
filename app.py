@@ -2578,29 +2578,34 @@ def api_setup_salesforce_auth():
         prod_token = os.environ.get("SF_PROD_ACCESS_TOKEN")
         prod_url = os.environ.get("SF_PROD_INSTANCE_URL")
 
+        print(f"[DEBUG] SF Auth Endpoint: prod_token={prod_token[:20] if prod_token else 'None'}... prod_url={prod_url}")
+
         if prod_token and prod_url:
             try:
                 # SF CLI expects token via SF_ACCESS_TOKEN env var, not as argument
                 env = os.environ.copy()
                 env["SF_ACCESS_TOKEN"] = prod_token
+                cmd = [
+                    "sf",
+                    "org",
+                    "login",
+                    "access-token",
+                    "--alias",
+                    "10xhealth",
+                    "--instance-url",
+                    prod_url,
+                    "--no-prompt",
+                ]
+                print(f"[DEBUG] Running: {' '.join(cmd)}")
                 proc = subprocess.run(
-                    [
-                        "sf",
-                        "org",
-                        "login",
-                        "access-token",
-                        "--alias",
-                        "10xhealth",
-                        "--instance-url",
-                        prod_url,
-                        "--no-prompt",
-                    ],
+                    cmd,
                     capture_output=True,
                     timeout=30,
                     check=False,
                     text=True,
                     env=env,
                 )
+                print(f"[DEBUG] Return code: {proc.returncode}, stdout: {proc.stdout[:100]}, stderr: {proc.stderr[:100]}")
                 if proc.returncode == 0:
                     results["10xhealth"] = "authenticated"
                 else:
