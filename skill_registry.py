@@ -28,7 +28,7 @@ class SkillRegistry:
                         Example: load_all_skills(ROOT / "skills", ROOT / ".claude" / "skills")
 
         Returns:
-            None. Skills are cached in self.skills dict.
+            None. Skills are cached in self.skills dict, including bundled guides.
         """
         if self._loaded:
             return  # Skip if already loaded
@@ -49,6 +49,19 @@ class SkillRegistry:
                 skill_name = skill_path.name
                 try:
                     skill_data = self._parse_skill(skill_md)
+
+                    # Bundle guides from references/ subdirectory (if it exists)
+                    references_dir = skill_path / "references"
+                    guides = {}
+                    if references_dir.exists():
+                        for guide_file in references_dir.glob("*.md"):
+                            guide_name = guide_file.stem
+                            try:
+                                guides[guide_name] = guide_file.read_text(encoding="utf-8")
+                            except Exception as e:
+                                print(f"Warning: Failed to load guide {guide_name} for skill {skill_name}: {e}")
+                    skill_data["guides"] = guides
+
                     self.skills[skill_name] = skill_data
                 except Exception as e:
                     print(f"Warning: Failed to load skill {skill_name} from {skill_md}: {e}")
@@ -125,3 +138,33 @@ class SkillRegistry:
     def skill_count(self) -> int:
         """Return the number of loaded skills."""
         return len(self.skills)
+
+    def get_guide(self, skill_name: str, guide_name: str) -> str | None:
+        """Get a bundled guide content by skill name and guide name.
+
+        Args:
+            skill_name: Name of the skill (e.g., 'jira-salesforce-fix-pipeline')
+            guide_name: Name of the guide without .md extension (e.g., 'workflow')
+
+        Returns:
+            Guide content as string, or None if not found.
+        """
+        skill = self.get_skill(skill_name)
+        if not skill:
+            return None
+        guides = skill.get("guides", {})
+        return guides.get(guide_name)
+
+    def list_guides(self, skill_name: str) -> list[str]:
+        """List all guide names for a skill.
+
+        Args:
+            skill_name: Name of the skill
+
+        Returns:
+            List of guide names (without .md extension), or empty list if skill not found.
+        """
+        skill = self.get_skill(skill_name)
+        if not skill:
+            return []
+        return sorted(skill.get("guides", {}).keys())

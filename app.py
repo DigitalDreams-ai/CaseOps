@@ -2866,10 +2866,11 @@ if __name__ == "__main__":
     print(f"{'='*70}\n")
 
     # Initialize skill registry (loads all skills once at startup)
+    # Load order: .claude first (stubs), then skills/ (full versions with guides, wins on duplicate names)
     print(f"Initializing skill registry...")
     skill_registry.load_all_skills(
-        ROOT / "skills",
-        ROOT / ".claude" / "skills"
+        ROOT / ".claude" / "skills",
+        ROOT / "skills"
     )
     print(f"[OK] Skill registry loaded: {skill_registry.skill_count()} skills")
     print(f"     Skills: {', '.join(skill_registry.list_skills())}\n")
