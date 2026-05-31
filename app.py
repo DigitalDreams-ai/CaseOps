@@ -2580,7 +2580,7 @@ def api_setup_salesforce_auth():
 
         if prod_token and prod_url:
             try:
-                subprocess.run(
+                proc = subprocess.run(
                     [
                         "sf",
                         "org",
@@ -2597,8 +2597,12 @@ def api_setup_salesforce_auth():
                     capture_output=True,
                     timeout=30,
                     check=False,
+                    text=True,
                 )
-                results["10xhealth"] = "authenticated"
+                if proc.returncode == 0:
+                    results["10xhealth"] = "authenticated"
+                else:
+                    results["10xhealth"] = f"failed: {proc.stderr or proc.stdout}"
             except subprocess.TimeoutExpired:
                 results["10xhealth"] = "timeout"
             except Exception as e:
@@ -2612,7 +2616,7 @@ def api_setup_salesforce_auth():
 
         if sandbox_token and sandbox_url:
             try:
-                subprocess.run(
+                proc = subprocess.run(
                     [
                         "sf",
                         "org",
@@ -2629,8 +2633,12 @@ def api_setup_salesforce_auth():
                     capture_output=True,
                     timeout=30,
                     check=False,
+                    text=True,
                 )
-                results["10xhealth-sean"] = "authenticated"
+                if proc.returncode == 0:
+                    results["10xhealth-sean"] = "authenticated"
+                else:
+                    results["10xhealth-sean"] = f"failed: {proc.stderr or proc.stdout}"
             except subprocess.TimeoutExpired:
                 results["10xhealth-sean"] = "timeout"
             except Exception as e:
