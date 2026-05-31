@@ -124,6 +124,10 @@ _ARTIFACT_CACHE_TTL_SECONDS = 86400  # 24 hours
 # Skill registry: loads all skills once at startup, reuses cached data
 skill_registry = SkillRegistry()
 
+# Skill paths: registered at startup and passed to subprocesses via env vars
+# Maps skill_name → absolute path to skill directory
+SKILL_PATHS: dict[str, str] = {}
+
 
 def _cache_evict(cache: dict) -> None:
     """Evict oldest entries when cache exceeds _CACHE_MAX_KEYS."""
@@ -509,6 +513,13 @@ def _claude_process_env() -> dict[str, str]:
     # Pass instance-specific directories to Claude Skill
     env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")
     env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+
+    # Pass skill paths (registered at startup, avoid find / loops in subprocesses)
+    env["CASEOPS_SKILL_PATHS"] = json.dumps(SKILL_PATHS)
+    for skill_name, skill_path in SKILL_PATHS.items():
+        env_var = f"CASEOPS_SKILL_{skill_name.upper().replace('-', '_')}"
+        env[env_var] = skill_path
+
     return env
 
 
@@ -575,6 +586,13 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
         env["COLUMNS"] = "999"  # Prevent terminal wrapping in subprocess output
         env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")  # Instance-specific Jira output dir
         env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+
+        # Pass skill paths (registered at startup)
+        env["CASEOPS_SKILL_PATHS"] = json.dumps(SKILL_PATHS)
+        for skill_name, skill_path in SKILL_PATHS.items():
+            env_var = f"CASEOPS_SKILL_{skill_name.upper().replace('-', '_')}"
+            env[env_var] = skill_path
+
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -2831,6 +2849,17 @@ if __name__ == "__main__":
     )
     print(f"[OK] Skill registry loaded: {skill_registry.skill_count()} skills")
     print(f"     Skills: {', '.join(skill_registry.list_skills())}\n")
+
+    # Register skill paths (pass to subprocesses via env vars)
+    print(f"Registering skill paths for subprocess environment...")
+    for skill_dir in [ROOT / "skills", ROOT / ".claude" / "skills"]:
+        if not skill_dir.exists():
+            continue
+        for skill_path in skill_dir.iterdir():
+            if skill_path.is_dir() and (skill_path / "SKILL.md").exists():
+                skill_name = skill_path.name
+                SKILL_PATHS[skill_name] = str(skill_path.resolve())
+    print(f"[OK] {len(SKILL_PATHS)} skill paths registered\n")
 
     # use_reloader=False prevents the dev reloader from killing SSE streams
     app.run(debug=True, threaded=True, host="0.0.0.0", port=_args.port, use_reloader=False)
