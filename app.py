@@ -134,6 +134,9 @@ _sf_orgs_cache: dict[str, dict[str, str]] | None = None
 _sf_orgs_cache_time = 0
 _SF_ORGS_CACHE_TTL = 600  # Cache for 10 minutes
 
+# Consolidated temp directory: instance-specific, cleaned up between runs
+TEMP_ROOT = None  # Path | None — Set in __main__
+
 
 def _cache_evict(cache: dict) -> None:
     """Evict oldest entries when cache exceeds _CACHE_MAX_KEYS."""
@@ -519,6 +522,8 @@ def _claude_process_env() -> dict[str, str]:
     # Pass instance-specific directories to Claude Skill
     env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")
     env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+    if TEMP_ROOT:
+        env["CASEOPS_TEMP_DIR"] = str(TEMP_ROOT)
 
     # Pass skill paths (registered at startup, avoid find / loops in subprocesses)
     env["CASEOPS_SKILL_PATHS"] = json.dumps(SKILL_PATHS)
@@ -592,6 +597,8 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
         env["COLUMNS"] = "999"  # Prevent terminal wrapping in subprocess output
         env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")  # Instance-specific Jira output dir
         env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+        if TEMP_ROOT:
+            env["CASEOPS_TEMP_DIR"] = str(TEMP_ROOT)
 
         # Pass skill paths (registered at startup)
         env["CASEOPS_SKILL_PATHS"] = json.dumps(SKILL_PATHS)
@@ -2877,6 +2884,11 @@ if __name__ == "__main__":
                 skill_name = skill_path.name
                 SKILL_PATHS[skill_name] = str(skill_path.resolve())
     print(f"[OK] {len(SKILL_PATHS)} skill paths registered\n")
+
+    # Initialize consolidated temp directory (instance-specific)
+    globals()["TEMP_ROOT"] = OUTPUTS.parent / ".temp"
+    TEMP_ROOT.mkdir(parents=True, exist_ok=True)
+    print(f"[OK] Temp directory: {TEMP_ROOT}")
 
     # use_reloader=False prevents the dev reloader from killing SSE streams
     app.run(debug=True, threaded=True, host="0.0.0.0", port=_args.port, use_reloader=False)
