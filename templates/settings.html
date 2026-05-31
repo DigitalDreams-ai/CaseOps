@@ -388,12 +388,13 @@
                 <hr style="border: none; border-top: 1px solid var(--color-border); margin: 20px 0;">
 
                 <div style="background: var(--color-bg); padding: 12px; border-radius: 4px; font-size: 12px; color: var(--color-text-secondary);">
+                    <strong>Steps:</strong><br>
+                    1. Open the Setup window above (works on mobile)<br>
+                    2. On your local machine, run: <code style="display: inline; background: var(--color-surface); padding: 2px 4px; border-radius: 2px;">claude setup-token</code><br>
+                    3. Copy the JSON output and paste into the setup window<br>
+                    <br>
                     <strong>⚠️ Token Expired?</strong><br>
-                    If you see "401 Invalid authentication credentials" errors, your Claude token has expired.
-                    <br><br>
-                    On your local machine, run:
-                    <code style="display: block; margin-top: 8px; padding: 8px; background: var(--color-surface); border-radius: 2px; overflow-x: auto;">claude logout && claude login</code>
-                    Then use the Setup wizard above to update your credentials.
+                    Run <code style="display: inline; background: var(--color-surface); padding: 2px 4px; border-radius: 2px;">claude logout && claude login</code> locally, then repeat steps above.
                 </div>
             </div>
 
@@ -414,50 +415,35 @@
 
             <!-- Salesforce -->
             <div class="settings-section">
-                <h2>Salesforce</h2>
-                <div class="settings-field">
-                    <label for="use-cci-auth">Org Auth Method:</label>
-                    <div>
-                        <div class="lvm-option">
-                            <input type="radio" id="use-sf-auth" name="CASEOPS_USE_CCI_FOR_AUTH" value="false">
-                            <label for="use-sf-auth">Salesforce CLI (sf)</label>
-                        </div>
-                        <div class="lvm-option">
-                            <input type="radio" id="use-cci-auth" name="CASEOPS_USE_CCI_FOR_AUTH" value="true">
-                            <label for="use-cci-auth">CumulusCI (cci)</label>
-                        </div>
-                    </div>
+                <h2>Salesforce CLI Authentication</h2>
+                <p style="font-size: 13px; color: var(--color-text); margin-bottom: 15px;">
+                    Authenticate your Salesforce orgs using the Salesforce CLI with access tokens.
+                </p>
+
+                <!-- Authenticated Orgs Status -->
+                <div id="sf-auth-status" style="margin-bottom: 20px;"></div>
+
+                <!-- Authentication Button -->
+                <div style="margin-bottom: 20px;">
+                    <button type="button" class="button-primary" id="authenticate-salesforce-btn" style="padding: 10px 20px; cursor: pointer;">
+                        🔐 Authenticate Salesforce Orgs
+                    </button>
+                    <span id="sf-auth-message" style="font-size: 12px; margin-left: 10px;"></span>
                 </div>
 
-                <!-- Two-column layout for Production and Sandbox -->
-                <div class="settings-section-grid">
-                    <div>
-                        <div class="settings-field">
-                            <label for="sf-prod-alias">Production alias:</label>
-                            <input type="text" id="sf-prod-alias" name="CASEOPS_PRODUCTION_READ_ORG" placeholder="prod">
-                        </div>
-                        <div id="sf-prod-status" style="margin-bottom: 15px;"></div>
-                        <div class="settings-field">
-                            <label for="sf-prod-url">Production URL:</label>
-                            <input type="url" id="sf-prod-url" name="CASEOPS_PRODUCTION_INSTANCE_URL" placeholder="https://login.salesforce.com">
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="settings-field">
-                            <label for="sf-sand-alias">Sandbox alias:</label>
-                            <input type="text" id="sf-sand-alias" name="CASEOPS_SANDBOX_TARGET_ORG" placeholder="sandbox">
-                        </div>
-                        <div id="sf-sand-status" style="margin-bottom: 15px;"></div>
-                        <div class="settings-field">
-                            <label for="sf-sand-url">Sandbox URL:</label>
-                            <input type="url" id="sf-sand-url" name="CASEOPS_SANDBOX_INSTANCE_URL" placeholder="https://10xhealth-sean.sandbox.my.salesforce.com">
-                        </div>
-                    </div>
+                <!-- Authenticated Orgs Details -->
+                <div id="sf-orgs-display" style="display: none;">
+                    <h3 style="margin-top: 20px; margin-bottom: 10px; font-size: 14px; font-weight: 600;">Authenticated Organizations:</h3>
+                    <div id="sf-orgs-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
                 </div>
 
-                <div class="status-note" id="auth-instructions">
-                    <!-- Instructions dynamically shown based on selected method -->
+                <hr style="border: none; border-top: 1px solid var(--color-border); margin: 20px 0;">
+
+                <div style="background: var(--color-bg); padding: 12px; border-radius: 4px; font-size: 12px; color: var(--color-text-secondary);">
+                    <strong>ℹ️ Authentication Method:</strong><br>
+                    This uses your pre-configured access tokens from the environment. Click the button above to authenticate using the Salesforce CLI with access token authentication.<br>
+                    <br>
+                    <strong>Required:</strong> SF_PROD_ACCESS_TOKEN, SF_PROD_INSTANCE_URL, SF_SANDBOX_ACCESS_TOKEN, SF_SANDBOX_INSTANCE_URL (set in .env.jira.nas)
                 </div>
             </div>
 
@@ -537,8 +523,6 @@
                     }
                 }
 
-                // Update instructions after form is populated
-                updateAuthInstructions();
                 // Update LLM section visibility
                 updateLLMVisibility();
             } catch (e) {
@@ -554,49 +538,88 @@
 
                 // Claude status
                 const claudeDiv = document.getElementById('claude-status');
-                if (status.claude.installed) {
-                    claudeDiv.innerHTML = `<span class="status-badge ok">✓ Installed & functional</span> ${status.claude.version || ''}`;
+                if (status.claude && status.claude.installed) {
+                    claudeDiv.innerHTML = `<span class="status-badge ok">✓ Installed</span> ${status.claude.version || ''}`;
                 } else {
                     claudeDiv.innerHTML = `<span class="status-badge not-ok">✗ Not installed</span>`;
                 }
-
-                // Determine which auth method to show
-                const useCCI = document.querySelector('input[name="CASEOPS_USE_CCI_FOR_AUTH"]:checked');
-                const isCCIMode = useCCI && useCCI.value === 'true';
-
-                // Salesforce prod
-                const prodDiv = document.getElementById('sf-prod-status');
-                let prodStatus;
-                if (isCCIMode && status.cci_installed) {
-                    prodStatus = status.cci_prod.authenticated
-                        ? `<span class="status-badge ok">✓ authenticated (cci)</span>`
-                        : `<span class="status-badge not-ok">✗ not authenticated (cci)</span>`;
-                } else if (status.sf_installed) {
-                    prodStatus = status.sf_prod.authenticated
-                        ? `<span class="status-badge ok">✓ authenticated (sf)</span> ${status.sf_prod.username || ''}`
-                        : `<span class="status-badge not-ok">✗ not authenticated (sf)</span>`;
-                } else {
-                    prodStatus = `<span class="status-badge not-ok">✗ CLI not installed</span>`;
-                }
-                prodDiv.innerHTML = prodStatus;
-
-                // Salesforce sandbox
-                const sandDiv = document.getElementById('sf-sand-status');
-                let sandStatus;
-                if (isCCIMode && status.cci_installed) {
-                    sandStatus = status.cci_sandbox.authenticated
-                        ? `<span class="status-badge ok">✓ authenticated (cci)</span>`
-                        : `<span class="status-badge not-ok">✗ not authenticated (cci)</span>`;
-                } else if (status.sf_installed) {
-                    sandStatus = status.sf_sandbox.authenticated
-                        ? `<span class="status-badge ok">✓ authenticated (sf)</span> ${status.sf_sandbox.username || ''}`
-                        : `<span class="status-badge not-ok">✗ not authenticated (sf)</span>`;
-                } else {
-                    sandStatus = `<span class="status-badge not-ok">✗ CLI not installed</span>`;
-                }
-                sandDiv.innerHTML = sandStatus;
             } catch (e) {
                 console.error('Failed to load status:', e);
+            }
+        }
+
+        async function loadSalesforceStatus() {
+            try {
+                const resp = await fetch('/api/settings/status');
+                if (!resp.ok) return;
+                const status = await resp.json();
+
+                // Load authenticated orgs from SF CLI
+                if (status.sf_installed) {
+                    const statusDiv = document.getElementById('sf-auth-status');
+                    statusDiv.innerHTML = `<span class="status-badge ok">✓ Salesforce CLI installed</span>`;
+
+                    // Check authenticated orgs
+                    if (status.sf_prod && status.sf_prod.authenticated && status.sf_sandbox && status.sf_sandbox.authenticated) {
+                        displayAuthenticatedOrgs(status.sf_prod, status.sf_sandbox);
+                    } else {
+                        const orgsDiv = document.getElementById('sf-orgs-display');
+                        orgsDiv.style.display = 'none';
+                    }
+                } else {
+                    const statusDiv = document.getElementById('sf-auth-status');
+                    statusDiv.innerHTML = `<span class="status-badge not-ok">✗ Salesforce CLI not installed</span>`;
+                }
+            } catch (e) {
+                console.error('Failed to load Salesforce status:', e);
+            }
+        }
+
+        function displayAuthenticatedOrgs(prodOrg, sandOrg) {
+            const display = document.getElementById('sf-orgs-display');
+            const list = document.getElementById('sf-orgs-list');
+
+            list.innerHTML = '';
+            let hasAuth = false;
+
+            if (prodOrg && prodOrg.username) {
+                hasAuth = true;
+                const orgDiv = document.createElement('div');
+                orgDiv.style.cssText = 'padding: 10px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; border-left: 3px solid var(--color-success);';
+                orgDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <strong>Production (10xhealth)</strong>
+                        <span class="status-badge ok">✓ Authenticated</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--color-text); font-family: monospace; display: flex; flex-direction: column; gap: 4px;">
+                        <div><strong>User:</strong> ${prodOrg.username || 'Unknown'}</div>
+                        <div><strong>Org ID:</strong> ${prodOrg.orgId || 'Unknown'}</div>
+                        <div><strong>Instance:</strong> ${prodOrg.instanceUrl || 'Unknown'}</div>
+                    </div>
+                `;
+                list.appendChild(orgDiv);
+            }
+
+            if (sandOrg && sandOrg.username) {
+                hasAuth = true;
+                const orgDiv = document.createElement('div');
+                orgDiv.style.cssText = 'padding: 10px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; border-left: 3px solid var(--color-success);';
+                orgDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <strong>Sandbox (10xhealth-sean)</strong>
+                        <span class="status-badge ok">✓ Authenticated</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--color-text); font-family: monospace; display: flex; flex-direction: column; gap: 4px;">
+                        <div><strong>User:</strong> ${sandOrg.username || 'Unknown'}</div>
+                        <div><strong>Org ID:</strong> ${sandOrg.orgId || 'Unknown'}</div>
+                        <div><strong>Instance:</strong> ${sandOrg.instanceUrl || 'Unknown'}</div>
+                    </div>
+                `;
+                list.appendChild(orgDiv);
+            }
+
+            if (hasAuth) {
+                display.style.display = 'block';
             }
         }
 
@@ -690,71 +713,41 @@
             }
         });
 
-        function updateAuthInstructions() {
-            const useCCI = document.querySelector('input[name="CASEOPS_USE_CCI_FOR_AUTH"]:checked')?.value === 'true';
-            const prodAlias = document.getElementById('sf-prod-alias').value || '<prod-alias>';
-            const sandAlias = document.getElementById('sf-sand-alias').value || '<sandbox-alias>';
-            const prodUrl = document.getElementById('sf-prod-url').value || 'https://login.salesforce.com';
-            const sandUrl = document.getElementById('sf-sand-url').value || 'https://10xhealth-sean.sandbox.my.salesforce.com';
-            const instrDiv = document.getElementById('auth-instructions');
+        async function authenticateSalesforce() {
+            const btn = document.getElementById('authenticate-salesforce-btn');
+            const msgDiv = document.getElementById('sf-auth-message');
 
-            let html = '';
+            btn.disabled = true;
+            msgDiv.textContent = 'Authenticating...';
+            msgDiv.style.color = 'var(--color-warn)';
 
-            if (useCCI) {
-                html = `
-                    <div class="auth-method-block">
-                        <div class="auth-method-title">Using CumulusCI (cci)</div>
+            try {
+                const resp = await fetch('/api/setup/salesforce-auth', { method: 'POST' });
+                const data = await resp.json();
 
-                        <div class="auth-command-group">
-                            <div class="auth-command-label">Production:</div>
-                            <div class="auth-command-box">
-                                <code id="cci-prod-cmd">cci org connect ${prodAlias}</code>
-                                <button class="copy-button" onclick="copyCommand('cci-prod-cmd')">Copy</button>
-                            </div>
-                        </div>
+                if (resp.ok && data.ok) {
+                    msgDiv.textContent = '✓ Authenticated successfully';
+                    msgDiv.style.color = 'var(--color-success)';
 
-                        <div class="auth-command-group">
-                            <div class="auth-command-label">Sandbox:</div>
-                            <div class="auth-command-box">
-                                <code id="cci-sand-cmd">cci org connect ${sandAlias} --sandbox</code>
-                                <button class="copy-button" onclick="copyCommand('cci-sand-cmd')">Copy</button>
-                            </div>
-                        </div>
+                    // Display authenticated orgs
+                    const orgs = data.authenticated_orgs || {};
+                    if (Object.keys(orgs).length > 0) {
+                        displayAuthenticatedOrgs(orgs['10xhealth'], orgs['10xhealth-sean']);
+                    }
 
-                        <div style="margin-top: 12px; font-style: italic; color: var(--color-text);">
-                            SSH to your NAS and authenticate with the selected method above.
-                        </div>
-                    </div>
-                `;
-            } else {
-                html = `
-                    <div class="auth-method-block">
-                        <div class="auth-method-title">Using Salesforce CLI (sf)</div>
-
-                        <div class="auth-command-group">
-                            <div class="auth-command-label">Production:</div>
-                            <div class="auth-command-box">
-                                <code id="sf-prod-cmd">sf org login web --set-default --alias ${prodAlias} --instance-url ${prodUrl}</code>
-                                <button class="copy-button" onclick="copyCommand('sf-prod-cmd')">Copy</button>
-                            </div>
-                        </div>
-
-                        <div class="auth-command-group">
-                            <div class="auth-command-label">Sandbox:</div>
-                            <div class="auth-command-box">
-                                <code id="sf-sand-cmd">sf org login web --set-default --alias ${sandAlias} --instance-url ${sandUrl}</code>
-                                <button class="copy-button" onclick="copyCommand('sf-sand-cmd')">Copy</button>
-                            </div>
-                        </div>
-
-                        <div style="margin-top: 12px; font-style: italic; color: var(--color-text);">
-                            SSH to your NAS and authenticate with the selected method above.
-                        </div>
-                    </div>
-                `;
+                    showBanner('Salesforce orgs authenticated successfully', 'success');
+                } else {
+                    msgDiv.textContent = '✗ ' + (data.error || 'Authentication failed');
+                    msgDiv.style.color = 'var(--color-danger)';
+                    showBanner('Error: ' + (data.error || 'Authentication failed'), 'error');
+                }
+            } catch (e) {
+                msgDiv.textContent = '✗ ' + e.message;
+                msgDiv.style.color = 'var(--color-danger)';
+                showBanner('Error: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
             }
-
-            instrDiv.innerHTML = html;
         }
 
         function copyCommand(elementId) {
@@ -776,22 +769,7 @@
         }
 
         document.getElementById('test-jira').addEventListener('click', testJira);
-
-        // Update instructions when auth method, aliases, or URLs change
-        document.querySelectorAll('input[name="CASEOPS_USE_CCI_FOR_AUTH"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                loadStatus();
-                updateAuthInstructions();
-            });
-        });
-        document.getElementById('sf-prod-alias').addEventListener('change', updateAuthInstructions);
-        document.getElementById('sf-prod-alias').addEventListener('input', updateAuthInstructions);
-        document.getElementById('sf-sand-alias').addEventListener('change', updateAuthInstructions);
-        document.getElementById('sf-sand-alias').addEventListener('input', updateAuthInstructions);
-        document.getElementById('sf-prod-url').addEventListener('change', updateAuthInstructions);
-        document.getElementById('sf-prod-url').addEventListener('input', updateAuthInstructions);
-        document.getElementById('sf-sand-url').addEventListener('change', updateAuthInstructions);
-        document.getElementById('sf-sand-url').addEventListener('input', updateAuthInstructions);
+        document.getElementById('authenticate-salesforce-btn').addEventListener('click', authenticateSalesforce);
 
         // Load canned messages
         async function loadCannedMessages() {
@@ -953,6 +931,7 @@
         // Load on page open
         loadSettings();
         loadStatus();
+        loadSalesforceStatus();
         loadDisplayLabel();
         loadCannedMessages();
         loadClaudeStatus();
