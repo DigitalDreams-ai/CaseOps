@@ -2528,15 +2528,13 @@ def setup_claude_login():
 
 @app.post("/api/setup/claude-credentials")
 def api_setup_claude_credentials():
-    """Save Claude Code credentials (OAuth token from claude setup-token)."""
+    """Save and validate Claude Code credentials."""
     try:
         body = request.get_json(silent=True) or {}
         credentials = body.get("credentials")
 
         if not credentials:
-            return jsonify({
-                "error": "Missing 'credentials' in request body"
-            }), 400
+            return jsonify({"error": "Missing 'credentials' in request body"}), 400
 
         # Parse credentials if it's a string, otherwise use as-is
         if isinstance(credentials, str):
@@ -2547,6 +2545,12 @@ def api_setup_claude_credentials():
         else:
             cred_obj = credentials
 
+        # Validate required fields
+        if not isinstance(cred_obj, dict):
+            return jsonify({"error": "Credentials must be a JSON object"}), 400
+        if "token" not in cred_obj:
+            return jsonify({"error": "Missing 'token' field in credentials"}), 400
+
         cred_json = json.dumps(cred_obj)
 
         # Write credentials file
@@ -2556,130 +2560,113 @@ def api_setup_claude_credentials():
         cred_file.write_text(cred_json, encoding="utf-8")
         cred_file.chmod(0o600)
 
+        # Validate: verify file was created and is readable
+        if not cred_file.exists():
+            return jsonify({"error": "Failed to create credentials file"}), 500
+        if not cred_file.is_file():
+            return jsonify({"error": "Credentials path is not a file"}), 500
+
+        # Try reading to verify it's valid
+        try:
+            saved = json.loads(cred_file.read_text(encoding="utf-8"))
+            if "token" not in saved:
+                return jsonify({"error": "Credentials file invalid after save"}), 500
+        except Exception:
+            return jsonify({"error": "Credentials file not readable after save"}), 500
+
         return jsonify({
             "ok": True,
-            "message": f"Credentials saved to {cred_file}",
+            "message": "Claude Code credentials saved and validated",
             "path": str(cred_file)
         })
 
     except Exception as e:
-        return jsonify({
-            "error": f"Failed to save credentials: {str(e)}"
-        }), 500
+        return jsonify({"error": f"Failed to save credentials: {str(e)}"}), 500
 
 
 @app.post("/api/setup/salesforce-auth")
 def api_setup_salesforce_auth():
-    """Authenticate Salesforce orgs using sf CLI with access tokens from environment variables."""
+    """Authenticate Salesforce orgs and validate they're accessible."""
     try:
-        results = {}
-
-        # Production org
         prod_token = os.environ.get("SF_PROD_ACCESS_TOKEN")
         prod_url = os.environ.get("SF_PROD_INSTANCE_URL")
-
-        print(f"[DEBUG] SF Auth Endpoint: prod_token={prod_token[:20] if prod_token else 'None'}... prod_url={prod_url}")
-
-        if prod_token and prod_url:
-            try:
-                # SF CLI expects token via SF_ACCESS_TOKEN env var, not as argument
-                env = os.environ.copy()
-                env["SF_ACCESS_TOKEN"] = prod_token
-                # Explicitly set HOME to ensure .sfdx directory is in correct location
-                home = str(Path.home())
-                env["HOME"] = home
-                cmd = [
-                    "sf",
-                    "org",
-                    "login",
-                    "access-token",
-                    "--alias",
-                    "10xhealth",
-                    "--instance-url",
-                    prod_url,
-                    "--no-prompt",
-                ]
-                proc = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    timeout=30,
-                    check=False,
-                    text=True,
-                    env=env,
-                )
-                if proc.returncode == 0:
-                    results["10xhealth"] = "authenticated"
-                else:
-                    results["10xhealth"] = f"failed: {proc.stderr or proc.stdout}"
-            except subprocess.TimeoutExpired:
-                results["10xhealth"] = "timeout"
-            except Exception as e:
-                results["10xhealth"] = f"error: {str(e)}"
-        else:
-            results["10xhealth"] = "skipped (missing env vars)"
-
-        # Sandbox org
         sandbox_token = os.environ.get("SF_SANDBOX_ACCESS_TOKEN")
         sandbox_url = os.environ.get("SF_SANDBOX_INSTANCE_URL")
 
-        if sandbox_token and sandbox_url:
+        if not any([prod_token, sandbox_token]):
+            return jsonify({"error": "No SF tokens in environment (SF_PROD_ACCESS_TOKEN or SF_SANDBOX_ACCESS_TOKEN)"}), 400
+
+        # Auth both orgs
+        def auth_org(alias: str, token: str, url: str) -> tuple[bool, str]:
+            """Authenticate one org. Returns (success, message)."""
+            if not token or not url:
+                return False, "missing token or url"
             try:
-                # SF CLI expects token via SF_ACCESS_TOKEN env var, not as argument
                 env = os.environ.copy()
-                env["SF_ACCESS_TOKEN"] = sandbox_token
-                # Explicitly set HOME to ensure .sfdx directory is in correct location
-                home = str(Path.home())
-                env["HOME"] = home
+                env["SF_ACCESS_TOKEN"] = token
+                env["HOME"] = str(Path.home())
                 proc = subprocess.run(
-                    [
-                        "sf",
-                        "org",
-                        "login",
-                        "access-token",
-                        "--alias",
-                        "10xhealth-sean",
-                        "--instance-url",
-                        sandbox_url,
-                        "--no-prompt",
-                    ],
+                    ["sf", "org", "login", "access-token", "--alias", alias, "--instance-url", url, "--no-prompt"],
                     capture_output=True,
                     timeout=30,
                     check=False,
                     text=True,
                     env=env,
                 )
-                if proc.returncode == 0:
-                    results["10xhealth-sean"] = "authenticated"
-                else:
-                    results["10xhealth-sean"] = f"failed: {proc.stderr or proc.stdout}"
+                if proc.returncode != 0:
+                    return False, f"{proc.stderr or proc.stdout}"
+                return True, "authenticated"
             except subprocess.TimeoutExpired:
-                results["10xhealth-sean"] = "timeout"
+                return False, "timeout"
             except Exception as e:
-                results["10xhealth-sean"] = f"error: {str(e)}"
-        else:
-            results["10xhealth-sean"] = "skipped (missing env vars)"
+                return False, str(e)
 
-        # Set default org to production
-        try:
-            subprocess.run(
-                ["sf", "config", "set", "defaultusername=10xhealth", "--global"],
-                capture_output=True,
-                timeout=10,
-                check=False,
-            )
-        except Exception:
-            pass
+        # Authenticate orgs
+        prod_ok, prod_msg = auth_org("10xhealth", prod_token, prod_url) if prod_token else (None, "skipped")
+        sandbox_ok, sandbox_msg = auth_org("10xhealth-sean", sandbox_token, sandbox_url) if sandbox_token else (None, "skipped")
+
+        # Validate: run sf org list to verify orgs actually exist
+        def verify_orgs() -> dict:
+            """Run sf org list and return authenticated orgs."""
+            try:
+                proc = subprocess.run(
+                    ["sf", "org", "list", "--json"],
+                    capture_output=True,
+                    timeout=15,
+                    check=False,
+                    text=True,
+                    env={**os.environ, "HOME": str(Path.home())},
+                )
+                if proc.returncode == 0:
+                    data = json.loads(proc.stdout)
+                    orgs = {}
+                    for org in data.get("result", {}).get("nonScratchOrgs", []):
+                        orgs[org.get("alias")] = {
+                            "username": org.get("username"),
+                            "orgId": org.get("orgId"),
+                            "instanceUrl": org.get("instanceUrl"),
+                        }
+                    return orgs
+                return {}
+            except Exception:
+                return {}
+
+        verified_orgs = verify_orgs()
+
+        # Final status
+        final_ok = all([v for v in [prod_ok, sandbox_ok] if v is not None])
 
         return jsonify({
-            "ok": True,
-            "orgs": results,
-            "message": "Salesforce org authentication completed"
+            "ok": final_ok,
+            "authenticated_orgs": verified_orgs,
+            "status": {
+                "10xhealth": "authenticated" if prod_ok else (prod_msg if prod_ok is not None else "skipped"),
+                "10xhealth-sean": "authenticated" if sandbox_ok else (sandbox_msg if sandbox_ok is not None else "skipped"),
+            }
         })
 
     except Exception as e:
-        return jsonify({
-            "error": f"Failed to authenticate Salesforce orgs: {str(e)}"
-        }), 500
+        return jsonify({"error": f"SF auth failed: {str(e)}"}), 500
 
 
 @app.post("/api/restart")
