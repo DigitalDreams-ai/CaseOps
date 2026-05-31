@@ -32,6 +32,7 @@ from flask import Flask, Response, jsonify, render_template, request, send_file,
 
 from caseops_paths import default_jira_dir
 from jira_sync import JiraClient, update_manifest_status
+from skill_registry import SkillRegistry
 
 
 class PipelineState(Enum):
@@ -119,6 +120,9 @@ artifact_metadata_cache: dict[str, dict[str, Any]] = {}
 
 _CACHE_MAX_KEYS = 100
 _ARTIFACT_CACHE_TTL_SECONDS = 86400  # 24 hours
+
+# Skill registry: loads all skills once at startup, reuses cached data
+skill_registry = SkillRegistry()
 
 
 def _cache_evict(cache: dict) -> None:
@@ -2818,6 +2822,15 @@ if __name__ == "__main__":
     print(f"\n{'='*70}")
     print(f"[OK] Startup validation PASSED - instance isolation ready")
     print(f"{'='*70}\n")
+
+    # Initialize skill registry (loads all skills once at startup)
+    print(f"Initializing skill registry...")
+    skill_registry.load_all_skills(
+        ROOT / "skills",
+        ROOT / ".claude" / "skills"
+    )
+    print(f"[OK] Skill registry loaded: {skill_registry.skill_count()} skills")
+    print(f"     Skills: {', '.join(skill_registry.list_skills())}\n")
 
     # use_reloader=False prevents the dev reloader from killing SSE streams
     app.run(debug=True, threaded=True, host="0.0.0.0", port=_args.port, use_reloader=False)
