@@ -16,34 +16,10 @@ else
 fi
 
 # Authenticate Salesforce orgs via sf CLI
-echo "Authenticating Salesforce orgs..."
-
-# 10xhealth production
-if [ -n "$SF_PROD_ACCESS_TOKEN" ] && [ -n "$SF_PROD_INSTANCE_URL" ]; then
-  echo "Authenticating 10xhealth (production)..."
-  sf org login access-token \
-    --alias 10xhealth \
-    --instance-url "$SF_PROD_INSTANCE_URL" \
-    --access-token "$SF_PROD_ACCESS_TOKEN" \
-    --no-prompt || echo "Warning: Failed to auth 10xhealth"
-else
-  echo "Skipping 10xhealth - missing SF_PROD_ACCESS_TOKEN or SF_PROD_INSTANCE_URL"
-fi
-
-# 10xhealth-sean sandbox
-if [ -n "$SF_SANDBOX_ACCESS_TOKEN" ] && [ -n "$SF_SANDBOX_INSTANCE_URL" ]; then
-  echo "Authenticating 10xhealth-sean (sandbox)..."
-  sf org login access-token \
-    --alias 10xhealth-sean \
-    --instance-url "$SF_SANDBOX_INSTANCE_URL" \
-    --access-token "$SF_SANDBOX_ACCESS_TOKEN" \
-    --no-prompt || echo "Warning: Failed to auth 10xhealth-sean"
-else
-  echo "Skipping 10xhealth-sean - missing SF_SANDBOX_ACCESS_TOKEN or SF_SANDBOX_INSTANCE_URL"
-fi
-
-# Set default org
-sf config set defaultusername=10xhealth --global 2>/dev/null || true
+# Note: SF_PROD_* and SF_SANDBOX_* env vars available from docker-compose env_file
+echo "Salesforce orgs will be authenticated on demand via Flask API /setup endpoints"
+echo "Alternatively, manually auth in container: sf org login access-token --alias <alias> --instance-url <url> --access-token <token> --no-prompt"
+echo "Environment variables available: SF_PROD_ACCESS_TOKEN, SF_PROD_INSTANCE_URL, SF_SANDBOX_ACCESS_TOKEN, SF_SANDBOX_INSTANCE_URL"
 
 # Verify environment is set before running Flask
 echo "Environment ready:"
