@@ -2585,6 +2585,9 @@ def api_setup_salesforce_auth():
                 # SF CLI expects token via SF_ACCESS_TOKEN env var, not as argument
                 env = os.environ.copy()
                 env["SF_ACCESS_TOKEN"] = prod_token
+                # Explicitly set HOME to ensure .sfdx directory is in correct location
+                home = str(Path.home())
+                env["HOME"] = home
                 cmd = [
                     "sf",
                     "org",
@@ -2596,7 +2599,6 @@ def api_setup_salesforce_auth():
                     prod_url,
                     "--no-prompt",
                 ]
-                print(f"[DEBUG] Running: {' '.join(cmd)}")
                 proc = subprocess.run(
                     cmd,
                     capture_output=True,
@@ -2605,7 +2607,6 @@ def api_setup_salesforce_auth():
                     text=True,
                     env=env,
                 )
-                print(f"[DEBUG] Return code: {proc.returncode}, stdout: {proc.stdout[:100]}, stderr: {proc.stderr[:100]}")
                 if proc.returncode == 0:
                     results["10xhealth"] = "authenticated"
                 else:
@@ -2626,6 +2627,9 @@ def api_setup_salesforce_auth():
                 # SF CLI expects token via SF_ACCESS_TOKEN env var, not as argument
                 env = os.environ.copy()
                 env["SF_ACCESS_TOKEN"] = sandbox_token
+                # Explicitly set HOME to ensure .sfdx directory is in correct location
+                home = str(Path.home())
+                env["HOME"] = home
                 proc = subprocess.run(
                     [
                         "sf",
