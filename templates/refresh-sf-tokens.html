@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Refresh Salesforce Tokens - CaseOps</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 30px; }
+        .section { margin-bottom: 30px; }
+        .section h2 { font-size: 16px; color: #666; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .step { margin-bottom: 20px; }
+        .step-num { display: inline-block; background: #007bff; color: white; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; margin-right: 10px; font-weight: bold; }
+        .step p { display: inline-block; }
+        code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+        .code-block { background: #f5f5f5; padding: 12px; border-left: 3px solid #007bff; margin: 10px 0; border-radius: 3px; overflow-x: auto; }
+        textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 13px; resize: vertical; min-height: 80px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-top: 10px; }
+        button:hover { background: #0056b3; }
+        .error { color: #d32f2f; background: #ffebee; padding: 12px; border-radius: 4px; margin-bottom: 20px; display: none; }
+        .success { color: #388e3c; background: #e8f5e9; padding: 12px; border-radius: 4px; margin-bottom: 20px; display: none; }
+        .label { display: block; margin-top: 12px; font-weight: 500; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Refresh Salesforce Access Tokens</h1>
+        <p style="color: #666; margin-bottom: 20px;">Salesforce access tokens expire after 8 hours. Follow these steps to refresh them.</p>
+
+        <div class="error" id="error-msg"></div>
+        <div class="success" id="success-msg"></div>
+
+        <div class="section">
+            <h2>Step 1: Get Current Tokens (from your local machine)</h2>
+            <div class="step">
+                <span class="step-num">1</span>
+                <p>Open terminal on your authenticated local machine and run:</p>
+            </div>
+            <div class="code-block">sf org auth show-access-token -o 10xhealth --no-prompt</div>
+            <p style="color: #666; margin-top: 8px;">Copy the entire token value</p>
+
+            <div class="step" style="margin-top: 20px;">
+                <span class="step-num">2</span>
+                <p>Then get the sandbox token:</p>
+            </div>
+            <div class="code-block">sf org auth show-access-token -o 10xhealth-sean --no-prompt</div>
+            <p style="color: #666; margin-top: 8px;">Copy the entire token value</p>
+        </div>
+
+        <div class="section">
+            <h2>Step 2: Paste Tokens Below</h2>
+
+            <label class="label">Production (10xhealth) Access Token:</label>
+            <textarea id="prod-token" placeholder="Paste production token here (00D0b000000vHFc!AQE...)"></textarea>
+
+            <label class="label">Sandbox (10xhealth-sean) Access Token:</label>
+            <textarea id="sandbox-token" placeholder="Paste sandbox token here (00DEa00000RViur!AQE...)"></textarea>
+
+            <button onclick="refreshTokens()">Save & Refresh Tokens</button>
+        </div>
+
+        <div class="section" style="background: #f9f9f9; padding: 15px; border-radius: 4px; margin-top: 30px;">
+            <h2 style="margin-bottom: 8px;">⏱️ Token Expiry Timeline</h2>
+            <p style="color: #666; font-size: 13px;">
+                • <strong>Refresh timestamp set:</strong> Pipeline can run freely for 6 hours<br>
+                • <strong>After 6 hours:</strong> Warning shown at startup, but pipeline still works<br>
+                • <strong>After 8 hours:</strong> Tokens expire, pipeline fails to execute SOQL queries<br>
+                <strong style="color: #d32f2f;">Refresh tokens before they expire!</strong>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function refreshTokens() {
+            const prodToken = document.getElementById('prod-token').value.trim();
+            const sandboxToken = document.getElementById('sandbox-token').value.trim();
+            const errorEl = document.getElementById('error-msg');
+            const successEl = document.getElementById('success-msg');
+
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+
+            if (!prodToken && !sandboxToken) {
+                errorEl.textContent = 'Please paste at least one token';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            fetch('/api/setup/refresh-salesforce-tokens', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sf_prod_access_token: prodToken,
+                    sf_sandbox_access_token: sandboxToken
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    successEl.textContent = '✅ ' + data.message + ' — Pipeline will now work for 8 more hours.';
+                    successEl.style.display = 'block';
+                    document.getElementById('prod-token').value = '';
+                    document.getElementById('sandbox-token').value = '';
+                    setTimeout(() => window.location.href = '/', 2000);
+                } else {
+                    errorEl.textContent = '❌ ' + (data.error || 'Failed to refresh tokens');
+                    errorEl.style.display = 'block';
+                }
+            })
+            .catch(e => {
+                errorEl.textContent = '❌ Error: ' + e.message;
+                errorEl.style.display = 'block';
+            });
+        }
+
+        // Allow Enter to submit
+        ['prod-token', 'sandbox-token'].forEach(id => {
+            document.getElementById(id).addEventListener('keypress', e => {
+                if (e.key === 'Enter' && e.ctrlKey) refreshTokens();
+            });
+        });
+    </script>
+</body>
+</html>

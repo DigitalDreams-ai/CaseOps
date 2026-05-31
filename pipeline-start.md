@@ -1,0 +1,372 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - heading "CaseOps CaseOps" [level=1] [ref=e3]:
+      - img "CaseOps" [ref=e4]
+      - text: CaseOps
+    - generic [ref=e7]: Idle
+    - generic [ref=e8]:
+      - button "Sync New Issues" [ref=e9] [cursor=pointer]
+      - button "Fetch from Jira" [ref=e10] [cursor=pointer]
+      - button "Reprocess All (No Sync)" [ref=e11] [cursor=pointer]
+      - button "Auto-Process All" [ref=e12] [cursor=pointer]
+      - button "Overview" [ref=e13] [cursor=pointer]
+    - link "⚙" [ref=e14] [cursor=pointer]:
+      - /url: /settings
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]: Issues (25)
+          - button "Select" [ref=e20] [cursor=pointer]
+        - generic [ref=e21]:
+          - button "#" [ref=e22] [cursor=pointer]: "#↓"
+          - button "Date" [ref=e23] [cursor=pointer]
+          - button "Status" [ref=e24] [cursor=pointer]
+          - button "Priority" [ref=e25] [cursor=pointer]
+        - searchbox "Filter by key or summary…" [ref=e26]
+      - generic [ref=e27]:
+        - generic [ref=e531]:
+          - generic [ref=e532] [cursor=pointer]: ▼ Active
+          - generic [ref=e533]:
+            - generic [ref=e534] [cursor=pointer]:
+              - generic [ref=e535]:
+                - generic [ref=e536]: HEAL-33920
+                - generic [ref=e537]: order not being submitted to welvi
+                - generic [ref=e538]:
+                  - generic [ref=e539]: Waiting for support
+                  - generic "Solution tested and confirmed in Sandbox." [ref=e540]: Validated
+              - generic: Failed
+            - generic [ref=e542] [cursor=pointer]:
+              - generic [ref=e543]: HEAL-33919
+              - generic [ref=e544]: Getting an error message when I submit payment
+              - generic [ref=e545]:
+                - generic [ref=e546]: Waiting for support
+                - generic "Analysis complete. Decision made (fix or escalate)." [ref=e547]: Analyzed
+                - generic "Issue is blocked/waiting. Action required." [ref=e548]: Blocked
+            - generic [ref=e550] [cursor=pointer]:
+              - generic [ref=e551]: HEAL-33909
+              - generic [ref=e552]: Please resubscribe client so they can receive the link to video appt. They are currently opted out of commercial emails.
+              - generic [ref=e553]:
+                - generic [ref=e554]: Waiting for support
+                - generic "No pipeline work started. Run investigation." [ref=e555]: Not Triaged
+            - generic [ref=e557] [cursor=pointer]:
+              - generic [ref=e558]: HEAL-33763
+              - generic [ref=e559]: Giving Tier 1 Tech Support more SF access
+              - generic [ref=e560]:
+                - generic [ref=e561]: In Progress
+                - generic "No pipeline work started. Run investigation." [ref=e562]: Not Triaged
+            - generic [ref=e563] [cursor=pointer]:
+              - generic [ref=e564]:
+                - generic [ref=e565]: HEAL-33758
+                - generic [ref=e566]: SF- Multiple Lab Order Errors & Correction Request
+                - generic [ref=e567]:
+                  - generic [ref=e568]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e569]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e570]
+            - generic [ref=e571] [cursor=pointer]:
+              - generic [ref=e572]:
+                - generic [ref=e573]: HEAL-33753
+                - generic [ref=e574]: Create workflow for email to send scheduling link for AHB consults
+                - generic [ref=e575]:
+                  - generic [ref=e576]: Waiting for support
+                  - generic "No pipeline work started. Run investigation." [ref=e577]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e578]
+            - generic [ref=e579] [cursor=pointer]:
+              - generic [ref=e580]:
+                - generic [ref=e581]: HEAL-33750
+                - generic [ref=e582]: Wellvi tracking access in Salesforce for Welness Concierge's
+                - generic [ref=e583]:
+                  - generic [ref=e584]: Waiting for customer
+                  - generic "No pipeline work started. Run investigation." [ref=e585]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e586]
+            - generic [ref=e587] [cursor=pointer]:
+              - generic [ref=e588]:
+                - generic [ref=e589]: HEAL-33744
+                - generic [ref=e590]: Pt agreement not getting sent
+                - generic [ref=e591]:
+                  - generic [ref=e592]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e593]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e594]
+            - generic [ref=e595] [cursor=pointer]:
+              - generic [ref=e596]:
+                - generic [ref=e597]: HEAL-33682
+                - generic [ref=e598]: Orphan PGT Booklets- No order on SF
+                - generic [ref=e599]:
+                  - generic [ref=e600]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e601]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e602]
+            - generic [ref=e603] [cursor=pointer]:
+              - generic [ref=e604]:
+                - generic [ref=e605]: HEAL-33659
+                - generic [ref=e606]: Cx Case function Additions
+                - generic [ref=e607]:
+                  - generic [ref=e608]: Escalated
+                  - generic "No pipeline work started. Run investigation." [ref=e609]: Not Triaged
+                  - generic "Needs escalation to Engineering team." [ref=e610]: Needs Escalation
+              - generic "New Jira comments since last view" [ref=e611]
+            - generic [ref=e612] [cursor=pointer]:
+              - generic [ref=e613]:
+                - generic [ref=e614]: HEAL-33628
+                - generic [ref=e615]: "\"Send Patient Agreements\" SF feature not opening consents for numerous patients"
+                - generic [ref=e616]:
+                  - generic [ref=e617]: Waiting for support
+                  - generic "No pipeline work started. Run investigation." [ref=e618]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e619]
+            - generic [ref=e620] [cursor=pointer]:
+              - generic [ref=e621]:
+                - generic [ref=e622]: HEAL-33623
+                - generic [ref=e623]: Pt unable to complete consent forms. Receives an error message
+                - generic [ref=e624]:
+                  - generic [ref=e625]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e626]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e627]
+            - generic [ref=e628] [cursor=pointer]:
+              - generic [ref=e629]:
+                - generic [ref=e630]: HEAL-33619
+                - generic [ref=e631]: Cx Case Disposition Level Additions/Changes
+                - generic [ref=e632]:
+                  - generic [ref=e633]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e634]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e635]
+            - generic [ref=e636] [cursor=pointer]:
+              - generic [ref=e637]:
+                - generic [ref=e638]: HEAL-33618
+                - generic [ref=e639]: CX Case function reporting
+                - generic [ref=e640]:
+                  - generic [ref=e641]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e642]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e643]
+            - generic [ref=e644] [cursor=pointer]:
+              - generic [ref=e645]:
+                - generic [ref=e646]: HEAL-33616
+                - generic [ref=e647]: Salesforce- Lab Order error (J. O'Connell)
+                - generic [ref=e648]:
+                  - generic [ref=e649]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e650]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e651]
+            - generic [ref=e652] [cursor=pointer]:
+              - generic [ref=e653]:
+                - generic [ref=e654]: HEAL-33605
+                - generic [ref=e655]: Amy Stolze needs access to email and SMS templates in SalesForce
+                - generic [ref=e656]:
+                  - generic [ref=e657]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e658]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e659]
+            - generic [ref=e660] [cursor=pointer]:
+              - generic [ref=e661]:
+                - generic [ref=e662]: HEAL-33569
+                - generic [ref=e663]: SF - Access to Generate Supplement Order
+                - generic [ref=e664]:
+                  - generic [ref=e665]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e666]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e667]
+            - generic [ref=e668] [cursor=pointer]:
+              - generic [ref=e669]:
+                - generic [ref=e670]: HEAL-33505
+                - generic [ref=e671]: Is there a way for "Opportunity Field History" to capture activity on "Order Notes" edits/updates to that field?
+                - generic [ref=e672]:
+                  - generic [ref=e673]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e674]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e675]
+            - generic [ref=e676] [cursor=pointer]:
+              - generic [ref=e677]:
+                - generic [ref=e678]: HEAL-33439
+                - generic [ref=e679]: Getting error when submitting an order to Wellvi through Salesforce
+                - generic [ref=e680]:
+                  - generic [ref=e681]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e682]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e683]
+            - generic [ref=e684] [cursor=pointer]:
+              - generic [ref=e685]:
+                - generic [ref=e686]: HEAL-33399
+                - generic [ref=e687]: CX Case flow process fail
+                - generic [ref=e688]:
+                  - generic [ref=e689]: Waiting for support
+                  - generic "No pipeline work started. Run investigation." [ref=e690]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e691]
+            - generic [ref=e692] [cursor=pointer]:
+              - generic [ref=e693]:
+                - generic [ref=e694]: HEAL-33150
+                - generic [ref=e695]: Cx Case Record Response
+                - generic [ref=e696]:
+                  - generic [ref=e697]: Waiting for support
+                  - generic "No pipeline work started. Run investigation." [ref=e698]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e699]
+            - generic [ref=e700] [cursor=pointer]:
+              - generic [ref=e701]:
+                - generic [ref=e702]: HEAL-33098
+                - generic [ref=e703]: SMS Magic in lower envs (UAT, QA, DEV) access and licenses
+                - generic [ref=e704]:
+                  - generic [ref=e705]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e706]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e707]
+            - generic [ref=e708] [cursor=pointer]:
+              - generic [ref=e709]:
+                - generic [ref=e710]: HEAL-33066
+                - generic [ref=e711]: Price Book Creation
+                - generic [ref=e712]:
+                  - generic [ref=e713]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e714]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e715]
+            - generic [ref=e716] [cursor=pointer]:
+              - generic [ref=e717]:
+                - generic [ref=e718]: HEAL-33054
+                - generic [ref=e719]: Create a cardone ventures employee checkbox
+                - generic [ref=e720]:
+                  - generic [ref=e721]: Escalated
+                  - generic "No pipeline work started. Run investigation." [ref=e722]: Not Triaged
+                  - generic "Needs escalation to Engineering team." [ref=e723]: Needs Escalation
+              - generic "New Jira comments since last view" [ref=e724]
+            - generic [ref=e725] [cursor=pointer]:
+              - generic [ref=e726]:
+                - generic [ref=e727]: HEAL-30437
+                - generic [ref=e728]: Automate Shopify Network Order Release Process
+                - generic [ref=e729]:
+                  - generic [ref=e730]: In Progress
+                  - generic "No pipeline work started. Run investigation." [ref=e731]: Not Triaged
+              - generic "New Jira comments since last view" [ref=e732]
+        - generic [ref=e734] [cursor=pointer]: ▶ Escalated
+    - generic [ref=e232]:
+      - generic [ref=e332]:
+        - generic [ref=e333]: HEAL-33920 — order not being submitted to welvi
+        - generic [ref=e334]:
+          - generic [ref=e735]: ✓ Synced
+          - generic [ref=e736]: ✓ Investigated
+          - generic [ref=e737]: ✓ Notes
+          - generic [ref=e738]: ✓ Draft
+          - generic [ref=e739]: ✓ Solution
+        - generic [ref=e340]: "Status: Waiting for support | Updated: 2026-05-29T17:55:49"
+      - generic [ref=e341]:
+        - generic [ref=e740] [cursor=pointer]: Jira Summary
+        - generic [ref=e741] [cursor=pointer]: Investigation
+        - generic [ref=e742] [cursor=pointer]: Internal Notes
+        - generic [ref=e743] [cursor=pointer]: Jira Message
+        - generic [ref=e744] [cursor=pointer]: Test Report
+        - generic [ref=e745] [cursor=pointer]: Eng Handoff
+      - generic [ref=e349]:
+        - textbox "Instruct CaseOps on what to do next for this issue…" [ref=e350]
+        - button "Send Request" [ref=e351] [cursor=pointer]
+      - generic [ref=e233]:
+        - generic [ref=e234]:
+          - button "Sync This Issue" [ref=e235] [cursor=pointer]
+          - button "Run Pipeline" [active] [ref=e236] [cursor=pointer]
+          - button "Reprocess" [ref=e237] [cursor=pointer]
+          - combobox [ref=e238]:
+            - option "Change status…" [selected]
+            - option "Respond to customer"
+            - option "Escalated to Engineering"
+            - option "In Progress"
+            - option "Resolve this issue"
+            - option "Pending"
+            - option "Cancel request"
+            - option "Escalate"
+          - button "Apply" [disabled] [ref=e239]
+          - combobox [ref=e240]:
+            - option "Send message…" [selected]
+            - option "Initial Response"
+            - option "Closing Response"
+          - button "Send" [disabled] [ref=e241]
+          - button "View in Jira" [ref=e242] [cursor=pointer]
+          - button "Copy Prompt" [ref=e243] [cursor=pointer]
+        - generic [ref=e352]:
+          - heading "HEAL-33920 Jira Summary" [level=1] [ref=e746]
+          - list [ref=e747]:
+            - listitem [ref=e748]: "Summary: order not being submitted to welvi"
+            - listitem [ref=e749]: "Status: Waiting for support"
+            - listitem [ref=e750]: "Assignee: Sean Bingham"
+            - listitem [ref=e751]: "Reporter: Amber Perry"
+            - listitem [ref=e752]: "Request participants:"
+            - listitem [ref=e753]: "Created: 2026-05-29T16:03:53.623-0400"
+            - listitem [ref=e754]: "Updated: 2026-05-29T17:55:49.609-0400"
+            - listitem [ref=e755]: "Request type: General Help Desk Request"
+            - listitem [ref=e756]: "System description: I am unable to submit an order to welvi"
+            - listitem [ref=e757]: "Portal summary (Summary):"
+            - listitem [ref=e758]: "Portal description (Description):"
+            - listitem [ref=e759]: "Comments: 1"
+            - listitem [ref=e760]: "Changelog entries: 10"
+            - listitem [ref=e761]: "Worklogs: 0"
+            - listitem [ref=e762]: "Attachments: 0"
+            - listitem [ref=e763]: "Attached forms: 1"
+          - heading "Attachments" [level=2] [ref=e764]
+          - heading "Attached Forms" [level=2] [ref=e765]
+          - heading "Help Desk Requests" [level=3] [ref=e766]
+          - list [ref=e767]:
+            - listitem [ref=e768]: "Scope: issue"
+            - listitem [ref=e769]: "Form id: f2790991-f9c3-49e3-be8d-aff9db1cd164"
+            - listitem [ref=e770]: "Submitted: True"
+            - listitem [ref=e771]: "Internal: False"
+            - listitem [ref=e772]: "Updated: 2026-05-29T20:03:53.296Z"
+          - table [ref=e773]:
+            - rowgroup [ref=e774]:
+              - row "Field Answer Choice" [ref=e775]:
+                - columnheader "Field" [ref=e776]
+                - columnheader "Answer" [ref=e777]
+                - columnheader "Choice" [ref=e778]
+            - rowgroup [ref=e779]:
+              - row "Attachments" [ref=e780]:
+                - cell "Attachments" [ref=e781]
+                - cell [ref=e782]
+                - cell [ref=e783]
+              - row "Stakeholders/Watchers" [ref=e784]:
+                - cell "Stakeholders/Watchers" [ref=e785]
+                - cell [ref=e786]
+                - cell [ref=e787]
+              - row "Subject order not being submitted to welvi" [ref=e788]:
+                - cell "Subject" [ref=e789]
+                - cell "order not being submitted to welvi" [ref=e790]
+                - cell [ref=e791]
+              - row "Description I am unable to submit an order to welvi" [ref=e792]:
+                - cell "Description" [ref=e793]
+                - cell "I am unable to submit an order to welvi" [ref=e794]
+                - cell [ref=e795]
+              - row "Department Operations 10483" [ref=e796]:
+                - cell "Department" [ref=e797]
+                - cell "Operations" [ref=e798]
+                - cell "10483" [ref=e799]
+              - row "How does this impact your work? I am completely blocked 12077" [ref=e800]:
+                - cell "How does this impact your work?" [ref=e801]
+                - cell "I am completely blocked" [ref=e802]
+                - cell "12077" [ref=e803]
+              - row "How many people or records are affected? Only me or one record 12072" [ref=e804]:
+                - cell "How many people or records are affected?" [ref=e805]
+                - cell "Only me or one record" [ref=e806]
+                - cell "12072" [ref=e807]
+              - row "System/Category Salesforce- Opportunities 12570" [ref=e808]:
+                - cell "System/Category" [ref=e809]
+                - cell "Salesforce- Opportunities" [ref=e810]
+                - cell "12570" [ref=e811]
+              - row "Which type of request are you submitting? Customer / Operations 12790" [ref=e812]:
+                - cell "Which type of request are you submitting?" [ref=e813]
+                - cell "Customer / Operations" [ref=e814]
+                - cell "12790" [ref=e815]
+              - row "Record Link https://10xhealth.lightning.force.com/lightning/r/Opportunity/006Ql00000eZvPNIA0 SB /view" [ref=e816]:
+                - cell "Record Link" [ref=e817]
+                - cell "https://10xhealth.lightning.force.com/lightning/r/Opportunity/006Ql00000eZvPNIA0 SB /view" [ref=e818]:
+                  - text: https://10xhealth.lightning.force.com/lightning/r/Opportunity/
+                  - link "006Ql00000eZvPNIA0" [ref=e819] [cursor=pointer]:
+                    - /url: https://10xhealth.lightning.force.com/lightning/r/Opportunity/006Ql00000eZvPNIA0/view
+                  - link "SB" [ref=e820] [cursor=pointer]:
+                    - /url: https://10xhealth-sean.lightning.force.com/lightning/r/Opportunity/006Ql00000eZvPNIA0/view
+                  - text: /view
+                - cell [ref=e821]
+          - heading "Comments" [level=2] [ref=e822]
+          - heading "2026-05-29T16:26:11.821-0400 - Ray Godfrey Emerson Guevarra (public)" [level=3] [ref=e823]
+          - paragraph [ref=e824]: Hello Amber Perry , We have assigned your request HEAL-33920 to an appropriate Help Desk team member. They will reach out to you shortly with an update. Best regards, Ray Godfrey Emerson Guevarra Tier 1 Technical Support 10X Health Help Desk Support
+      - generic [ref=e325]:
+        - generic "Drag to resize" [ref=e326]
+        - generic [ref=e327]:
+          - button "▼" [ref=e328] [cursor=pointer]
+          - generic [ref=e329]: Pipeline log
+          - generic [ref=e330] [cursor=pointer]: Clear
+        - generic [ref=e331]:
+          - generic [ref=e825]: "-- Processing HEAL-33920 via jira-salesforce-fix-pipeline Skill --"
+          - generic [ref=e826]: "CaseOps LLM: Claude Code CLI (CASEOPS_LLM_AUTH=claude_code)."
+          - generic [ref=e827]: "Claude binary: /usr/local/bin/claude"
+          - generic [ref=e828]: "WARNING: Credentials file not found at /home/caseops/.claude/.credentials.json"
+          - generic [ref=e829]: Claude Code CLI will attempt to authenticate but may fail with 401.
+          - generic [ref=e830]: "Invoking: /usr/local/bin/claude -p Issue: HEAL-33920 — order not being submitted to welvi Status: Waiting for support Existing pipeline files: - Jira Summary: instance1/outputs/jira/summary/HEAL-33920.md - Investigation: instance1/outputs/investigations/HEAL-33920.md - Internal Notes: instance1/outputs/internal-notes/HEAL-33920.md - Jira Message: instance1/outputs/jira-messages/HEAL-33920.md - Test Report: instance1/outputs/test-reports/HEAL-33920.md - Eng Handoff: instance1/outputs/engineering-escalations/HEAL-33920.md ## Playbook (mandatory — read first) A Claude Code stub may exist at .claude/skills/jira-salesforce-fix-pipeline/SKILL.md; the entrypoint is the file below. Read SKILL.md fully, then read `skills/jira-salesforce-fix-pipeline/references/workflow.md` end-to-end (authoritative steps 1–11), then execute for issue HEAL-33920: /app/skills/jira-salesforce-fix-pipeline/SKILL.md Use `references/sub-agent-prompts.md`, `references/safety-policy.md`, `references/quality-checklist.md`, and `assets/` under that skill when the playbook points to them. ## Instance Output Directory **CRITICAL for multi-instance deployments:** All file paths in this run must use: `instance1/outputs/` instead of the generic `outputs/` references in the playbook. Example: Instead of `outputs/investigations/{KEY}.md`, use `instance1/outputs/investigations/{KEY}.md` ## Instance Configuration (.env.jira) **CRITICAL for multi-instance deployments:** Use the instance-specific configuration file: - Read Jira credentials and Salesforce orgs from: `.env.jira` - Do NOT read from `ROOT/.env.jira` (this is another instance's config) - Environment variable available: `CASEOPS_JIRA_ENV_FILE=/app/.env.jira` - Example: `source .env.jira` or pass it explicitly to commands that need Jira/Salesforce config ## Instance Metadata & Deploy Directory **CRITICAL for multi-instance deployments:** All metadata retrieval and deploy operations must use: - Instance-isolated temp directory: `${CASEOPS_OUTPUTS_DIR}/../temp-retrieve` - Environment variable: `CASEOPS_OUTPUTS_DIR=/app/instance1/outputs` - When using `sf project retrieve` or `sf project deploy`, ALWAYS pass: `--output-dir \"${CASEOPS_OUTPUTS_DIR}/../temp-retrieve\"` - This prevents cross-instance metadata contamination (instance2 retrieving instance1's org metadata, etc.) - Sub-agents spawned in Steps 5, 6, 9 must reference this path (see sub-agent-prompts.md) ## Instruction Run the full CaseOps fix pipeline for this issue through completion of investigation, internal notes, and Jira customer message (and any sandbox/escalation steps the playbook requires for this issue). Use the jira-salesforce-fix-pipeline Skill entrypoint. ## Salesforce Queries: Use sf CLI + SOQL (DEFAULT) **For metadata queries, field inspection, permission checks, and configuration verification:** 1. **Prefer `sf` CLI commands** (read-only, fast, no browser needed): - `sf org open` (open/view in browser only when UI interaction needed) - `sf project retrieve start --metadata [type]` (pull metadata) - `sf sobject get --sobject [type]` (inspect objects/fields) 2. **Use SOQL queries** via `sf data query` to inspect data, field values, record types, assignments 3. **Never use Playwright or browser automation** for metadata queries, field inspection, or permission checks 4. **Only open browser** for: - Visual verification (testing layouts, field placement, visual tests) - UI clicks (when automation can't use CLI, e.g., custom buttons, flow runs) - Human-readable confirmation ## Salesforce in the browser (this CaseOps / Claude run) If you need the Salesforce UI in a browser for this task: **Permission model (mandatory):** The Production frontdoor session is **read-only** — investigate, query, and view only; do **not** create, update, delete, or deploy **anything** in Production. The Sandbox frontdoor session may use **full CRUD** for metadata deploy, test fixes, and record operations required by the playbook. - **Production (10xhealth)** via `CASEOPS_PRODUCTION_MAGIC_LINK` — **read-only**: use this session only for investigation (view/query). No Production creates, edits, deletes, or deployments. Open this link first in Chrome Dev for prod UI: https://10xhealth.my.salesforce.com/secur/frontdoor.jsp?sid=00D0b000000vHFc!AQEAQFXt2bdB8.2rZ5wFv9k55XHvG5fbuOj3GNqcGWhGeeJAl9QAIDK9D1Lyc7vayGg1FmjWwc4IuFuv72CwAfhJg.jvytHl - **Sandbox (10xhealth-sean)** via `CASEOPS_SANDBOX_MAGIC_LINK` — **full CRUD** allowed: deploy, test, and change records/metadata as the playbook requires. Open this link first in Chrome Dev for sandbox UI: https://10xhealth--sean.sandbox.my.salesforce.com/secur/frontdoor.jsp?sid=00DEa00000RViur!AQEAQC1Buu0mjBBJ5kedFRfGs26PS78IQ43IIQceVgT2ilPJvVQD7kArAWNYLcVX61QXA9kpLHtG6k4dxev0GksLnN.LOVMY ## CaseOps Output Files (update these when your task is complete) You can read and write these files directly for issue HEAL-33920: (Use `instance1/outputs/` prefix for multi-instance deployments) | File | Purpose | When to Update | |------|---------|----------------| | `instance1/outputs/investigations/HEAL-33920.md` | Investigation record (issue understanding, Salesforce problem, similar items analysis) | After diagnosis, before drafting notes | | `instance1/outputs/internal-notes/HEAL-33920.md` | Internal notes for operator (root cause, escalation decision, fix notes) | When you've diagnosed the issue | | `instance1/outputs/jira-messages/HEAL-33920.md` | Customer-facing Jira message (confirmed fix OR engineering escalation) | When ready to respond to customer | | `instance1/outputs/test-reports/HEAL-33920.md` | Test cases, results, and fix validation | After testing the fix in Sandbox | | `instance1/outputs/engineering-escalations/HEAL-33920.md` | Engineering handoff (if escalating) | When escalating to Engineering team | **Update guidance:** - Read existing files first (if they exist) to preserve prior work - Update them directly (do not ask operator or wait for confirmation) - Commit your changes with `git add` + `git commit` if substantial updates - If you cannot complete a task, update the relevant file to document progress and blockers ## Rules - Do not ask the user to pick a workflow or skill; the playbook above is the workflow. - Proceed with the next pipeline steps implied by the playbook and by which files already exist for HEAL-33920 in `instance1/outputs/`. - Create or update artifacts in `instance1/outputs/` that this issue needs (paths as shown above). - In every confirmed solution, state **Production vs Sandbox** clearly: what Production has (read-only verification), what is **Sandbox-only**, and whether **Production metadata deploy** is required (**Yes — e.g. Gearset** / **No** / **N/A**). Never imply Production has new metadata just because Sandbox validation passed. Do not deploy to Production unless the operator explicitly requests it. ..."
+          - generic [ref=e831]: "Process started (PID: 402)"
+          - generic [ref=e832]: Not logged in · Please run /login
+          - generic [ref=e833]: "-- success --"
+          - generic [ref=e834]: "-- exit code 1 --"
+          - generic [ref=e835]: "Done: HEAL-33920"

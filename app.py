@@ -144,6 +144,33 @@ def _cache_evict(cache: dict) -> None:
         cache.pop(next(iter(cache)))
 
 
+def _check_salesforce_token_expiry(env_file_path: Path) -> None:
+    """Check SF token age. Tokens valid 8h. Warn if <2h left, error if expired."""
+    try:
+        env_content = env_file_path.read_text(encoding="utf-8")
+        match = re.search(r'SF_TOKENS_REFRESHED_AT=(\d+)', env_content)
+        if not match:
+            print("[WARN] SF_TOKENS_REFRESHED_AT not set in .env.jira. Tokens may be stale.")
+            print("[WARN] Run: /api/setup/refresh-salesforce-tokens to refresh and set timestamp.")
+            return
+        refreshed_at = int(match.group(1))
+        now = int(time.time())
+        age_hours = (now - refreshed_at) / 3600
+        if age_hours > 8:
+            print("[ERROR] Salesforce tokens EXPIRED (>8h old).")
+            print("[ERROR] Navigate to: http://localhost:5000/setup/refresh-salesforce-tokens")
+            raise RuntimeError("Salesforce tokens expired. Refresh required.")
+        if age_hours > 6:
+            print(f"[WARN] Salesforce tokens are {age_hours:.1f}h old. <2h until expiry.")
+            print("[WARN] Refresh soon at: http://localhost:5000/setup/refresh-salesforce-tokens")
+        else:
+            print(f"[OK] Salesforce tokens valid ({age_hours:.1f}h old, 8h TTL)")
+    except RuntimeError:
+        raise
+    except Exception as e:
+        print(f"[WARN] Could not check token expiry: {e}")
+
+
 def _instance_cache_key(key: str) -> str:
     """Generate instance-specific cache key to prevent cross-instance contamination.
 
@@ -783,7 +810,9 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
 
         # Check for credentials file availability before invoking CLI
         if not caseops_llm_auth_uses_anthropic_api_key():
-            cred_file = Path.home() / ".claude" / ".credentials.json"
+            cred_file = Path("/app") / ".claude" / ".credentials.json"  # Container path; fallback to home if not found
+            if not cred_file.exists():
+                cred_file = Path.home() / ".claude" / ".credentials.json"
             if cred_file.exists():
                 _log_emit_line(run_key, f"Credentials found: {cred_file}")
             else:
@@ -2717,6 +2746,50 @@ def api_setup_salesforce_auth():
         return jsonify({"error": f"SF auth failed: {str(e)}"}), 500
 
 
+@app.get("/setup/refresh-salesforce-tokens")
+def setup_refresh_sf_tokens():
+    """Show instructions for refreshing Salesforce access tokens (8h TTL)."""
+    return render_template("refresh-sf-tokens.html")
+
+
+@app.post("/api/setup/refresh-salesforce-tokens")
+def api_refresh_salesforce_tokens():
+    """Update SF tokens and set refresh timestamp in .env.jira."""
+    try:
+        body = request.get_json(silent=True) or {}
+        prod_token = body.get("sf_prod_access_token")
+        sandbox_token = body.get("sf_sandbox_access_token")
+
+        if not any([prod_token, sandbox_token]):
+            return jsonify({"error": "Missing sf_prod_access_token or sf_sandbox_access_token"}), 400
+
+        env_file = os.environ.get("CASEOPS_JIRA_ENV_FILE")
+        if not env_file:
+            return jsonify({"error": "CASEOPS_JIRA_ENV_FILE not set"}), 500
+
+        env_path = Path(env_file)
+        env_content = env_path.read_text(encoding="utf-8")
+
+        # Remove old token lines, keep everything else
+        lines = env_content.split("\n")
+        new_lines = [l for l in lines if not l.startswith(("SF_PROD_ACCESS_TOKEN=", "SF_SANDBOX_ACCESS_TOKEN=", "SF_TOKENS_REFRESHED_AT="))]
+
+        # Add new tokens and timestamp
+        new_lines.append(f"SF_PROD_ACCESS_TOKEN={prod_token}")
+        new_lines.append(f"SF_SANDBOX_ACCESS_TOKEN={sandbox_token}")
+        new_lines.append(f"SF_TOKENS_REFRESHED_AT={int(time.time())}")
+
+        env_path.write_text("\n".join(new_lines), encoding="utf-8")
+
+        return jsonify({
+            "ok": True,
+            "message": "Salesforce tokens refreshed and timestamp set",
+            "refreshed_at": int(time.time())
+        })
+    except Exception as e:
+        return jsonify({"error": f"Failed to update tokens: {str(e)}"}), 500
+
+
 @app.post("/api/restart")
 def api_restart():
     """Restart the CaseOps service. Returns immediately; actual restart happens in background."""
@@ -2887,6 +2960,9 @@ if __name__ == "__main__":
                 skill_name = skill_path.name
                 SKILL_PATHS[skill_name] = str(skill_path.resolve())
     print(f"[OK] {len(SKILL_PATHS)} skill paths registered\n")
+
+    # Check Salesforce token expiry (8h TTL, warn if <2h left)
+    _check_salesforce_token_expiry(env_file_path)
 
     # Initialize consolidated temp directory (instance-specific)
     globals()["TEMP_ROOT"] = OUTPUTS.parent / ".temp"

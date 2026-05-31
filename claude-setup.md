@@ -1,0 +1,24 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - heading "🔐 Setup Claude Code" [level=1] [ref=e4]
+    - paragraph [ref=e5]: Authenticate for CaseOps pipeline
+  - generic [ref=e6]:
+    - generic [ref=e7]: "1"
+    - generic [ref=e8]: Locate your credentials file
+    - generic [ref=e9]: "On your authenticated local machine, find:"
+    - generic [ref=e10]:
+      - button "Copy Path" [ref=e11] [cursor=pointer]
+      - code [ref=e12]: ~/.claude/.credentials.json
+    - generic [ref=e13]: This file contains your complete authentication credentials (token + OAuth fields).
+  - generic [ref=e14]:
+    - generic [ref=e15]: "2"
+    - generic [ref=e16]: Read the full file
+    - generic [ref=e17]: "Open the file in a text editor, or run in terminal:"
+    - generic [ref=e18]: cat ~/.claude/.credentials.json
+    - generic [ref=e19]: ⚠️ Copy the ENTIRE file contents (JSON object with token, claudeAiOauth, accessToken, etc.), not just the token value.
+  - generic [ref=e20]:
+    - generic [ref=e21]: "3"
+    - generic [ref=e22]: Paste below
+    - generic [ref=e23]: "Paste the token or JSON (we'll format it automatically):"
+    - textbox "Paste your token here" [ref=e24]
+    - button "Save & Finish" [ref=e25] [cursor=pointer]
