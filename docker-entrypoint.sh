@@ -1,29 +1,56 @@
 #!/bin/bash
 set -e
 
-# Load LLM auth mode from .env.jira (Claude Code CLI mode only, no API keys)
+# Load .env.jira config
 if [ -f /app/.env.jira ]; then
-  export CASEOPS_LLM_AUTH=$(grep "^CASEOPS_LLM_AUTH=" /app/.env.jira | sed 's/^CASEOPS_LLM_AUTH=//' | tr -d ' ')
-  if [ -n "$CASEOPS_LLM_AUTH" ]; then
-    echo "Loaded .env.jira: CASEOPS_LLM_AUTH=$CASEOPS_LLM_AUTH"
-  fi
+  source /app/.env.jira
+  echo "Loaded .env.jira"
 fi
 
 # Initialize Claude Code settings and credentials
-# ~/.claude is mounted from host via docker-compose.yml; don't try to modify it
 mkdir -p ~/.claude 2>/dev/null || true
 
 # Check for pre-mounted credentials
 if [ -f ~/.claude/.credentials.json ]; then
-  echo "Found ~/.claude/.credentials.json (mounted from host)"
+  echo "Found ~/.claude/.credentials.json"
 else
   echo "Warning: ~/.claude/.credentials.json not found - Claude Code CLI will require /login"
 fi
 
+# Authenticate Salesforce orgs via sf CLI
+echo "Authenticating Salesforce orgs..."
+
+# 10xhealth production
+if [ -n "$SF_PROD_ACCESS_TOKEN" ] && [ -n "$SF_PROD_INSTANCE_URL" ]; then
+  echo "Authenticating 10xhealth (production)..."
+  sf org login access-token \
+    --alias 10xhealth \
+    --instance-url "$SF_PROD_INSTANCE_URL" \
+    --access-token "$SF_PROD_ACCESS_TOKEN" \
+    --no-prompt || echo "Warning: Failed to auth 10xhealth"
+else
+  echo "Skipping 10xhealth - missing SF_PROD_ACCESS_TOKEN or SF_PROD_INSTANCE_URL"
+fi
+
+# 10xhealth-sean sandbox
+if [ -n "$SF_SANDBOX_ACCESS_TOKEN" ] && [ -n "$SF_SANDBOX_INSTANCE_URL" ]; then
+  echo "Authenticating 10xhealth-sean (sandbox)..."
+  sf org login access-token \
+    --alias 10xhealth-sean \
+    --instance-url "$SF_SANDBOX_INSTANCE_URL" \
+    --access-token "$SF_SANDBOX_ACCESS_TOKEN" \
+    --no-prompt || echo "Warning: Failed to auth 10xhealth-sean"
+else
+  echo "Skipping 10xhealth-sean - missing SF_SANDBOX_ACCESS_TOKEN or SF_SANDBOX_INSTANCE_URL"
+fi
+
+# Set default org
+sf config set defaultusername=10xhealth --global 2>/dev/null || true
+
 # Verify environment is set before running Flask
-echo "Final env check:"
+echo "Environment ready:"
 echo "  CASEOPS_LLM_AUTH=$CASEOPS_LLM_AUTH"
-echo "  Claude Code CLI will use ~/.claude/.credentials.json (mounted from host)"
+echo "  SF orgs authenticated"
 
 # Run Flask app with arguments
 exec python app.py "$@"

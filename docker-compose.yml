@@ -8,6 +8,8 @@ services:
     container_name: caseops
     ports:
       - "5350:5000"
+    env_file:
+      - .env.jira.nas
     volumes:
       # Persistent output files (use ./instance1/outputs for single-instance NAS)
       - ./instance1/outputs:/app/instance1/outputs
@@ -16,7 +18,7 @@ services:
       # Note: .sfdx and .claude mounted from NAS had permission conflicts.
       # These are now managed via container-local storage + Flask API setup endpoints.
       # Use /setup/claude-login to save Claude credentials.
-      # Use sf org login web in container or cci org connect for Salesforce auth.
+      # Salesforce orgs authenticated via SF_PROD/SANDBOX env vars at startup.
       # (Optional) Mount workspace-specific .env.jira.{workspace} files
       # - ./.env.jira.production:/app/.env.jira.production:ro
     environment:
@@ -26,8 +28,8 @@ services:
       CASEOPS_OUTPUTS_DIR: "/app/instance1/outputs"
       # Optional: set workspace
       # CASEOPS_WORKSPACE: "default"
-      # For Claude Code CLI mode: omit ANTHROPIC_API_KEY from here
-      # (it will be read from .env.jira only)
+      # Salesforce credentials: loaded from .env.jira.nas via env_file directive above
+      # CASEOPS_DEFAULT_TARGET_ORG, CASEOPS_PRODUCTION_READ_ORG, SF_PROD_*, SF_SANDBOX_* all available
     restart: unless-stopped
     # Synology-specific: change "bridge" to your network if using custom network
     networks:
