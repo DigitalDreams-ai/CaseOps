@@ -182,17 +182,18 @@ SF_TOKENS_REFRESHED_AT=<unix timestamp>
 
 ### Pipeline Steps (1-12)
 
-| Step | Name | Input | Process | Output | Time |
-|------|------|-------|---------|--------|------|
-| 1 | Sync | Jira API | Fetch active cases | `jira/*.md` | 2m |
-| 2 | Triage | Manifest | Separate by status | folders | 1m |
-| 3 | Analysis | Jira + SF | Root cause research | `investigations/*.md` | 3m |
-| 4 | Hypotheses | Analysis | Propose fixes | `step-4-hypothesis/*.md` | 2m |
-| 5 | Metadata | Hypothesis | Identify changes | step-5-metadata | 1m |
-| 6 | Sandbox Test | Metadata | Deploy + validate | `test-reports/*.md` | 3m |
-| 7 | Messaging | Test results | Draft customer msg | `jira-messages/*.md` | 1m |
-| 11 | Summary | All steps | Rollup report | `issue-summary-YYYY-MM-DD.md` | 1m |
-| 12 | Logs | Execution | Collect logs | `pipeline-logs/*` | 0m |
+| Step | Name | Owner | Input | Process | Output | Time |
+|------|------|-------|-------|---------|--------|------|
+| 1-2 | Setup (Sync + Triage) | Orchestrator | Jira API | Fetch + classify cases | `jira/*.md` + folders | 3m |
+| 3 | Analysis | Sub-agent | Jira + SF | Root cause research | Context summary | 3m |
+| 4 | Hypothesis Synthesis | Orchestrator | Analysis | Synthesize fix proposal | `step-4-hypothesis/*.md` | 2m |
+| 5 | Metadata Retrieval | Sub-agent | Hypothesis | Retrieve Production metadata | Context summary | 2m |
+| 6 | Problem Location | Sub-agent | Metadata | Drill to exact artifact location | Context summary | 2m |
+| 7 | Escalation Gate | Orchestrator | Problem location | Decide: Support or Engineering | Routing decision | 1m |
+| 8-9 | Implementation + Test | Sub-agent | Hypothesis + Routing | Deploy to Sandbox + test | `test-reports/*.md` | 5m |
+| 10 | Messaging | Sub-agent | Test results + Routing | Draft customer + internal notes | `jira-messages/*.md` + `internal-notes/*.md` | 1m |
+| 11 | Summary | Orchestrator | All steps | Rollup report | `issue-summary-YYYY-MM-DD.md` | 1m |
+| 12 | Return to User | Orchestrator | Summary | Print completion report | Console output | 0m |
 
 ### Sub-Agent Architecture
 
@@ -260,7 +261,7 @@ ESCALATED_TO_ENGINEERING
 | GET | `/setup/refresh-salesforce-tokens` | HTML form for manual refresh |
 | POST | `/api/setup/refresh-salesforce-tokens` | Save tokens + refresh |
 | POST | `/api/setup/salesforce-auth` | Auth SF CLI orgs |
-| GET | `/api/status` | Check SF, Claude, Jira health |
+| GET | `/api/status` | Get active issues + LLM backend info |
 
 ### Claude Authentication
 

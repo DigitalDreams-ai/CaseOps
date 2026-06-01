@@ -40,14 +40,14 @@ CaseOps is an AI-powered platform for automating the investigation, analysis, an
 ## Key Features
 
 ### 🔄 Automated Investigation Pipeline
-- **Step 1 — Sync:** Pulls all active support cases from Jira
-- **Step 2 — Triage:** Categorizes cases (closed, escalated, active)
+- **Steps 1-2 — Setup (Sync + Triage):** Pulls active cases from Jira and classifies by status
 - **Step 3 — Analysis:** Claude AI investigates root causes in Salesforce
-- **Step 4 — Hypotheses:** Generates fix proposals with test plans
-- **Step 5 — Metadata:** Identifies required metadata changes
-- **Step 6 — Sandbox Testing:** Auto-deploys and validates fixes
-- **Step 7 — Messaging:** Drafts customer-ready responses
-- **Steps 11-12 — Reports:** Generates summaries and escalation docs
+- **Step 4 — Hypothesis:** Generates fix proposals with test plan
+- **Steps 5-6 — Metadata Investigation:** Identifies exact artifact location and problem
+- **Step 7 — Escalation Gate:** Decides if Support-resolvable or Engineering-required
+- **Steps 8-9 — Implementation + Test:** Deploys fix to Sandbox and validates
+- **Step 10 — Messaging:** Drafts customer message + internal notes + escalation doc (if needed)
+- **Steps 11-12 — Summary + Report:** Generates daily rollup and completion report
 
 ### 📋 Badge System
 - **✓ Synced** — Issue pulled from Jira

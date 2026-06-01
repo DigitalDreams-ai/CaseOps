@@ -115,16 +115,16 @@ If you provide **refresh tokens**, CaseOps automatically:
 
 | Step | What Happens | Time | Output |
 |------|-------------|------|--------|
-| 1 | Sync from Jira | 2 min | `jira/` folder with raw + parsed issues |
-| 2 | Triage | 1 min | Separate escalated vs. active |
-| 3 | Analysis | 3 min/issue | `investigations/HEAL-*.md` |
-| 4 | Hypotheses | 2 min/issue | `step-4-hypothesis/HEAL-*.md` |
-| 5 | Metadata | 1 min/issue | Metadata dependencies identified |
-| 6 | Sandbox Deploy | 2-5 min | Test fix in sandbox |
-| 7 | Messaging | 1 min/issue | Draft customer response |
-| 11-12 | Reports | 1 min | Summary + escalation docs |
+| 1-2 | Sync + Triage from Jira | 3 min | `jira/` folder; issues classified by status |
+| 3 | Analysis (per issue) | 3 min | Root cause understanding |
+| 4 | Hypothesis | 2 min | `step-4-hypothesis/HEAL-*.md` with proposed fix |
+| 5-6 | Metadata Investigation | 3 min | Problem location identified (exact artifact, type, location) |
+| 7 | Escalation Gate | 1 min | Decide: Support-resolvable or Engineering-required |
+| 8-9 | Sandbox Implementation + Test | 5 min | Deploy fix, test, validate; save `test-reports/HEAL-*.md` |
+| 10 | Customer Message | 1 min | `jira-messages/HEAL-*.md` + `internal-notes/HEAL-*.md` + `engineering-escalations/` (if needed) |
+| 11-12 | Summary + Report | 2 min | `issue-summary-YYYY-MM-DD.md` + completion output |
 
-**Total:** ~15 minutes for 25 issues.
+**Total:** ~20 minutes for 25 issues.
 
 **Watch progress:** Click issue to see real-time investigation log.
 
@@ -342,15 +342,11 @@ sf org login web --alias 10xhealth
 - Report token expiry time
 
 ### Q: Can I have multiple instances?
-**A:** Yes! CaseOps supports multi-instance via `CASEOPS_WORKSPACE` env var:
-- `instance1/` (default)
-- `instance2/` (separate outputs, tokens, state)
-- Each has isolated outputs directory
+**A:** Yes! CaseOps supports multi-instance via isolated output directories:
+- `instance1/outputs/` (default)
+- `instance2/outputs/` (separate outputs, tokens, state)
 
-To use instance2:
-```bash
-docker-compose -f docker-compose.instance2.yml up -d
-```
+Each instance runs in a separate Docker container with its own `CASEOPS_WORKSPACE` env var. Configure via docker-compose overrides or separate .env files per container.
 
 ### Q: How do I export investigation results?
 **A:** Click issue → Settings → **"Download All"**. Gets:
