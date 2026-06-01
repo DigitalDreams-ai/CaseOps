@@ -183,10 +183,6 @@
             <default>false</default>
         </values>
         <values>
-            <fullName>Blood</fullName>
-            <default>false</default>
-        </values>
-        <values>
             <fullName>Clinic Services</fullName>
             <default>false</default>
         </values>
@@ -195,15 +191,7 @@
             <default>false</default>
         </values>
         <values>
-            <fullName>Gut Health</fullName>
-            <default>false</default>
-        </values>
-        <values>
             <fullName>Health Net</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>MGT</fullName>
             <default>false</default>
         </values>
         <values>
@@ -215,23 +203,11 @@
             <default>false</default>
         </values>
         <values>
-            <fullName>Mitochondrial Testing</fullName>
-            <default>false</default>
-        </values>
-        <values>
             <fullName>My Wellness Portal</fullName>
             <default>false</default>
         </values>
         <values>
             <fullName>Other Sales Channels</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>PGT</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>PGT%2FSupps %28Novogenia supplier%29</fullName>
             <default>false</default>
         </values>
         <values>
@@ -244,6 +220,30 @@
         </values>
         <values>
             <fullName>Supplements</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Test - Blood</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Test - Gut Health</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Test - Methylation Genetic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Test - Mitochondrial</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Test - Precision Genetic</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Test - At Home Blood (Dependent)</fullName>
             <default>false</default>
         </values>
     </picklistValues>

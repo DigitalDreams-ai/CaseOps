@@ -123,6 +123,10 @@
                     <stringValue>TikTok</stringValue>
                 </rightValue>
             </conditions>
+            <conditions>
+                <leftValueReference>$Record.Shopify_Order_Name__c</leftValueReference>
+                <operator>IsNull</operator>
+            </conditions>
             <label>Affiliate Order</label>
         </rules>
     </decisions>

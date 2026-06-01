@@ -27,11 +27,6 @@
                 <label>Account Data Or Legal</label>
             </value>
             <value>
-                <fullName>Blood</fullName>
-                <default>false</default>
-                <label>Blood</label>
-            </value>
-            <value>
                 <fullName>Blood Test</fullName>
                 <default>false</default>
                 <label>Blood Test</label>
@@ -45,11 +40,6 @@
                 <fullName>Echo</fullName>
                 <default>false</default>
                 <label>Echo</label>
-            </value>
-            <value>
-                <fullName>Gut Health</fullName>
-                <default>false</default>
-                <label>Gut Health</label>
             </value>
             <value>
                 <fullName>Gut Test</fullName>
@@ -82,16 +72,6 @@
                 <label>Methylation Genetic Test</label>
             </value>
             <value>
-                <fullName>MGT</fullName>
-                <default>false</default>
-                <label>MGT</label>
-            </value>
-            <value>
-                <fullName>Mitochondrial Testing</fullName>
-                <default>false</default>
-                <label>Mitochondrial Testing</label>
-            </value>
-            <value>
                 <fullName>My Wellness Portal</fullName>
                 <default>false</default>
                 <label>My Wellness Portal</label>
@@ -100,16 +80,6 @@
                 <fullName>Other Sales Channels</fullName>
                 <default>false</default>
                 <label>Other Sales Channels</label>
-            </value>
-            <value>
-                <fullName>PGT</fullName>
-                <default>false</default>
-                <label>PGT</label>
-            </value>
-            <value>
-                <fullName>PGT/Supps (Novogenia supplier)</fullName>
-                <default>false</default>
-                <label>PGT/Supps (Novogenia supplier)</label>
             </value>
             <value>
                 <fullName>Precision Genetic Test</fullName>
@@ -168,32 +138,32 @@
             <value>
                 <fullName>Test - Blood</fullName>
                 <default>false</default>
-                <isActive>false</isActive>
                 <label>Test - Blood</label>
             </value>
             <value>
                 <fullName>Test - Gut Health</fullName>
                 <default>false</default>
-                <isActive>false</isActive>
                 <label>Test - Gut Health</label>
             </value>
             <value>
                 <fullName>Test - Methylation Genetic</fullName>
                 <default>false</default>
-                <isActive>false</isActive>
                 <label>Test - Methylation Genetic</label>
             </value>
             <value>
                 <fullName>Test - Mitochondrial</fullName>
                 <default>false</default>
-                <isActive>false</isActive>
                 <label>Test - Mitochondrial</label>
             </value>
             <value>
                 <fullName>Test - Precision Genetic</fullName>
                 <default>false</default>
-                <isActive>false</isActive>
                 <label>Test - Precision Genetic</label>
+            </value>
+            <value>
+                <fullName>Test - At Home Blood (Dependent)</fullName>
+                <default>false</default>
+                <label>Test - At Home Blood (Dependent)</label>
             </value>
         </valueSetDefinition>
     </valueSet>

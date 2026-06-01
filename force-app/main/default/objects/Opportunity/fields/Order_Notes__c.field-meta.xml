@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Order_Notes__c</fullName>
-    <encryptionScheme>None</encryptionScheme>
+    <externalId>false</externalId>
     <label>Order Notes</label>
-    <length>3000</length>
-    <trackFeedHistory>false</trackFeedHistory>
-    <trackHistory>false</trackHistory>
-    <trackTrending>false</trackTrending>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
     <type>LongTextArea</type>
-    <visibleLines>5</visibleLines>
+    <visibleLines>3</visibleLines>
 </CustomField>
