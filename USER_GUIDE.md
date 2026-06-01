@@ -113,9 +113,7 @@ If you provide **refresh tokens**, CaseOps automatically:
 
 **Click: "Auto-Process All"**
 
-**For each issue, follow one of two paths:**
-
-**Support-Resolvable Path:**
+Both Support-resolvable and Engineering-escalation issues follow **the same Steps 1-12**. The difference is what happens in Step 10: Support-resolvable issues deploy to Production; Escalation issues are handed to Engineering with a proposed solution.
 
 | Step | What Happens | Time | Output |
 |------|-------------|------|--------|
@@ -123,22 +121,13 @@ If you provide **refresh tokens**, CaseOps automatically:
 | 3 | Analysis (per issue) | 3 min | Root cause understanding |
 | 4 | Hypothesis | 2 min | `step-4-hypothesis/HEAL-*.md` with proposed fix |
 | 5-6 | Metadata Investigation | 3 min | Problem location identified (artifact, type, location, failure point) |
-| 7 | Escalation Gate | 1 min | Decide: Support-resolvable (proceed to Step 8) |
-| 8 | Implement | 1 min | Local code changes recorded |
-| 9 | Sandbox Test | 3 min | Deploy fix, test, validate; save `test-reports/HEAL-*.md` |
-| 10 | Customer Message | 1 min | `jira-messages/HEAL-*.md` + `internal-notes/HEAL-*.md` |
+| 7 | Escalation Gate | 1 min | Decide: Support-resolvable or Engineering-required |
+| 8 | Implement | 1 min | Propose local code changes (both paths) |
+| 9 | Sandbox Test | 3 min | Deploy proposed fix to Sandbox, test, validate; save `test-reports/HEAL-*.md` |
+| 10 | Customer Message | 1 min | `jira-messages/HEAL-*.md` + `internal-notes/HEAL-*.md` + (if escalating) `engineering-escalations/HEAL-*.md` with proposed solution |
 | 11-12 | Summary + Report | 2 min | `issue-summary-YYYY-MM-DD.md` + completion output |
 
-**Engineering-Escalation Path:**
-
-| Step | What Happens | Time | Output |
-|------|-------------|------|--------|
-| 1-6 | Sync → Problem Location | ~12 min | Same as above |
-| 7 | Escalation Gate | 1 min | Decide: Engineering-required; skip Steps 8-9 |
-| 10 | Customer Message | 1 min | `jira-messages/HEAL-*.md` + `internal-notes/HEAL-*.md` + `engineering-escalations/HEAL-*.md` (handoff doc) |
-| 11-12 | Summary + Report | 2 min | `issue-summary-YYYY-MM-DD.md` + completion output |
-
-**Total:** ~18 min/support issue, ~16 min/escalation issue; ~20 minutes for mixed batch of 25 issues.
+**Total:** ~18 minutes per issue; ~25 minutes for batch of 25 issues (both paths run full pipeline; proposed solutions provided to Engineering for escalations).
 
 **Watch progress:** Click issue to see real-time investigation log.
 

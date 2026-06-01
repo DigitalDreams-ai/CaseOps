@@ -182,19 +182,19 @@ SF_TOKENS_REFRESHED_AT=<unix timestamp>
 
 ### Pipeline Steps (1-12)
 
-| Step | Name | Owner | Input | Process | Escalation Path | Support Path | Time |
-|------|------|-------|-------|---------|---|---|------|
-| 1-2 | Setup (Sync + Triage) | Orchestrator | Jira API | Fetch + classify cases | → Step 3 | → Step 3 | 3m |
-| 3 | Analysis | Sub-agent | Jira + SF | Root cause research | → Step 4 | → Step 4 | 3m |
-| 4 | Hypothesis | Orchestrator | Analysis | Synthesize fix proposal | → Step 5 | → Step 5 | 2m |
-| 5 | Metadata Retrieval | Sub-agent | Hypothesis | Retrieve Production metadata | → Step 6 | → Step 6 | 2m |
-| 6 | Problem Location | Sub-agent | Metadata | Drill to exact artifact | → Step 7 | → Step 7 | 2m |
-| 7 | Escalation Gate | Orchestrator | Problem location | Decide: Support or Engineering | **Skip 8-9 → Step 10** | → Step 8 | 1m |
-| 8 | Implement | Orchestrator | Hypothesis | Code local changes | *skipped* | Make changes | 1m |
-| 9 | Deploy + Test | Sub-agent | Hypothesis | Deploy to Sandbox + test | *skipped* | Deploy & validate | 3m |
-| 10 | Messaging | Sub-agent | Results OR Escalation | Draft customer + internal | Test="N/A-Escalation" | Test results | 1m |
-| 11 | Summary | Orchestrator | All steps | Rollup report | → final summary | → final summary | 1m |
-| 12 | Return to User | Orchestrator | Summary | Print completion | Print report | Print report | 0m |
+| Step | Name | Owner | Input | Process | Output | Time |
+|------|------|-------|-------|---------|--------|------|
+| 1-2 | Setup (Sync + Triage) | Orchestrator | Jira API | Fetch + classify cases | `jira/*.md` + folders | 3m |
+| 3 | Analysis | Sub-agent | Jira + SF | Root cause research | Context summary | 3m |
+| 4 | Hypothesis | Orchestrator | Analysis | Synthesize fix proposal | `step-4-hypothesis/*.md` | 2m |
+| 5 | Metadata Retrieval | Sub-agent | Hypothesis | Retrieve Production metadata | Context summary | 2m |
+| 6 | Problem Location | Sub-agent | Metadata | Drill to exact artifact | Context summary | 2m |
+| 7 | Escalation Gate | Orchestrator | Problem location | Decide: Support or Engineering | Routing decision | 1m |
+| 8 | Implement | Orchestrator | Hypothesis | Code local changes (both paths) | Investigation notes | 1m |
+| 9 | Deploy + Test | Sub-agent | Hypothesis + Routing | Deploy to Sandbox + test (both paths) | `test-reports/*.md` | 3m |
+| 10 | Messaging | Sub-agent | Results + Routing | Draft customer + internal + escalation | `jira-messages/*.md` + `engineering-escalations/*.md` (if escalating) | 1m |
+| 11 | Summary | Orchestrator | All steps | Rollup report | `issue-summary-YYYY-MM-DD.md` | 1m |
+| 12 | Return to User | Orchestrator | Summary | Print completion | Console output | 0m |
 
 ### Sub-Agent Architecture
 
