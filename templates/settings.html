@@ -417,7 +417,7 @@
             <div class="settings-section">
                 <h2>Salesforce CLI Authentication</h2>
                 <p style="font-size: 13px; color: var(--color-text); margin-bottom: 15px;">
-                    Authenticate your Salesforce orgs using the Salesforce CLI with access tokens.
+                    Salesforce access tokens are automatically refreshed using OAuth 2.0 refresh tokens. No manual refresh needed.
                 </p>
 
                 <!-- Authenticated Orgs Status -->
@@ -439,11 +439,26 @@
 
                 <hr style="border: none; border-top: 1px solid var(--color-border); margin: 20px 0;">
 
-                <div style="background: var(--color-bg); padding: 12px; border-radius: 4px; font-size: 12px; color: var(--color-text-secondary);">
-                    <strong>ℹ️ Authentication Method:</strong><br>
-                    This uses your pre-configured access tokens from the environment. Click the button above to authenticate using the Salesforce CLI with access token authentication.<br>
-                    <br>
-                    <strong>Required:</strong> SF_PROD_ACCESS_TOKEN, SF_PROD_INSTANCE_URL, SF_SANDBOX_ACCESS_TOKEN, SF_SANDBOX_INSTANCE_URL (set in .env.jira.nas)
+                <div style="background: var(--color-bg); padding: 12px; border-radius: 4px; font-size: 12px; color: var(--color-text-secondary); line-height: 1.6;">
+                    <strong>📋 Initial Setup (Required Once)</strong><br>
+                    1. On your <strong>local machine</strong>, run:<br>
+                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto;">
+                        sf org auth show-access-token -o 10xhealth --no-prompt
+                    </div>
+                    Copy the token value (starts with session ID like <code style="background: var(--color-surface); padding: 1px 3px; border-radius: 2px;">00D0b...</code>)
+                    <br><br>
+                    2. Then get the sandbox token:<br>
+                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto;">
+                        sf org auth show-access-token -o 10xhealth-sean --no-prompt
+                    </div>
+                    Copy the token value<br><br>
+                    3. Visit <a href="/setup/refresh-sf-tokens" target="_blank" style="color: var(--color-primary); text-decoration: underline;">Refresh Tokens page</a> and paste both tokens, then save.
+                    <br><br>
+                    <strong>✅ Automatic Refresh</strong><br>
+                    Once setup, tokens are <strong>automatically refreshed</strong> on service startup if they're older than 4 hours. Access tokens valid for 8 hours; refresh happens before expiry. No manual action needed.
+                    <br><br>
+                    <strong>🔐 Token Storage</strong><br>
+                    Stored securely in <code style="background: var(--color-surface); padding: 1px 3px; border-radius: 2px;">SF_PROD_ACCESS_TOKEN</code>, <code style="background: var(--color-surface); padding: 1px 3px; border-radius: 2px;">SF_SANDBOX_ACCESS_TOKEN</code> with refresh tokens in <code style="background: var(--color-surface); padding: 1px 3px; border-radius: 2px;">.env.jira</code> on the NAS.
                 </div>
             </div>
 
