@@ -1349,13 +1349,16 @@ select.desktop-only {
   flex: 1;
 }
 
-#log-clear {
+.log-link-btn {
+  background: none;
+  border: none;
+  padding: 2px 0;
   font-size: 11px;
   color: var(--color-primary);
   cursor: pointer;
 }
 
-#log-clear:hover {
+.log-link-btn:hover {
   text-decoration: underline;
 }
 

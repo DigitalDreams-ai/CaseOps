@@ -134,14 +134,91 @@ _sf_orgs_cache: dict[str, dict[str, str]] | None = None
 _sf_orgs_cache_time = 0
 _SF_ORGS_CACHE_TTL = 600  # Cache for 10 minutes
 
-# Consolidated temp directory: instance-specific, cleaned up between runs
+_ENV_KEYS_RELOAD_FROM_FILE = {
+    "ANTHROPIC_API_KEY",
+    "CLAUDE_CODE_OAUTH_TOKEN",
+    CASEOPS_LLM_AUTH_ENV,
+    "JIRA_BASE_URL",
+    "JIRA_EMAIL",
+    "JIRA_API_TOKEN",
+    "JIRA_AUTH_HEADER_COMMAND",
+    "JIRA_BEARER_TOKEN",
+    "CASEOPS_ANTHROPIC_MODEL",
+    "CASEOPS_USE_CCI_FOR_AUTH",
+    "CASEOPS_PRODUCTION_READ_ORG",
+    "CASEOPS_SANDBOX_TARGET_ORG",
+    "CASEOPS_PRODUCTION_INSTANCE_URL",
+    "CASEOPS_SANDBOX_INSTANCE_URL",
+    "CASEOPS_PRODUCTION_MAGIC_LINK",
+    "CASEOPS_SANDBOX_MAGIC_LINK",
+    "SF_PROD_ACCESS_TOKEN",
+    "SF_SANDBOX_ACCESS_TOKEN",
+    "SF_PROD_REFRESH_TOKEN",
+    "SF_SANDBOX_REFRESH_TOKEN",
+    "SF_TOKENS_REFRESHED_AT",
+    "SF_PROD_INSTANCE_URL",
+    "SF_SANDBOX_INSTANCE_URL",
+}
+
+# Consolidated temp directory: instance-specific runtime workspace
 TEMP_ROOT = None  # Path | None — Set in __main__
+
+
+def _metadata_workspace_dirs() -> dict[str, Path]:
+    """Return the instance-scoped Salesforce metadata workspace directories."""
+    base_temp = TEMP_ROOT if TEMP_ROOT is not None else OUTPUTS.parent / ".temp"
+    root = base_temp / "metadata"
+    return {
+        "root": root,
+        "raw_prod": root / "raw-production",
+        "sandbox_work": root / "sandbox-work",
+        "confirmed": root / "confirmed",
+    }
+
+
+def _ensure_metadata_workspace_dirs() -> None:
+    """Create the shared directory contract used by Salesforce pipeline agents."""
+    for path in _metadata_workspace_dirs().values():
+        path.mkdir(parents=True, exist_ok=True)
 
 
 def _cache_evict(cache: dict) -> None:
     """Evict oldest entries when cache exceeds _CACHE_MAX_KEYS."""
     while len(cache) > _CACHE_MAX_KEYS:
         cache.pop(next(iter(cache)))
+
+
+def _persistent_canned_messages_file() -> Path:
+    """Return the writable, mounted canned-message customization path.
+
+    In Docker/NAS deployments only OUTPUTS is mounted persistently. Root-level files
+    inside /app are image/container state and are lost on container replacement.
+    """
+    return OUTPUTS / "settings" / "canned-messages.json"
+
+
+def _legacy_canned_messages_file() -> Path | None:
+    """Return the old workspace-specific canned-message path, if applicable."""
+    workspace = app.config.get("WORKSPACE") or os.environ.get("CASEOPS_WORKSPACE", "default")
+    if workspace and workspace != "default":
+        return ROOT / workspace / "canned-messages.json"
+    legacy_instance_file = OUTPUTS.parent / "canned-messages.json"
+    if legacy_instance_file != ROOT / "canned-messages.json":
+        return legacy_instance_file
+    return None
+
+
+def _active_canned_messages_file() -> tuple[Path, bool]:
+    """Return the file to read and whether it is a custom/persistent override."""
+    persistent = _persistent_canned_messages_file()
+    if persistent.exists():
+        return persistent, True
+
+    legacy = _legacy_canned_messages_file()
+    if legacy and legacy.exists():
+        return legacy, True
+
+    return ROOT / "canned-messages.json", False
 
 
 def _refresh_salesforce_token_from_refresh_token(instance_url: str, refresh_token: str, client_id: str = "PlatformCLI") -> tuple[bool, str | None]:
@@ -159,7 +236,7 @@ def _refresh_salesforce_token_from_refresh_token(instance_url: str, refresh_toke
             "client_id": client_id,
         }).encode("utf-8")
 
-        token_url = "https://login.salesforce.com/services/oauth2/token"
+        token_url = f"{instance_url.rstrip('/')}/services/oauth2/token"
         req = urllib.request.Request(token_url, data=data, method="POST")
         req.add_header("Content-Type", "application/x-www-form-urlencoded")
 
@@ -171,6 +248,28 @@ def _refresh_salesforce_token_from_refresh_token(instance_url: str, refresh_toke
             return False, result.get("error_description", "No access_token in response")
     except Exception as e:
         return False, str(e)
+
+
+def _extract_salesforce_refresh_token(value: str | None) -> str:
+    """Accept a raw refresh token or an SFDX auth URL and return the refresh token."""
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    if raw.startswith("force://"):
+        match = re.match(r"^force://[^:]*:[^:]*:([^@]+)@.+$", raw)
+        if match:
+            return urllib.parse.unquote(match.group(1))
+    return raw
+
+
+def _env_first(*keys: str, settings: dict[str, str] | None = None, default: str = "") -> str:
+    """Return the first non-empty value from os.environ or an optional parsed env file."""
+    settings = settings or {}
+    for key in keys:
+        value = os.environ.get(key) or settings.get(key) or ""
+        if str(value).strip():
+            return str(value).strip()
+    return default
 
 
 def _check_and_refresh_salesforce_tokens(env_file_path: Path) -> None:
@@ -228,17 +327,30 @@ def _attempt_token_refresh(env_file_path: Path, env_content: str, prod_token_mat
     """Attempt to refresh SF tokens using refresh tokens. Update .env on success."""
     prod_ok, prod_new = False, None
     sandbox_ok, sandbox_new = False, None
+    settings = _read_env_file(env_file_path)
+    prod_url = _env_first(
+        "SF_PROD_INSTANCE_URL",
+        "CASEOPS_PRODUCTION_INSTANCE_URL",
+        settings=settings,
+        default="https://login.salesforce.com",
+    )
+    sandbox_url = _env_first(
+        "SF_SANDBOX_INSTANCE_URL",
+        "CASEOPS_SANDBOX_INSTANCE_URL",
+        settings=settings,
+        default="https://test.salesforce.com",
+    )
 
     if prod_token_match:
         prod_ok, prod_new = _refresh_salesforce_token_from_refresh_token(
-            "https://10xhealth.my.salesforce.com",
-            prod_token_match.group(1)
+            prod_url,
+            _extract_salesforce_refresh_token(prod_token_match.group(1))
         )
 
     if sandbox_token_match:
         sandbox_ok, sandbox_new = _refresh_salesforce_token_from_refresh_token(
-            "https://10xhealth--sean.sandbox.my.salesforce.com",
-            sandbox_token_match.group(1)
+            sandbox_url,
+            _extract_salesforce_refresh_token(sandbox_token_match.group(1))
         )
 
     if prod_ok or sandbox_ok:
@@ -251,6 +363,7 @@ def _attempt_token_refresh(env_file_path: Path, env_content: str, prod_token_mat
             new_lines.append(f"SF_SANDBOX_ACCESS_TOKEN={sandbox_new}")
         new_lines.append(f"SF_TOKENS_REFRESHED_AT={int(time.time())}")
         env_file_path.write_text("\n".join(new_lines), encoding="utf-8")
+        _load_jira_env(env_file_path)
         print(f"[OK] Salesforce tokens auto-refreshed (prod={prod_ok}, sandbox={sandbox_ok})")
     else:
         print(f"[WARN] Auto-refresh failed (prod: {prod_new}, sandbox: {sandbox_new})")
@@ -281,9 +394,9 @@ def _validate_instance_path(path: Path, operation: str = "write") -> None:
 
     Forbidden patterns (HARD STOP):
     - ROOT/outputs (use OUTPUTS instead)
-    - ROOT/temp* (use ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve)
-    - ROOT/retrieved_metadata* (use instance-specific)
-    - ROOT/retrieve-prod (use instance-specific)
+    - ROOT/temp* (use CASEOPS_METADATA_* directories)
+    - ROOT/retrieved_metadata* (use CASEOPS_METADATA_* directories)
+    - ROOT/retrieve-prod (use CASEOPS_METADATA_* directories)
     - Any write to ROOT/.sfdx or ROOT/.claude (use env vars: SF_DATA_DIR, CLAUDE_CODE_DIR)
     """
     path_resolved = path.resolve()
@@ -310,7 +423,8 @@ def _validate_instance_path(path: Path, operation: str = "write") -> None:
                 f"INSTANCE ROUTING VIOLATION: Cannot {operation} to {path}\n"
                 f"Reason: Path is in shared directory {forbidden}\n"
                 f"Rule: All instance operations must use OUTPUTS (currently: {OUTPUTS})\n"
-                f"For metadata retrieval: use ${{CASEOPS_OUTPUTS_DIR}}/../temp-retrieve\n"
+                f"For Salesforce metadata: use CASEOPS_METADATA_RAW_PROD_DIR, "
+                f"CASEOPS_METADATA_SANDBOX_WORK_DIR, or CASEOPS_METADATA_CONFIRMED_DIR\n"
                 f"This is a HARD STOP to prevent cross-instance contamination."
             )
         except ValueError:
@@ -361,12 +475,9 @@ def _load_jira_env(env_file: Path | None = None) -> None:
 
     By default does not overwrite existing non-empty values.
     Exceptions:
-    - ANTHROPIC_API_KEY: always set from the file when the line has a non-empty
-      value (used for the Anthropic **Messages API** when ``CASEOPS_LLM_AUTH=api_key``;
-      still present in the environment when ``CASEOPS_LLM_AUTH=claude_code`` but the
-      Flask app omits it from the Claude Code **subprocess** in that mode).
-    - CASEOPS_LLM_AUTH: always set from the file when the line has a non-empty
-      value (so switching API vs Claude Code mode in ``.env.jira`` applies on reload).
+    - Runtime settings and secrets listed in `_ENV_KEYS_RELOAD_FROM_FILE` are always
+      set from the file when the line has a non-empty value. This lets the Settings
+      and token-refresh pages update the running Flask process without a restart.
     - Any key: if currently unset or empty/whitespace, the file value is applied.
     """
     if env_file is None:
@@ -384,10 +495,7 @@ def _load_jira_env(env_file: Path | None = None) -> None:
         value = value.strip().strip('"').strip("'")
         if not value:
             continue
-        if key == "ANTHROPIC_API_KEY":
-            os.environ[key] = value
-            continue
-        if key == CASEOPS_LLM_AUTH_ENV:
+        if key in _ENV_KEYS_RELOAD_FROM_FILE:
             os.environ[key] = value
             continue
         cur = os.environ.get(key, "")
@@ -402,7 +510,7 @@ def caseops_llm_auth_uses_anthropic_api_key() -> bool:
     """If True, CaseOps LLM calls use the **Anthropic Messages API** (API key billing).
 
     If False, CaseOps spawns the **Claude Code CLI** and omits ``ANTHROPIC_API_KEY`` so the CLI uses
-    subscription / ``claude login`` (or its defaults).
+    ``CLAUDE_CODE_OAUTH_TOKEN`` from ``claude setup-token``.
     Unrecognized ``CASEOPS_LLM_AUTH`` values default to API mode (backward compatible).
     """
     raw = (os.environ.get(CASEOPS_LLM_AUTH_ENV) or "api_key").strip().lower()
@@ -501,12 +609,37 @@ def _write_env_file(updates: dict[str, str], env_file: Path | None = None) -> No
     # Reload env in running process
     _load_jira_env(env_file)
 
+
+def _remove_env_keys(keys: set[str], env_file: Path | None = None) -> None:
+    """Remove keys from .env.jira and the running process environment."""
+    if env_file is None:
+        env_file = ROOT / ".env.jira"
+    if not env_file.exists():
+        for key in keys:
+            os.environ.pop(key, None)
+        return
+
+    new_lines: list[str] = []
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in line:
+            new_lines.append(line)
+            continue
+        key = stripped.partition("=")[0].strip()
+        if key not in keys:
+            new_lines.append(line)
+
+    env_file.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    for key in keys:
+        os.environ.pop(key, None)
+
 CLOSED_STATUSES = {"closed", "resolved", "canceled", "cancelled"}
 ESCALATED_STATUS = "escalated to engineering"
 
 FILE_LOCATIONS: dict[str, str] = {
     "jira_summary":       "jira/summary/{key}.md",
     "investigation":      "investigations/{key}.md",
+    "step4_hypothesis":   "step-4-hypothesis/{key}.md",
     "internal_notes":     "internal-notes/{key}.md",
     "jira_message":       "jira-messages/{key}.md",
     "test_report":        "test-reports/{key}.md",
@@ -517,6 +650,7 @@ FILE_LOCATIONS: dict[str, str] = {
 FILE_LABELS: dict[str, str] = {
     "jira_summary":    "Jira Summary",
     "investigation":   "Investigation",
+    "step4_hypothesis": "Step 4 Hypothesis",
     "internal_notes":  "Internal Notes",
     "jira_message":    "Jira Message",
     "test_report":     "Test Report",
@@ -556,6 +690,15 @@ def _persist_pipeline_record(run_key: str, text: str, *, kind: str = "line") -> 
             fh.write(line)
 
 
+def _format_run_timestamp() -> str:
+    return datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
+
+
+def _log_emit_run_start(run_key: str, label: str | None = None) -> None:
+    target = label or run_key
+    _log_emit_line(run_key, f"Run started: {target} at {_format_run_timestamp()}")
+
+
 def _log_emit_line(run_key: str, text: str) -> None:
     """Notify SSE clients and append to per-key pipeline history on disk."""
     _log_q.put(f"{run_key}|{text}")
@@ -565,6 +708,334 @@ def _log_emit_line(run_key: str, text: str) -> None:
 def _log_emit_done(run_key: str) -> None:
     _log_q.put(f"__done__|{run_key}")
     _persist_pipeline_record(run_key, "", kind="done")
+
+
+def _path_relative_for_prompt(path: Path | None) -> str:
+    if path is None:
+        return ""
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def _read_text_for_resume(path: Path, max_chars: int = 80_000) -> str:
+    if not path.is_file():
+        return ""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    return text if len(text) <= max_chars else text[:max_chars]
+
+
+def _artifact_snapshot(path: Path, source_mtime: float | None = None) -> dict[str, Any]:
+    exists = path.is_file()
+    stat = None
+    if exists:
+        try:
+            stat = path.stat()
+        except OSError:
+            exists = False
+            stat = None
+    current = bool(exists and (source_mtime is None or (stat and stat.st_mtime + 1 >= source_mtime)))
+    return {
+        "path": _path_relative_for_prompt(path),
+        "exists": exists,
+        "current": current,
+        "size": stat.st_size if stat else 0,
+        "mtime": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat() if stat else "",
+    }
+
+
+def _directory_has_files(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+    try:
+        return any(child.is_file() for child in path.rglob("*"))
+    except OSError:
+        return False
+
+
+def _parse_jira_updated_mtime(value: str | None) -> float | None:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    for fmt in ("%Y-%m-%dT%H:%M:%S.%f%z", "%Y-%m-%dT%H:%M:%S%z"):
+        try:
+            return datetime.strptime(raw, fmt).timestamp()
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(raw).timestamp()
+    except ValueError:
+        return None
+
+
+def _issue_source_mtime(key: str, jira_updated: str | None = None) -> float | None:
+    parsed_updated = _parse_jira_updated_mtime(jira_updated)
+    if parsed_updated is not None:
+        return parsed_updated
+
+    mtimes: list[float] = []
+    for path in (
+        OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key),
+        OUTPUTS / "jira" / "raw" / f"{key}.json",
+    ):
+        try:
+            if path.exists():
+                mtimes.append(path.stat().st_mtime)
+        except OSError:
+            continue
+    return max(mtimes) if mtimes else None
+
+
+def _resume_step(step: int, name: str, status: str, reason: str, action: str, artifacts: list[str] | None = None) -> dict[str, Any]:
+    return {
+        "step": step,
+        "name": name,
+        "status": status,
+        "reason": reason,
+        "action": action,
+        "artifacts": artifacts or [],
+    }
+
+
+def _build_pipeline_resume_plan(key: str, status: str = "", jira_updated: str | None = None) -> dict[str, Any]:
+    """Build a conservative file-based resume plan for a single issue run."""
+    source_mtime = _issue_source_mtime(key, jira_updated)
+    paths = {
+        "jira_summary": OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key),
+        "investigation": OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key),
+        "step4_hypothesis": OUTPUTS / FILE_LOCATIONS["step4_hypothesis"].format(key=key),
+        "test_report": OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key),
+        "internal_notes": OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key),
+        "jira_message": OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key),
+        "eng_handoff": OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key),
+        "closed_resolved": OUTPUTS / FILE_LOCATIONS["closed_resolved"].format(key=key),
+    }
+    artifacts = {name: _artifact_snapshot(path, source_mtime) for name, path in paths.items()}
+
+    investigation = _read_text_for_resume(paths["investigation"])
+    hypothesis = _read_text_for_resume(paths["step4_hypothesis"])
+    test_report = _read_text_for_resume(paths["test_report"])
+    internal_notes = _read_text_for_resume(paths["internal_notes"])
+    jira_message = _read_text_for_resume(paths["jira_message"])
+    eng_handoff = _read_text_for_resume(paths["eng_handoff"])
+    diagnosis_text = "\n".join([investigation, hypothesis, internal_notes, eng_handoff])
+
+    metadata_dirs = _metadata_workspace_dirs()
+    raw_metadata_dir = metadata_dirs["raw_prod"] / key
+    sandbox_work_dir = metadata_dirs["sandbox_work"] / key
+    confirmed_dir = metadata_dirs["confirmed"] / key
+    metadata_manifest = sandbox_work_dir / "metadata-workspace.json"
+    metadata = {
+        "raw_production_dir": {"path": _path_relative_for_prompt(raw_metadata_dir), "has_files": _directory_has_files(raw_metadata_dir)},
+        "sandbox_work_dir": {"path": _path_relative_for_prompt(sandbox_work_dir), "has_files": _directory_has_files(sandbox_work_dir)},
+        "confirmed_dir": {"path": _path_relative_for_prompt(confirmed_dir), "has_files": _directory_has_files(confirmed_dir)},
+        "workspace_manifest": _artifact_snapshot(metadata_manifest, None),
+    }
+
+    steps: list[dict[str, Any]] = []
+    disposition = _disposition(status or "")
+    if disposition == "closed":
+        closed_current = artifacts["closed_resolved"]["current"]
+        steps.append(_resume_step(
+            2,
+            "Triage closed/resolved issue",
+            "complete" if closed_current else "pending",
+            "Jira status is closed/resolved/canceled.",
+            "Stop issue processing after closed/resolved archive is current." if closed_current else "Create or refresh closed/resolved archive, then stop for this key.",
+            [artifacts["closed_resolved"]["path"]],
+        ))
+    elif disposition == "escalated":
+        handoff_current = artifacts["eng_handoff"]["current"]
+        steps.append(_resume_step(
+            2,
+            "Triage pre-escalated issue",
+            "complete" if handoff_current else "pending",
+            "Jira status is already Escalated to Engineering.",
+            "Stop issue processing after engineering escalation archive is current." if handoff_current else "Create or refresh engineering escalation archive, then stop for this key.",
+            [artifacts["eng_handoff"]["path"]],
+        ))
+    else:
+        inv_current = artifacts["investigation"]["current"] and artifacts["investigation"]["size"] > 80
+        step4_current = artifacts["step4_hypothesis"]["current"] and artifacts["step4_hypothesis"]["size"] > 80
+        step4_inline = bool(artifacts["investigation"]["current"] and re.search(r"(?is)root cause hypothesis|smallest viable fix|sandbox validation plan|solution plan", investigation))
+        problem_location = bool(artifacts["investigation"]["current"] and re.search(r"(?is)problem location|specific artifact|failure point|confirmed root cause|root cause", investigation))
+        route_known = bool(artifacts["eng_handoff"]["current"] or re.search(r"(?is)support-resolvable|engineering[- ]required|engineering escalation|escalate to engineering", diagnosis_text))
+        candidate_exists = bool(
+            metadata["sandbox_work_dir"]["has_files"]
+            or metadata["confirmed_dir"]["has_files"]
+            or re.search(r"(?is)proposed solution|candidate|changed files|components changed|deploy", "\n".join([investigation, test_report]))
+        )
+        test_current = artifacts["test_report"]["current"] and artifacts["test_report"]["size"] > 80
+        test_passed = _test_report_confirms_fix(key)
+        test_failed = bool(test_current and not test_passed and re.search(r"(?is)\bfail(?:ed|ing)?\b|not fixed|revert|required: yes|blocked", test_report))
+        engineering_path = bool(artifacts["eng_handoff"]["current"] or re.search(r"(?is)engineering escalation|escalate to engineering|engineering-required", diagnosis_text))
+        step10_artifacts_current = bool(
+            artifacts["internal_notes"]["current"]
+            and artifacts["internal_notes"]["size"] > 80
+            and artifacts["jira_message"]["current"]
+            and artifacts["jira_message"]["size"] > 80
+            and (not engineering_path or artifacts["eng_handoff"]["current"])
+        )
+        step10_complete = bool(step10_artifacts_current and test_current and test_passed)
+
+        steps.extend([
+            _resume_step(
+                3,
+                "Analyze issue",
+                "complete" if inv_current else "pending",
+                "Current investigation artifact exists." if inv_current else "No current investigation artifact, or Jira source changed after it was written.",
+                "Emit STEP_3 resume-skip; do not spawn Step 3 sub-agent unless Jira changed materially." if inv_current else "Run Step 3 and write investigation record.",
+                [artifacts["investigation"]["path"]],
+            ),
+            _resume_step(
+                4,
+                "Synthesize problem hypothesis",
+                "complete" if (step4_current or step4_inline) else ("blocked" if not inv_current else "pending"),
+                "Step 4 hypothesis artifact or required hypothesis sections are current." if (step4_current or step4_inline) else "Requires current Step 3 investigation first." if not inv_current else "No current Step 4 hypothesis found.",
+                "Emit STEP_4 resume-skip; do not rewrite hypothesis unless later evidence invalidates it." if (step4_current or step4_inline) else "Create/update Step 4 hypothesis from Step 3 summary.",
+                [artifacts["step4_hypothesis"]["path"], artifacts["investigation"]["path"]],
+            ),
+            _resume_step(
+                5,
+                "Retrieve relevant Production metadata",
+                "complete" if (problem_location and metadata["raw_production_dir"]["has_files"]) else ("blocked" if not (step4_current or step4_inline) else "pending"),
+                "Investigation identifies problem evidence and raw Production metadata exists." if (problem_location and metadata["raw_production_dir"]["has_files"]) else "Requires Step 4 hypothesis first." if not (step4_current or step4_inline) else "Production metadata evidence is missing or not indexed.",
+                "Emit STEP_5 resume-skip; reuse raw Production metadata unless the hypothesis changed." if (problem_location and metadata["raw_production_dir"]["has_files"]) else "Run targeted Step 5 metadata retrieval using sf CLI.",
+                [metadata["raw_production_dir"]["path"], artifacts["investigation"]["path"]],
+            ),
+            _resume_step(
+                6,
+                "Identify exact problem location",
+                "complete" if problem_location else ("blocked" if not metadata["raw_production_dir"]["has_files"] else "pending"),
+                "Investigation contains root cause/problem location signals." if problem_location else "Requires targeted Production metadata first." if not metadata["raw_production_dir"]["has_files"] else "Problem location is not documented clearly enough.",
+                "Emit STEP_6 resume-skip; do not reread full investigation unless Step 8/9 needs exact component details." if problem_location else "Run Step 6 drilling and update investigation with exact artifact and failure point.",
+                [artifacts["investigation"]["path"]],
+            ),
+            _resume_step(
+                7,
+                "Engineering escalation gate",
+                "complete" if route_known else ("blocked" if not problem_location else "pending"),
+                "Routing decision is already documented." if route_known else "Requires exact problem location first." if not problem_location else "Routing decision is not explicit.",
+                "Emit STEP_7 resume-skip; preserve existing Support vs Engineering route." if route_known else "Classify Support-resolvable vs Engineering-required and document decision.",
+                [artifacts["eng_handoff"]["path"], artifacts["investigation"]["path"]],
+            ),
+            _resume_step(
+                8,
+                "Prepare candidate solution",
+                "complete" if candidate_exists and not test_failed else ("blocked" if not route_known else "pending"),
+                "Candidate/proposed solution files or confirmed package evidence exist." if candidate_exists and not test_failed else "Requires routing decision first." if not route_known else "No usable candidate solution package/evidence found.",
+                "Emit STEP_8 resume-skip; reuse existing candidate unless Step 9 failed." if candidate_exists and not test_failed else "Prepare or revise candidate solution in the metadata workspace.",
+                [metadata["sandbox_work_dir"]["path"], metadata["confirmed_dir"]["path"]],
+            ),
+            _resume_step(
+                9,
+                "Deploy and test in Sandbox",
+                "complete" if (test_current and test_passed) else ("stale" if test_failed else "blocked" if not candidate_exists else "pending"),
+                "Current test report affirmatively confirms the fix." if (test_current and test_passed) else "Existing test report is not a pass; revert/iteration is required." if test_failed else "Requires candidate solution first." if not candidate_exists else "No passing current test report found.",
+                "Emit STEP_9 resume-skip; do not redeploy unless candidate changed." if (test_current and test_passed) else "Re-enter Step 4/5/8/9 loop, reverting non-viable Sandbox attempts first." if test_failed else "Run Step 9 deploy/test against the allowlisted Sandbox.",
+                [artifacts["test_report"]["path"], metadata["workspace_manifest"]["path"]],
+            ),
+            _resume_step(
+                10,
+                "Draft internal notes and Jira message",
+                "complete" if step10_complete else ("stale" if step10_artifacts_current and not (test_current and test_passed) else "blocked" if not (test_current and test_passed) else "pending"),
+                "Internal notes and Jira message are current and based on a passing current Step 9." if step10_complete else "Drafts exist, but Step 9 is not currently passing; they must be refreshed after validation." if step10_artifacts_current else "Requires passing Step 9 first." if not (test_current and test_passed) else "Draft artifacts are missing, stale, or incomplete.",
+                "Emit STEP_10 resume-skip; do not rewrite drafts unless new test evidence changed." if step10_complete else "Refresh drafts after Step 9 passes." if step10_artifacts_current else "Draft/update internal notes, Jira message, and engineering handoff if required.",
+                [artifacts["internal_notes"]["path"], artifacts["jira_message"]["path"], artifacts["eng_handoff"]["path"]],
+            ),
+        ])
+
+        summary_path = _latest_issue_summary_path()
+        summary_mtime = summary_path.stat().st_mtime if summary_path and summary_path.exists() else None
+        issue_mtimes = []
+        for path in paths.values():
+            try:
+                if path.exists():
+                    issue_mtimes.append(path.stat().st_mtime)
+            except OSError:
+                continue
+        newest_issue_mtime = max(issue_mtimes) if issue_mtimes else None
+        summary_current = bool(summary_mtime and newest_issue_mtime and summary_mtime + 1 >= newest_issue_mtime)
+        steps.append(_resume_step(
+            11,
+            "Update dated summary",
+            "complete" if summary_current and step10_complete else ("blocked" if not step10_complete else "pending"),
+            "Latest dated summary is newer than issue artifacts." if summary_current and step10_complete else "Requires Step 10 first." if not step10_complete else "Latest dated summary is missing or older than issue artifacts.",
+            "Emit STEP_11 __summary__ resume-skip unless the run changed artifacts." if summary_current and step10_complete else "Update today's issue summary once issue artifacts are complete.",
+            [_path_relative_for_prompt(summary_path) if summary_path else "issue-summary-YYYY-MM-DD.md"],
+        ))
+        steps.append(_resume_step(
+            12,
+            "Inform operator",
+            "pending",
+            "Always report the result of this run.",
+            "Emit STEP_12 __complete__ and summarize only what changed or what remains blocked.",
+            [],
+        ))
+
+    next_step = next((s for s in steps if s["status"] not in {"complete", "skipped"}), steps[-1] if steps else None)
+    return {
+        "key": key,
+        "status": status,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "source_mtime": datetime.fromtimestamp(source_mtime, timezone.utc).isoformat() if source_mtime else "",
+        "mode": disposition,
+        "next_step": next_step,
+        "artifacts": artifacts,
+        "metadata": metadata,
+        "steps": steps,
+    }
+
+
+def _write_pipeline_resume_plan(plan: dict[str, Any]) -> Path:
+    key = str(plan.get("key") or "unknown")
+    path = OUTPUTS / "pipeline-state" / f"{key}.json"
+    _validate_instance_path(path, "write")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
+def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str:
+    next_step = plan.get("next_step") or {}
+    lines = [
+        "## Resume State Plan (authoritative for this rerun)",
+        f"- Plan file: `{_path_relative_for_prompt(plan_path)}`",
+        f"- Next required step: STEP_{next_step.get('step')} — {next_step.get('name')} ({next_step.get('status')})",
+        "- Rule: completed steps are not work items. Emit one concise `STEP_N <KEY> resume-skip` line if needed for progress, then continue.",
+        "- Rule: do not reread or rewrite completed artifacts unless a pending/stale downstream step needs exact details.",
+        "- Rule: if Jira source changed after an artifact, treat that artifact and downstream artifacts as stale.",
+        "",
+        "| Step | Status | Action |",
+        "| --- | --- | --- |",
+    ]
+    for step in plan.get("steps", []):
+        lines.append(f"| {step.get('step')} {step.get('name')} | {step.get('status')} | {step.get('action')} |")
+    return "\n".join(lines)
+
+
+def _prepare_resume_plan(key: str, status: str = "", jira_updated: str | None = None) -> tuple[dict[str, Any], Path, str]:
+    plan = _build_pipeline_resume_plan(key, status, jira_updated)
+    plan_path = _write_pipeline_resume_plan(plan)
+    return plan, plan_path, _format_resume_plan_for_prompt(plan, plan_path)
+
+
+def _log_resume_plan_summary(run_key: str, plan: dict[str, Any], plan_path: Path) -> None:
+    next_step = plan.get("next_step") or {}
+    steps = plan.get("steps") or []
+    completed = sum(1 for step in steps if step.get("status") == "complete")
+    total = len(steps)
+    step_num = next_step.get("step", "?")
+    name = next_step.get("name", "Unknown")
+    status = next_step.get("status", "unknown")
+    _log_emit_line(
+        run_key,
+        f"Resume planner: next STEP_{step_num} ({name}, {status}); {completed}/{total} step checkpoints complete. Plan: {_path_relative_for_prompt(plan_path)}",
+    )
 
 
 def manifest_changed(changed_keys: list[str] | None = None) -> None:
@@ -611,21 +1082,17 @@ _manifest_q: queue.Queue[str] = queue.Queue()  # manifest change notifications
 def _claude_process_env() -> dict[str, str]:
     """Environment for Claude Code CLI subprocess.
 
-    For claude_code mode: omit ANTHROPIC_API_KEY. Claude Code CLI uses pre-authenticated
-    credentials from ~/.claude/.credentials.json (mounted from host).
+    For claude_code mode: omit ANTHROPIC_API_KEY. Claude Code CLI uses the
+    long-lived token generated by `claude setup-token` in CLAUDE_CODE_OAUTH_TOKEN.
     For api_key mode: pass ANTHROPIC_API_KEY (API billing auth).
     Instance-specific output directories so Skill writes to correct location.
-
-    Reference: https://github.com/cabinlab/claude-code-sdk-docker/blob/main/docs/AUTHENTICATION.md
     """
     env = os.environ.copy()
     if not caseops_llm_auth_uses_anthropic_api_key():
-        # Claude Code subscription mode: use pre-authenticated credentials file (~/.claude/.credentials.json)
-        # Don't pass ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN — Claude Code CLI will use the mounted credentials
+        # Claude Code subscription mode: prefer CLAUDE_CODE_OAUTH_TOKEN.
+        # Do not pass ANTHROPIC_API_KEY; it takes precedence over subscription auth.
         env.pop("ANTHROPIC_API_KEY", None)
         env.pop("OAUTH_TOKEN", None)
-        env.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
-        env["HOME"] = "/app"  # Claude CLI looks for credentials in $HOME/.claude/
 
     chrome = (env.get("CASEOPS_CLAUDE_BROWSER") or "").strip()
     if chrome:
@@ -633,10 +1100,30 @@ def _claude_process_env() -> dict[str, str]:
         if not (env.get("CLAUDE_CODE_CHROME_PATH") or "").strip():
             env["CLAUDE_CODE_CHROME_PATH"] = chrome
     # Pass instance-specific directories to Claude Skill
+    env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
     env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")
     env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
     if TEMP_ROOT:
         env["CASEOPS_TEMP_DIR"] = str(TEMP_ROOT)
+    metadata_dirs = _metadata_workspace_dirs()
+    env["CASEOPS_METADATA_ROOT"] = str(metadata_dirs["root"])
+    env["CASEOPS_METADATA_RAW_PROD_DIR"] = str(metadata_dirs["raw_prod"])
+    env["CASEOPS_METADATA_SANDBOX_WORK_DIR"] = str(metadata_dirs["sandbox_work"])
+    env["CASEOPS_METADATA_CONFIRMED_DIR"] = str(metadata_dirs["confirmed"])
+
+    # Keep Salesforce CLI subprocesses deterministic in noninteractive Docker runs.
+    # The CLI can otherwise spend time on telemetry/update/progress initialization
+    # before even returning from simple commands such as `sf --version`.
+    env.setdefault("SF_DISABLE_TELEMETRY", "true")
+    env.setdefault("SFDX_DISABLE_TELEMETRY", "true")
+    env.setdefault("SF_AUTOUPDATE_DISABLE", "true")
+    env.setdefault("SFDX_AUTOUPDATE_DISABLE", "true")
+    env.setdefault("SF_DISABLE_AUTOUPDATE", "true")
+    env.setdefault("SFDX_DISABLE_AUTOUPDATE", "true")
+    env.setdefault("SF_USE_PROGRESS_BAR", "false")
+    env.setdefault("SFDX_USE_PROGRESS_BAR", "false")
+    env.setdefault("SF_JSON_TO_STDOUT", "true")
+    env.setdefault("NO_COLOR", "1")
 
     # Pass skill paths (registered at startup, avoid find / loops in subprocesses)
     env["CASEOPS_SKILL_PATHS"] = json.dumps(SKILL_PATHS)
@@ -645,6 +1132,273 @@ def _claude_process_env() -> dict[str, str]:
         env[env_var] = skill_path
 
     return env
+
+
+def _json_from_stdout(stdout: str) -> dict[str, Any]:
+    """Parse JSON from CLI stdout that may include warning text before the object."""
+    text = (stdout or "").strip()
+    if not text:
+        return {}
+    if not text.startswith("{"):
+        idx = text.find("{")
+        if idx < 0:
+            return {}
+        text = text[idx:]
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+
+
+def _command_error(proc: subprocess.CompletedProcess[str]) -> str:
+    text = (proc.stderr or proc.stdout or "").strip()
+    return text[:500] if text else f"exit {proc.returncode}"
+
+
+def _decoded_timeout_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
+def _run_cli_command(
+    cmd: list[str],
+    *,
+    env: dict[str, str],
+    timeout: int,
+    retries: int = 0,
+) -> subprocess.CompletedProcess[str]:
+    """Run a CLI command and return a CompletedProcess even on timeout.
+
+    Preflight should report actionable failures, not crash with TimeoutExpired.
+    """
+    last_timeout: subprocess.TimeoutExpired | None = None
+    for attempt in range(retries + 1):
+        try:
+            return subprocess.run(
+                cmd,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired as exc:
+            last_timeout = exc
+            if attempt < retries:
+                continue
+    assert last_timeout is not None
+    stdout = _decoded_timeout_text(last_timeout.stdout)
+    stderr = _decoded_timeout_text(last_timeout.stderr)
+    message = f"Timed out after {timeout} seconds: {' '.join(cmd)}"
+    stderr = f"{stderr}\n{message}".strip() if stderr else message
+    return subprocess.CompletedProcess(cmd, 124, stdout=stdout, stderr=stderr)
+
+
+def _content_text_fragments(value: Any) -> list[str]:
+    """Extract readable text fragments from Claude stream-json content blocks."""
+    fragments: list[str] = []
+    if value is None:
+        return fragments
+    if isinstance(value, str):
+        if value.strip():
+            fragments.append(value)
+        return fragments
+    if isinstance(value, list):
+        for item in value:
+            fragments.extend(_content_text_fragments(item))
+        return fragments
+    if isinstance(value, dict):
+        for key in ("text", "content", "output", "stdout", "stderr"):
+            if key in value:
+                fragments.extend(_content_text_fragments(value.get(key)))
+    return fragments
+
+
+def _is_file_read_tool(tool: str, detail: str) -> bool:
+    tool_name = (tool or "").lower()
+    normalized = (detail or "").replace("\\", "/").lower()
+    if tool_name in {"read", "glob", "grep"}:
+        return True
+    read_commands = (
+        "cat ",
+        "type ",
+        "get-content",
+        "gc ",
+        "sed ",
+        "more ",
+        "less ",
+        "head ",
+        "tail ",
+    )
+    return tool_name in {"bash", "powershell", "shell"} and any(cmd in normalized for cmd in read_commands)
+
+
+def _emit_tool_result_text(run_key: str, text: str, *, suppress: bool, max_lines: int = 80) -> None:
+    if suppress:
+        return
+    lines = [line for line in text.splitlines() if line.strip()]
+    for line in lines[:max_lines]:
+        _log_emit_line(run_key, line)
+    if len(lines) > max_lines:
+        _log_emit_line(
+            run_key,
+            f"... [tool output truncated: {len(lines) - max_lines} additional line(s)]",
+        )
+
+
+def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
+    """Validate the exact runtime environment used for Claude Code subprocesses."""
+    settings = _read_env_file(Path(app.config["ENV_FILE_PATH"]) if app.config.get("ENV_FILE_PATH") else None)
+    prod_alias = _env_first("CASEOPS_PRODUCTION_READ_ORG", settings=settings)
+    sandbox_alias = _env_first("CASEOPS_SANDBOX_TARGET_ORG", settings=settings)
+    env = _claude_process_env()
+
+    result: dict[str, Any] = {
+        "ok": True,
+        "issues": [],
+        "home": env.get("HOME") or str(Path.home()),
+        "caseops_llm_auth": "api_key" if caseops_llm_auth_uses_anthropic_api_key() else "claude_code",
+        "claude": {"ok": False},
+        "sf": {
+            "ok": False,
+            "installed": False,
+            "prod": {"alias": prod_alias, "authenticated": False, "soql_ok": False},
+            "sandbox": {"alias": sandbox_alias, "authenticated": False, "soql_ok": False},
+        },
+    }
+
+    def fail(message: str) -> None:
+        result["ok"] = False
+        result["issues"].append(message)
+
+    if caseops_llm_auth_uses_anthropic_api_key():
+        api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+        result["claude"] = {"ok": bool(api_key), "mode": "api_key"}
+        if not api_key:
+            fail("ANTHROPIC_API_KEY is required when CASEOPS_LLM_AUTH=api_key.")
+    else:
+        claude_bin = shutil.which("claude") or "/usr/local/bin/claude"
+        version = _run_cli_command([claude_bin, "--version"], env=env, timeout=10, retries=1)
+        result["claude"]["installed"] = version.returncode == 0
+        result["claude"]["version"] = (version.stdout or version.stderr).strip()
+        if version.returncode != 0:
+            fail(f"Claude Code CLI is not available: {_command_error(version)}")
+        else:
+            auth = _run_cli_command([claude_bin, "auth", "status"], env=env, timeout=15, retries=1)
+            auth_json = _json_from_stdout(auth.stdout)
+            result["claude"]["authenticated"] = auth.returncode == 0
+            result["claude"]["auth_status"] = auth_json or None
+            result["claude"]["token_configured"] = bool((env.get("CLAUDE_CODE_OAUTH_TOKEN") or "").strip())
+            result["claude"]["ok"] = auth.returncode == 0
+            if auth.returncode != 0:
+                fail("Claude Code CLI is not authenticated in the pipeline runtime environment.")
+
+    sf_bin = shutil.which("sf")
+    if not sf_bin:
+        fail("Salesforce CLI (`sf`) is not installed or not on PATH.")
+        return result
+
+    result["sf"]["installed"] = True
+    result["sf"]["path"] = sf_bin
+    version = _run_cli_command([sf_bin, "--version"], env=env, timeout=15, retries=1)
+    result["sf"]["version_ok"] = version.returncode == 0
+    result["sf"]["version"] = (version.stdout or version.stderr).strip()
+    if version.returncode != 0:
+        # Version is useful diagnostics, but org display + SOQL are the real
+        # runtime gates. Do not abort the pipeline only because version startup
+        # was slow.
+        result["sf"]["version_warning"] = _command_error(version)
+
+    def check_org(role: str, alias: str) -> None:
+        role_status = result["sf"][role]
+        if not alias:
+            fail(f"Missing {role} Salesforce org alias in .env.jira.")
+            return
+
+        display = _run_cli_command(
+            [sf_bin, "org", "display", "--target-org", alias, "--json"],
+            env=env,
+            timeout=25,
+            retries=1,
+        )
+        role_status["display_returncode"] = display.returncode
+        if display.returncode != 0:
+            role_status["error"] = _command_error(display)
+            fail(f"Salesforce {role} org `{alias}` is not authenticated in the pipeline runtime environment.")
+            return
+
+        data = _json_from_stdout(display.stdout)
+        org = data.get("result", {}) if isinstance(data, dict) else {}
+        role_status.update({
+            "authenticated": True,
+            "username": org.get("username", ""),
+            "orgId": org.get("id", ""),
+            "instanceUrl": org.get("instanceUrl", ""),
+        })
+
+        if run_soql:
+            query = _run_cli_command(
+                [
+                    sf_bin,
+                    "data",
+                    "query",
+                    "--target-org",
+                    alias,
+                    "--query",
+                    "SELECT Id FROM Organization LIMIT 1",
+                    "--json",
+                ],
+                env=env,
+                timeout=30,
+                retries=1,
+            )
+            role_status["soql_returncode"] = query.returncode
+            role_status["soql_ok"] = query.returncode == 0
+            if query.returncode != 0:
+                role_status["soql_error"] = _command_error(query)
+                fail(f"Salesforce {role} org `{alias}` failed SOQL preflight in the pipeline runtime environment.")
+
+    check_org("prod", prod_alias)
+    check_org("sandbox", sandbox_alias)
+    result["sf"]["ok"] = (
+        result["sf"]["installed"]
+        and result["sf"]["prod"]["authenticated"]
+        and result["sf"]["sandbox"]["authenticated"]
+        and (not run_soql or (result["sf"]["prod"]["soql_ok"] and result["sf"]["sandbox"]["soql_ok"]))
+    )
+    return result
+
+
+def _emit_runtime_preflight_or_stop(run_key: str, run_soql: bool = True) -> bool:
+    """Log and enforce runtime preflight before Claude-backed pipeline work starts."""
+    _log_emit_line(run_key, "Preflight: validating Claude runtime, Salesforce CLI auth, and SOQL access")
+    try:
+        preflight = _collect_runtime_preflight(run_soql=run_soql)
+    except Exception as e:
+        _log_emit_line(run_key, f"ERROR: Runtime preflight failed unexpectedly: {type(e).__name__}: {e}")
+        return False
+
+    home = preflight.get("home") or ""
+    sf_status = preflight.get("sf", {})
+    prod = preflight.get("sf", {}).get("prod", {})
+    sandbox = preflight.get("sf", {}).get("sandbox", {})
+    _log_emit_line(run_key, f"Preflight: subprocess HOME={home}")
+    if sf_status.get("version_warning"):
+        _log_emit_line(run_key, f"Preflight warning: sf --version did not complete cleanly: {sf_status.get('version_warning')}")
+    _log_emit_line(run_key, f"Preflight: Production org `{prod.get('alias')}` authenticated={bool(prod.get('authenticated'))} soql={bool(prod.get('soql_ok')) if run_soql else 'skipped'}")
+    _log_emit_line(run_key, f"Preflight: Sandbox org `{sandbox.get('alias')}` authenticated={bool(sandbox.get('authenticated'))} soql={bool(sandbox.get('soql_ok')) if run_soql else 'skipped'}")
+
+    if preflight.get("ok"):
+        _log_emit_line(run_key, "Preflight: OK")
+        return True
+
+    _log_emit_line(run_key, "ERROR: CaseOps runtime preflight failed. Pipeline not started.")
+    for issue in preflight.get("issues", []):
+        _log_emit_line(run_key, f"       - {issue}")
+    _log_emit_line(run_key, "       Fix Settings/auth first; do not use Salesforce frontdoor links as an API fallback.")
+    return False
 
 
 def _salesforce_browser_prompt_section() -> str:
@@ -661,11 +1415,10 @@ def _salesforce_browser_prompt_section() -> str:
         return ""
 
     lines = [
-        "## Salesforce in the browser (this CaseOps / Claude run)",
-        "If you need the Salesforce UI in a browser for this task:",
-        "**Permission model (mandatory):** The Production frontdoor session is **read-only** — investigate, query, and view only; "
-        "do **not** create, update, delete, or deploy **anything** in Production. The Sandbox frontdoor session may use **full CRUD** "
-        "for metadata deploy, test fixes, and record operations required by the playbook.",
+        "## Salesforce browser access (visual-only fallback)",
+        "Default Salesforce access is `sf` CLI plus SOQL. Use frontdoor / magic links only when visual UI inspection is absolutely necessary.",
+        "**Do not use frontdoor session IDs as API bearer tokens.** Frontdoor links authenticate a browser UI session; they are not the API credential for `curl`, SOQL, metadata retrieval, deploy, or test execution.",
+        "**Permission model (mandatory):** Production UI access is read-only. Sandbox UI access may be used for visual testing or UI-only actions after CLI/SOQL options are exhausted.",
     ]
     if chrome:
         lines.append(
@@ -675,20 +1428,20 @@ def _salesforce_browser_prompt_section() -> str:
         )
     if generic:
         lines.append(
-            "- Open this **session / frontdoor link** first in that Chrome Dev session when the target org is not specified below "
+            "- Open this **session / frontdoor link** in Chrome Dev only for visual inspection when the target org is not specified below "
             "(do not paste into Jira, git commits, or customer-facing artifacts):"
         )
         lines.append(generic)
     if prod_magic:
         lines.append(
-            f"- **Production ({prod_label})** via `CASEOPS_PRODUCTION_MAGIC_LINK` — **read-only**: use this session only for investigation "
-            "(view/query). No Production creates, edits, deletes, or deployments. Open this link first in Chrome Dev for prod UI:"
+            f"- **Production ({prod_label})** via `CASEOPS_PRODUCTION_MAGIC_LINK` — **visual read-only only**. "
+            "Use `sf` CLI/SOQL for queries and metadata inspection. No Production creates, edits, deletes, deployments, or API calls with the frontdoor SID:"
         )
         lines.append(prod_magic)
     if sand_magic:
         lines.append(
-            f"- **Sandbox ({sand_label})** via `CASEOPS_SANDBOX_MAGIC_LINK` — **full CRUD** allowed: deploy, test, and change records/metadata "
-            "as the playbook requires. Open this link first in Chrome Dev for sandbox UI:"
+            f"- **Sandbox ({sand_label})** via `CASEOPS_SANDBOX_MAGIC_LINK` — visual UI fallback only. "
+            "Use `sf project deploy`, `sf data query`, Apex tests, and other CLI commands for investigation/deploy/test unless a browser-only action is required:"
         )
         lines.append(sand_magic)
     if not has_magic:
@@ -708,7 +1461,6 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
     try:
         env = os.environ.copy()
         env["COLUMNS"] = "999"  # Prevent terminal wrapping in subprocess output
-        env["HOME"] = "/app"  # Claude CLI looks for credentials in $HOME/.claude/
         env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")  # Instance-specific Jira output dir
         env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
         if TEMP_ROOT:
@@ -893,20 +1645,17 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
         )
         _log_emit_line(run_key, f"Claude binary: {claude_bin}")
 
-        # Check for credentials file availability before invoking CLI
+        # Check auth availability before invoking CLI. Do not log token values.
         if not caseops_llm_auth_uses_anthropic_api_key():
-            cred_file = Path("/app") / ".claude" / ".credentials.json"  # Container path; fallback to home if not found
-            if not cred_file.exists():
-                cred_file = Path.home() / ".claude" / ".credentials.json"
-            if cred_file.exists():
-                _log_emit_line(run_key, f"Credentials found: {cred_file}")
+            if (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or "").strip():
+                _log_emit_line(run_key, "Claude Code OAuth token configured: CLAUDE_CODE_OAUTH_TOKEN")
             else:
-                _log_emit_line(run_key, f"WARNING: Credentials file not found at {cred_file}")
-                _log_emit_line(run_key, "Claude Code CLI will attempt to authenticate but may fail with 401.")
+                _log_emit_line(run_key, "WARNING: Claude Code auth token not configured.")
+                _log_emit_line(run_key, "Run /setup/claude-login and paste output from `claude setup-token`.")
 
         env = _claude_process_env()
         env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
-        _log_emit_line(run_key, f"Invoking: {' '.join(cmd[:3])}...")
+        _log_emit_line(run_key, f"Invoking: {claude_bin} -p [prompt redacted] --output-format stream-json ...")
         proc = subprocess.Popen(
             cmd,
             env=env,
@@ -922,6 +1671,7 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
         _log_emit_line(run_key, f"Process started (PID: {proc.pid})")
         assert proc.stdout
         assistant_text = []
+        tool_uses: dict[str, tuple[str, str]] = {}
         for raw in proc.stdout:
             raw = raw.strip()
             if not raw:
@@ -949,7 +1699,26 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                         inp = block.get("input", {})
                         detail = inp.get("command") or inp.get("file_path") or inp.get("path") or ""
                         detail = str(detail).replace("\r", " ").replace("\n", " ").strip()
+                        tool_id = str(block.get("id") or "")
+                        if tool_id:
+                            tool_uses[tool_id] = (str(tool), detail)
                         _log_emit_line(run_key, f"[{tool}]{' ' + detail if detail else ''}")
+
+            elif etype == "user":
+                # Claude Code reports tool results as user/tool_result stream events.
+                # Keep command/sub-agent output visible for progress, but avoid dumping
+                # file contents and playbooks into the operator log.
+                for block in event.get("message", {}).get("content", []):
+                    tool = ""
+                    detail = ""
+                    if isinstance(block, dict):
+                        tool_id = str(block.get("tool_use_id") or "")
+                        tool, detail = tool_uses.get(tool_id, ("", ""))
+                    suppress_result = _is_file_read_tool(tool, detail)
+                    for text in _content_text_fragments(block):
+                        if issue_key and not suppress_result:
+                            assistant_text.append(text)
+                        _emit_tool_result_text(run_key, text, suppress=suppress_result)
 
             elif etype == "result":
                 subtype = event.get("subtype", "")
@@ -1109,6 +1878,10 @@ def _save_claude_output(content: str, key: str) -> None:
 
 def _stream_claude_proc(prompt: str, run_key: str, issue_key: str | None = None) -> None:
     try:
+        if issue_key:
+            _log_emit_run_start(run_key, issue_key)
+        if not _emit_runtime_preflight_or_stop(run_key):
+            return
         _do_stream_claude(prompt, run_key, issue_key)
     finally:
         with _state_lock:
@@ -1122,13 +1895,14 @@ def _stream_claude_proc(prompt: str, run_key: str, issue_key: str | None = None)
 
 
 def _stream_full_issue(key: str, run_key: str) -> None:
-    """Run full CaseOps fix pipeline via jira-salesforce-fix-pipeline Skill.
+    """Run full CaseOps fix pipeline via the mounted jira-salesforce-fix-pipeline playbook.
 
-    This invokes the Skill directly (Steps 1-12 orchestration including sub-agents).
+    This invokes Claude Code with direct file-path instructions for Steps 1-12 orchestration.
     Do NOT call deprecated run_pipeline.py — that calls removed agents.
     """
     try:
-        _log_emit_line(run_key, f"-- Processing {key} via jira-salesforce-fix-pipeline Skill --")
+        _log_emit_run_start(run_key, key)
+        _log_emit_line(run_key, f"-- Processing {key} via jira-salesforce-fix-pipeline playbook --")
 
         # Safety check: CASEOPS_SANDBOX_TARGET_ORG must be set before Step 9
         sandbox_target = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
@@ -1136,6 +1910,8 @@ def _stream_full_issue(key: str, run_key: str) -> None:
             _log_emit_line(run_key, "ERROR: CASEOPS_SANDBOX_TARGET_ORG not set in .env.jira")
             _log_emit_line(run_key, "       Step 9 (deploy+test) requires an allowlisted Sandbox org.")
             _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env.jira and retry.")
+            return
+        if not _emit_runtime_preflight_or_stop(run_key):
             return
 
         # Safety check: if claude_code mode, verify `claude` CLI is available
@@ -1146,7 +1922,7 @@ def _stream_full_issue(key: str, run_key: str) -> None:
             except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
                 _log_emit_line(run_key, "ERROR: `claude` CLI not found or not responding")
                 _log_emit_line(run_key, "       CASEOPS_LLM_AUTH=claude_code requires Claude Code installed.")
-                _log_emit_line(run_key, "       Verify: `claude --version` runs, and `claude login` succeeded.")
+                _log_emit_line(run_key, "       Verify: `claude --version` runs, then use `/setup/claude-login` with `claude setup-token`.")
                 return
 
         # Safety check: if api_key mode, verify API key is set
@@ -1156,11 +1932,15 @@ def _stream_full_issue(key: str, run_key: str) -> None:
                 _log_emit_line(run_key, "WARNING: CASEOPS_LLM_AUTH=api_key but ANTHROPIC_API_KEY not set")
                 _log_emit_line(run_key, "         Sub-agents (Steps 3–10) will not execute. Text-only response only.")
 
+        row = next((r for r in _read_manifest() if r.get("Key") == key), {})
+        resume_plan, resume_path, resume_block = _prepare_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
+        _log_resume_plan_summary(run_key, resume_plan, resume_path)
         prompt = _build_claude_prompt(
             key,
             "Run the full CaseOps fix pipeline for this issue through completion of investigation, "
             "internal notes, and Jira customer message (and any sandbox/escalation steps the playbook "
-            "requires for this issue). Use the jira-salesforce-fix-pipeline Skill entrypoint.",
+            "requires for this issue). Read the mounted playbook files directly; do not invoke a slash-skill.",
+            resume_block,
         )
         _do_stream_claude(prompt, run_key, key)
     finally:
@@ -1174,12 +1954,13 @@ def _stream_full_issue(key: str, run_key: str) -> None:
 
 
 def _stream_reprocess_issue(key: str, run_key: str) -> None:
-    """Reprocess single issue without Jira sync via jira-salesforce-fix-pipeline Skill.
+    """Reprocess single issue without Jira sync via the mounted jira-salesforce-fix-pipeline playbook.
 
     Useful for re-running a single issue that failed or needs investigation updates.
     """
     try:
-        _log_emit_line(run_key, f"-- Reprocessing {key} (no sync) via jira-salesforce-fix-pipeline Skill --")
+        _log_emit_run_start(run_key, f"{key} reprocess")
+        _log_emit_line(run_key, f"-- Reprocessing {key} (no sync) via jira-salesforce-fix-pipeline playbook --")
 
         # Safety check: CASEOPS_SANDBOX_TARGET_ORG must be set before Step 9
         sandbox_target = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
@@ -1187,6 +1968,8 @@ def _stream_reprocess_issue(key: str, run_key: str) -> None:
             _log_emit_line(run_key, "ERROR: CASEOPS_SANDBOX_TARGET_ORG not set in .env.jira")
             _log_emit_line(run_key, "       Step 9 (deploy+test) requires an allowlisted Sandbox org.")
             _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env.jira and retry.")
+            return
+        if not _emit_runtime_preflight_or_stop(run_key):
             return
 
         # Safety check: if claude_code mode, verify `claude` CLI is available
@@ -1197,7 +1980,7 @@ def _stream_reprocess_issue(key: str, run_key: str) -> None:
             except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
                 _log_emit_line(run_key, "ERROR: `claude` CLI not found or not responding")
                 _log_emit_line(run_key, "       CASEOPS_LLM_AUTH=claude_code requires Claude Code installed.")
-                _log_emit_line(run_key, "       Verify: `claude --version` runs, and `claude login` succeeded.")
+                _log_emit_line(run_key, "       Verify: `claude --version` runs, then use `/setup/claude-login` with `claude setup-token`.")
                 return
 
         # Safety check: if api_key mode, verify API key is set
@@ -1207,10 +1990,14 @@ def _stream_reprocess_issue(key: str, run_key: str) -> None:
                 _log_emit_line(run_key, "WARNING: CASEOPS_LLM_AUTH=api_key but ANTHROPIC_API_KEY not set")
                 _log_emit_line(run_key, "         Sub-agents (Steps 3–10) will not execute. Text-only response only.")
 
+        row = next((r for r in _read_manifest() if r.get("Key") == key), {})
+        resume_plan, resume_path, resume_block = _prepare_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
+        _log_resume_plan_summary(run_key, resume_plan, resume_path)
         prompt = _build_claude_prompt(
             key,
             "Reprocess the CaseOps fix pipeline for this issue without re-syncing from Jira. "
-            "Use the jira-salesforce-fix-pipeline Skill entrypoint with 'reprocess' mode.",
+            "Read the mounted jira-salesforce-fix-pipeline playbook files directly; do not invoke a slash-skill.",
+            resume_block,
         )
         _do_stream_claude(prompt, run_key, key)
     finally:
@@ -1223,9 +2010,9 @@ def _stream_reprocess_issue(key: str, run_key: str) -> None:
 
 
 def _stream_global_skill(instruction: str, run_key: str) -> None:
-    """Run global CaseOps pipeline via jira-salesforce-fix-pipeline Skill (full or reprocess mode).
+    """Run global CaseOps pipeline via the mounted jira-salesforce-fix-pipeline playbook.
 
-    This invokes the Skill for global actions like "full" (sync + process all)
+    This invokes Claude Code for global actions like "full" (sync + process all)
     or "reprocess" (process existing without sync).
     """
     try:
@@ -1238,6 +2025,8 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
             _log_emit_line(run_key, "       Step 9 (deploy+test) requires an allowlisted Sandbox org.")
             _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env.jira and retry.")
             return
+        if not _emit_runtime_preflight_or_stop(run_key):
+            return
 
         # Safety check: if claude_code mode, verify `claude` CLI is available
         if not caseops_llm_auth_uses_anthropic_api_key():
@@ -1247,7 +2036,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
             except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
                 _log_emit_line(run_key, "ERROR: `claude` CLI not found or not responding")
                 _log_emit_line(run_key, "       CASEOPS_LLM_AUTH=claude_code requires Claude Code installed.")
-                _log_emit_line(run_key, "       Verify: `claude --version` runs, and `claude login` succeeded.")
+                _log_emit_line(run_key, "       Verify: `claude --version` runs, then use `/setup/claude-login` with `claude setup-token`.")
                 return
 
         # Safety check: if api_key mode, verify API key is set
@@ -1258,9 +2047,18 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                 _log_emit_line(run_key, "         Sub-agents (Steps 3–10) will not execute. Text-only response only.")
 
         prompt = (
-            f"Run the jira-salesforce-fix-pipeline Skill with instruction:\n\n{instruction}\n\n"
-            f"Use the Skill entrypoint at skills/jira-salesforce-fix-pipeline/SKILL.md and read "
-            f"ORCHESTRATOR-PROMPT.md for decision logic."
+            f"Run the CaseOps jira-salesforce-fix-pipeline playbook with instruction:\n\n{instruction}\n\n"
+            f"Do not invoke a slash-skill. Read the mounted playbook entrypoint at "
+            f"skills/jira-salesforce-fix-pipeline/SKILL.md and read "
+            f"ORCHESTRATOR-PROMPT.md for decision logic.\n\n"
+            f"At the start of processing each issue, emit `Run started: <ISSUE_KEY> at YYYY-MM-DD HH:MM:SS <TZ>`.\n\n"
+            f"Operator log hygiene: do not echo, restate, or summarize the playbook, this prompt, "
+            f"skill files, or reference files into stdout. Stream the actual run only: step markers, "
+            f"concise status, commands/tools used, files written, test results, and blockers.\n\n"
+            f"Resume efficiency: for each active issue, inspect existing artifacts first and skip completed "
+            f"checkpoints unless Jira source changed after the artifact or downstream evidence invalidates it. "
+            f"Do not reread or rewrite full existing artifacts just to restate them; read targeted sections only "
+            f"when a pending/stale step requires exact details."
         )
         _do_stream_claude(prompt, run_key, issue_key=None)
     finally:
@@ -1270,12 +2068,14 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
         _log_emit_done(run_key)
 
 
-def _build_claude_prompt(key: str, instruction: str) -> str:
+def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = None) -> str:
     """Build a context-rich prompt for CaseOps LLM runs (API or Claude Code CLI)."""
     issues = _read_manifest()
     row = next((r for r in issues if r.get("Key") == key), {})
     summary = row.get("Summary", "")
     status  = row.get("Status", "")
+    if resume_block is None:
+        _resume_plan, _resume_path, resume_block = _prepare_resume_plan(key, status, row.get("Updated", ""))
 
     existing = []
     for ftype, rel in FILE_LOCATIONS.items():
@@ -1301,9 +2101,10 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
         f"Issue: {key} — {summary}\n"
         f"Status: {status}\n\n"
         f"Existing pipeline files:\n{files_block}\n\n"
+        f"{resume_block}\n\n"
         f"## Playbook (mandatory — read first)\n"
-        f"A Claude Code stub may exist at .claude/skills/jira-salesforce-fix-pipeline/SKILL.md; "
-        f"the entrypoint is the file below. Read SKILL.md fully, then read "
+        f"Do not invoke `/jira-salesforce-fix-pipeline` or a Claude Code Skill tool in this subprocess. "
+        f"The entrypoint is the mounted file below. Read SKILL.md fully, then read "
         f"`skills/jira-salesforce-fix-pipeline/references/workflow.md` end-to-end (authoritative steps 1–11), "
         f"then execute for issue {key}:\n"
         f"  {skill_line}\n"
@@ -1319,28 +2120,55 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
         f"- Do NOT read from `ROOT/.env.jira` (this is another instance's config)\n"
         f"- Environment variable available: `CASEOPS_JIRA_ENV_FILE={env_file_path}`\n"
         f"- Example: `source {env_file_relative}` or pass it explicitly to commands that need Jira/Salesforce config\n\n"
-        f"## Instance Metadata & Deploy Directory\n"
-        f"**CRITICAL for multi-instance deployments:** All metadata retrieval and deploy operations must use:\n"
-        f"- Instance-isolated temp directory: `${{CASEOPS_OUTPUTS_DIR}}/../temp-retrieve`\n"
-        f"- Environment variable: `CASEOPS_OUTPUTS_DIR={str(OUTPUTS)}`\n"
-        f"- When using `sf project retrieve` or `sf project deploy`, ALWAYS pass:\n"
-        f"  `--output-dir \"${{CASEOPS_OUTPUTS_DIR}}/../temp-retrieve\"`\n"
-        f"- This prevents cross-instance metadata contamination (instance2 retrieving instance1's org metadata, etc.)\n"
-        f"- Sub-agents spawned in Steps 5, 6, 9 must reference this path (see sub-agent-prompts.md)\n\n"
+        f"## Salesforce Metadata Workspace\n"
+        f"**CRITICAL for multi-instance deployments and clean rollback:** Do not use root-level `temp*`, "
+        f"`retrieve*`, `deploy*`, or `metadata*` directories. Use this instance-scoped workspace contract:\n"
+        f"- Raw Production retrievals, read-only: `${{CASEOPS_METADATA_RAW_PROD_DIR}}/{key}/`\n"
+        f"- Sandbox solution attempts: `${{CASEOPS_METADATA_SANDBOX_WORK_DIR}}/{key}/attempt-001/`, "
+        f"`attempt-002/`, etc.\n"
+        f"- Confirmed packages: `${{CASEOPS_METADATA_CONFIRMED_DIR}}/{key}/support-owned/` or "
+        f"`${{CASEOPS_METADATA_CONFIRMED_DIR}}/{key}/engineering-proposal/`\n"
+        f"- Environment variables available:\n"
+        f"  - `CASEOPS_METADATA_ROOT={str(_metadata_workspace_dirs()['root'])}`\n"
+        f"  - `CASEOPS_METADATA_RAW_PROD_DIR={str(_metadata_workspace_dirs()['raw_prod'])}`\n"
+        f"  - `CASEOPS_METADATA_SANDBOX_WORK_DIR={str(_metadata_workspace_dirs()['sandbox_work'])}`\n"
+        f"  - `CASEOPS_METADATA_CONFIRMED_DIR={str(_metadata_workspace_dirs()['confirmed'])}`\n"
+        f"- Production metadata is read-only reference material. Never edit files under "
+        f"`CASEOPS_METADATA_RAW_PROD_DIR`.\n"
+        f"- Before each Sandbox deploy attempt, retrieve the current Sandbox baseline for every component "
+        f"you will change into `attempt-N/baseline-sandbox/`, place candidate metadata in "
+        f"`attempt-N/candidate/`, and keep rollback metadata in `attempt-N/revert/`.\n"
+        f"- If an attempt is not viable, revert the Sandbox to the captured baseline before starting the "
+        f"next attempt, then record the revert command/result in the test report.\n"
+        f"- Maintain `${{CASEOPS_METADATA_SANDBOX_WORK_DIR}}/{key}/metadata-workspace.json` with "
+        f"attempt number, components touched, baseline path, candidate path, revert status, and confirmed "
+        f"package path when applicable.\n"
+        f"- Sub-agents spawned in Steps 5, 6, and 9 must follow this workspace contract "
+        f"(see sub-agent-prompts.md).\n\n"
         f"## Instruction\n"
         f"{instruction}\n\n"
+        f"## Live Progress Requirement\n"
+        f"- Execute the pipeline in this Claude Code process. Do not start background work and say you will be notified later.\n"
+        f"- Before each numbered pipeline step, print a standalone progress line exactly like `STEP_N {key}`.\n"
+        f"- For Step 11 print `STEP_11 __summary__`; for Step 12 print `STEP_12 __complete__`.\n"
+        f"- Continue streaming concise status after each step completes, including file paths written and blockers.\n\n"
+        f"## Operator Log Hygiene\n"
+        f"- Do not echo, restate, or summarize the playbook, this prompt, skill files, or reference files into stdout.\n"
+        f"- The operator log should show the actual run: step markers, concise status, commands/tools used, files written, test results, and blockers.\n"
+        f"- Keep playbook analysis internal unless a playbook conflict blocks the run.\n\n"
         f"## Salesforce Queries: Use sf CLI + SOQL (DEFAULT)\n"
         f"**For metadata queries, field inspection, permission checks, and configuration verification:**\n"
-        f"1. **Prefer `sf` CLI commands** (read-only, fast, no browser needed):\n"
-        f"   - `sf org open` (open/view in browser only when UI interaction needed)\n"
+        f"1. **Use `sf` CLI commands** (read-only, fast, no browser needed):\n"
+        f"   - `sf org display --target-org <alias>` and `sf org list` to verify auth\n"
         f"   - `sf project retrieve start --metadata [type]` (pull metadata)\n"
         f"   - `sf sobject get --sobject [type]` (inspect objects/fields)\n"
         f"2. **Use SOQL queries** via `sf data query` to inspect data, field values, record types, assignments\n"
-        f"3. **Never use Playwright or browser automation** for metadata queries, field inspection, or permission checks\n"
-        f"4. **Only open browser** for:\n"
+        f"3. **Never use Playwright, browser automation, frontdoor links, or frontdoor SIDs** for metadata queries, SOQL/API access, field inspection, permission checks, retrieval, deploy, or Apex tests\n"
+        f"4. **Only open browser / frontdoor links for:**\n"
         f"   - Visual verification (testing layouts, field placement, visual tests)\n"
         f"   - UI clicks (when automation can't use CLI, e.g., custom buttons, flow runs)\n"
         f"   - Human-readable confirmation\n"
+        f"5. If `sf` reports no authenticated orgs, treat that as a CaseOps/container auth configuration blocker. Do **not** test frontdoor SIDs with `curl` and do not conclude Salesforce API is unreachable from frontdoor 401s.\n"
         f"\n{_salesforce_browser_prompt_section()}"
         f"## CaseOps Output Files (update these when your task is complete)\n"
         f"You can read and write these files directly for issue {key}:\n"
@@ -1361,7 +2189,7 @@ def _build_claude_prompt(key: str, instruction: str) -> str:
         f"- If you cannot complete a task, update the relevant file to document progress and blockers\n"
         f"\n"
         f"## Rules\n"
-        f"- Do not ask the user to pick a workflow or skill; the playbook above is the workflow.\n"
+        f"- Do not ask the user to pick a workflow; the playbook above is the workflow.\n"
         f"- Proceed with the next pipeline steps implied by the playbook and by which files "
         f"already exist for {key} in `{outputs_dir_relative}/`.\n"
         f"- Create or update artifacts in `{outputs_dir_relative}/` that this issue needs (paths as shown above).\n"
@@ -1595,7 +2423,7 @@ def _latest_issue_summary_path() -> Path | None:
 
 def _claude_prompt(key: str, summary: str) -> str:
     return (
-        f'Process {key} through the jira-salesforce-fix-pipeline skill.\n\n'
+        f'Process {key} through the mounted jira-salesforce-fix-pipeline playbook files. Do not invoke a slash-skill.\n\n'
         f'Issue: {summary}'
     )
 
@@ -1784,10 +2612,10 @@ def api_run():
         ]
     elif action == "reprocess":
         use_global_skill = True
-        instruction = "Run the full CaseOps fix pipeline: reprocess all active issues without re-syncing from Jira. Use the jira-salesforce-fix-pipeline Skill with 'reprocess' mode."
+        instruction = "Run the full CaseOps fix pipeline: reprocess all active issues without re-syncing from Jira. Use the mounted jira-salesforce-fix-pipeline playbook files in reprocess mode; do not invoke a slash-skill."
     elif action == "full":
         use_global_skill = True
-        instruction = "Run the full CaseOps fix pipeline: sync all issues from Jira and process all active issues through completion. Use the jira-salesforce-fix-pipeline Skill with 'full' mode."
+        instruction = "Run the full CaseOps fix pipeline: sync all issues from Jira and process all active issues through completion. Use the mounted jira-salesforce-fix-pipeline playbook files in full mode; do not invoke a slash-skill."
     elif action == "full_issue" and key:
         use_full_issue = True
     elif action == "reprocess_issue" and key:
@@ -1816,7 +2644,7 @@ def api_run():
     elif use_global_skill:
         t = threading.Thread(target=_stream_global_skill, args=(instruction, run_key), daemon=True)
     elif use_claude_cli:
-        t = threading.Thread(target=_stream_claude_proc, args=(prompt, run_key), daemon=True)
+        t = threading.Thread(target=_stream_claude_proc, args=(prompt, run_key, key), daemon=True)
     else:
         t = threading.Thread(target=_stream_proc, args=(cmd, run_key), daemon=True)
     t.start()
@@ -2066,10 +2894,7 @@ def api_issue_mark_viewed(key: str):
 
 @app.route("/api/canned-messages", methods=["GET"])
 def api_canned_messages():
-    # Try instance-specific file first, fall back to shared default (supports per-instance customization)
-    workspace = os.environ.get("CASEOPS_WORKSPACE", "default")
-    instance_messages = ROOT / workspace / "canned-messages.json" if workspace != "default" else None
-    messages_file = instance_messages if instance_messages and instance_messages.exists() else ROOT / "canned-messages.json"
+    messages_file, _ = _active_canned_messages_file()
 
     if not messages_file.exists():
         return jsonify([])
@@ -2087,10 +2912,7 @@ def api_send_canned_message(key: str):
     if not message_id:
         return jsonify({"error": "message_id required"}), 400
 
-    # Try instance-specific file first, fall back to shared default (supports per-instance customization)
-    workspace = os.environ.get("CASEOPS_WORKSPACE", "default")
-    instance_messages = ROOT / workspace / "canned-messages.json" if workspace != "default" else None
-    messages_file = instance_messages if instance_messages and instance_messages.exists() else ROOT / "canned-messages.json"
+    messages_file, _ = _active_canned_messages_file()
 
     if not messages_file.exists():
         return jsonify({"error": "No canned messages configured"}), 400
@@ -2494,17 +3316,19 @@ def api_test_jira():
 @app.route("/api/settings/canned-messages", methods=["GET"])
 def api_settings_get_canned_messages():
     """Get current canned messages (instance-specific or default)."""
-    workspace = app.config.get("WORKSPACE", "default")
-    instance_messages = ROOT / workspace / "canned-messages.json" if workspace != "default" else None
-    messages_file = instance_messages if instance_messages and instance_messages.exists() else ROOT / "canned-messages.json"
+    messages_file, is_custom = _active_canned_messages_file()
 
     try:
         content = messages_file.read_text(encoding="utf-8")
         json.loads(content)  # Validate JSON
+        try:
+            path = str(messages_file.relative_to(ROOT))
+        except ValueError:
+            path = str(messages_file)
         return jsonify({
             "content": content,
-            "is_custom": instance_messages and instance_messages.exists(),
-            "path": str(messages_file.relative_to(ROOT))
+            "is_custom": is_custom,
+            "path": path
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -2512,7 +3336,7 @@ def api_settings_get_canned_messages():
 
 @app.route("/api/settings/canned-messages", methods=["POST"])
 def api_settings_set_canned_messages():
-    """Update canned messages (saves to instance-specific file)."""
+    """Update canned messages in persistent mounted storage."""
     data = request.get_json(silent=True) or {}
     content = data.get("content", "").strip()
 
@@ -2525,22 +3349,21 @@ def api_settings_set_canned_messages():
     except json.JSONDecodeError as e:
         return jsonify({"error": f"Invalid JSON: {str(e)}"}), 400
 
-    workspace = app.config.get("WORKSPACE", "default")
-    if workspace == "default":
-        messages_file = ROOT / "canned-messages.json"
-    else:
-        messages_file = ROOT / workspace / "canned-messages.json"
-
-    # Validate instance routing
-    _validate_instance_path(messages_file, "write")
+    messages_file = _persistent_canned_messages_file()
 
     try:
         messages_file.parent.mkdir(parents=True, exist_ok=True)
+        messages_file.parent.chmod(0o775)
         messages_file.write_text(content, encoding="utf-8")
+        messages_file.chmod(0o664)
+        try:
+            path = str(messages_file.relative_to(ROOT))
+        except ValueError:
+            path = str(messages_file)
         return jsonify({
             "ok": True,
-            "path": str(messages_file.relative_to(ROOT)),
-            "is_custom": workspace != "default"
+            "path": path,
+            "is_custom": True
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -2548,17 +3371,21 @@ def api_settings_set_canned_messages():
 
 @app.route("/api/settings/canned-messages/reset", methods=["POST"])
 def api_settings_reset_canned_messages():
-    """Reset to default canned messages (delete instance-specific file)."""
-    workspace = app.config.get("WORKSPACE", "default")
-    if workspace == "default":
-        return jsonify({"error": "Cannot reset default instance"}), 400
-
-    messages_file = ROOT / workspace / "canned-messages.json"
+    """Reset to default canned messages by deleting custom overrides."""
+    messages_files = [_persistent_canned_messages_file()]
+    legacy = _legacy_canned_messages_file()
+    if legacy:
+        messages_files.append(legacy)
 
     try:
-        if messages_file.exists():
-            messages_file.unlink()
-        return jsonify({"ok": True, "message": "Reset to default messages"})
+        deleted = []
+        for messages_file in messages_files:
+            if messages_file.exists():
+                messages_file.unlink()
+                deleted.append(str(messages_file))
+        if not (ROOT / "canned-messages.json").exists():
+            return jsonify({"error": "Default canned-messages.json is missing"}), 500
+        return jsonify({"ok": True, "message": "Reset to default messages", "deleted": deleted})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -2566,19 +3393,22 @@ def api_settings_reset_canned_messages():
 @app.route("/api/settings/status", methods=["GET"])
 def api_settings_status():
     """Return status of Claude CLI, sf CLI, and Salesforce orgs."""
+    env_file_path = app.config.get("ENV_FILE_PATH")
+    settings = _read_env_file(Path(env_file_path) if env_file_path else None)
+    prod_alias = _env_first("CASEOPS_PRODUCTION_READ_ORG", settings=settings)
+    sand_alias = _env_first("CASEOPS_SANDBOX_TARGET_ORG", settings=settings)
+
     status = {
-        "claude": {"installed": False},
+        "claude": {"installed": False, "authenticated": False, "token_configured": False},
         "sf_installed": False,
-        "sf_prod": {"authenticated": False},
-        "sf_sandbox": {"authenticated": False},
+        "sf_prod": {"authenticated": False, "alias": prod_alias},
+        "sf_sandbox": {"authenticated": False, "alias": sand_alias},
         "cci_installed": False,
         "cci_prod": {"authenticated": False},
         "cci_sandbox": {"authenticated": False},
     }
 
     use_cci = os.environ.get("CASEOPS_USE_CCI_FOR_AUTH", "false").lower() == "true"
-    prod_alias = os.environ.get("CASEOPS_PRODUCTION_READ_ORG", "")
-    sand_alias = os.environ.get("CASEOPS_SANDBOX_TARGET_ORG", "")
 
     # Check Claude
     try:
@@ -2586,6 +3416,24 @@ def api_settings_status():
         if result.returncode == 0:
             status["claude"]["installed"] = True
             status["claude"]["version"] = result.stdout.strip()
+            status["claude"]["token_configured"] = bool(
+                (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or "").strip()
+            )
+            auth_result = subprocess.run(
+                ["claude", "auth", "status"],
+                env=_claude_process_env(),
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            status["claude"]["authenticated"] = auth_result.returncode == 0
+            if auth_result.stdout.strip().startswith("{"):
+                try:
+                    status["claude"]["auth_status"] = json.loads(auth_result.stdout)
+                except json.JSONDecodeError:
+                    pass
+            if not status["claude"]["authenticated"]:
+                status["claude"]["auth_error"] = (auth_result.stderr or auth_result.stdout).strip()[:500]
     except Exception:
         pass
 
@@ -2598,7 +3446,7 @@ def api_settings_status():
             try:
                 result = subprocess.run(
                     ["sf", "org", "display", "--target-org", prod_alias, "--json"],
-                    capture_output=True, text=True, timeout=5
+                    capture_output=True, text=True, timeout=20
                 )
                 if result.returncode == 0:
                     # Skip warning lines, find JSON start
@@ -2607,6 +3455,8 @@ def api_settings_status():
                         data = json.loads(json_str)
                         status["sf_prod"]["authenticated"] = True
                         status["sf_prod"]["username"] = data.get("result", {}).get("username", "")
+                        status["sf_prod"]["orgId"] = data.get("result", {}).get("id", "")
+                        status["sf_prod"]["instanceUrl"] = data.get("result", {}).get("instanceUrl", "")
                     else:
                         # Find first { and parse from there
                         idx = json_str.find('{')
@@ -2614,6 +3464,8 @@ def api_settings_status():
                             data = json.loads(json_str[idx:])
                             status["sf_prod"]["authenticated"] = True
                             status["sf_prod"]["username"] = data.get("result", {}).get("username", "")
+                            status["sf_prod"]["orgId"] = data.get("result", {}).get("id", "")
+                            status["sf_prod"]["instanceUrl"] = data.get("result", {}).get("instanceUrl", "")
             except Exception:
                 pass
 
@@ -2622,7 +3474,7 @@ def api_settings_status():
             try:
                 result = subprocess.run(
                     ["sf", "org", "display", "--target-org", sand_alias, "--json"],
-                    capture_output=True, text=True, timeout=5
+                    capture_output=True, text=True, timeout=20
                 )
                 if result.returncode == 0:
                     # Skip warning lines, find JSON start
@@ -2631,6 +3483,8 @@ def api_settings_status():
                         data = json.loads(json_str)
                         status["sf_sandbox"]["authenticated"] = True
                         status["sf_sandbox"]["username"] = data.get("result", {}).get("username", "")
+                        status["sf_sandbox"]["orgId"] = data.get("result", {}).get("id", "")
+                        status["sf_sandbox"]["instanceUrl"] = data.get("result", {}).get("instanceUrl", "")
                     else:
                         # Find first { and parse from there
                         idx = json_str.find('{')
@@ -2638,6 +3492,8 @@ def api_settings_status():
                             data = json.loads(json_str[idx:])
                             status["sf_sandbox"]["authenticated"] = True
                             status["sf_sandbox"]["username"] = data.get("result", {}).get("username", "")
+                            status["sf_sandbox"]["orgId"] = data.get("result", {}).get("id", "")
+                            status["sf_sandbox"]["instanceUrl"] = data.get("result", {}).get("instanceUrl", "")
             except Exception as e:
                 print(f"DEBUG: sandbox auth check failed: {type(e).__name__}: {str(e)}", flush=True)
 
@@ -2669,6 +3525,14 @@ def api_settings_status():
             except Exception:
                 pass
 
+    try:
+        status["runtime_preflight"] = _collect_runtime_preflight(run_soql=False)
+    except Exception as e:
+        status["runtime_preflight"] = {
+            "ok": False,
+            "issues": [f"Runtime preflight status failed: {type(e).__name__}: {e}"],
+        }
+
     return jsonify(status)
 
 
@@ -2680,93 +3544,79 @@ def setup_claude_login():
 
 @app.post("/api/setup/claude-credentials")
 def api_setup_claude_credentials():
-    """Save and validate Claude Code credentials."""
+    """Save Claude Code OAuth token generated by `claude setup-token`."""
     try:
         body = request.get_json(silent=True) or {}
+        token = (body.get("token") or body.get("CLAUDE_CODE_OAUTH_TOKEN") or "").strip()
         credentials = body.get("credentials")
 
-        if not credentials:
-            return jsonify({"error": "Missing 'credentials' in request body"}), 400
+        # Backward-compatible parsing for the previous UI, which posted either a
+        # raw token string or {"token": "..."} under "credentials".
+        if not token and credentials:
+            if isinstance(credentials, str):
+                raw = credentials.strip()
+                try:
+                    parsed = json.loads(raw)
+                except json.JSONDecodeError:
+                    token = raw
+                else:
+                    if isinstance(parsed, dict):
+                        token = (
+                            parsed.get("CLAUDE_CODE_OAUTH_TOKEN")
+                            or parsed.get("token")
+                            or parsed.get("accessToken")
+                            or ""
+                        ).strip()
+                    else:
+                        return jsonify({"error": "Credentials JSON must be an object"}), 400
+            elif isinstance(credentials, dict):
+                token = (
+                    credentials.get("CLAUDE_CODE_OAUTH_TOKEN")
+                    or credentials.get("token")
+                    or credentials.get("accessToken")
+                    or ""
+                ).strip()
+            else:
+                return jsonify({"error": "Credentials must be a token string or JSON object"}), 400
 
-        # Parse credentials if it's a string, otherwise use as-is
-        if isinstance(credentials, str):
-            try:
-                cred_obj = json.loads(credentials)
-            except json.JSONDecodeError:
-                return jsonify({"error": "Invalid credentials JSON"}), 400
-        else:
-            cred_obj = credentials
+        if not token:
+            return jsonify({"error": "Missing Claude Code OAuth token"}), 400
+        if token.startswith("export "):
+            token = token.removeprefix("export ").strip()
+        if token.startswith("CLAUDE_CODE_OAUTH_TOKEN="):
+            token = token.partition("=")[2].strip().strip('"').strip("'")
+        if not token:
+            return jsonify({"error": "Missing Claude Code OAuth token"}), 400
+        if "\n" in token or "\r" in token:
+            return jsonify({"error": "Paste only the token printed by `claude setup-token`, not a shell export line or multi-line output"}), 400
 
-        # Validate required fields
-        if not isinstance(cred_obj, dict):
-            return jsonify({"error": "Credentials must be a JSON object"}), 400
-        if "token" not in cred_obj:
-            return jsonify({"error": "Missing 'token' field in credentials"}), 400
-
-        cred_json = json.dumps(cred_obj)
-
-        # Write credentials file to /app/.claude (where Claude CLI subprocess looks with HOME=/app)
-        cred_dir = Path("/app") / ".claude"
-        cred_dir.mkdir(parents=True, exist_ok=True)
-        cred_file = cred_dir / ".credentials.json"
-        cred_file.write_text(cred_json, encoding="utf-8")
-        cred_file.chmod(0o600)
-
-        # Create .claude.json to indicate authenticated installation (prevents re-login prompt)
-        claude_config = {
-            "version": 1,
-            "authenticated": True,
-            "setup_timestamp": time.time()
-        }
-        claude_json_file = cred_dir / ".claude.json"
-        claude_json_file.write_text(json.dumps(claude_config), encoding="utf-8")
-        claude_json_file.chmod(0o600)
-
-        # Persist credentials to .env.jira for container restarts
-        # Store as base64-encoded CLAUDE_CREDENTIALS_B64 so it survives env file reloads
-        import base64
-        cred_b64 = base64.b64encode(cred_json.encode()).decode()
-        env_file = Path("/app/.env.jira")
-        if env_file.exists():
-            env_content = env_file.read_text(encoding="utf-8")
-            # Remove old CLAUDE_CREDENTIALS_B64 if present
-            lines = env_content.split("\n")
-            new_lines = [l for l in lines if not l.startswith("CLAUDE_CREDENTIALS_B64=")]
-            new_lines.append(f"CLAUDE_CREDENTIALS_B64={cred_b64}")
-            env_file.write_text("\n".join(new_lines), encoding="utf-8")
-
-        # Validate: verify file was created and is readable
-        if not cred_file.exists():
-            return jsonify({"error": "Failed to create credentials file"}), 500
-        if not cred_file.is_file():
-            return jsonify({"error": "Credentials path is not a file"}), 500
-
-        # Try reading to verify it's valid
-        try:
-            saved = json.loads(cred_file.read_text(encoding="utf-8"))
-            if "token" not in saved:
-                return jsonify({"error": "Credentials file invalid after save"}), 500
-        except Exception:
-            return jsonify({"error": "Credentials file not readable after save"}), 500
+        env_file_path = app.config.get("ENV_FILE_PATH")
+        env_file = Path(env_file_path) if env_file_path else ROOT / ".env.jira"
+        _write_env_file({"CLAUDE_CODE_OAUTH_TOKEN": token}, env_file)
+        _remove_env_keys({"CLAUDE_CREDENTIALS_B64"}, env_file)
+        os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
 
         return jsonify({
             "ok": True,
-            "message": "Claude Code credentials saved and validated",
-            "path": str(cred_file)
+            "message": "Claude Code OAuth token saved",
+            "env_key": "CLAUDE_CODE_OAUTH_TOKEN"
         })
 
     except Exception as e:
-        return jsonify({"error": f"Failed to save credentials: {str(e)}"}), 500
-
+        return jsonify({"error": f"Failed to save Claude Code token: {str(e)}"}), 500
 
 @app.post("/api/setup/salesforce-auth")
 def api_setup_salesforce_auth():
     """Authenticate Salesforce orgs and validate they're accessible."""
     try:
-        prod_token = os.environ.get("SF_PROD_ACCESS_TOKEN")
-        prod_url = os.environ.get("SF_PROD_INSTANCE_URL")
-        sandbox_token = os.environ.get("SF_SANDBOX_ACCESS_TOKEN")
-        sandbox_url = os.environ.get("SF_SANDBOX_INSTANCE_URL")
+        env_file_path = app.config.get("ENV_FILE_PATH")
+        settings = _read_env_file(Path(env_file_path) if env_file_path else None)
+        prod_alias = _env_first("CASEOPS_PRODUCTION_READ_ORG", settings=settings)
+        sandbox_alias = _env_first("CASEOPS_SANDBOX_TARGET_ORG", settings=settings)
+        prod_token = _env_first("SF_PROD_ACCESS_TOKEN", settings=settings)
+        prod_url = _env_first("SF_PROD_INSTANCE_URL", "CASEOPS_PRODUCTION_INSTANCE_URL", settings=settings)
+        sandbox_token = _env_first("SF_SANDBOX_ACCESS_TOKEN", settings=settings)
+        sandbox_url = _env_first("SF_SANDBOX_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL", settings=settings)
 
         if not any([prod_token, sandbox_token]):
             return jsonify({"error": "No SF tokens in environment (SF_PROD_ACCESS_TOKEN or SF_SANDBOX_ACCESS_TOKEN)"}), 400
@@ -2774,6 +3624,8 @@ def api_setup_salesforce_auth():
         # Auth both orgs
         def auth_org(alias: str, token: str, url: str) -> tuple[bool, str]:
             """Authenticate one org. Returns (success, message)."""
+            if not alias:
+                return False, "missing org alias (CASEOPS_PRODUCTION_READ_ORG or CASEOPS_SANDBOX_TARGET_ORG)"
             if not token or not url:
                 return False, "missing token or url"
             try:
@@ -2797,8 +3649,8 @@ def api_setup_salesforce_auth():
                 return False, str(e)
 
         # Authenticate orgs
-        prod_ok, prod_msg = auth_org("10xhealth", prod_token, prod_url) if prod_token else (None, "skipped")
-        sandbox_ok, sandbox_msg = auth_org("10xhealth-sean", sandbox_token, sandbox_url) if sandbox_token else (None, "skipped")
+        prod_ok, prod_msg = auth_org(prod_alias, prod_token, prod_url) if prod_token else (None, "skipped")
+        sandbox_ok, sandbox_msg = auth_org(sandbox_alias, sandbox_token, sandbox_url) if sandbox_token else (None, "skipped")
 
         # Validate: run sf org list to verify orgs actually exist (cached for 10 min)
         def verify_orgs() -> dict:
@@ -2810,10 +3662,11 @@ def api_setup_salesforce_auth():
             if _sf_orgs_cache is not None and (now - _sf_orgs_cache_time) < _SF_ORGS_CACHE_TTL:
                 return _sf_orgs_cache
 
-            # Cache miss or expired: run sf org list
+            # Cache miss or expired: run sf org list auth.
+            # This reads local CLI auth without querying every org and is fast enough for UI refresh.
             try:
                 proc = subprocess.run(
-                    ["sf", "org", "list", "--json"],
+                    ["sf", "org", "list", "auth", "--json"],
                     capture_output=True,
                     timeout=15,
                     check=False,
@@ -2823,10 +3676,16 @@ def api_setup_salesforce_auth():
                 if proc.returncode == 0:
                     data = json.loads(proc.stdout)
                     orgs = {}
-                    for org in data.get("result", {}).get("nonScratchOrgs", []):
-                        orgs[org.get("alias")] = {
+                    result = data.get("result", [])
+                    if isinstance(result, dict):
+                        result = result.get("nonScratchOrgs", []) or result.get("orgs", [])
+                    for org in result:
+                        aliases = org.get("aliases") or []
+                        alias = org.get("alias") or (aliases[0] if aliases else "") or org.get("username")
+                        orgs[alias] = {
+                            "alias": alias,
                             "username": org.get("username"),
-                            "orgId": org.get("orgId"),
+                            "orgId": org.get("orgId") or org.get("id"),
                             "instanceUrl": org.get("instanceUrl"),
                         }
                     # Update cache
@@ -2845,9 +3704,13 @@ def api_setup_salesforce_auth():
         return jsonify({
             "ok": final_ok,
             "authenticated_orgs": verified_orgs,
+            "aliases": {
+                "production": prod_alias,
+                "sandbox": sandbox_alias,
+            },
             "status": {
-                "10xhealth": "authenticated" if prod_ok else (prod_msg if prod_ok is not None else "skipped"),
-                "10xhealth-sean": "authenticated" if sandbox_ok else (sandbox_msg if sandbox_ok is not None else "skipped"),
+                prod_alias or "production": "authenticated" if prod_ok else (prod_msg if prod_ok is not None else "skipped"),
+                sandbox_alias or "sandbox": "authenticated" if sandbox_ok else (sandbox_msg if sandbox_ok is not None else "skipped"),
             }
         })
 
@@ -2868,13 +3731,13 @@ def api_refresh_salesforce_tokens():
         body = request.get_json(silent=True) or {}
         prod_token = body.get("sf_prod_access_token")
         sandbox_token = body.get("sf_sandbox_access_token")
-        prod_refresh_token = body.get("sf_prod_refresh_token")
-        sandbox_refresh_token = body.get("sf_sandbox_refresh_token")
+        prod_refresh_token = _extract_salesforce_refresh_token(body.get("sf_prod_refresh_token"))
+        sandbox_refresh_token = _extract_salesforce_refresh_token(body.get("sf_sandbox_refresh_token"))
 
         if not any([prod_token, sandbox_token]):
             return jsonify({"error": "Missing sf_prod_access_token or sf_sandbox_access_token"}), 400
 
-        env_file = os.environ.get("CASEOPS_JIRA_ENV_FILE")
+        env_file = os.environ.get("CASEOPS_JIRA_ENV_FILE") or app.config.get("ENV_FILE_PATH")
         if not env_file:
             return jsonify({"error": "CASEOPS_JIRA_ENV_FILE not set"}), 500
 
@@ -2900,6 +3763,7 @@ def api_refresh_salesforce_tokens():
         new_lines.append(f"SF_TOKENS_REFRESHED_AT={int(time.time())}")
 
         env_path.write_text("\n".join(new_lines), encoding="utf-8")
+        _load_jira_env(env_path)
 
         auto_refresh_enabled = bool(prod_refresh_token or sandbox_refresh_token)
         return jsonify({
@@ -2962,13 +3826,18 @@ if __name__ == "__main__":
         OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
     OUTPUTS.mkdir(parents=True, exist_ok=True)
 
+    # Initialize instance-specific runtime and metadata workspaces.
+    globals()["TEMP_ROOT"] = OUTPUTS.parent / ".temp"
+    TEMP_ROOT.mkdir(parents=True, exist_ok=True)
+    _ensure_metadata_workspace_dirs()
+
     # Initialize instance-specific pipeline logs directory
     globals()["OUTPUTS_PIPELINE_LOGS"] = OUTPUTS / "pipeline-logs"
 
     # Pre-create all pipeline output subdirectories so Claude Code doesn't need write permissions to create them
     for subdir in [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
-        "engineering-escalations", "step-4-hypothesis", "pipeline-logs"
+        "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state"
     ]:
         (OUTPUTS / subdir).mkdir(parents=True, exist_ok=True)
 
@@ -3020,7 +3889,7 @@ if __name__ == "__main__":
     # Validate all required subdirectories exist
     required_subdirs = [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
-        "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "closed-resolved"
+        "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state", "closed-resolved"
     ]
     for subdir in required_subdirs:
         subdir_path = OUTPUTS / subdir
@@ -3043,6 +3912,12 @@ if __name__ == "__main__":
     print(f"  - CASEOPS_JIRA_OUT_DIR={OUTPUTS / 'jira'}")
     print(f"  - CASEOPS_JIRA_ENV_FILE={env_file_path}")
     print(f"  - CASEOPS_WORKSPACE={WORKSPACE}")
+    metadata_dirs = _metadata_workspace_dirs()
+    print(f"  - CASEOPS_TEMP_DIR={TEMP_ROOT}")
+    print(f"  - CASEOPS_METADATA_ROOT={metadata_dirs['root']}")
+    print(f"  - CASEOPS_METADATA_RAW_PROD_DIR={metadata_dirs['raw_prod']}")
+    print(f"  - CASEOPS_METADATA_SANDBOX_WORK_DIR={metadata_dirs['sandbox_work']}")
+    print(f"  - CASEOPS_METADATA_CONFIRMED_DIR={metadata_dirs['confirmed']}")
 
     # Validate no hardcoded ROOT paths are being used for instance operations
     print(f"[OK] Instance routing validation:")
@@ -3075,31 +3950,19 @@ if __name__ == "__main__":
                 SKILL_PATHS[skill_name] = str(skill_path.resolve())
     print(f"[OK] {len(SKILL_PATHS)} skill paths registered\n")
 
-    # Restore Claude credentials from .env.jira if they were persisted
-    claude_creds_b64 = os.environ.get("CLAUDE_CREDENTIALS_B64")
-    if claude_creds_b64:
-        try:
-            import base64
-            cred_json = base64.b64decode(claude_creds_b64).decode()
-            cred_obj = json.loads(cred_json)
-            cred_dir = Path("/app") / ".claude"
-            cred_dir.mkdir(parents=True, exist_ok=True)
-            cred_file = cred_dir / ".credentials.json"
-            cred_file.write_text(cred_json, encoding="utf-8")
-            cred_file.chmod(0o600)
-            print(f"[OK] Claude credentials restored from environment")
-        except Exception as e:
-            print(f"[WARN] Failed to restore Claude credentials: {e}")
+    # Claude Code auth for non-interactive runs. Single source of truth is
+    # CLAUDE_CODE_OAUTH_TOKEN generated by `claude setup-token`.
+    claude_oauth_token = (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or "").strip()
+    if claude_oauth_token:
+        print("[OK] Claude Code OAuth token configured")
     else:
-        print(f"[WARN] Claude credentials not found in environment - Claude Code CLI will require /setup/claude-login")
+        print("[WARN] Claude Code OAuth token not configured - use /setup/claude-login")
 
     # Check Salesforce tokens and auto-refresh if needed (8h TTL, auto-refresh at 4h)
     _check_and_refresh_salesforce_tokens(env_file_path)
 
-    # Initialize consolidated temp directory (instance-specific)
-    globals()["TEMP_ROOT"] = OUTPUTS.parent / ".temp"
-    TEMP_ROOT.mkdir(parents=True, exist_ok=True)
     print(f"[OK] Temp directory: {TEMP_ROOT}")
+    print(f"[OK] Metadata workspace: {_metadata_workspace_dirs()['root']}")
 
     # use_reloader=False prevents the dev reloader from killing SSE streams
     app.run(debug=True, threaded=True, host="0.0.0.0", port=_args.port, use_reloader=False)

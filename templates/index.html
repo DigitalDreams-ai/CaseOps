@@ -213,8 +213,9 @@
       <div id="log-resize-handle" title="Drag to resize"></div>
       <div id="log-header">
         <button type="button" id="log-collapse-btn" class="log-header-btn" title="Collapse log">▼</button>
-        <span>Pipeline log</span>
-        <span id="log-clear" onclick="clearLog()">Clear</span>
+        <span id="log-title">Pipeline log</span>
+        <button type="button" id="log-copy" class="log-link-btn" onclick="copyPipelineLog()">Copy log</button>
+        <button type="button" id="log-clear" class="log-link-btn" onclick="clearLog()">Clear</button>
       </div>
       <div id="log-output"></div>
     </div>
@@ -401,29 +402,53 @@
 
   let streamRetries = 0;
   const MAX_STREAM_RETRIES = 5;
+  const STEP_LABELS = {
+    1: 'Sync',
+    2: 'Triage',
+    3: 'Analyze',
+    4: 'Hypothesis',
+    5: 'Metadata',
+    6: 'Locate',
+    7: 'Gate',
+    8: 'Implement',
+    9: 'Test',
+    10: 'Draft',
+    11: 'Summary',
+    12: 'Report'
+  };
+
+  function stepIndicatorText(state) {
+    const label = STEP_LABELS[state.step] ? ` - ${STEP_LABELS[state.step]}` : '';
+    if (state.status === 'failed') return 'Failed';
+    if (state.status === 'stuck') return `Stuck: Step ${state.step}/12${label}`;
+    return state.step ? `Running: Step ${state.step}/12${label}` : '';
+  }
 
   function updateStepIndicator(issueKey, step) {
     const now = Date.now();
     const existing = pipelineProgress[issueKey] || {};
+    const nextStatus = step === 'FAILED'
+      ? 'failed'
+      : (existing.status === 'stuck' && step === existing.step ? 'stuck' : 'running');
     pipelineProgress[issueKey] = {
       step: step === 'FAILED' ? (existing.step || 0) : step,
       lastUpdate: now,
-      status: step === 'FAILED' ? 'failed' : 'running'
+      status: nextStatus
     };
 
     const indicator = document.querySelector(`.issue-indicator[data-key="${issueKey}"]`);
     if (indicator) {
       const state = pipelineProgress[issueKey];
       if (state.status === 'failed') {
-        indicator.textContent = 'Failed';
+        indicator.textContent = stepIndicatorText(state);
         indicator.classList.add('indicator-failed');
         indicator.classList.remove('indicator-running', 'indicator-stuck');
       } else if (state.status === 'stuck') {
-        indicator.textContent = `Stuck: Step ${state.step}/12`;
+        indicator.textContent = stepIndicatorText(state);
         indicator.classList.add('indicator-stuck');
         indicator.classList.remove('indicator-running', 'indicator-failed');
       } else {
-        indicator.textContent = state.step ? `Running: Step ${state.step}/12` : '';
+        indicator.textContent = stepIndicatorText(state);
         indicator.classList.add('indicator-running');
         indicator.classList.remove('indicator-failed', 'indicator-stuck');
       }
@@ -444,15 +469,15 @@
       const indicator = document.querySelector(`.issue-indicator[data-key="${issueKey}"]`);
       if (indicator && state.step) {
         if (state.status === 'failed') {
-          indicator.textContent = 'Failed';
+          indicator.textContent = stepIndicatorText(state);
           indicator.classList.add('indicator-failed');
           indicator.classList.remove('indicator-running', 'indicator-stuck');
         } else if (state.status === 'stuck') {
-          indicator.textContent = `Stuck: Step ${state.step}/12`;
+          indicator.textContent = stepIndicatorText(state);
           indicator.classList.add('indicator-stuck');
           indicator.classList.remove('indicator-running', 'indicator-failed');
         } else {
-          indicator.textContent = `Running: Step ${state.step}/12`;
+          indicator.textContent = stepIndicatorText(state);
           indicator.classList.add('indicator-running');
           indicator.classList.remove('indicator-failed', 'indicator-stuck');
         }
@@ -473,11 +498,16 @@
 
   function parsePipelineStep(line) {
     if (!line) return null;
-    const normalized = line.replace(/\*\*/g, '').trim();
+    const normalized = line.replace(/\*\*/g, '').replace(/[“”"]/g, '').trim();
     const marker = normalized.match(/\bSTEP_(\d+)(?:_LOOP)?\b/i);
     if (marker) return parseInt(marker[1], 10);
-    const range = normalized.match(/\bStep\s+(\d+)\s*[–-]\s*(\d+)\b/i);
+    const range = normalized.match(/\bStep\s+(\d+)\s*[–—-]\s*(\d+)\b/i);
     if (range) return parseInt(range[1], 10);
+    const sequence = normalized.match(/\bSteps?\s+((?:\d+\s*(?:→|->|,|and|\s)\s*){2,})/i);
+    if (sequence) {
+      const nums = sequence[1].match(/\d+/g);
+      if (nums && nums.length) return parseInt(nums[0], 10);
+    }
     const plain = normalized.match(/\bStep\s+(\d+)\b/i);
     if (plain) return parseInt(plain[1], 10);
     return null;
@@ -1874,7 +1904,10 @@
     }
 
     activeRuns.add(runKey);
-    if (runKey !== '__global__') updateStepIndicator(runKey, 1);
+    if (runKey !== '__global__') {
+      const initialStep = (action === 'full_issue' || action === 'reprocess_issue' || action === 'claude_instruction') ? 3 : 1;
+      updateStepIndicator(runKey, initialStep);
+    }
     updateStatus();
     setIssueRunning(runKey, true);
   }
@@ -1935,9 +1968,15 @@
   }
 
   function updateProgressFromLogLine(runKey, line) {
-    const stepMatch = line.match(/STEP_(\d+)(?:_LOOP)?\s+(HEAL-\d+)/i);
+    const normalized = String(line || '').replace(/\*\*/g, '').replace(/[“”"]/g, ' ');
+    const stepMatch = normalized.match(/\bSTEP_(\d+)(?:_LOOP)?\b[^A-Z0-9]*(HEAL-\d+)/i);
     if (stepMatch) {
       updateStepIndicator(stepMatch[2], parseInt(stepMatch[1], 10));
+      return;
+    }
+    const summaryMatch = normalized.match(/\bSTEP_(1[12])\b\s+__(summary|complete)__\b/i);
+    if (summaryMatch && runKey !== '__global__') {
+      updateStepIndicator(runKey, parseInt(summaryMatch[1], 10));
       return;
     }
     if (runKey === '__global__') return;
@@ -2031,6 +2070,45 @@
     } catch (_) {}
   }
 
+  async function writeClipboardText(text) {
+    const value = text || '';
+    const clipboard = navigator.clipboard;
+    if (clipboard && typeof clipboard.writeText === 'function' && window.isSecureContext) {
+      await clipboard.writeText(value);
+      return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    textarea.style.left = '-9999px';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, value.length);
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (!copied) {
+      throw new Error('Clipboard API is unavailable in this browser context.');
+    }
+  }
+
+  async function copyPipelineLog() {
+    const key = activeKey || '__global__';
+    const buf = _logBuf(key);
+    const prefix = buf.truncated ? ['... (earlier logs truncated)'] : [];
+    const text = prefix.concat(buf.lines.map(({text}) => text)).join('\n');
+    try {
+      await writeClipboardText(text);
+      logLine('Pipeline log copied to clipboard.', 'ok', key);
+    } catch (e) {
+      logLine('Clipboard write failed: ' + e.message, 'err', key);
+    }
+  }
+
   // ── Clipboard ─────────────────────────────────────────────
 
   async function copyFullPrompt(key) {
@@ -2049,10 +2127,10 @@
       }
 
       const prompt = parts.length > 0
-        ? `Process ${key} through jira-salesforce-fix-pipeline skill.\n\n${parts.join('\n\n---\n\n')}`
-        : `Process ${key} through jira-salesforce-fix-pipeline skill.`;
+        ? `Process ${key} through the mounted jira-salesforce-fix-pipeline playbook files.\n\n${parts.join('\n\n---\n\n')}`
+        : `Process ${key} through the mounted jira-salesforce-fix-pipeline playbook files.`;
 
-      await navigator.clipboard.writeText(prompt);
+      await writeClipboardText(prompt);
       logLine('Full Claude prompt copied to clipboard.', 'ok');
     } catch (e) {
       logLine('Clipboard write failed: ' + e.message, 'err');

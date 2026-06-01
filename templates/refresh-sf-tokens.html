@@ -38,15 +38,23 @@
                 <span class="step-num">1</span>
                 <p>Open terminal on your authenticated local machine and run:</p>
             </div>
-            <div class="code-block">sf org auth show-access-token -o 10xhealth --no-prompt</div>
-            <p style="color: #666; margin-top: 8px;">Copy the entire token value</p>
+            <div class="code-block">sf org auth show-access-token -o 10xhealth --json</div>
+            <p style="color: #666; margin-top: 8px;">Copy <code>result.accessToken</code>. This command returns the access token only.</p>
 
             <div class="step" style="margin-top: 20px;">
                 <span class="step-num">2</span>
                 <p>Then get the sandbox token:</p>
             </div>
-            <div class="code-block">sf org auth show-access-token -o 10xhealth-sean --no-prompt</div>
-            <p style="color: #666; margin-top: 8px;">Copy the entire token value</p>
+            <div class="code-block">sf org auth show-access-token -o 10xhealth-sean --json</div>
+            <p style="color: #666; margin-top: 8px;">Copy <code>result.accessToken</code>.</p>
+
+            <div class="step" style="margin-top: 20px;">
+                <span class="step-num">3</span>
+                <p>Optional: get refresh-token source URLs for auto-refresh:</p>
+            </div>
+            <div class="code-block">sf org auth show-sfdx-auth-url -o 10xhealth --json</div>
+            <div class="code-block">sf org auth show-sfdx-auth-url -o 10xhealth-sean --json</div>
+            <p style="color: #666; margin-top: 8px;">Copy <code>result.sfdxAuthUrl</code> for each org and paste those full URLs into the refresh-token fields. CaseOps extracts the refresh token safely.</p>
         </div>
 
         <div class="section">
@@ -62,15 +70,15 @@
 
             <h3 style="font-size: 14px; color: #333; margin-top: 20px; margin-bottom: 10px;">Refresh Tokens (Optional but Recommended for Auto-Refresh)</h3>
             <p style="color: #666; font-size: 13px; margin-bottom: 12px;">
-                If you have refresh tokens, paste them below to enable automatic token refresh every 4 hours.
+                Paste either raw refresh tokens or the full <code>sfdxAuthUrl</code> values from <code>sf org auth show-sfdx-auth-url --json</code> to enable automatic token refresh every 4 hours.
                 Without refresh tokens, you'll need to manually refresh every 8 hours.
             </p>
 
             <label class="label">Production (10xhealth) Refresh Token:</label>
-            <textarea id="prod-refresh-token" placeholder="Optional: paste production refresh token (optional, enables auto-refresh)"></textarea>
+            <textarea id="prod-refresh-token" placeholder="Optional: paste production refresh token or sfdxAuthUrl"></textarea>
 
             <label class="label">Sandbox (10xhealth-sean) Refresh Token:</label>
-            <textarea id="sandbox-refresh-token" placeholder="Optional: paste sandbox refresh token (optional, enables auto-refresh)"></textarea>
+            <textarea id="sandbox-refresh-token" placeholder="Optional: paste sandbox refresh token or sfdxAuthUrl"></textarea>
 
             <button onclick="refreshTokens()">Save & Refresh Tokens</button>
         </div>

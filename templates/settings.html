@@ -320,20 +320,6 @@
 
         <div id="banner"></div>
 
-        <!-- Interactive Auth Instructions -->
-        <div class="settings-section" style="background: var(--color-primary); border-color: var(--color-primary); color: white; margin-bottom: 25px;">
-            <h2 style="color: white; margin-top: 0;">Interactive Authentication (Salesforce, Claude)</h2>
-            <p style="margin: 10px 0; line-height: 1.6;">
-                To authenticate Salesforce orgs and Claude Code CLI, SSH into the container using the command:
-            </p>
-            <div style="display: flex; gap: 8px; margin: 10px 0; align-items: center;">
-                <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 4px; flex: 1; font-family: monospace; font-size: 12px; word-break: break-all;">
-                    ssh -t docker@10.0.1.10 "/volume1/@appstore/ContainerManager/usr/bin/docker exec -it caseops bash"
-                </div>
-                <button type="button" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; white-space: nowrap; transition: background 0.2s;" onclick="navigator.clipboard.writeText('ssh -t docker@10.0.1.10 &quot;/volume1/@appstore/ContainerManager/usr/bin/docker exec -it caseops bash&quot;'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000);">Copy</button>
-            </div>
-        </div>
-
         <form id="settings-form">
             <!-- Instance Display -->
             <div class="settings-section">
@@ -375,13 +361,13 @@
 
                 <div style="text-align: center; padding: 20px 0;">
                     <p style="font-size: 14px; margin-bottom: 16px; color: var(--color-text);">
-                        Setup Claude Code authentication in 3 steps:
+                        Set the OAuth token CaseOps uses for non-interactive Claude Code runs:
                     </p>
                     <button type="button" class="button-primary" id="open-claude-wizard" style="padding: 12px 24px; font-size: 16px; cursor: pointer;">
-                        🔐 Setup Claude Token
+                        Setup Claude Token
                     </button>
                     <p style="font-size: 12px; color: var(--color-text-secondary); margin-top: 12px;">
-                        Run command locally, paste token. Works on mobile & desktop.
+                        Run the command locally, then paste the token printed by the CLI.
                     </p>
                 </div>
 
@@ -389,12 +375,12 @@
 
                 <div style="background: var(--color-bg); padding: 12px; border-radius: 4px; font-size: 12px; color: var(--color-text-secondary);">
                     <strong>Steps:</strong><br>
-                    1. Open the Setup window above (works on mobile)<br>
+                    1. Open the Setup window above<br>
                     2. On your local machine, run: <code style="display: inline; background: var(--color-surface); padding: 2px 4px; border-radius: 2px;">claude setup-token</code><br>
-                    3. Copy the JSON output and paste into the setup window<br>
+                    3. Copy only the token printed by the command and paste it into the setup window<br>
                     <br>
-                    <strong>⚠️ Token Expired?</strong><br>
-                    Run <code style="display: inline; background: var(--color-surface); padding: 2px 4px; border-radius: 2px;">claude logout && claude login</code> locally, then repeat steps above.
+                    <strong>Token expired or revoked?</strong><br>
+                    Run <code style="display: inline; background: var(--color-surface); padding: 2px 4px; border-radius: 2px;">claude setup-token</code> again and save the new token.
                 </div>
             </div>
 
@@ -441,27 +427,47 @@
 
                 <div style="background: var(--color-bg); padding: 12px; border-radius: 4px; font-size: 12px; color: var(--color-text-secondary); line-height: 1.6;">
                     <strong>📋 Initial Setup (Required Once)</strong><br><br>
-                    <strong style="color: var(--color-text);">1️⃣ Production Access Token</strong><br>
+                    <strong style="color: var(--color-text);">1️⃣ Authenticate Production Org</strong><br>
                     On your <strong>local machine</strong>, run:<br>
                     <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
-                        sf org auth show-access-token -o 10xhealth --no-prompt
+                        sf org login web --alias 10xhealth
                     </div>
-                    Output shows two values separated by a space. <strong>Copy the FIRST token</strong> (the long string before the space).
+                    Logs in to production. Close browser after authorizing.
                     <br><br>
-                    <strong style="color: var(--color-text);">2️⃣ Production Refresh Token</strong><br>
-                    From the same output above, <strong>copy the SECOND token</strong> (after the space) into the Refresh Token field.
-                    <br><br>
-                    <strong style="color: var(--color-text);">3️⃣ Sandbox Access Token</strong><br>
-                    Run for sandbox:<br>
+                    <strong style="color: var(--color-text);">2️⃣ Authenticate Sandbox Org</strong><br>
+                    Run for sandbox (requires test.salesforce.com URL):<br>
                     <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
-                        sf org auth show-access-token -o 10xhealth-sean --no-prompt
+                        sf org login web --alias 10xhealth-sean --instance-url https://test.salesforce.com
                     </div>
-                    Copy the FIRST token (access token).
+                    Logs in to sandbox. Close browser after authorizing.
                     <br><br>
-                    <strong style="color: var(--color-text);">4️⃣ Sandbox Refresh Token</strong><br>
-                    From sandbox output, copy the SECOND token (refresh token)
+                    <strong style="color: var(--color-text);">3️⃣ Get Production Access Token</strong><br>
+                    Run:<br>
+                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
+                        sf org auth show-access-token -o 10xhealth --json
+                    </div>
+                    Copy <code>result.accessToken</code>. This command shows the access token only.
                     <br><br>
-                    <strong style="color: var(--color-text);">5️⃣ Save All Tokens</strong><br>
+                    <strong style="color: var(--color-text);">4️⃣ Get Production Refresh Token</strong><br>
+                    Run the command below and copy <code>result.sfdxAuthUrl</code>; CaseOps accepts that full URL in the refresh-token field.
+                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
+                        sf org auth show-sfdx-auth-url -o 10xhealth --json
+                    </div>
+                    <br><br>
+                    <strong style="color: var(--color-text);">5️⃣ Get Sandbox Access Token</strong><br>
+                    Run:<br>
+                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
+                        sf org auth show-access-token -o 10xhealth-sean --json
+                    </div>
+                    Copy <code>result.accessToken</code>.
+                    <br><br>
+                    <strong style="color: var(--color-text);">6️⃣ Get Sandbox Refresh Token</strong><br>
+                    Run the command below and copy <code>result.sfdxAuthUrl</code>; CaseOps accepts that full URL in the refresh-token field.
+                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
+                        sf org auth show-sfdx-auth-url -o 10xhealth-sean --json
+                    </div>
+                    <br><br>
+                    <strong style="color: var(--color-text);">7️⃣ Save All Tokens</strong><br>
                     Visit <a href="/setup/refresh-salesforce-tokens" target="_blank" style="color: var(--color-primary); text-decoration: underline;">Refresh Tokens page</a> and paste all 4 tokens (Prod access, Prod refresh, Sandbox access, Sandbox refresh), then save.
                     <br><br>
                     <strong>✅ Automatic Refresh</strong><br>
@@ -584,7 +590,16 @@
                 // Load authenticated orgs from SF CLI
                 if (status.sf_installed) {
                     const statusDiv = document.getElementById('sf-auth-status');
-                    statusDiv.innerHTML = `<span class="status-badge ok">✓ Salesforce CLI installed</span>`;
+                    let runtimeHtml = '';
+                    if (status.runtime_preflight) {
+                        if (status.runtime_preflight.ok) {
+                            runtimeHtml = ` <span class="status-badge ok">✓ Pipeline runtime ready</span>`;
+                        } else {
+                            const issue = (status.runtime_preflight.issues || [])[0] || 'Pipeline runtime preflight failed';
+                            runtimeHtml = ` <span class="status-badge not-ok" title="${issue.replace(/"/g, '&quot;')}">✗ Pipeline runtime blocked</span>`;
+                        }
+                    }
+                    statusDiv.innerHTML = `<span class="status-badge ok">✓ Salesforce CLI installed</span>${runtimeHtml}`;
 
                     // Check authenticated orgs
                     if (status.sf_prod && status.sf_prod.authenticated && status.sf_sandbox && status.sf_sandbox.authenticated) {
@@ -615,7 +630,7 @@
                 orgDiv.style.cssText = 'padding: 10px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; border-left: 3px solid var(--color-success);';
                 orgDiv.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <strong>Production (10xhealth)</strong>
+                        <strong>Production (${prodOrg.alias || 'configured alias'})</strong>
                         <span class="status-badge ok">✓ Authenticated</span>
                     </div>
                     <div style="font-size: 12px; color: var(--color-text); font-family: monospace; display: flex; flex-direction: column; gap: 4px;">
@@ -633,7 +648,7 @@
                 orgDiv.style.cssText = 'padding: 10px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; border-left: 3px solid var(--color-success);';
                 orgDiv.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <strong>Sandbox (10xhealth-sean)</strong>
+                        <strong>Sandbox (${sandOrg.alias || 'configured alias'})</strong>
                         <span class="status-badge ok">✓ Authenticated</span>
                     </div>
                     <div style="font-size: 12px; color: var(--color-text); font-family: monospace; display: flex; flex-direction: column; gap: 4px;">
@@ -758,8 +773,9 @@
 
                     // Display authenticated orgs
                     const orgs = data.authenticated_orgs || {};
+                    const aliases = data.aliases || {};
                     if (Object.keys(orgs).length > 0) {
-                        displayAuthenticatedOrgs(orgs['10xhealth'], orgs['10xhealth-sean']);
+                        displayAuthenticatedOrgs(orgs[aliases.production], orgs[aliases.sandbox]);
                     }
 
                     showBanner('Salesforce orgs authenticated successfully', 'success');
@@ -892,10 +908,12 @@
                 const resp = await fetch('/api/settings/status');
                 const status = await resp.json();
                 const statusDiv = document.getElementById('claude-status');
-                if (status.claude && status.claude.installed && status.claude.version) {
-                    statusDiv.innerHTML = `<span style="color: var(--color-success);">✓ Claude CLI v${status.claude.version} - Authenticated</span>`;
+                if (status.claude && status.claude.installed && status.claude.authenticated) {
+                    const runtimeText = status.runtime_preflight && status.runtime_preflight.ok ? ' - Pipeline runtime ready' : '';
+                    statusDiv.innerHTML = `<span style="color: var(--color-success);">✓ Claude CLI ${status.claude.version || ''} - Authenticated${runtimeText}</span>`;
                 } else if (status.claude && status.claude.installed) {
-                    statusDiv.innerHTML = '<span style="color: var(--color-warn);">⚠ Claude CLI installed but needs authentication</span>';
+                    const tokenText = status.claude.token_configured ? 'token configured but auth check failed' : 'needs token';
+                    statusDiv.innerHTML = `<span style="color: var(--color-warn);">⚠ Claude CLI ${status.claude.version || ''} - ${tokenText}</span>`;
                 } else {
                     statusDiv.innerHTML = '<span style="color: var(--color-danger);">✗ Claude CLI not available</span>';
                 }

@@ -183,43 +183,40 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Setup Claude Code</h1>
-            <p>Authenticate for CaseOps pipeline</p>
+            <h1>Setup Claude Code</h1>
+            <p>Save the OAuth token used by the CaseOps pipeline</p>
         </div>
 
         <div class="step">
-            <span class="step-number">1</span><span class="step-title">Locate your credentials file</span>
+            <span class="step-number">1</span><span class="step-title">Generate a token</span>
             <div class="step-desc">
-                On your authenticated local machine, find:
+                On your local machine, run:
             </div>
             <div class="code-block">
-                <button class="copy-btn" onclick="copyCommand()">Copy Path</button>
-                <code>~/.claude/.credentials.json</code>
+                <button class="copy-btn" onclick="copyCommand()">Copy</button>
+                <code>claude setup-token</code>
             </div>
             <div class="step-desc">
-                This file contains your complete authentication credentials (token + OAuth fields).
+                Complete the browser authorization if prompted. The command prints a long-lived OAuth token to the terminal.
             </div>
         </div>
 
         <div class="step">
-            <span class="step-number">2</span><span class="step-title">Read the full file</span>
+            <span class="step-number">2</span><span class="step-title">Copy the token</span>
             <div class="step-desc">
-                Open the file in a text editor, or run in terminal:
-            </div>
-            <div class="code-block">
-                cat ~/.claude/.credentials.json
+                Copy only the token printed by <code>claude setup-token</code>.
             </div>
             <div class="info-box">
-                ⚠️ Copy the ENTIRE file contents (JSON object with token, claudeAiOauth, accessToken, etc.), not just the token value.
+                If you paste <code>CLAUDE_CODE_OAUTH_TOKEN=...</code> or <code>export CLAUDE_CODE_OAUTH_TOKEN=...</code>, CaseOps will save only the token value. Do not paste shell prompts, logs, or <code>~/.claude/.credentials.json</code> contents.
             </div>
         </div>
 
         <div class="step">
             <span class="step-number">3</span><span class="step-title">Paste below</span>
             <div class="step-desc">
-                Paste the token or JSON (we'll format it automatically):
+                CaseOps stores this as <code>CLAUDE_CODE_OAUTH_TOKEN</code> in the active env file. On NAS, that is <code>/volume1/docker/stacks/caseops/.env.jira.nas</code>.
             </div>
-            <textarea id="token-input" placeholder='Paste your token here'></textarea>
+            <textarea id="token-input" placeholder="Paste the token printed by claude setup-token"></textarea>
             <button class="btn" onclick="saveToken()" id="submit-btn">Save & Finish</button>
             <div id="status-message" class="status-message"></div>
         </div>
@@ -227,11 +224,11 @@
 
     <script>
         function copyCommand() {
-            const text = '~/.claude/.credentials.json';
+            const text = 'claude setup-token';
             navigator.clipboard.writeText(text).then(() => {
                 const btn = event.target;
                 btn.textContent = 'Copied!';
-                setTimeout(() => { btn.textContent = 'Copy Path'; }, 2000);
+                setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
             });
         }
 
@@ -249,25 +246,15 @@
             btn.disabled = true;
 
             try {
-                let credentials;
-
-                // Try to parse as JSON first (full credentials object)
-                try {
-                    credentials = JSON.parse(tokenText);
-                } catch (e) {
-                    // If not valid JSON, wrap as token string
-                    credentials = { token: tokenText };
-                }
-
                 const resp = await fetch('/api/setup/claude-credentials', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ credentials })
+                    body: JSON.stringify({ token: tokenText })
                 });
 
                 const data = await resp.json();
                 if (resp.ok && data.ok) {
-                    showStatus('✓ Credentials saved! Redirecting...', 'success');
+                    showStatus('Token saved. Redirecting...', 'success');
                     setTimeout(() => {
                         window.location.href = '/settings';
                     }, 1500);
