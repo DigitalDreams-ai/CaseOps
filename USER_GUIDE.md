@@ -113,18 +113,32 @@ If you provide **refresh tokens**, CaseOps automatically:
 
 **Click: "Auto-Process All"**
 
+**For each issue, follow one of two paths:**
+
+**Support-Resolvable Path:**
+
 | Step | What Happens | Time | Output |
 |------|-------------|------|--------|
 | 1-2 | Sync + Triage from Jira | 3 min | `jira/` folder; issues classified by status |
 | 3 | Analysis (per issue) | 3 min | Root cause understanding |
 | 4 | Hypothesis | 2 min | `step-4-hypothesis/HEAL-*.md` with proposed fix |
-| 5-6 | Metadata Investigation | 3 min | Problem location identified (exact artifact, type, location) |
-| 7 | Escalation Gate | 1 min | Decide: Support-resolvable or Engineering-required |
-| 8-9 | Sandbox Implementation + Test | 5 min | Deploy fix, test, validate; save `test-reports/HEAL-*.md` |
-| 10 | Customer Message | 1 min | `jira-messages/HEAL-*.md` + `internal-notes/HEAL-*.md` + `engineering-escalations/` (if needed) |
+| 5-6 | Metadata Investigation | 3 min | Problem location identified (artifact, type, location, failure point) |
+| 7 | Escalation Gate | 1 min | Decide: Support-resolvable (proceed to Step 8) |
+| 8 | Implement | 1 min | Local code changes recorded |
+| 9 | Sandbox Test | 3 min | Deploy fix, test, validate; save `test-reports/HEAL-*.md` |
+| 10 | Customer Message | 1 min | `jira-messages/HEAL-*.md` + `internal-notes/HEAL-*.md` |
 | 11-12 | Summary + Report | 2 min | `issue-summary-YYYY-MM-DD.md` + completion output |
 
-**Total:** ~20 minutes for 25 issues.
+**Engineering-Escalation Path:**
+
+| Step | What Happens | Time | Output |
+|------|-------------|------|--------|
+| 1-6 | Sync → Problem Location | ~12 min | Same as above |
+| 7 | Escalation Gate | 1 min | Decide: Engineering-required; skip Steps 8-9 |
+| 10 | Customer Message | 1 min | `jira-messages/HEAL-*.md` + `internal-notes/HEAL-*.md` + `engineering-escalations/HEAL-*.md` (handoff doc) |
+| 11-12 | Summary + Report | 2 min | `issue-summary-YYYY-MM-DD.md` + completion output |
+
+**Total:** ~18 min/support issue, ~16 min/escalation issue; ~20 minutes for mixed batch of 25 issues.
 
 **Watch progress:** Click issue to see real-time investigation log.
 

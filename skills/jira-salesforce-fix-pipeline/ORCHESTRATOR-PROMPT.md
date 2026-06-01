@@ -60,45 +60,51 @@ From Step 6 problem location, decide:
 - Config changes (feature flags, settings, lightweight declarative tools)
 - Read-only metadata investigation (no changes)
 
-### Decision: Escalate
-1. Mark as engineering-escalation path (will route messaging differently).
-2. Proceed to Steps 8-9 (implementation + test to generate proposed solution).
+### Decision: Escalate to Engineering
+1. Mark as engineering-escalation path (will skip implementation + test).
+2. Create `outputs/engineering-escalations/{key}.md` using assets/engineering-handoff-template.md with:
+   - Problem location (from Step 6)
+   - Root cause (from Step 4)
+   - Why it requires Engineering
+3. **Skip Steps 8-9**. Proceed directly to Step 10 (drafting only).
 
 ### Decision: Support-Resolvable
 1. Mark as support-resolution path.
 2. Proceed to Steps 8-9 (implementation + test).
 
-### Step 8-9: Implementation + Test (DELEGATE)
-1. Spawn salesforce-implementation sub-agent with:
+### Step 8: Implement (YOU do this, Support path only)
+Make local changes scoped to the issue. Avoid unrelated refactors. Record changed files in `outputs/investigations/{key}.md`.
+
+Before creating new metadata, confirm it does not already exist in Production (Step 5 existence check). Extend existing components when possible.
+
+### Step 9: Deploy, Test, and Iterate (DELEGATE, Support path only)
+1. Spawn salesforce-sandbox-deploy-test sub-agent with:
    - Problem location and hypothesis
    - Sandbox org (CASEOPS_SANDBOX_TARGET_ORG)
    - Test plan
-2. Receive summary: what was implemented, test results (pass/fail), or blocker if encountered.
+2. Receive summary: what was deployed, test results (pass/fail), or blocker.
 3. If test **passes**: proceed to Step 10.
-4. If test **fails**: 
-   - Ask sub-agent to revise hypothesis
-   - Loop back to Step 5 with refined metadata request
-   - Re-attempt Step 8-9
+4. If test **fails**:
+   - Revise hypothesis (Step 4)
+   - Loop back to Step 5 with refined metadata request if needed
+   - Re-implement (Step 8)
+   - Re-test (Step 9)
    - Record iterations in `outputs/investigations/{key}.md`
 5. Save test results to `outputs/test-reports/{key}.md`.
 
-### Step 10: Messaging (DELEGATE)
+### Step 10: Messaging (DELEGATE, both paths)
 1. Spawn jira-response-drafting sub-agent with:
    - Issue context
-   - Test results (from Step 9, both paths)
+   - **For Support path:** Test results from Step 9
+   - **For Escalation path:** Test result = "N/A - Engineering escalation"
    - Analysis notes
    - **Routing info:** Is this support-resolved or engineering-escalation?
 2. Receive two files:
    - `outputs/jira-messages/{key}.md` (customer-facing only, no [INTERNAL] markers)
-   - `outputs/internal-notes/{key}.md` (internal analysis, allowed to reference escalation)
+   - `outputs/internal-notes/{key}.md` (internal analysis, allowed to reference escalation if applicable)
 3. **Validation checkpoint:** Verify file separation (no [INTERNAL] in jira-messages; no customer greeting in internal-notes).
-4. **If engineering-escalation path:**
-   - Create `outputs/engineering-escalations/{key}.md` with:
-     - Problem location (from Step 6)
-     - Root cause (from Step 4)
-     - Proposed solution (from Step 9 test results)
-     - Why it requires Engineering
-   - This file signals handoff to Engineering team.
+4. **For support-resolution path:** Test results from Step 9 already saved to `outputs/test-reports/{key}.md`.
+5. **For engineering-escalation path:** `outputs/engineering-escalations/{key}.md` already created in Step 7. This signals handoff to Engineering team.
 
 ### Step 11: Dated Summary (You do this)
 After all active issues processed through Steps 3-10:
@@ -213,7 +219,7 @@ UI parses these to update real-time progress indicator.
 
 ---
 
-## Example Flow (Single Issue)
+## Example Flow (Escalation Path)
 
 ```
 User: "Process HEAL-33753"
@@ -228,16 +234,33 @@ ORCHESTRATOR:
 7. STEP_5 HEAL-33753 → Invoke metadata investigation (retrieval)
 8. Receive: "Flow 'Order Sync' found at Setup > Flows > Order Sync"
 9. STEP_6 HEAL-33753 → Invoke metadata investigation (drilling)
-10. Receive: "Failure at condition node. Missing record type 'Phone Order'. Fix = add OR condition."
+10. Receive: "Failure at condition node. Missing record type 'Phone Order'."
 11. STEP_7 HEAL-33753 → Decide: Flow modification = Engineering-required. ESCALATE.
-12. STEP_8-9 HEAL-33753 → Invoke salesforce-implementation (generate proposed solution)
-13. Receive: test results (Flow modification would fix the condition node), propose adding OR clause
-14. Save to test-reports/HEAL-33753.md
-15. STEP_10 HEAL-33753 → Invoke jira-response-drafting (escalation variant)
-16. Receive: jira-messages/HEAL-33753.md and internal-notes/HEAL-33753.md
-17. Create engineering-escalations/HEAL-33753.md with problem + proposed solution + test results
-18. STEP_11 → Update issue-summary-YYYY-MM-DD.md: add to Escalated section
-19. STEP_12 → Print completion report
+    - Create engineering-escalations/HEAL-33753.md with problem location + root cause + why Engineering
+    - Skip Steps 8-9 (no implementation/test)
+12. STEP_10 HEAL-33753 → Invoke jira-response-drafting (test result: "N/A - Engineering escalation")
+13. Receive: jira-messages/HEAL-33753.md and internal-notes/HEAL-33753.md
+14. STEP_11 → Update issue-summary-YYYY-MM-DD.md: add to Escalated section
+15. STEP_12 → Print completion report
 
-Result: Engineering handoff ready with proposed solution, customer notified of escalation.
+Result: Engineering handoff ready. Customer notified of escalation. No Sandbox deployment (Steps 8-9 skipped).
+```
+
+## Example Flow (Support Path)
+
+```
+User: "Process HEAL-33750"
+
+ORCHESTRATOR:
+1-10. Similar to above, but STEP_7 decides: Data update = Support-resolvable
+11. STEP_8 HEAL-33750 → Update Order.ShipToCity field values in local config
+12. STEP_9 HEAL-33750 → Invoke salesforce-sandbox-deploy-test
+13. Receive: deployment succeeded, tests passed
+14. Save to test-reports/HEAL-33750.md
+15. STEP_10 HEAL-33750 → Invoke jira-response-drafting (with test results)
+16. Receive: jira-messages/HEAL-33750.md and internal-notes/HEAL-33750.md
+17. STEP_11 → Update issue-summary-YYYY-MM-DD.md: add to Support-fixed section
+18. STEP_12 → Print completion report
+
+Result: Fix tested and ready. Customer notified. Sandbox validated.
 ```
