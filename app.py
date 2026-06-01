@@ -2914,13 +2914,21 @@ def api_refresh_salesforce_tokens():
 
 @app.post("/api/restart")
 def api_restart():
-    """Restart the CaseOps service. Returns immediately; actual restart happens in background."""
+    """Restart the CaseOps service via graceful shutdown and entrypoint loop restart."""
     def restart_app():
         import time
         time.sleep(1)  # Give response time to send
-        import os
-        import signal
-        os.kill(os.getpid(), signal.SIGTERM)
+
+        # Use Werkzeug's shutdown function (most reliable in Docker)
+        # This cleanly exits the Flask app, letting entrypoint loop restart it
+        func = request.environ.get('werkzeug.server.shutdown')
+        if func is None:
+            # Fallback: if not running under Werkzeug, use os.execl for in-place restart
+            import os
+            import sys
+            os.execl(sys.executable, sys.executable, *sys.argv)
+        else:
+            func()
 
     import threading
     t = threading.Thread(target=restart_app, daemon=True)
