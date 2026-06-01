@@ -441,24 +441,28 @@
 
                 <div style="background: var(--color-bg); padding: 12px; border-radius: 4px; font-size: 12px; color: var(--color-text-secondary); line-height: 1.6;">
                     <strong>📋 Initial Setup (Required Once)</strong><br><br>
-                    <strong style="color: var(--color-text);">1️⃣ Production Token</strong><br>
-                    On your <strong>local machine</strong>, run to get the <strong>Production</strong> access token:<br>
+                    <strong style="color: var(--color-text);">1️⃣ Production Access Token</strong><br>
+                    On your <strong>local machine</strong>, run:<br>
                     <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
-                        sf org auth show-access-token -o &lt;your-production-org-alias&gt; --no-prompt
+                        sf org auth show-access-token -o 10xhealth --no-prompt
                     </div>
-                    <span style="color: #888;">Replace <code style="background: var(--color-surface); padding: 1px 3px;">&lt;your-production-org-alias&gt;</code> with your org alias (e.g., <code style="background: var(--color-surface); padding: 1px 3px;">10xhealth</code>)</span>
-                    <br>Copy the token value (session ID starting with <code style="background: var(--color-surface); padding: 1px 3px;">00D0b...</code>)
+                    Output shows two values separated by a space. <strong>Copy the FIRST token</strong> (the long string before the space).
                     <br><br>
-                    <strong style="color: var(--color-text);">2️⃣ Sandbox Token</strong><br>
-                    Then get the <strong>Sandbox</strong> access token:<br>
+                    <strong style="color: var(--color-text);">2️⃣ Production Refresh Token</strong><br>
+                    From the same output above, <strong>copy the SECOND token</strong> (after the space) into the Refresh Token field.
+                    <br><br>
+                    <strong style="color: var(--color-text);">3️⃣ Sandbox Access Token</strong><br>
+                    Run for sandbox:<br>
                     <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
-                        sf org auth show-access-token -o &lt;your-sandbox-org-alias&gt; --no-prompt
+                        sf org auth show-access-token -o 10xhealth-sean --no-prompt
                     </div>
-                    <span style="color: #888;">Replace <code style="background: var(--color-surface); padding: 1px 3px;">&lt;your-sandbox-org-alias&gt;</code> with your sandbox alias (e.g., <code style="background: var(--color-surface); padding: 1px 3px;">10xhealth-sean</code>)</span>
-                    <br>Copy the token value
+                    Copy the FIRST token (access token).
                     <br><br>
-                    <strong style="color: var(--color-text);">3️⃣ Save Tokens</strong><br>
-                    Visit <a href="/setup/refresh-salesforce-tokens" target="_blank" style="color: var(--color-primary); text-decoration: underline;">Refresh Tokens page</a> and paste both tokens, then save.
+                    <strong style="color: var(--color-text);">4️⃣ Sandbox Refresh Token</strong><br>
+                    From sandbox output, copy the SECOND token (refresh token)
+                    <br><br>
+                    <strong style="color: var(--color-text);">5️⃣ Save All Tokens</strong><br>
+                    Visit <a href="/setup/refresh-salesforce-tokens" target="_blank" style="color: var(--color-primary); text-decoration: underline;">Refresh Tokens page</a> and paste all 4 tokens (Prod access, Prod refresh, Sandbox access, Sandbox refresh), then save.
                     <br><br>
                     <strong>✅ Automatic Refresh</strong><br>
                     Once setup, tokens are <strong>automatically refreshed</strong> on service startup if they're older than 4 hours. Access tokens valid for 8 hours; refresh happens before expiry. No manual action needed.
