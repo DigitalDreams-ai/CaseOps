@@ -171,6 +171,13 @@ The skill runs Steps 1–12 sequentially:
 - Production read-only: All queries use `CASEOPS_PRODUCTION_READ_ORG`
 - No Production deploys, ever
 
+**Salesforce Metadata Workspace:**
+- Raw Production metadata is retrieved per issue under `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/` and treated as read-only.
+- Sandbox testing uses one attempt directory per candidate solution: `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/`.
+- Each attempt contains `baseline-sandbox/`, `candidate/`, and `revert/` so failed solutions can be backed out before the next attempt.
+- Confirmed packages are copied to `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/` or `engineering-proposal/`.
+- Agents must not create root-level `temp*`, `retrieve*`, `deploy*`, or `metadata*` folders.
+
 ## File Organization
 
 ```
@@ -221,6 +228,11 @@ CaseOps/
 │   ├── issue-summary-YYYY-MM-DD.md
 │   ├── pipeline-logs/<RUN_ID>.jsonl (streaming progress)
 │   └── ...
+│
+├── .temp/metadata/                 # Instance-scoped Salesforce metadata workspace
+│   ├── raw-production/<KEY>/        # Read-only Production retrievals
+│   ├── sandbox-work/<KEY>/          # Per-attempt Sandbox baselines/candidates/reverts
+│   └── confirmed/<KEY>/             # Passed packages for Support or Engineering handoff
 │
 ├── deprecated/                     # Removed agents (archived for reference)
 │   ├── agent_*.py

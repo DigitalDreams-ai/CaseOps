@@ -7,7 +7,7 @@ CaseOps is an AI-powered platform for automating the investigation, analysis, an
 ### Requirements
 - Salesforce orgs (production + sandbox) with API access
 - Jira instance with API token
-- Claude Code CLI authentication
+- Claude Code CLI installed and a Claude Code subscription token
 - Docker & docker-compose
 
 ### Setup (5 minutes)
@@ -19,15 +19,19 @@ CaseOps is an AI-powered platform for automating the investigation, analysis, an
    cp .env.jira.example .env.jira.nas
    ```
 
-2. **Set Salesforce tokens** (valid for 8 hours):
+2. **Authenticate Salesforce and set tokens** (access tokens are valid for 8 hours):
    ```bash
-   sf org auth show-access-token -o 10xhealth --no-prompt     # prod
-   sf org auth show-access-token -o 10xhealth-sean --no-prompt # sandbox
+   sf org login web --alias 10xhealth
+   sf org login web --alias 10xhealth-sean --instance-url https://test.salesforce.com
+
+   sf org auth show-access-token -o 10xhealth --json
+   sf org auth show-access-token -o 10xhealth-sean --json
    ```
-   Navigate to `http://localhost:5350/setup/refresh-salesforce-tokens` and paste tokens.
+   Navigate to `http://localhost:5350/setup/refresh-salesforce-tokens` and paste each `result.accessToken`.
+   For auto-refresh, also run `sf org auth show-sfdx-auth-url -o <alias> --json` and paste each `result.sfdxAuthUrl` into the matching refresh-token field.
 
 3. **Set Claude authentication:**
-   Navigate to `http://localhost:5350/setup/claude-login` and follow the wizard.
+   Run `claude setup-token`, then navigate to `http://localhost:5350/setup/claude-login` and paste the token printed by the CLI.
 
 4. **Start the service:**
    ```bash
@@ -78,10 +82,11 @@ CaseOps is an AI-powered platform for automating the investigation, analysis, an
 
 ## Documentation
 
-- **[USER_GUIDE.md](USER_GUIDE.md)** — How to use CaseOps, workflows, features
-- **[TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md)** — Architecture, APIs, token management
-- **[ARCHITECTURE_STRATEGY.md](ARCHITECTURE_STRATEGY.md)** — 7-skill pipeline design
-- **[references/](references/)** — Detailed technical specs
+- **[USER_GUIDE.md](USER_GUIDE.md)** — How to use CaseOps, workflows, and token setup
+- **[TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md)** — Architecture, APIs, token management, storage model
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System design and pipeline flow
+- **[docs/DOCKER_SETUP.md](docs/DOCKER_SETUP.md)** — Docker/NAS setup
+- **[INSTANCE_ROUTING.md](INSTANCE_ROUTING.md)** — Instance isolation and metadata workspace policy
 
 ## Common Tasks
 
@@ -90,22 +95,33 @@ CaseOps is an AI-powered platform for automating the investigation, analysis, an
 2. Monitor progress in logs
 3. Issues flow through Steps 1-12 automatically
 
+### Salesforce Metadata Workspace
+
+Pipeline metadata is stored under the active instance's `.temp/metadata/` tree:
+
+- `raw-production/<KEY>/` — read-only Production retrievals
+- `sandbox-work/<KEY>/attempt-N/` — Sandbox baseline, candidate, and revert packages
+- `confirmed/<KEY>/support-owned/` or `engineering-proposal/` — final tested package
+
+Do not use root-level `temp*`, `retrieve*`, `deploy*`, or `metadata*` folders for runtime work.
+
 ### Manually Refresh Salesforce Tokens
 1. Get fresh access tokens:
    ```bash
-   sf org auth show-access-token -o 10xhealth --no-prompt
-   sf org auth show-access-token -o 10xhealth-sean --no-prompt
+   sf org auth show-access-token -o 10xhealth --json
+   sf org auth show-access-token -o 10xhealth-sean --json
    ```
 2. Navigate to `http://localhost:5350/setup/refresh-salesforce-tokens`
-3. Paste tokens (optional: add refresh tokens for auto-refresh)
-4. Submit
+3. Paste each `result.accessToken`
+4. Optional for auto-refresh: run `sf org auth show-sfdx-auth-url -o <alias> --json` and paste `result.sfdxAuthUrl` into the matching refresh-token field
+5. Submit
 
 ### Set Up Claude Authentication
-1. Navigate to `http://localhost:5350/setup/claude-login`
-2. Step 1: Click link to log into Claude
-3. Step 2: Run `cat ~/.claude/.credentials.json` on your local machine
-4. Step 3: Paste the JSON output into the form
-5. Submit — credentials saved and persisted
+1. On your local machine, run `claude setup-token`
+2. Copy only the token printed by the command
+3. Navigate to `http://localhost:5350/setup/claude-login`
+4. Paste the token and submit
+5. CaseOps stores it as `CLAUDE_CODE_OAUTH_TOKEN` in the active env file
 
 ### Escalate an Issue
 1. Click issue in sidebar
@@ -119,11 +135,11 @@ CaseOps is an AI-powered platform for automating the investigation, analysis, an
 ### "Salesforce tokens EXPIRED"
 **Solution:** Refresh tokens via `/setup/refresh-salesforce-tokens` or provide refresh tokens for auto-refresh.
 
-### "Claude credentials not found"
-**Solution:** Run `/setup/claude-login` wizard to authenticate.
+### "Claude Code auth token not configured"
+**Solution:** Run `claude setup-token`, then save the token with `/setup/claude-login`.
 
 ### Pipeline stalled on Step 5
-**Check:** Are Salesforce orgs reachable? Run `/api/status` to verify auth.
+**Check:** Are Salesforce orgs reachable? Open Settings or call `/api/settings/status` to verify runtime preflight.
 
 ### Mobile layout broken
 **Check:** Browser zoom is 100%, viewport meta tags loaded. See [CSS responsive rules](static/css/caseops.css#L1160).

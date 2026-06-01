@@ -57,9 +57,9 @@
 3. Flask spawns: `claude -p <orchestrator prompt>`
    ↓
 4. Claude Code subprocess:
-   - Reads ORCHESTRATOR-PROMPT.md
+   - Reads `skills/jira-salesforce-fix-pipeline/SKILL.md` and `references/workflow.md`
    - Executes jira_sync.py (Step 1)
-   - Calls sub-agents for Steps 3-7
+   - Calls sub-agents for Steps 3, 5, 6, 9, and 10
    - Collects outputs
    - Exits
    ↓
@@ -129,7 +129,7 @@
 
 2. **OAuth Token Refresh:**
    ```
-   POST https://login.salesforce.com/services/oauth2/token
+   POST <configured-login-or-instance-url>/services/oauth2/token
    grant_type=refresh_token
    refresh_token=<refresh_token>
    client_id=PlatformCLI
@@ -150,6 +150,10 @@
 ```env
 SF_PROD_ACCESS_TOKEN=<current access token>
 SF_PROD_REFRESH_TOKEN=<long-lived refresh token>
+CASEOPS_PRODUCTION_INSTANCE_URL=https://login.salesforce.com
+SF_SANDBOX_ACCESS_TOKEN=<current access token>
+SF_SANDBOX_REFRESH_TOKEN=<long-lived refresh token>
+CASEOPS_SANDBOX_INSTANCE_URL=https://test.salesforce.com
 SF_TOKENS_REFRESHED_AT=<unix timestamp>
 ```
 - Startup auto-refreshes at 4h mark
@@ -164,17 +168,18 @@ SF_TOKENS_REFRESHED_AT=<unix timestamp>
 ```
 - Manual refresh required every 8h
 - User navigates to /setup/refresh-salesforce-tokens
-- Must re-authenticate locally: `sf org login web -o 10xhealth`
+- Must re-authenticate locally: `sf org login web --alias 10xhealth`
 
 ### Token Sources
 
 | Source | Method | Duration | Refresh? |
 |--------|--------|----------|----------|
-| `sf org auth show-access-token` | Session token | 8h | Manual |
-| `.sfdx/` cache file | OAuth token + refresh | 8h + indefinite | Auto |
+| `sf org auth show-access-token --json` | Access token only (`result.accessToken`) | 8h | Manual |
+| `sf org auth show-sfdx-auth-url --json` | SFDX auth URL containing refresh token (`result.sfdxAuthUrl`) | 8h + refresh-token lifetime | Auto |
+| Salesforce CLI auth cache (`~/.sf/`, older `~/.sfdx/`) | Local OAuth material used by `sf` | Depends on org policy | Local CLI only |
 | `.env.jira` | Manual paste | 8h | Manual or Auto |
 
-**Best practice:** Use refresh tokens from `.sfdx/` cache.
+**Best practice:** Use `sf org login web`, then paste `result.accessToken` from `sf org auth show-access-token --json` and `result.sfdxAuthUrl` from `sf org auth show-sfdx-auth-url --json` into the CaseOps refresh page. CaseOps stores only the access token plus extracted refresh token in `.env.jira`.
 
 ---
 
@@ -200,12 +205,13 @@ SF_TOKENS_REFRESHED_AT=<unix timestamp>
 
 **Skill files:** `skills/jira-salesforce-fix-pipeline/`
 
-Each step runs as a **sub-agent** (Claude API call with specific prompt + context):
+Specialized steps run as **sub-agents** with specific prompts and context:
 - `jira-issue-analysis` — Step 3
-- `jira-response-drafting` — Step 7
 - `salesforce-production-metadata-investigation` — Step 5
-- `salesforce-sandbox-deploy-test` — Step 6
-- (Orchestrator runs Steps 1, 2, 4, 11, 12)
+- `salesforce-production-metadata-investigation` drilling mode — Step 6
+- `salesforce-sandbox-deploy-test` — Step 9
+- `jira-response-drafting` — Step 10
+- Orchestrator runs Steps 1, 2, 4, 7, 8, 11, and 12
 
 ### Pipeline State Machine
 
@@ -268,8 +274,8 @@ ESCALATED_TO_ENGINEERING
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| GET | `/setup/claude-login` | HTML wizard for auth |
-| POST | `/api/setup/claude-credentials` | Save + persist credentials |
+| GET | `/setup/claude-login` | HTML wizard for saving a Claude Code OAuth token |
+| POST | `/api/setup/claude-credentials` | Save `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` |
 
 ### System
 
@@ -288,9 +294,9 @@ ESCALATED_TO_ENGINEERING
 ```
 outputs/
 ├── jira/
-│   ├── issues-raw.json          # Raw Jira API response
-│   ├── issues-summary-*.md      # Parsed issues
-│   └── manifest.json            # Issue list + metadata
+│   ├── raw/HEAL-*.json          # Raw Jira issue JSON
+│   ├── summary/HEAL-*.md        # Parsed issue summaries
+│   └── manifest.csv             # Issue list + metadata
 ├── investigations/
 │   └── HEAL-*.md                # Root cause analysis
 ├── internal-notes/
@@ -309,6 +315,29 @@ outputs/
 │   └── YYYY-MM-DD-*.log         # Timestamped runs
 └── issue-summary-YYYY-MM-DD.md  # Daily rollup
 ```
+
+### Salesforce Metadata Workspace
+
+Salesforce metadata is managed outside `outputs/` so user-facing reports stay separate from raw and deployable metadata:
+
+```
+.temp/metadata/
+├── raw-production/
+│   └── HEAL-*/                    # Read-only Production retrievals
+├── sandbox-work/
+│   └── HEAL-*/
+│       ├── metadata-workspace.json
+│       └── attempt-001/
+│           ├── baseline-sandbox/  # Sandbox state before deploy
+│           ├── candidate/         # Candidate metadata deployed for this attempt
+│           └── revert/            # Rollback package for failed attempts
+└── confirmed/
+    └── HEAL-*/
+        ├── support-owned/         # Passed Support-owned package
+        └── engineering-proposal/  # Passed proposal for Engineering handoff
+```
+
+Raw Production files are read-only evidence. Modified metadata is always issue-scoped and attempt-scoped. Failed or abandoned attempts must be reverted from `baseline-sandbox/` before another candidate is tested.
 
 ### Pipeline Log Format (JSONL)
 
@@ -329,21 +358,11 @@ Each line is JSON:
 
 ### Manifest Structure
 
-File: `outputs/jira/manifest.json`
+File: `outputs/jira/manifest.csv`
 
-```json
-[
-  {
-    "Key": "HEAL-30437",
-    "Status": "In Progress",
-    "Summary": "Automate Shopify Network Order Release Process",
-    "Priority": "Medium",
-    "Assignee": "sean@example.com",
-    "Updated": "2026-05-29T11:08:58.216-0400",
-    "Due": "",
-    "HasNewComments": true
-  }
-]
+```csv
+Key,Status,Summary,Priority,Assignee,Updated,Due,HasNewComments
+HEAL-30437,In Progress,Automate Shopify Network Order Release Process,Medium,sean@example.com,2026-05-29T11:08:58.216-0400,,true
 ```
 
 Used for: Issue list, status tracking, SLA calculations.
@@ -366,12 +385,14 @@ Used for: Issue list, status tracking, SLA calculations.
 - Can run test code
 - Used for: Testing fixes before Production
 
+CaseOps does not promote metadata to Production. Passed Sandbox packages are saved under `.temp/metadata/confirmed/<KEY>/...` for operator-controlled Gearset or standard change control.
+
 ### Token Security
 
 **Storage:**
 - Never logged or printed (redacted in debug output)
 - Stored in `.env.jira` (restricted permissions: 0o600)
-- Persisted in base64-encoded form in Docker env vars
+- Loaded by Docker from the active env file
 - NAS storage: restricted to docker user only
 
 **Rotation:**
@@ -387,10 +408,10 @@ Used for: Issue list, status tracking, SLA calculations.
 ### Claude Code Security
 
 **Credentials:**
-- Stored in `/app/.claude/.credentials.json` (0o600)
-- Persisted in base64 env var CLAUDE_CREDENTIALS_B64
-- Mounted from NAS, survives restarts
-- Only accessible to Claude CLI subprocess
+- Preferred auth is `CLAUDE_CODE_OAUTH_TOKEN`, generated by `claude setup-token`
+- Stored in the active env file (`/app/.env.jira` in Docker; `.env.jira.nas` on the NAS host)
+- Passed only to Claude Code CLI subprocesses; `ANTHROPIC_API_KEY` is removed in `claude_code` mode so it cannot override subscription auth
+- Legacy credential files and `CLAUDE_CREDENTIALS_B64` are not used; missing `CLAUDE_CODE_OAUTH_TOKEN` blocks runtime preflight
 
 **Capabilities:**
 - Can invoke Claude API (limited to registered skills)
@@ -418,15 +439,17 @@ services:
       - .env.jira.nas
     volumes:
       - ./instance1/outputs:/app/instance1/outputs
-      - ./.env.jira.nas:/app/.env.jira:ro
+      - ./.env.jira.nas:/app/.env.jira
     environment:
       CASEOPS_OUTPUTS_DIR: /app/instance1/outputs
       CASEOPS_WORKSPACE: default
 ```
 
 **Key points:**
-- Source code mounted via `build:` (rebuild on changes)
-- `.env.jira.nas` mounted **read-only** (NAS is source of truth)
+- The NAS container bind-mounts `app.py`, `templates/`, `static/`, and `skills/` read-only for predictable source and playbook updates
+- Source/skill changes require sync to `/volume1/docker/stacks/caseops` plus container restart
+- Dockerfile, dependency, npm/global CLI, or OS package changes require sync plus image rebuild and restart
+- `.env.jira.nas` mounted writable because token refresh and Settings update `/app/.env.jira`
 - Outputs directory volume-mounted (persistent across restarts)
 - Port 5350 on host → 5000 in container
 
@@ -512,13 +535,13 @@ _check_and_refresh_salesforce_tokens(Path('/app/.env.jira'))
 
 **Check org accessibility:**
 ```bash
-curl -H "Authorization: Bearer <token>" \
-  https://10xhealth.my.salesforce.com/services/data/
-# Should return 200 with version info
+sf org display --target-org <alias> --json
+sf data query --target-org <alias> --query "SELECT Id FROM Organization LIMIT 1" --json
 ```
 
 **If 401 INVALID_SESSION_ID:**
-- Token expired or invalid
+- Salesforce CLI access token expired or invalid
+- Do not test frontdoor/magic-link SIDs as API bearer tokens; frontdoor links are browser UI sessions only
 - Run token refresh
 - Verify token format (check for typos)
 
@@ -585,5 +608,6 @@ docker-compose restart caseops
 ## Further Reading
 
 - See [USER_GUIDE.md](USER_GUIDE.md) for operational docs
-- See [ARCHITECTURE_STRATEGY.md](ARCHITECTURE_STRATEGY.md) for design rationale
-- See [references/](references/) for detailed specifications
+- See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system design
+- See [INSTANCE_ROUTING.md](INSTANCE_ROUTING.md) for instance isolation and metadata workspace rules
+- See [skills/jira-salesforce-fix-pipeline/references/workflow.md](skills/jira-salesforce-fix-pipeline/references/workflow.md) for the authoritative pipeline workflow

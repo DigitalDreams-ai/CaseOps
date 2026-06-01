@@ -49,11 +49,21 @@ outputs/
     investigations/          ← Investigation records
     internal-notes/          ← Claude analysis
     jira-messages/           ← Draft Jira replies
-    solutions/               ← Solution flags
-    confidence-flags/        ← Confidence metadata
+    test-reports/            ← Sandbox validation results
+    engineering-escalations/ ← Engineering handoffs
+    pipeline-logs/           ← Per-run logs
     ...
   job2/
     (same structure, completely separate data)
+```
+
+When an explicit `--outputs-dir` is used, CaseOps creates the Salesforce metadata workspace beside that outputs directory. For example, `instance1/outputs` uses:
+
+```
+instance1/.temp/metadata/
+  raw-production/             ← read-only Production retrievals
+  sandbox-work/               ← per-issue, per-attempt Sandbox work
+  confirmed/                  ← passed Support or Engineering proposal packages
 ```
 
 ---
@@ -107,14 +117,11 @@ When launching with `--workspace myorg`, CaseOps looks for:
 
 ## Command-Line Interface
 
-Both `run_pipeline.py` and `step8_agent.py` respect workspace isolation via CLI args:
+`run_pipeline.py` respects workspace isolation via CLI args:
 
 ```bash
 # Pipeline for job2
 python run_pipeline.py --outputs-dir outputs/job2 --env-file .env.jira.job2
-
-# Single issue agent for job2
-python step8_agent.py --key HEAL-33150 --outputs-dir outputs/job2 --env-file .env.jira.job2
 ```
 
 When launched from Flask (via app.py), these args are passed automatically.

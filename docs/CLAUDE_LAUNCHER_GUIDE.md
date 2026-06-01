@@ -52,7 +52,7 @@ Execute Steps 1-12:
 5. Production metadata
 6. Problem location
 7. Escalation gate
-8. Implement (if Support)
+8. Implement proposed solution
 9. Deploy+test in Sandbox
 10. Draft messages
 11. Dated summary
@@ -78,7 +78,7 @@ claude -p "<paste-prompt-here>"
 
 ### "claude: command not found"
 - Install Claude Code: `npm install -g @anthropic-ai/claude-code`
-- Or run `claude login` to verify it's installed
+- Run `claude --version` to verify it's installed
 - Or use the Claude Code IDE directly (Method 3 above)
 
 ### PowerShell script fails with permission error
@@ -86,7 +86,7 @@ claude -p "<paste-prompt-here>"
 - Or change execution policy: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
 ### "Claude Code subscription not active"
-- Run `claude login` and verify you're logged in
+- Run `claude setup-token` and save the new token in CaseOps at `/setup/claude-login`
 - Check your Claude Code subscription status
 - If using API key mode (`CASEOPS_LLM_AUTH=api_key`), sub-agents won't work
 

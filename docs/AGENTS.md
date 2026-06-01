@@ -96,25 +96,25 @@ Each prompt is:
 ```
 Step 3 → Step 4 → Step 5 → Step 6 → Step 7
          ↓
-      Escalate? ← Yes → Route to Engineering (Step 10 → 12)
-                        |
-                        No (Support-resolvable)
-                        ↓
-                      Step 8 → Step 9 (Deploy & Test)
-                               ↓
-                            Passed? → Step 10 → 11 → 12
-                               ↓
-                               No (Failed)
-                               ↓
-                            Revise hypothesis (Step 4)
-                            Re-investigate (Step 5–6)
-                            Re-implement (Step 8)
-                            Re-test (Step 9)
+      Classify path
+          ↓
+      Step 8 → Step 9 (Sandbox deploy/test for Support fix or Engineering proposal)
+               ↓
+            Passed? → Step 10 → 11 → 12
+               ↓
+               No (Failed)
+               ↓
+            Revert failed Sandbox attempt
+            Revise hypothesis (Step 4)
+            Re-investigate (Step 5–6)
+            Re-implement (Step 8)
+            Re-test (Step 9)
 ```
 
 **Retry Logic:**
 - On Step 9 deploy failure: Revise Step 4 hypothesis → loop back to Steps 5–6
 - On Step 9 test failure: Same retry loop
+- Failed or abandoned Sandbox attempts must be reverted before the next attempt
 - Max 2–3 iterations before escalation
 
 ### Progress Output Format
@@ -157,12 +157,26 @@ GUI parses regex `/STEP_(\d+)\s+(HEAL-\d+)/` from SSE stream → updates indicat
 **Allowed:**
 - Query Production metadata (flows, validation rules, fields, etc.)
 - Use `CASEOPS_PRODUCTION_READ_ORG` for org context
-- Use `CASEOPS_PRODUCTION_MAGIC_LINK` for UI investigation
+- Use `sf` CLI and SOQL for investigation
+- Use `CASEOPS_PRODUCTION_MAGIC_LINK` only for visual UI inspection when CLI/SOQL is insufficient
 
 **Forbidden:**
 - Any write to Production
 - Modifying Production records or metadata
 - Deploying to Production
+- Using frontdoor session IDs as API bearer tokens
+
+### Metadata Workspace
+
+Salesforce metadata must use the environment-provided workspace:
+
+| Purpose | Path |
+| --- | --- |
+| Raw Production metadata | `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/` |
+| Sandbox attempts | `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/` |
+| Confirmed packages | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/...` |
+
+Do not create root-level `temp*`, `retrieve*`, `deploy*`, or `metadata*` folders.
 
 ### Artifact Linkification
 
@@ -201,6 +215,7 @@ All generated artifacts (investigation, notes, messages) include Salesforce link
 **Output:** ~300-token summary containing:
 - Deploy success/failure
 - Test results (did the fix work?)
+- Attempt directory, baseline, candidate, and revert status
 - Gearset promotion readiness
 
 **Stored at:** `outputs/test-reports/<KEY>.md`
@@ -255,6 +270,7 @@ All templates live in `assets/` and are loaded by steps:
 - Call deprecated Python agents (run_7_skills_for_issue, etc.)
 - Hard-code org names; read from `.env.jira`
 - Assume magic links are fresh; they expire
+- Use magic links or frontdoor SIDs for API/SOQL/metadata access; use `sf` CLI instead
 - Deploy to Production
 - Load full investigation into orchestrator context
 - Process multiple issues in a single Agent call

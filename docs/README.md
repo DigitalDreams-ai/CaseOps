@@ -21,7 +21,7 @@ All orchestrated by Claude Code via the `jira-salesforce-fix-pipeline` skill. No
 ```bash
 # Copy and configure credentials
 cp .env.jira.example .env.jira
-# Edit: Jira credentials, org identifiers, magic links (optional)
+# Edit: Jira credentials, org identifiers, Salesforce tokens, Claude token
 ```
 
 ### 2. Start the GUI
@@ -84,6 +84,8 @@ CASEOPS_DEFAULT_ASSIGNEE=your-jira-username
 # Salesforce
 CASEOPS_SANDBOX_TARGET_ORG=10xhealth-sean      # Single writable Sandbox
 CASEOPS_PRODUCTION_READ_ORG=10xhealth           # Production (read-only)
+CASEOPS_SANDBOX_INSTANCE_URL=https://test.salesforce.com
+CASEOPS_PRODUCTION_INSTANCE_URL=https://login.salesforce.com
 
 # Optional: Session URLs for UI investigation (auto-expire)
 CASEOPS_SANDBOX_MAGIC_LINK=https://...
@@ -91,6 +93,7 @@ CASEOPS_PRODUCTION_MAGIC_LINK=https://...
 
 # LLM Auth (choose one)
 CASEOPS_LLM_AUTH=claude_code   # Use Claude Code CLI
+CLAUDE_CODE_OAUTH_TOKEN=...    # Save via /setup/claude-login after `claude setup-token`
 # OR
 CASEOPS_LLM_AUTH=api_key       # Use Anthropic API
 ANTHROPIC_API_KEY=sk-...
@@ -119,16 +122,26 @@ After processing, check:
 | `outputs/engineering-escalations/<KEY>.md` | Engineering handoff (if escalated) |
 | `outputs/issue-summary-YYYY-MM-DD.md` | Daily rollup of all processed issues |
 
+Runtime Salesforce metadata is kept outside `outputs/`:
+
+| Path | Contents |
+| --- | --- |
+| `.temp/metadata/raw-production/<KEY>/` | Read-only Production retrievals |
+| `.temp/metadata/sandbox-work/<KEY>/attempt-N/` | Sandbox baseline, candidate, and revert packages |
+| `.temp/metadata/confirmed/<KEY>/...` | Confirmed Support package or Engineering proposal |
+
 ## Safety Constraints
 
 ✅ **Allowed:**
 - Read Production metadata (diagnosis only)
+- Use `sf` CLI and SOQL for Salesforce API work
 - Write/deploy to `CASEOPS_SANDBOX_TARGET_ORG` only
 - Test in Sandbox before promotion
 
 ❌ **Forbidden:**
 - Direct Production writes
 - Deploying to other Sandboxes
+- Using frontdoor or magic-link session IDs for API/SOQL/metadata access
 - Automatic Jira posting (you review & post manually)
 - Automatic Production promotion (you use Gearset)
 
@@ -156,12 +169,12 @@ After processing, check:
 - **[NIGHTLY_SETUP.md](NIGHTLY_SETUP.md)** — Scheduled pipeline
 - **[CLAUDE_LAUNCHER_GUIDE.md](CLAUDE_LAUNCHER_GUIDE.md)** — Claude Code CLI setup
 
-## Recent Changes
+## Current Runtime Notes
 
-- Fixed sync cache clearing for individual issue syncs
-- Added real-time step progress indicators in GUI
-- Improved artifact linkification (ID-based, no magic links)
-- Added `/api/orgs` endpoint for org identifier access
+- Claude Code auth uses `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`.
+- Salesforce CLI auth is recreated inside the container from tokens saved in the active env file.
+- The pipeline preflight verifies Claude auth plus Production and Sandbox `sf` CLI access before Salesforce work begins.
+- Magic links are visual UI fallback only.
 
 ## License
 

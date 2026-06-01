@@ -14,16 +14,14 @@ CaseOps/                          ← shared code repo (git tracked)
   
 instance1/                        ← GITIGNORED (not tracked)
   .env.jira                       ← instance1 Jira/Salesforce config
-  .sfdx/                          ← instance1 sf CLI auth + cache
-  .claude/                        ← instance1 Claude Code state
   outputs/                        ← instance1 pipeline results
+  .temp/metadata/                 ← instance1 Salesforce metadata workspace
   launch.ps1                      ← instance1 launcher script
   
 instance2/                        ← GITIGNORED (not tracked)
   .env.jira                       ← instance2 Jira/Salesforce config
-  .sfdx/                          ← instance2 sf CLI auth + cache
-  .claude/                        ← instance2 Claude Code state
   outputs/                        ← instance2 pipeline results
+  .temp/metadata/                 ← instance2 Salesforce metadata workspace
   launch.ps1                      ← instance2 launcher script
 ```
 
@@ -76,9 +74,8 @@ Each instance is completely independent:
 | Component | Instance 1 | Instance 2 |
 |-----------|-----------|-----------|
 | Jira/Salesforce auth | `instance1/.env.jira` | `instance2/.env.jira` |
-| sf CLI state | `instance1/.sfdx/` | `instance2/.sfdx/` |
-| Claude Code state | `instance1/.claude/` | `instance2/.claude/` |
 | Pipeline outputs | `instance1/outputs/` | `instance2/outputs/` |
+| Metadata workspace | `instance1/.temp/metadata/` | `instance2/.temp/metadata/` |
 | Port | 5000 | 5351 |
 | Workspace name | `instance1` | `instance2` |
 
@@ -133,7 +130,7 @@ git pull
 Clone the pattern:
 
 ```bash
-mkdir -p instance3/.sfdx instance3/.claude instance3/outputs
+mkdir -p instance3/outputs instance3/.temp/metadata
 cp instance2/.env.jira instance3/.env.jira
 cp instance2/launch.ps1 instance3/launch.ps1
 ```
@@ -151,8 +148,8 @@ Edit `instance3/launch.ps1`:
 - Verify both instances are using different ports
 
 **State files not isolated:**
-- Verify `SF_DATA_DIR` and `CLAUDE_CODE_DIR` are set correctly (see launch.ps1 output)
-- Check that `.sfdx/` and `.claude/` directories are in instanceN/, not repo root
+- Verify `CASEOPS_OUTPUTS_DIR`, `CASEOPS_JIRA_ENV_FILE`, and `CASEOPS_METADATA_ROOT` are set correctly in startup logs
+- Check that generated files are under `instanceN/outputs` or `instanceN/.temp/metadata`, not repo root
 
 **Instance can't find .env.jira:**
 - Confirm file exists: `instance1/.env.jira`
@@ -161,9 +158,8 @@ Edit `instance3/launch.ps1`:
 **One instance corrupted; need reset:**
 ```bash
 # Clean instance1 state (keep code)
-rm -r instance1/.sfdx/*
-rm -r instance1/.claude/*
 rm -r instance1/outputs/*
+rm -r instance1/.temp/*
 
 # Restart instance1
 .\instance1\launch.ps1
@@ -182,13 +178,11 @@ rm -r instance1/outputs/*
 ### Instance 1 (Git ignored)
 - `instance1/launch.ps1` — Instance 1 launcher (port 5000)
 - `instance1/.env.jira` — Instance 1 Jira/Salesforce config
-- `instance1/.sfdx/` — Instance 1 sf CLI auth
-- `instance1/.claude/` — Instance 1 Claude Code state
 - `instance1/outputs/` — Instance 1 pipeline results
+- `instance1/.temp/metadata/` — Instance 1 Salesforce metadata workspace
 
 ### Instance 2 (Git ignored)
 - `instance2/launch.ps1` — Instance 2 launcher (port 5351)
 - `instance2/.env.jira` — Instance 2 Jira/Salesforce config
-- `instance2/.sfdx/` — Instance 2 sf CLI auth
-- `instance2/.claude/` — Instance 2 Claude Code state
 - `instance2/outputs/` — Instance 2 pipeline results
+- `instance2/.temp/metadata/` — Instance 2 Salesforce metadata workspace

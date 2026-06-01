@@ -7,7 +7,7 @@
 ### Prerequisites
 - Python 3.9+
 - `sf` CLI (Salesforce)
-- Claude Code subscription or `claude login`
+- Claude Code CLI plus a token from `claude setup-token`
 - `.env.jira` file (copy from `.env.jira.example` and fill in Jira credentials + Salesforce orgs)
 
 ### Configure .env.jira
@@ -24,6 +24,8 @@ JIRA_API_TOKEN=your-api-token
 CASEOPS_DEFAULT_ASSIGNEE=your-username
 CASEOPS_SANDBOX_TARGET_ORG=10xhealth-sean  # Single writable Sandbox
 CASEOPS_PRODUCTION_READ_ORG=10xhealth      # Production (read-only)
+CASEOPS_SANDBOX_INSTANCE_URL=https://test.salesforce.com
+CASEOPS_PRODUCTION_INSTANCE_URL=https://login.salesforce.com
 CASEOPS_SANDBOX_MAGIC_LINK=https://...     # Optional: Sandbox session URL
 CASEOPS_PRODUCTION_MAGIC_LINK=https://...  # Optional: Production session URL (read-only)
 ```
@@ -55,7 +57,7 @@ GUI features:
    - Step 5: Retrieve Production metadata
    - Step 6: Identify problem location
    - Step 7: Escalation decision
-   - Step 8–9: Implement + Deploy to Sandbox (if Support-resolvable)
+   - Step 8–9: Implement proposed solution + deploy/test in Sandbox
    - Step 10: Draft internal notes + Jira message
    - Step 11–12: Generate summary + report
 
@@ -101,13 +103,13 @@ CaseOps **does not** auto-post to Jira. You review then post:
 3. Post to Jira issue as a comment
 4. In GUI: Mark issue as "Resolved" or use Jira transition if applicable
 
-## 6. Deploy to Production (Manual Step)
+## 6. Promote to Production (Manual Step)
 
 **CaseOps validates only in Sandbox.** Production deploy is operator-driven:
 
 - **If Support-fixed issue:** Use Gearset to promote Sandbox changes to Production
 - **If Engineering-escalated:** Coordinate with Engineering team (handoff in `outputs/engineering-escalations/`)
-- **Read-only fix (data/config/access only):** No Production deploy needed; issue resolved in Sandbox
+- **Data/access-only fix:** No metadata promotion is needed; operator performs or confirms the required non-metadata action outside Production deploy flow
 
 Always confirm in the **Test Report** whether Production deploy is required ("Gearset: Yes / No / N/A").
 
@@ -143,13 +145,22 @@ Always confirm in the **Test Report** whether Production deploy is required ("Ge
 - ✗ Never deploy to Production from CaseOps
 - ✗ Never modify Production metadata or records
 - ✓ Read Production metadata to diagnose issues
-- ✓ Use `CASEOPS_PRODUCTION_MAGIC_LINK` for UI investigation (read-only)
+- ✓ Use `sf` CLI and SOQL for investigation
+- ✓ Use `CASEOPS_PRODUCTION_MAGIC_LINK` only for visual UI inspection (read-only)
 
 **Sandbox writes are allowlisted:**
 - ✓ Deploy, test, modify metadata **ONLY** in `CASEOPS_SANDBOX_TARGET_ORG`
 - ✓ That org is read from `.env.jira` at deploy time
+- ✓ Capture a Sandbox baseline before each deploy attempt
+- ✓ Revert failed or abandoned Sandbox attempts before trying another solution
 - ✗ Deploying to any other org will be blocked
 - If `.env.jira` is missing `CASEOPS_SANDBOX_TARGET_ORG`, processing stops with an error
+
+**Metadata workspace:**
+- Raw Production retrievals: `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`
+- Sandbox attempts: `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/`
+- Confirmed packages: `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/` or `engineering-proposal/`
+- Do not use root-level `temp*`, `retrieve*`, `deploy*`, or `metadata*` folders.
 
 ## 9. Troubleshooting
 
@@ -161,7 +172,7 @@ Always confirm in the **Test Report** whether Production deploy is required ("Ge
 ### "Pipeline failed at Step 8"
 - Check `CASEOPS_SANDBOX_TARGET_ORG` is set and reachable
 - Run: `sf org list` to confirm Sandbox org is registered
-- Check if magic links expired (refresh in `.env.jira`)
+- Refresh magic links only if the failure is a visual browser/UI login problem
 
 ### "Sub-agent timed out"
 - Check available context tokens (very large issues may exceed limits)

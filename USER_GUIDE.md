@@ -70,27 +70,41 @@ If you provide **refresh tokens**, CaseOps automatically:
 - Continues running without interruption
 
 **To enable auto-refresh:**
-1. Go to `http://localhost:5350/setup/refresh-salesforce-tokens`
-2. Get both **access tokens** AND **refresh tokens**:
+1. First authenticate Salesforce orgs locally:
    ```bash
-   # On your authenticated local machine
-   sf org auth show-access-token -o 10xhealth --no-prompt
-   # (get both tokens from .sfdx/sbingham@10xhealthsystem.com.json)
+   sf org login web --alias 10xhealth
+   sf org login web --alias 10xhealth-sean --instance-url https://test.salesforce.com
    ```
-3. Paste access tokens in "Prod (10xhealth)" and "Sandbox (10xhealth-sean)"
-4. Paste refresh tokens in "Refresh" fields (optional but recommended)
-5. Click **"Save & Refresh Tokens"**
-6. Tokens auto-refresh every 4 hours from now on
+2. Get access tokens:
+   ```bash
+   sf org auth show-access-token -o 10xhealth --json
+   sf org auth show-access-token -o 10xhealth-sean --json
+   ```
+   Copy each `result.accessToken`.
+3. Get refresh-token source URLs:
+   ```bash
+   sf org auth show-sfdx-auth-url -o 10xhealth --json
+   sf org auth show-sfdx-auth-url -o 10xhealth-sean --json
+   ```
+   Copy each `result.sfdxAuthUrl`. CaseOps accepts the full SFDX auth URL and extracts the refresh token.
+4. Go to `http://localhost:5350/setup/refresh-salesforce-tokens`
+5. Paste Prod access, Prod SFDX auth URL, Sandbox access, and Sandbox SFDX auth URL
+6. Click **"Save & Refresh Tokens"**
+7. Tokens auto-refresh every 4 hours from now on
 
 ### Manual Refresh (If Needed)
-1. Navigate to `http://localhost:5350/setup/refresh-salesforce-tokens`
-2. Run locally:
+1. Authenticate orgs locally (if not already done):
    ```bash
-   sf org auth show-access-token -o 10xhealth --no-prompt
-   sf org auth show-access-token -o 10xhealth-sean --no-prompt
+   sf org login web --alias 10xhealth
+   sf org login web --alias 10xhealth-sean --instance-url https://test.salesforce.com
    ```
-3. Copy the access token values into the form
-4. (Optional) Get refresh tokens and paste those too
+2. Get current tokens:
+   ```bash
+   sf org auth show-access-token -o 10xhealth --json
+   sf org auth show-access-token -o 10xhealth-sean --json
+   ```
+3. Navigate to `http://localhost:5350/setup/refresh-salesforce-tokens`
+4. Copy each `result.accessToken` into the form
 5. Click submit
 
 ### Token Refresh Timeline (Without Refresh Tokens)
@@ -101,7 +115,7 @@ If you provide **refresh tokens**, CaseOps automatically:
 | 8h+ | ❌ Expired | Tokens fail; pipeline blocked |
 
 ### Where Tokens Are Stored
-- **Local:** `~/.sfdx/` directory (sf CLI cache)
+- **Local:** Salesforce CLI auth cache, usually `~/.sf/` for current `sf` CLI versions; some older installations also use `~/.sfdx/`
 - **Container:** `/app/.env.jira` (refreshed by startup script)
 - **NAS:** `/volume1/docker/stacks/caseops/.env.jira.nas` (persistent)
 
@@ -113,7 +127,7 @@ If you provide **refresh tokens**, CaseOps automatically:
 
 **Click: "Auto-Process All"**
 
-Both Support-resolvable and Engineering-escalation issues follow **the same Steps 1-12**. The difference is what happens in Step 10: Support-resolvable issues deploy to Production; Escalation issues are handed to Engineering with a proposed solution.
+Both Support-resolvable and Engineering-escalation issues follow **the same Steps 1-12**. The difference is the Step 10 outcome: Support-resolvable issues produce a Sandbox-validated package ready for operator-controlled Production promotion, while Engineering-escalation issues produce an Engineering handoff with a Sandbox-validated proposed solution. CaseOps does not deploy to Production.
 
 | Step | What Happens | Time | Output |
 |------|-------------|------|--------|
@@ -131,17 +145,30 @@ Both Support-resolvable and Engineering-escalation issues follow **the same Step
 
 **Watch progress:** Click issue to see real-time investigation log.
 
+### Salesforce Metadata Workspace
+
+CaseOps keeps raw metadata, test attempts, and confirmed packages separate:
+
+| Purpose | Path |
+| --- | --- |
+| Raw Production metadata, read-only | `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/` |
+| Sandbox test attempts | `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/` |
+| Confirmed Support package | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/` |
+| Confirmed Engineering proposal | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/engineering-proposal/` |
+
+Failed or abandoned Sandbox attempts must be reverted from the captured `baseline-sandbox/` before another candidate is tested.
+
 ### Workflow 2: Manual Case-by-Case
 
 **Click issue in sidebar → Click "Settings" (⚙)**
 
 Available actions:
-- **Investigate** — Run Step 3 (analysis) on this issue only
-- **Propose Fix** — Run Steps 4-5 (hypothesis + metadata)
-- **Test in Sandbox** — Run Step 6 (deploy + validation)
-- **Draft Message** — Run Step 7 (customer response)
+- **Investigate** — Run issue analysis and investigation steps
+- **Propose Fix** — Build or refine the hypothesis and metadata scope
+- **Test in Sandbox** — Deploy and validate the proposed fix in the allowlisted Sandbox
+- **Draft Message** — Generate internal notes and customer-facing draft
 
-Each action saves output to `outputs/HEAL-*.md` files.
+Each action saves output to the issue-specific folders under `outputs/`.
 
 ### Workflow 3: Re-Investigate (After Fix Fails)
 
@@ -319,21 +346,21 @@ An issue needs escalation when:
 **A:** 8 hours. Without refresh tokens, you must manually refresh every 8 hours. With refresh tokens, CaseOps auto-refreshes at 4 hours.
 
 ### Q: Can I get refresh tokens?
-**A:** Only if your Salesforce CLI session has them. Run:
+**A:** Only if your Salesforce CLI session was created by `sf org login web`. Run:
 ```bash
-cat ~/.sfdx/sbingham@10xhealthsystem.com.json | grep refreshToken
+sf org auth show-sfdx-auth-url -o 10xhealth --json
 ```
-If no refresh token field, you'll need to re-authenticate:
+If `result.sfdxAuthUrl` is missing, you'll need to re-authenticate:
 ```bash
 sf org login web --alias 10xhealth
 ```
 
-### Q: What if I lose my Claude credentials?
-**A:** They're persisted in the container. If lost:
-1. Go to `/setup/claude-login`
-2. Follow the 3-step wizard
-3. Credentials saved automatically
-4. Container restart will restore them
+### Q: What if I lose my Claude Code token?
+**A:** Generate and save a new one:
+1. Run `claude setup-token` on your local machine
+2. Go to `/setup/claude-login`
+3. Paste only the token printed by the command
+4. CaseOps saves it as `CLAUDE_CODE_OAUTH_TOKEN`
 
 ### Q: Can the pipeline run without Salesforce tokens?
 **A:** No. Steps 5-7 require Salesforce API access. Steps 1-4 (sync, triage, analysis, hypotheses) can run without SF access, but pipeline will stop at Step 5.
@@ -341,7 +368,7 @@ sf org login web --alias 10xhealth
 ### Q: How do I check if tokens are valid?
 **A:** Tokens are automatically checked at startup. If expired:
 - App warns in logs but continues (with auto-refresh if refresh tokens available)
-- Pipeline will fail at Step 8-9 if Salesforce tokens required but invalid
+- Pipeline preflight blocks Salesforce work if the `sf` CLI cannot access the configured Production and Sandbox orgs
 - Go to **Settings** → **Refresh Salesforce Tokens** to manually refresh
 
 ### Q: Can I have multiple instances?
@@ -368,9 +395,10 @@ Each instance runs in a separate Docker container with its own `CASEOPS_WORKSPAC
 
 ### Q: Is Production data modified?
 **A:** **Never.** CaseOps has **read-only** access to Production Salesforce:
-- Investigations only query metadata + data
+- Investigations use `sf` CLI and SOQL for read-only metadata and data checks
+- Magic links/frontdoor links are visual UI fallback only, not API authentication
 - All fixes tested in Sandbox first
-- Manual approval required for Production changes
+- Operator-controlled Production promotion is required outside CaseOps
 - Audit trail logged in escalation docs
 
 ---
@@ -390,12 +418,19 @@ cd /volume1/docker/stacks/caseops
 docker-compose restart caseops
 ```
 
+### Deploy Local Updates to NAS
+For pilot deployments, CaseOps bind-mounts `app.py`, `templates/`, `static/`, and `skills/` from `/volume1/docker/stacks/caseops`.
+
+- App, UI, CSS, or skill/playbook changes: sync local files to the NAS stack folder, then restart `caseops`.
+- Dockerfile, dependency, Claude CLI, Salesforce CLI, or OS package changes: sync local files, rebuild the image, then restart `caseops`.
+- Verify the running container after restart; do not rely only on the files in the NAS stack folder.
+
 ### Common Errors & Fixes
 
 | Error | Cause | Fix |
 |-------|-------|-----|
 | "Salesforce tokens EXPIRED" | 8h+ since last refresh | Refresh tokens via Settings |
-| "Claude credentials not found" | Claude not authenticated | Run /setup/claude-login |
+| "Claude Code auth token not configured" | Claude token missing or expired | Run `claude setup-token`, then save it in `/setup/claude-login` |
 | "Sandbox deploy failed" | Metadata conflict | Check test-report for details |
 | "Pipeline stalled" | Jira API unreachable | Check .env.jira JIRA_* settings |
 
@@ -404,5 +439,6 @@ docker-compose restart caseops
 ## Next Steps
 
 - See [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) for architecture details
-- See [references/](references/) for detailed specs
-- Check [ARCHITECTURE_STRATEGY.md](ARCHITECTURE_STRATEGY.md) for pipeline design
+- See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system design
+- See [INSTANCE_ROUTING.md](INSTANCE_ROUTING.md) for instance isolation and metadata workspace rules
+- See [skills/jira-salesforce-fix-pipeline/references/workflow.md](skills/jira-salesforce-fix-pipeline/references/workflow.md) for the authoritative pipeline workflow
