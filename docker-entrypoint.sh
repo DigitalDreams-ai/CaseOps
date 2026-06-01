@@ -26,5 +26,17 @@ echo "Environment ready:"
 echo "  CASEOPS_LLM_AUTH=$CASEOPS_LLM_AUTH"
 echo "  SF orgs authenticated"
 
-# Run Flask app with arguments
-exec python app.py "$@"
+# Run Flask app with restart loop
+# If Flask exits (e.g., from /api/restart SIGTERM), restart it
+while true; do
+  echo "Starting Flask app..."
+  python app.py "$@"
+  EXIT_CODE=$?
+  if [ $EXIT_CODE -eq 0 ]; then
+    echo "Flask app exited cleanly"
+    break
+  else
+    echo "Flask app crashed with exit code $EXIT_CODE, restarting in 2 seconds..."
+    sleep 2
+  fi
+done
