@@ -52,22 +52,41 @@
         <div class="section">
             <h2>Step 2: Paste Tokens Below</h2>
 
+            <h3 style="font-size: 14px; color: #333; margin-top: 16px; margin-bottom: 10px;">Access Tokens (Required)</h3>
+
             <label class="label">Production (10xhealth) Access Token:</label>
             <textarea id="prod-token" placeholder="Paste production token here (00D0b000000vHFc!AQE...)"></textarea>
 
             <label class="label">Sandbox (10xhealth-sean) Access Token:</label>
             <textarea id="sandbox-token" placeholder="Paste sandbox token here (00DEa00000RViur!AQE...)"></textarea>
 
+            <h3 style="font-size: 14px; color: #333; margin-top: 20px; margin-bottom: 10px;">Refresh Tokens (Optional but Recommended for Auto-Refresh)</h3>
+            <p style="color: #666; font-size: 13px; margin-bottom: 12px;">
+                If you have refresh tokens, paste them below to enable automatic token refresh every 4 hours.
+                Without refresh tokens, you'll need to manually refresh every 8 hours.
+            </p>
+
+            <label class="label">Production (10xhealth) Refresh Token:</label>
+            <textarea id="prod-refresh-token" placeholder="Optional: paste production refresh token (optional, enables auto-refresh)"></textarea>
+
+            <label class="label">Sandbox (10xhealth-sean) Refresh Token:</label>
+            <textarea id="sandbox-refresh-token" placeholder="Optional: paste sandbox refresh token (optional, enables auto-refresh)"></textarea>
+
             <button onclick="refreshTokens()">Save & Refresh Tokens</button>
         </div>
 
         <div class="section" style="background: #f9f9f9; padding: 15px; border-radius: 4px; margin-top: 30px;">
-            <h2 style="margin-bottom: 8px;">⏱️ Token Expiry Timeline</h2>
+            <h2 style="margin-bottom: 8px;">⏱️ Token Expiry & Auto-Refresh Timeline</h2>
             <p style="color: #666; font-size: 13px;">
-                • <strong>Refresh timestamp set:</strong> Pipeline can run freely for 6 hours<br>
-                • <strong>After 6 hours:</strong> Warning shown at startup, but pipeline still works<br>
-                • <strong>After 8 hours:</strong> Tokens expire, pipeline fails to execute SOQL queries<br>
-                <strong style="color: #d32f2f;">Refresh tokens before they expire!</strong>
+                <strong>Without Refresh Tokens (Manual Refresh):</strong><br>
+                • <strong>0–4 hours:</strong> Pipeline works freely<br>
+                • <strong>4–8 hours:</strong> Warning at startup, pipeline may have reduced Salesforce access<br>
+                • <strong>After 8 hours:</strong> Tokens expire, Salesforce queries fail<br>
+                <br>
+                <strong style="color: #27ae60;">With Refresh Tokens (Auto-Refresh):</strong><br>
+                • <strong>Every 4 hours:</strong> Tokens automatically refresh in the background<br>
+                • <strong>No manual intervention needed</strong> — pipeline continues working indefinitely<br>
+                <strong>Recommendation:</strong> Provide refresh tokens for continuous operation.
             </p>
         </div>
     </div>
@@ -76,6 +95,8 @@
         function refreshTokens() {
             const prodToken = document.getElementById('prod-token').value.trim();
             const sandboxToken = document.getElementById('sandbox-token').value.trim();
+            const prodRefreshToken = document.getElementById('prod-refresh-token').value.trim();
+            const sandboxRefreshToken = document.getElementById('sandbox-refresh-token').value.trim();
             const errorEl = document.getElementById('error-msg');
             const successEl = document.getElementById('success-msg');
 
@@ -83,26 +104,38 @@
             successEl.style.display = 'none';
 
             if (!prodToken && !sandboxToken) {
-                errorEl.textContent = 'Please paste at least one token';
+                errorEl.textContent = 'Please paste at least one access token';
                 errorEl.style.display = 'block';
                 return;
             }
 
+            const payload = {
+                sf_prod_access_token: prodToken,
+                sf_sandbox_access_token: sandboxToken
+            };
+            if (prodRefreshToken) payload.sf_prod_refresh_token = prodRefreshToken;
+            if (sandboxRefreshToken) payload.sf_sandbox_refresh_token = sandboxRefreshToken;
+
             fetch('/api/setup/refresh-salesforce-tokens', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sf_prod_access_token: prodToken,
-                    sf_sandbox_access_token: sandboxToken
-                })
+                body: JSON.stringify(payload)
             })
             .then(r => r.json())
             .then(data => {
                 if (data.ok) {
-                    successEl.textContent = '✅ ' + data.message + ' — Pipeline will now work for 8 more hours.';
+                    let msg = data.message + ' — Pipeline will now work for 8 more hours.';
+                    if (data.auto_refresh_enabled) {
+                        msg += ' Auto-refresh enabled: tokens will refresh automatically every 4 hours.';
+                    } else if (prodRefreshToken || sandboxRefreshToken) {
+                        msg += ' ✓ Refresh tokens saved for auto-refresh.';
+                    }
+                    successEl.textContent = '✅ ' + msg;
                     successEl.style.display = 'block';
                     document.getElementById('prod-token').value = '';
                     document.getElementById('sandbox-token').value = '';
+                    document.getElementById('prod-refresh-token').value = '';
+                    document.getElementById('sandbox-refresh-token').value = '';
                     setTimeout(() => window.location.href = '/', 2000);
                 } else {
                     errorEl.textContent = '❌ ' + (data.error || 'Failed to refresh tokens');

@@ -2831,11 +2831,13 @@ def setup_refresh_sf_tokens():
 
 @app.post("/api/setup/refresh-salesforce-tokens")
 def api_refresh_salesforce_tokens():
-    """Update SF tokens and set refresh timestamp in .env.jira."""
+    """Update SF tokens (access + optional refresh) and set refresh timestamp in .env.jira."""
     try:
         body = request.get_json(silent=True) or {}
         prod_token = body.get("sf_prod_access_token")
         sandbox_token = body.get("sf_sandbox_access_token")
+        prod_refresh_token = body.get("sf_prod_refresh_token")
+        sandbox_refresh_token = body.get("sf_sandbox_refresh_token")
 
         if not any([prod_token, sandbox_token]):
             return jsonify({"error": "Missing sf_prod_access_token or sf_sandbox_access_token"}), 400
@@ -2849,18 +2851,29 @@ def api_refresh_salesforce_tokens():
 
         # Remove old token lines, keep everything else
         lines = env_content.split("\n")
-        new_lines = [l for l in lines if not l.startswith(("SF_PROD_ACCESS_TOKEN=", "SF_SANDBOX_ACCESS_TOKEN=", "SF_TOKENS_REFRESHED_AT="))]
+        new_lines = [l for l in lines if not l.startswith((
+            "SF_PROD_ACCESS_TOKEN=", "SF_SANDBOX_ACCESS_TOKEN=", "SF_TOKENS_REFRESHED_AT=",
+            "SF_PROD_REFRESH_TOKEN=", "SF_SANDBOX_REFRESH_TOKEN="
+        ))]
 
         # Add new tokens and timestamp
-        new_lines.append(f"SF_PROD_ACCESS_TOKEN={prod_token}")
-        new_lines.append(f"SF_SANDBOX_ACCESS_TOKEN={sandbox_token}")
+        if prod_token:
+            new_lines.append(f"SF_PROD_ACCESS_TOKEN={prod_token}")
+        if sandbox_token:
+            new_lines.append(f"SF_SANDBOX_ACCESS_TOKEN={sandbox_token}")
+        if prod_refresh_token:
+            new_lines.append(f"SF_PROD_REFRESH_TOKEN={prod_refresh_token}")
+        if sandbox_refresh_token:
+            new_lines.append(f"SF_SANDBOX_REFRESH_TOKEN={sandbox_refresh_token}")
         new_lines.append(f"SF_TOKENS_REFRESHED_AT={int(time.time())}")
 
         env_path.write_text("\n".join(new_lines), encoding="utf-8")
 
+        auto_refresh_enabled = bool(prod_refresh_token or sandbox_refresh_token)
         return jsonify({
             "ok": True,
             "message": "Salesforce tokens refreshed and timestamp set",
+            "auto_refresh_enabled": auto_refresh_enabled,
             "refreshed_at": int(time.time())
         })
     except Exception as e:
