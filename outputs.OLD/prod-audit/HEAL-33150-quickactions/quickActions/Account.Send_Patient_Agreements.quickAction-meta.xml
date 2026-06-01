@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<QuickAction xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>This will allow users to send patient agreements to patients.</description>
-    <flowDefinition>Screenflow_Send_Patient_Agreement_Forms</flowDefinition>
-    <label>Send Patient Agreements</label>
-    <optionsCreateFeedItem>false</optionsCreateFeedItem>
-    <type>Flow</type>
-</QuickAction>

@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>First_Shipping_Date_Validation_Rule</fullName>
-    <active>true</active>
-    <errorConditionFormula>AND(ISPICKVAL(StageName,&apos;Closed Won&apos;), ISBLANK(TEXT(  First_Shipping_Date__c )))</errorConditionFormula>
-    <errorDisplayField>First_Shipping_Date__c</errorDisplayField>
-    <errorMessage>1st Shipping Date is Required</errorMessage>
-</ValidationRule>
