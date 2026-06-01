@@ -21,10 +21,11 @@ description: Investigates Salesforce Production metadata read-only to identify o
 
 1. Start from the Jira issue analysis and problem hypothesis.
 2. Identify the smallest relevant metadata set.
-3. Retrieve metadata from Production read-only or inspect provided metadata exports.
-4. Record why each metadata item was retrieved.
-5. Summarize findings and likely implementation surface.
-6. Stop before making changes.
+3. Retrieve metadata from Production read-only using `sf` CLI and `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`, or inspect provided metadata exports.
+4. Treat retrieved Production files as read-only evidence.
+5. Record why each metadata item was retrieved.
+6. Summarize findings and likely implementation surface.
+7. Stop before making changes.
 
 ## References
 
@@ -38,4 +39,5 @@ description: Investigates Salesforce Production metadata read-only to identify o
 
 - Production access remains read-only.
 - Retrieval is targeted to the issue.
+- Raw metadata is stored under `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`.
 - Findings separate facts from hypotheses.

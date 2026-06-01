@@ -1,7 +1,7 @@
 ---
 name: jira-salesforce-fix-pipeline
 description: Runs the CaseOps Jira-to-Salesforce fix pipeline. Use when the user asks to retrieve Jira issues, process and work assigned issues, diagnose Salesforce problems, investigate Production metadata, determine whether to escalate to Engineering, implement fixes and generate proposed solutions in the Sandbox named by CASEOPS_SANDBOX_TARGET_ORG in .env.jira, iterate if needed, draft internal notes plus a Jira response, and produce a dated issue summary. Routes Closed/Resolved issues to outputs/closed-resolved/ and pre-escalated issues to outputs/engineering-escalations/ without processing. Both Support-resolvable and Engineering-escalation paths run implementation + testing to include proposed solutions.
-compatibility: CaseOps repo root, `.env.jira` (Jira credentials, JIRA_BASE_URL, CASEOPS_DEFAULT_ASSIGNEE, CASEOPS_SANDBOX_TARGET_ORG), Python 3 for `jira_sync.py`; Salesforce CLI optional for deploy/test sub-path.
+compatibility: CaseOps repo root, active `.env.jira` from CASEOPS_JIRA_ENV_FILE, Python 3 for `jira_sync.py`, Salesforce CLI for Production read-only investigation and Sandbox deploy/test.
 ---
 
 # Jira Salesforce Fix Pipeline
@@ -34,7 +34,7 @@ Supporting references (load when doing the step they support):
 
 - `.env.jira` configured with valid Jira credentials (`JIRA_EMAIL` + `JIRA_API_TOKEN`, or `JIRA_BEARER_TOKEN`, or `JIRA_AUTH_HEADER_COMMAND`).
 - `JIRA_BASE_URL` and `CASEOPS_DEFAULT_ASSIGNEE` set in `.env.jira`.
-- Read **`CASEOPS_SANDBOX_TARGET_ORG`** from `.env.jira` before deployment. That is the **only** org that may receive deploys or writes on the Support-resolvable path (see `salesforce-sandbox-deploy-test` and `references/safety-policy.md`).
+- Read **`CASEOPS_SANDBOX_TARGET_ORG`** from the active env file before deployment. That is the **only** org that may receive deploys or writes for Sandbox testing (see `salesforce-sandbox-deploy-test` and `references/safety-policy.md`).
 - Production org access or exported Production metadata for read-only investigation.
 - Acceptance criteria or enough issue detail to infer testable behavior.
 
@@ -62,14 +62,18 @@ This skill orchestrates the complete pipeline from issue sync through summary ge
 
 **CRITICAL: Step Progress Tracking**
 
-Throughout Steps 1–12, you MUST emit step progress lines to stdout in the format `STEP_N identifier` (e.g., `STEP_3 HEAL-33753`). These lines are parsed by the CaseOps GUI in real-time to update the pipeline progress indicator. Without these explicit output lines, the progress indicator will not display.
+Throughout Steps 1–12, you MUST emit step progress lines to stdout in the format `STEP_N identifier` (e.g., `STEP_3 HEAL-33753`). These lines are parsed by the CaseOps GUI in real-time to update the pipeline progress indicator. Without these explicit output lines, the progress indicator will not display. Do not launch background pipeline work and say you will be notified later; execute sequentially in the current Claude Code run and stream progress as each step starts and finishes.
+
+For global runs that process multiple issues, emit a single timestamped line at the start of each issue in this format: `Run started: <ISSUE_KEY> at YYYY-MM-DD HH:MM:SS <TZ>`.
+
+**Operator log hygiene:** Do not echo, restate, or summarize this playbook, prompts, reference files, or checklists into stdout during a run. The CaseOps pipeline log is for live execution only: step markers, concise status, commands/tools used, files written, test results, and blockers.
 
 ### Operator Setup
 
 Before running:
 1. **Ensure `.env.jira` is configured** with Jira credentials, Salesforce orgs, and URLs.
-2. **Verify `CASEOPS_SANDBOX_TARGET_ORG`** is set in `.env.jira` (e.g., `10xhealth-sean`). This is the **only** org that may receive Support-path deploys (Step 8–9).
-3. **Python 3** and **sf CLI** (optional) are available on the system.
+2. **Verify `CASEOPS_SANDBOX_TARGET_ORG`** is set in the active env file (e.g., `10xhealth-sean`). This is the **only** org that may receive Step 8–9 Sandbox deploys.
+3. **Python 3** and **sf CLI** are available on the system.
 
 ### Execution Flow
 
@@ -138,21 +142,22 @@ For each active issue:
 
 Log decision in `outputs/pipeline-logs/<RUN_DATE>.log`.
 
-**Step 8 — Implement (Sub-agent)**
+**Step 8 — Implement / prepare candidate (Orchestrator)**
 
 For all active issues (both Support-resolvable and Engineering-required):
 1. **Emit to stdout:** `STEP_8 <ISSUE_KEY>`
-2. Spawn salesforce-implementation sub-agent. Make the fix in Sandbox only. Sandbox org name is `CASEOPS_SANDBOX_TARGET_ORG` from `.env.jira`. Never touch Production. Document test results.
+2. Prepare the proposed solution package under `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/candidate/`. Never touch Production.
+3. Record changed files/components in `outputs/investigations/<KEY>.md`.
 
-**Step 9 — Test results (Orchestrator)**
+**Step 9 — Deploy, test, and iterate (Sub-agent)**
 
 For each active issue (all paths):
 1. **Emit to stdout:** `STEP_9 <ISSUE_KEY>`
-2. Receive test results from Step 8 sub-agent.
-3. Save test results to `outputs/test-reports/<KEY>.md`.
+2. Spawn `salesforce-sandbox-deploy-test` with the Step 9 prompt from `references/sub-agent-prompts.md`.
+3. Ensure the sub-agent captures `baseline-sandbox/`, deploys `candidate/`, tests acceptance criteria, and writes `outputs/test-reports/<KEY>.md`.
 
 - **On Pass:** Proceed to Step 10.
-- **On Fail:** Revise Step 4 hypothesis, loop back to Step 5–6 if more metadata is needed, re-run Step 8–9. Record iterations in `outputs/investigations/<KEY>.md`.
+- **On Fail:** Confirm the Sandbox attempt was reverted from `baseline-sandbox/`, revise Step 4 hypothesis, loop back to Step 5–6 if more metadata is needed, re-run Step 8–9. Record iterations in `outputs/investigations/<KEY>.md`.
 
 **Step 10 — Draft messages (Sub-agent)**
 
@@ -238,7 +243,7 @@ NEXT STEPS FOR USER (Step 12 — Manual):
    - HEAL-XXXXX: outputs/jira-messages/HEAL-XXXXX.md
    - [Additional issues...]
 
-3. Deploy to Production via Gearset (if needed)
+3. Promote confirmed Support packages via Gearset or standard change control (if needed)
    - [Issues requiring Gearset deployment]
 
 4. Coordinate with Engineering (if applicable)
@@ -253,7 +258,7 @@ Total runtime: H hours M minutes
 
 **What the user owns (final manual step):**
 - Post Jira message drafts to actual Jira issues (customer communication)
-- Coordinate Production deployment via Gearset (if Support-fixed issues need to be promoted)
+- Coordinate Production promotion via Gearset or standard change control when confirmed Support packages need to be promoted
 - Review Engineering handoffs and coordinate with Engineering team (if applicable)
 - Archive run artifacts for audit trail
 
@@ -266,11 +271,19 @@ Total runtime: H hours M minutes
 
 **Step 3–7: Read Production metadata (read-only investigation only)**
 - ✓ Query Production flows, validation rules, permission sets, fields, objects
-- ✓ Use `CASEOPS_PRODUCTION_MAGIC_LINK` from `.env.jira` for UI access
+- ✓ Use `sf` CLI and SOQL for all metadata/data investigation
+- ✓ Store raw Production metadata under `CASEOPS_METADATA_RAW_PROD_DIR/<KEY>/` and treat it as read-only evidence
+- ✓ Use `CASEOPS_PRODUCTION_MAGIC_LINK` only for visual UI inspection when CLI/SOQL cannot answer the question
 - ✗ **Never write to Production**
 - ✗ **Never execute actions in Production** (read-only diagnosis only)
+- ✗ **Never use frontdoor session IDs as API bearer tokens**; frontdoor links are browser UI sessions, not CLI/API auth
 
 **Step 8–9: Write ONLY to `CASEOPS_SANDBOX_TARGET_ORG`**
+- ✓ Use `CASEOPS_METADATA_SANDBOX_WORK_DIR/<KEY>/attempt-N/` for Sandbox candidates, baselines, and revert packages
+- ✓ Capture `baseline-sandbox/` before every deploy attempt
+- ✓ Revert failed or abandoned attempts before trying another candidate
+- ✓ Copy the passed package to `CASEOPS_METADATA_CONFIRMED_DIR/<KEY>/support-owned/` or `engineering-proposal/`
+- ✗ Do not use root-level `temp*`, `retrieve*`, `deploy*`, or `metadata*` directories
 
 **Mandatory safety checks:**
 
@@ -280,7 +293,7 @@ Total runtime: H hours M minutes
 2. **Before Step 9 (first time):** Verify Sandbox org is reachable
    - Test: `sf org list` should include the org alias
    - Test: `sf org display --target-org <CASEOPS_SANDBOX_TARGET_ORG>` should succeed
-   - If unreachable: STOP, report auth/network error, ask user to refresh credentials or magic link
+   - If unreachable: STOP, report a CaseOps/Salesforce CLI auth error. Do not test magic-link SIDs with curl as an API substitute.
 
 3. **Step 9 sub-agent execution:** Pass exact `CASEOPS_SANDBOX_TARGET_ORG` value to Step 9 prompt
    - Sub-agent must confirm CLI target matches before any deploy or write

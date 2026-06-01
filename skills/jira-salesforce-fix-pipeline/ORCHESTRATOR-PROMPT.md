@@ -76,12 +76,14 @@ Before creating new metadata, confirm it does not already exist in Production (S
 2. Receive summary: what was deployed, test results (pass/fail), or blocker.
 3. If test **passes**: proceed to Step 10.
 4. If test **fails**:
+   - Confirm the failed Sandbox attempt was reverted from its captured baseline
    - Revise hypothesis (Step 4)
    - Loop back to Step 5 with refined metadata request if needed
    - Re-implement (Step 8)
    - Re-test (Step 9)
    - Record iterations in `outputs/investigations/{key}.md`
 5. Save test results to `outputs/test-reports/{key}.md`.
+6. Keep Salesforce metadata under `${CASEOPS_METADATA_RAW_PROD_DIR}`, `${CASEOPS_METADATA_SANDBOX_WORK_DIR}`, and `${CASEOPS_METADATA_CONFIRMED_DIR}` only. Do not use root-level temp/retrieve/deploy directories.
 
 **Both escalation and support paths generate proposed solutions in Sandbox to provide Engineering with concrete fix options.**
 
@@ -131,7 +133,7 @@ After all active issues processed through Steps 3-10:
    NEXT STEPS (USER ACTION):
    1. Review dated summary
    2. Post Jira messages (outputs/jira-messages/*.md)
-   3. Deploy to Production via Gearset (if Support-fixed)
+   3. Promote confirmed Support packages via Gearset or standard change control, if required
    4. Coordinate with Engineering (if escalated)
    5. Archive artifacts
    ```
@@ -142,7 +144,7 @@ Spawn sub-agents via Agent tool using prompts from `references/sub-agent-prompts
 - **Step 3:** jira-issue-analysis prompt
 - **Step 5:** salesforce-metadata-investigation prompt (retrieval mode)
 - **Step 6:** salesforce-metadata-investigation prompt (drilling mode)
-- **Step 8-9:** salesforce-implementation prompt (combined)
+- **Step 9:** salesforce-sandbox-deploy-test prompt
 - **Step 10:** jira-response-drafting prompt
 
 ## State Tracking (File-Based)

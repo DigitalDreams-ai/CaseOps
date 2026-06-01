@@ -1,7 +1,7 @@
 ---
 name: jira-salesforce-fix-pipeline
-description: Runs the CaseOps Jira-to-Salesforce fix pipeline. Use when the user asks to retrieve Jira issues, process and work assigned issues, diagnose Salesforce problems, investigate Production metadata, determine whether to escalate to Engineering, implement Support-owned fixes, **always** deploy and test only in the single Sandbox named by CASEOPS_SANDBOX_TARGET_ORG in .env.jira, iterate if needed, draft internal notes plus a Jira response, and produce a dated issue summary. Routes Closed/Resolved issues to outputs/closed-resolved/ and pre-escalated issues to outputs/engineering-escalations/ without processing.
-compatibility: CaseOps repo root, `.env.jira` (Jira credentials, JIRA_BASE_URL, CASEOPS_DEFAULT_ASSIGNEE, CASEOPS_SANDBOX_TARGET_ORG), Python 3 for `jira_sync.py`; Salesforce CLI optional for deploy/test sub-path.
+description: Runs the CaseOps Jira-to-Salesforce fix pipeline. Use when the user asks to retrieve Jira issues, process assigned issues, diagnose Salesforce problems, investigate Production metadata read-only, classify Support vs Engineering ownership, create a proposed solution, deploy and test only in the single Sandbox named by CASEOPS_SANDBOX_TARGET_ORG, revert failed Sandbox attempts, draft internal notes plus a Jira response, and produce a dated issue summary. Routes Closed/Resolved issues to outputs/closed-resolved/ and pre-escalated issues to outputs/engineering-escalations/ without processing.
+compatibility: CaseOps repo root, active `.env.jira` from CASEOPS_JIRA_ENV_FILE, Python 3 for `jira_sync.py`, Salesforce CLI for Production read-only investigation and Sandbox deploy/test.
 ---
 
 # CaseOps — Claude Code entrypoint

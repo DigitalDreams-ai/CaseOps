@@ -21,13 +21,13 @@
 
 **Delegated skills:** Step 3 → `jira-issue-analysis`; Step 5 → `salesforce-production-metadata-investigation`; Step 6 → `salesforce-production-metadata-investigation` (drilling); Step 9 → `salesforce-sandbox-deploy-test`; Step 10 → `jira-response-drafting`.
 
-**Both paths run full Steps 1-12.** Escalation routing decision in Step 7 determines how Step 10 routes: Support issues deploy to Production; Escalation issues hand off to Engineering with Sandbox-validated proposed solution.
+**Both paths run full Steps 1-12.** Escalation routing decision in Step 7 determines how Step 10 routes: Support issues produce Sandbox-validated packages ready for operator-controlled Production promotion; Escalation issues hand off to Engineering with Sandbox-validated proposed solutions. CaseOps does not deploy to Production.
 
 ---
 
 ## Operator setup (CaseOps GUI + Claude)
 
-Put **Chrome Dev** in `.env.jira` as `CASEOPS_CLAUDE_BROWSER`. Use **`CASEOPS_PRODUCTION_MAGIC_LINK`** only for **read-only** Production UI investigation and **`CASEOPS_SANDBOX_MAGIC_LINK`** for **full CRUD** in Sandbox (deploy/test). See **AGENTS.md**. Refresh frontdoor links when sessions expire; treat them like secrets.
+Put **Chrome Dev** in `.env.jira` as `CASEOPS_CLAUDE_BROWSER` only for visual UI checks. Default Salesforce access is **sf CLI + SOQL**. Use **`CASEOPS_PRODUCTION_MAGIC_LINK`** only for read-only visual Production UI inspection and **`CASEOPS_SANDBOX_MAGIC_LINK`** only for visual Sandbox UI inspection or UI-only actions. Do not use frontdoor session IDs as API bearer tokens; they do not replace `sf` CLI auth. See **AGENTS.md**. Refresh frontdoor links when sessions expire; treat them like secrets.
 
 ---
 
@@ -98,6 +98,23 @@ From the Step 3 summary (Issue Understanding), synthesize a Salesforce-specific 
 
 ---
 
+## Salesforce metadata workspace
+
+Use the environment-provided workspace instead of ad hoc root directories:
+
+| Purpose | Directory |
+| --- | --- |
+| Raw Production metadata, read-only | `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/` |
+| Sandbox test attempts | `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/` |
+| Confirmed Support package | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/` |
+| Confirmed Engineering proposal | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/engineering-proposal/` |
+
+Raw Production metadata may be reused as evidence, but it must not be edited. Every Sandbox attempt gets its own directory with `baseline-sandbox/`, `candidate/`, and `revert/` subdirectories. Failed or abandoned attempts must be reverted in Sandbox before the next attempt starts.
+
+Each issue with Sandbox work must maintain `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/metadata-workspace.json` with attempt number, touched components, baseline path, candidate path, revert status, test outcome, and confirmed package path when applicable. This is the index that keeps the workspace auditable without spreading metadata across root-level folders.
+
+---
+
 ## Step 5 — Retrieve relevant Production metadata [SUB-AGENT]
 
 Spawn a sub-agent using **“Step 5 — Retrieve relevant Production metadata”** in **`references/sub-agent-prompts.md`**. Paste the Step 4 hypothesis into the prompt.
@@ -164,6 +181,8 @@ Update **`Solution Plan` → Production vs sandbox deployment state** in the inv
 **Allowlist:** Read **`CASEOPS_SANDBOX_TARGET_ORG`** from `.env.jira`. If missing or empty, **STOP**. Only that org may receive deploys or mutating operations. See **`references/sub-agent-prompts.md`** — **”Step 9 — Deploy, test, and iterate”** for the full prompt and failure-loop behavior.
 
 On **Fail:** revise hypothesis (Step 4), re-run Step 5 if needed (and Step 6 if more drilling required), re-implement (Step 8), re-run Step 9. Record iterations in `outputs/investigations/<KEY>.md`.
+
+Before returning Fail, the Step 9 sub-agent must revert non-viable Sandbox changes from the attempt baseline and record the revert command/result in `outputs/test-reports/<KEY>.md`. The next iteration must use the next attempt directory number.
 
 ---
 
@@ -253,7 +272,7 @@ After all issues are processed and Step 11 summary is created, report back to st
   - Operator next step (e.g., "Run Gearset to promote to Production", "Deploy via standard change control")
 - **Files or metadata changed** (list of Apex classes, Flows, fields, configs modified)
 - **Sandbox target** (if applicable; reference CASEOPS_SANDBOX_TARGET_ORG)
-- **Tests run and outcome** (from Step 9 test report, if Support-resolvable)
+- **Tests run and outcome** (from Step 9 test report)
 - **Open risks or follow-up** (known issues, test gaps, manual verification needed)
 - **Paths:** Internal notes (`outputs/internal-notes/<KEY>.md`), Jira message draft (`outputs/jira-messages/<KEY>.md`), dated summary (`outputs/issue-summary-YYYY-MM-DD.md`)
 

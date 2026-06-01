@@ -5,7 +5,13 @@
 ## Test Environment
 
 - Sandbox: 
+- Attempt directory:
+- Baseline snapshot: `baseline-sandbox/`
+- Candidate package: `candidate/`
+- Revert package: `revert/`
+- Workspace manifest: `metadata-workspace.json`
 - Metadata deployed: (link to deployment/validation output)
+- Confirmed package path: (if passed)
 - Date tested:
 
 ## Test Cases
@@ -43,6 +49,13 @@
 
 | Issue | Severity | Status | Resolution |
 | --- | --- | --- | --- |
+
+## Revert Status
+
+- Revert required: Yes / No
+- Revert command:
+- Revert result:
+- Post-revert verification:
 
 ## Validation Against Acceptance Criteria
 

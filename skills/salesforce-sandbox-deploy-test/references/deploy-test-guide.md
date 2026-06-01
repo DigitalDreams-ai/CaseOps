@@ -11,7 +11,12 @@
 
 - Confirm the allowlisted Sandbox alias or username matches `CASEOPS_SANDBOX_TARGET_ORG`.
 - Confirm the change is Support-resolvable. If it requires Apex/code, flow, approval process, or validation rule changes, stop and produce an Engineering handoff unless the user explicitly overrides the escalation rule.
-- Review the local diff.
+- Create a new attempt directory: `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/`.
+- Retrieve the current Sandbox baseline for every component you will change into `attempt-N/baseline-sandbox/`.
+- Put candidate metadata in `attempt-N/candidate/`.
+- Prepare rollback metadata in `attempt-N/revert/`. For updated components this is the captured baseline. For newly created components, prepare the correct destructive delete package if the metadata type supports deletion.
+- Update `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/metadata-workspace.json` with attempt number, touched components, and paths.
+- Review the local diff between `baseline-sandbox/` and `candidate/`.
 - Confirm the deployment scope.
 - Identify tests to run.
 
@@ -26,4 +31,14 @@ If validation fails:
 
 - Record the failed case.
 - Identify whether the implementation, hypothesis, test data, or metadata scope was wrong.
+- Revert every Sandbox change from this attempt before returning to the main pipeline.
+- Verify the revert by retrieving the changed components again and comparing them with `baseline-sandbox/`.
+- Record the revert command, result, and verification in `outputs/test-reports/<KEY>.md`.
+- Mark the attempt reverted in `metadata-workspace.json`.
 - Return to the main pipeline for another iteration.
+
+If validation passes:
+
+- Copy the final deployable package to `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/` for Support-owned fixes, or `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/engineering-proposal/` for Engineering handoff proposals.
+- Record the confirmed package path in `outputs/test-reports/<KEY>.md`.
+- Mark the confirmed package path in `metadata-workspace.json`.

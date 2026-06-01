@@ -1,6 +1,6 @@
 ---
 name: salesforce-sandbox-deploy-test
-description: Mandatory for jira-salesforce-fix-pipeline after Support-owned implementation. Deploys only to the single allowlisted Sandbox from CASEOPS_SANDBOX_TARGET_ORG in .env.jira, tests against Jira acceptance criteria, and records results. Refuse any deploy or data write to any other org.
+description: Mandatory for jira-salesforce-fix-pipeline after a proposed solution is prepared. Deploys only to the single allowlisted Sandbox from CASEOPS_SANDBOX_TARGET_ORG, tests against Jira acceptance criteria, records results, preserves baseline/candidate/revert metadata, and reverts failed attempts. Refuse any deploy or data write to any other org.
 ---
 
 # CaseOps — Claude Code entrypoint

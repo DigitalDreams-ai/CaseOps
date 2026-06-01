@@ -438,7 +438,7 @@ NEXT STEPS FOR USER (Step 12):
 1. Review dated summary: outputs/issue-summary-2026-05-20.md
 2. Post Jira messages:
    - HEAL-33618: outputs/jira-messages/HEAL-33618.md
-3. Deploy to Production via Gearset (if needed):
+3. Promote confirmed Support packages via Gearset or standard change control (if needed):
    - HEAL-33618 (Gearset deployment required)
 4. Coordinate with Engineering:
    - HEAL-33633: outputs/engineering-escalations/HEAL-33633.md

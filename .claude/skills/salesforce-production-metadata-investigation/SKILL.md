@@ -1,6 +1,6 @@
 ---
 name: salesforce-production-metadata-investigation
-description: Investigates Salesforce Production metadata read-only. Queries flows, validation rules, permission sets, fields, and objects to confirm current state and support diagnosis. Does not modify Production.
+description: Investigates Salesforce Production metadata read-only using sf CLI and issue-scoped raw metadata workspace paths. Queries flows, validation rules, permission sets, fields, and objects to confirm current state and support diagnosis. Does not modify Production.
 ---
 
 # CaseOps — Claude Code entrypoint

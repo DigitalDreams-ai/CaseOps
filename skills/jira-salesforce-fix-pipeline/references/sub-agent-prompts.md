@@ -34,16 +34,17 @@ Issue key: <KEY>
 Problem hypothesis: <paste from outputs/step-4-hypothesis/<KEY>.md OR inline notes from Step 4>
 Investigation record: outputs/investigations/<KEY>.md
 
-CRITICAL: Instance-Specific Metadata Directory
-- Retrieve metadata to: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve (instance-isolated)
-- All `sf project retrieve` commands MUST include:
-  --output-dir "${CASEOPS_OUTPUTS_DIR}/../temp-retrieve"
-- This prevents cross-instance metadata contamination (e.g., instance2 retrieving instance1's org metadata)
+CRITICAL: Metadata Workspace Contract
+- Retrieve Production metadata to: ${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/ (read-only)
+- All `sf project retrieve` commands MUST include an issue-scoped output dir, for example:
+  --output-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
+- Do not write to root-level temp/retrieve/deploy/metadata directories.
+- Do not edit files under ${CASEOPS_METADATA_RAW_PROD_DIR}; copy only the needed files into a Sandbox attempt directory before changing them.
 
 Instructions:
 1. Use the salesforce-production-metadata-investigation skill.
 2. Retrieve only metadata directly relevant to the hypothesis. Do not modify Production.
-3. Pass instance-specific output directory to all retrieve commands (see CRITICAL section above).
+3. Pass the issue-scoped raw Production metadata directory to all retrieve commands (see CRITICAL section above).
 4. Append your findings to the Production Metadata Retrieved section of
    outputs/investigations/<KEY>.md.
 5. If additional metadata is discovered to be needed (e.g., during drilling in Step 6), 
@@ -54,7 +55,7 @@ Return a compact summary (max 400 tokens) containing:
 - Key findings per item
 - Whether each item confirms or rejects the hypothesis
 - Recommended implementation surface (what to change and where)
-- Temp directory used: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve
+- Raw metadata directory used: ${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>
 - Path written: outputs/investigations/<KEY>.md
 ```
 
@@ -68,15 +69,15 @@ Problem hypothesis: <paste from outputs/step-4-hypothesis/<KEY>.md OR inline not
 Production metadata: <paste the Summary from Step 5>
 Investigation record: outputs/investigations/<KEY>.md
 
-CRITICAL: Instance-Specific Metadata Directory
-- Use instance-isolated temp directory: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve
-- If additional metadata retrieval is needed, pass to Step 5:
-  --output-dir "${CASEOPS_OUTPUTS_DIR}/../temp-retrieve"
-- This prevents cross-instance metadata contamination
+CRITICAL: Metadata Workspace Contract
+- Read Step 5 Production metadata from: ${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/ (read-only)
+- If additional metadata retrieval is needed, pass an issue-scoped output dir to Step 5, for example:
+  --output-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
+- Do not edit raw Production metadata. Candidate changes belong under ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/candidate/.
 
 Instructions:
 1. Use the salesforce-production-metadata-investigation skill (drilling mode).
-2. From the Step 5 metadata (stored in instance-isolated temp dir), drill down to identify:
+2. From the Step 5 metadata (stored in the issue-scoped raw metadata directory), drill down to identify:
    - **Problem type**: data / component / config / integration / access / setting / process
    - **Specific artifact**: exact name, API name, class name, field name (from Production)
    - **Location**: Production path (Setup > Object > Field, or code path, or org setting)
@@ -91,7 +92,7 @@ Return a compact summary (max 400 tokens) containing:
 - Failure point in the flow
 - Root cause identified (why this artifact is broken)
 - If more metadata needed: "REQUEST: Step 5 refinement — need [specific metadata]"
-- Temp directory: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve
+- Raw metadata directory: ${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>
 - Path written: outputs/investigations/<KEY>.md
 ```
 
@@ -107,18 +108,27 @@ Allowlisted Sandbox (from .env.jira CASEOPS_SANDBOX_TARGET_ORG): <paste exact va
 Fix description: <paste the solution from Step 8>
 Investigation record: outputs/investigations/<KEY>.md
 
-CRITICAL: Instance-Specific Deploy Directory
-- Deploy/retrieve artifacts to: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve (instance-isolated)
-- All `sf project deploy|retrieve` commands MUST include:
-  --output-dir "${CASEOPS_OUTPUTS_DIR}/../temp-retrieve" or metadata-dir flag
-- This prevents cross-instance deploy artifacts (e.g., instance2 deploy files contaminating instance1)
+CRITICAL: Sandbox Attempt Workspace and Revert Contract
+- Use one directory per solution attempt: ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-001/, attempt-002/, etc.
+- Before any Sandbox deploy, retrieve the current Sandbox baseline for every component you will change into:
+  ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/baseline-sandbox/
+- Put candidate metadata to deploy in:
+  ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/candidate/
+- Put rollback metadata or destructive changes in:
+  ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/revert/
+- If an attempt fails or is not viable, revert the Sandbox to the captured baseline before starting another attempt, then verify by retrieve/diff.
+- When an attempt passes, copy the final package to:
+  ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/ or ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/engineering-proposal/
+- Maintain ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/metadata-workspace.json with attempt number, components touched, baseline path, candidate path, revert status, and confirmed package path when applicable.
+- Do not write to root-level temp/retrieve/deploy/metadata directories.
 
 Instructions:
 1. Use the salesforce-sandbox-deploy-test skill (mandatory allowlist rules).
 2. Confirm the CLI/UI org target matches the allowlisted value exactly before any deploy or write.
-3. Use instance-specific deploy directory (see CRITICAL section above).
+3. Use the issue-scoped attempt directory (see CRITICAL section above).
 4. Deploy the fix, test against the Jira acceptance criteria.
-5. Write results to outputs/test-reports/<KEY>.md using
+5. If the fix fails or is abandoned, revert Sandbox changes from the attempt baseline before returning Fail.
+6. Write results to outputs/test-reports/<KEY>.md using
    skills/jira-salesforce-fix-pipeline/assets/test-report-template.md.
    Fill **Production deployment state** (Sandbox vs Production; Gearset required Y/N/N/A).
 
@@ -126,12 +136,14 @@ Return a compact summary (max 400 tokens) containing:
 - Pass or Fail
 - Steps tested and actual results
 - Whether the issue is confirmed fixed
-- If failed: what broke, what hypothesis was wrong, what to try next
-- Deploy directory: ${CASEOPS_OUTPUTS_DIR}/../temp-retrieve
+- If failed: what broke, what hypothesis was wrong, what was reverted, what to try next
+- Attempt directory: ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N
+- Confirmed package directory, if passed: ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/<support-owned|engineering-proposal>
+- Workspace manifest: ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/metadata-workspace.json
 - Path written: outputs/test-reports/<KEY>.md
 ```
 
-If the sub-agent returns **Fail:** update the hypothesis in Step 4, spawn a new Step 5 sub-agent if more metadata is needed (and Step 6 if drilling refinement needed), re-implement in Step 8, spawn a new Step 9 sub-agent. Record each failed iteration in `outputs/investigations/<KEY>.md`.
+If the sub-agent returns **Fail:** confirm the failed attempt was reverted in Sandbox, update the hypothesis in Step 4, spawn a new Step 5 sub-agent if more metadata is needed (and Step 6 if drilling refinement needed), re-implement in Step 8, spawn a new Step 9 sub-agent using the next attempt number. Record each failed iteration in `outputs/investigations/<KEY>.md`.
 
 ## Step 10 — Draft internal notes and Jira message
 

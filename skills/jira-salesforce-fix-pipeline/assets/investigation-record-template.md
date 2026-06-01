@@ -49,6 +49,17 @@
 
 ### Likely Affected Metadata
 
+### Metadata Workspace
+
+- Raw Production metadata: `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`
+- Sandbox attempts: `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/`
+- Confirmed package: `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/`
+
+### Attempt History
+
+| Attempt | Candidate Path | Outcome | Reverted? | Notes |
+| --- | --- | --- | --- | --- |
+
 ### Similar Items Analysis
 
 **Due diligence check — before implementation:**
