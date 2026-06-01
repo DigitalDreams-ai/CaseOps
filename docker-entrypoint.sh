@@ -6,21 +6,28 @@
 # Variables like SF_PROD_*, SF_SANDBOX_*, CASEOPS_*, etc. are already in the environment.
 # No need to source here as it conflicts with comments containing special characters.
 
-# Initialize Claude Code settings and credentials
+# Load selected runtime secrets from the mounted env file. Do not source the
+# entire file; values such as Windows paths and comments can break shell parsing.
+if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && [ -f /app/.env.jira ]; then
+  CLAUDE_CODE_OAUTH_TOKEN="$(grep -m1 '^CLAUDE_CODE_OAUTH_TOKEN=' /app/.env.jira | cut -d= -f2-)"
+  export CLAUDE_CODE_OAUTH_TOKEN
+fi
+
+# Initialize Claude Code settings directory.
 mkdir -p ~/.claude || true
 
-# Check for pre-mounted credentials
-if [ -f ~/.claude/.credentials.json ]; then
-  echo "Found ~/.claude/.credentials.json"
+# Check for preferred non-interactive OAuth token.
+if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+  echo "Found CLAUDE_CODE_OAUTH_TOKEN for Claude Code CLI"
 else
-  echo "Warning: ~/.claude/.credentials.json not found - Claude Code CLI will require /login"
+  echo "Warning: CLAUDE_CODE_OAUTH_TOKEN not configured - use /setup/claude-login"
 fi
 
 # Authenticate Salesforce orgs via sf CLI
 # Note: SF_PROD_* and SF_SANDBOX_* env vars available from docker-compose env_file
 echo "Salesforce orgs will be authenticated on demand via Flask API /setup endpoints"
-echo "Alternatively, manually auth in container: sf org login access-token --alias <alias> --instance-url <url> --access-token <token> --no-prompt"
-echo "Environment variables available: SF_PROD_ACCESS_TOKEN, SF_PROD_INSTANCE_URL, SF_SANDBOX_ACCESS_TOKEN, SF_SANDBOX_INSTANCE_URL"
+echo "Alternatively, manually auth in container: export SF_ACCESS_TOKEN=<token>; sf org login access-token --alias <alias> --instance-url <url> --no-prompt"
+echo "Environment variables available: SF_PROD_ACCESS_TOKEN, SF_SANDBOX_ACCESS_TOKEN, CASEOPS_PRODUCTION_INSTANCE_URL, CASEOPS_SANDBOX_INSTANCE_URL"
 
 # Service restart loop: reinitialize everything on each restart
 while true; do
@@ -28,13 +35,19 @@ while true; do
   echo "Initializing CaseOps service..."
   echo "========================================"
 
-  # Reinitialize Claude Code settings and credentials
+  # Re-load selected runtime secrets in case /app/.env.jira changed before a restart.
+  if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && [ -f /app/.env.jira ]; then
+    CLAUDE_CODE_OAUTH_TOKEN="$(grep -m1 '^CLAUDE_CODE_OAUTH_TOKEN=' /app/.env.jira | cut -d= -f2-)"
+    export CLAUDE_CODE_OAUTH_TOKEN
+  fi
+
+  # Reinitialize Claude Code settings directory.
   mkdir -p ~/.claude || true
 
-  if [ -f ~/.claude/.credentials.json ]; then
-    echo "✓ Claude Code credentials found"
+  if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+    echo "Claude Code OAuth token configured"
   else
-    echo "⚠ Claude Code credentials not found"
+    echo "Claude Code OAuth token not configured"
   fi
 
   # Verify environment

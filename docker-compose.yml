@@ -13,11 +13,18 @@ services:
     volumes:
       # Persistent output files (use ./instance1/outputs for single-instance NAS)
       - ./instance1/outputs:/app/instance1/outputs
-      # Mount .env.jira.nas for NAS/Linux (use .env.jira for local Windows dev)
-      - ./.env.jira.nas:/app/.env.jira:ro
+      # Mount .env.jira.nas for NAS/Linux (use .env.jira for local Windows dev).
+      # Must be writable: token refresh and Settings update this file.
+      - ./.env.jira.nas:/app/.env.jira
+      # Live app code mounted read-only for predictable pilot deployments.
+      # Sync to NAS + restart is enough for app/templates/static/skills changes.
+      - ./app.py:/app/app.py:ro
+      - ./templates:/app/templates:ro
+      - ./static:/app/static:ro
+      - ./skills:/app/skills:ro
       # Note: .sfdx and .claude mounted from NAS had permission conflicts.
-      # These are now managed via container-local storage + Flask API setup endpoints.
-      # Use /setup/claude-login to save Claude credentials.
+      # Claude Code auth is stored in .env.jira.nas as CLAUDE_CODE_OAUTH_TOKEN.
+      # Use /setup/claude-login to save/update the token.
       # Salesforce orgs authenticated via SF_PROD/SANDBOX env vars at startup.
       # (Optional) Mount workspace-specific .env.jira.{workspace} files
       # - ./.env.jira.production:/app/.env.jira.production:ro
@@ -29,7 +36,7 @@ services:
       # Optional: set workspace
       # CASEOPS_WORKSPACE: "default"
       # Salesforce credentials: loaded from .env.jira.nas via env_file directive above
-      # CASEOPS_DEFAULT_TARGET_ORG, CASEOPS_PRODUCTION_READ_ORG, SF_PROD_*, SF_SANDBOX_* all available
+      # CASEOPS_PRODUCTION_READ_ORG, CASEOPS_SANDBOX_TARGET_ORG, CASEOPS_*_INSTANCE_URL, SF_PROD_*, SF_SANDBOX_* all available
     restart: unless-stopped
     # Synology-specific: change "bridge" to your network if using custom network
     networks:
