@@ -1450,6 +1450,7 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
         "has_confirmed_solution": _test_report_confirms_fix(key),
         "has_solution": has_solution,
         "needs_escalation": has_eng_handoff,  # Issue needs escalation (has escalation handoff file)
+        "is_jira_escalated": status == "Escalated to Engineering",  # User-driven Jira status
 
         # Pipeline state machine: all determined by file existence
         "pipeline_state": state.value,

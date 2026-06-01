@@ -944,6 +944,9 @@
         if (issue.has_eng_handoff && !issue.is_data_only) {
           secondaryBadges += '<span class="badge badge-needs-escalation" title="Issue determined to need escalation (engineering-escalations file exists).">Needs Escalation</span>';
         }
+        if (issue.is_jira_escalated && !issue.is_data_only) {
+          secondaryBadges += '<span class="badge badge-escalated-jira" title="Escalated to Engineering (Jira status).">Escalated to Eng</span>';
+        }
       }
 
       const newCommentsIndicator =
@@ -1053,6 +1056,7 @@
       if (issue.has_jira_message) badges.push({text: '✓ Draft', cls: ''});
       if (issue.has_solution) badges.push({text: '✓ Solution', cls: 'solution'});
       if (issue.has_eng_handoff) badges.push({text: '📋 Needs Escalation', cls: 'escalated'});
+      if (issue.is_jira_escalated) badges.push({text: '🔀 Escalated to Engineering', cls: 'escalated'});
       badgesEl.innerHTML = badges.length > 0
         ? badges.map(b => `<span class="detail-badge${b.cls ? ' ' + b.cls : ''}">${escHtml(b.text)}</span>`).join('')
         : '';
