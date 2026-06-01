@@ -1451,10 +1451,9 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
         "has_solution": has_solution,
         "needs_escalation": has_eng_handoff,  # Issue needs escalation (has escalation handoff file)
 
-        # New state machine
+        # Pipeline state machine: all determined by file existence
         "pipeline_state": state.value,
-        "is_escalation_path": has_eng_handoff,  # Ground truth: file existence
-        "is_jira_escalated": status == "Escalated to Engineering",  # Source of truth for Jira status
+        "is_escalation_path": has_eng_handoff,  # Source of truth: eng_handoff file presence
         "is_blocked": _investigation_indicates_blocked(key),
         "is_data_only": _test_report_is_data_only(key),
     }
@@ -1510,17 +1509,18 @@ def _test_report_is_data_only(key: str) -> bool:
 
 
 def _calculate_pipeline_state(key: str, status: str = "") -> PipelineState:
-    """Calculate current pipeline state based on file existence and Jira status.
+    """Calculate current pipeline state based on file existence.
 
-    Escalation state is determined by Jira status = "Escalated to Engineering" (source of truth).
+    Source of truth: eng_handoff file (engineering-escalations/{key}.md) marks escalation.
     Support-resolvable progression based on pipeline file artifacts.
     """
     has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
     has_test_report = (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists()
+    has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
 
-    # Escalation state: based on Jira status (source of truth)
-    if status == "Escalated to Engineering":
+    # Escalation state: based on eng_handoff file (source of truth, pipeline determines this)
+    if has_eng_handoff:
         return PipelineState.ESCALATED_TO_ENGINEERING
 
     # Support-resolvable progression

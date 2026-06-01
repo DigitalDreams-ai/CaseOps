@@ -938,14 +938,11 @@
         if (issue.is_blocked && !issue.is_data_only) {
           secondaryBadges += '<span class="badge badge-blocked" title="Issue is blocked/waiting. Action required.">Blocked</span>';
         }
-        if (issue.is_data_only && !issue.is_blocked && !issue.has_eng_handoff && !issue.is_jira_escalated) {
+        if (issue.is_data_only && !issue.is_blocked && !issue.has_eng_handoff) {
           secondaryBadges += '<span class="badge badge-data-only" title="Data-only fix (no metadata deploy).">Data Only</span>';
         }
         if (issue.has_eng_handoff && !issue.is_data_only) {
-          secondaryBadges += '<span class="badge badge-needs-escalation" title="Needs escalation to Engineering team.">Needs Escalation</span>';
-        }
-        if (issue.is_jira_escalated && !issue.is_data_only) {
-          secondaryBadges += '<span class="badge badge-escalated-jira" title="Jira status: Escalated to Engineering.">Escalated to Engineering</span>';
+          secondaryBadges += '<span class="badge badge-needs-escalation" title="Issue determined to need escalation (engineering-escalations file exists).">Needs Escalation</span>';
         }
       }
 
@@ -1055,7 +1052,7 @@
       if (issue.has_internal_notes) badges.push({text: '✓ Notes', cls: ''});
       if (issue.has_jira_message) badges.push({text: '✓ Draft', cls: ''});
       if (issue.has_solution) badges.push({text: '✓ Solution', cls: 'solution'});
-      if (issue.status === 'Escalated to Engineering') badges.push({text: '📋 Escalated', cls: 'escalated'});
+      if (issue.has_eng_handoff) badges.push({text: '📋 Needs Escalation', cls: 'escalated'});
       badgesEl.innerHTML = badges.length > 0
         ? badges.map(b => `<span class="detail-badge${b.cls ? ' ' + b.cls : ''}">${escHtml(b.text)}</span>`).join('')
         : '';
