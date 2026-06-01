@@ -144,31 +144,98 @@ def _cache_evict(cache: dict) -> None:
         cache.pop(next(iter(cache)))
 
 
-def _check_salesforce_token_expiry(env_file_path: Path) -> None:
-    """Check SF token age. Tokens valid 8h. Warn if <2h left, error if expired."""
+def _refresh_salesforce_token_from_refresh_token(instance_url: str, refresh_token: str, client_id: str = "PlatformCLI") -> tuple[bool, str | None]:
+    """Use Salesforce OAuth 2.0 refresh_token grant to get a new access token.
+
+    Returns: (success, new_access_token or error_message)
+    """
+    if not refresh_token:
+        return False, "No refresh token"
+
+    try:
+        data = urllib.parse.urlencode({
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": client_id,
+        }).encode("utf-8")
+
+        token_url = "https://login.salesforce.com/services/oauth2/token"
+        req = urllib.request.Request(token_url, data=data, method="POST")
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            new_token = result.get("access_token")
+            if new_token:
+                return True, new_token
+            return False, result.get("error_description", "No access_token in response")
+    except Exception as e:
+        return False, str(e)
+
+
+def _check_and_refresh_salesforce_tokens(env_file_path: Path) -> None:
+    """Check SF token age. Auto-refresh if <4h left, warn if <2h left, error if expired."""
     try:
         env_content = env_file_path.read_text(encoding="utf-8")
-        match = re.search(r'SF_TOKENS_REFRESHED_AT=(\d+)', env_content)
-        if not match:
-            print("[WARN] SF_TOKENS_REFRESHED_AT not set in .env.jira. Tokens may be stale.")
-            print("[WARN] Run: /api/setup/refresh-salesforce-tokens to refresh and set timestamp.")
+
+        # Extract timestamp and tokens
+        match_ts = re.search(r'SF_TOKENS_REFRESHED_AT=(\d+)', env_content)
+        match_prod_token = re.search(r'SF_PROD_REFRESH_TOKEN=([^\n]+)', env_content)
+        match_sandbox_token = re.search(r'SF_SANDBOX_REFRESH_TOKEN=([^\n]+)', env_content)
+
+        if not match_ts:
+            print("[WARN] SF_TOKENS_REFRESHED_AT not in .env.jira")
             return
-        refreshed_at = int(match.group(1))
+
+        refreshed_at = int(match_ts.group(1))
         now = int(time.time())
         age_hours = (now - refreshed_at) / 3600
+
         if age_hours > 8:
-            print("[ERROR] Salesforce tokens EXPIRED (>8h old).")
-            print("[ERROR] Navigate to: http://localhost:5000/setup/refresh-salesforce-tokens")
-            raise RuntimeError("Salesforce tokens expired. Refresh required.")
+            print("[ERROR] Salesforce tokens EXPIRED (>8h old). Auto-refresh failed or not configured.")
+            raise RuntimeError("Salesforce tokens expired. Please refresh manually.")
+
+        # Auto-refresh if <4h left (4h into 8h TTL)
+        if age_hours > 4:
+            print(f"[*] Salesforce tokens {age_hours:.1f}h old (<4h until expiry). Auto-refreshing...")
+            prod_ok, prod_new = False, None
+            sandbox_ok, sandbox_new = False, None
+
+            if match_prod_token:
+                prod_ok, prod_new = _refresh_salesforce_token_from_refresh_token(
+                    "https://10xhealth.my.salesforce.com",
+                    match_prod_token.group(1)
+                )
+
+            if match_sandbox_token:
+                sandbox_ok, sandbox_new = _refresh_salesforce_token_from_refresh_token(
+                    "https://10xhealth--sean.sandbox.my.salesforce.com",
+                    match_sandbox_token.group(1)
+                )
+
+            if prod_ok or sandbox_ok:
+                # Update .env.jira with new tokens
+                lines = env_content.split("\n")
+                new_lines = [l for l in lines if not l.startswith(("SF_PROD_ACCESS_TOKEN=", "SF_SANDBOX_ACCESS_TOKEN=", "SF_TOKENS_REFRESHED_AT="))]
+                if prod_new:
+                    new_lines.append(f"SF_PROD_ACCESS_TOKEN={prod_new}")
+                if sandbox_new:
+                    new_lines.append(f"SF_SANDBOX_ACCESS_TOKEN={sandbox_new}")
+                new_lines.append(f"SF_TOKENS_REFRESHED_AT={int(time.time())}")
+                env_file_path.write_text("\n".join(new_lines), encoding="utf-8")
+                print(f"[OK] Salesforce tokens auto-refreshed (prod={prod_ok}, sandbox={sandbox_ok})")
+            else:
+                print(f"[WARN] Auto-refresh failed (prod: {prod_new}, sandbox: {sandbox_new})")
+
         if age_hours > 6:
-            print(f"[WARN] Salesforce tokens are {age_hours:.1f}h old. <2h until expiry.")
-            print("[WARN] Refresh soon at: http://localhost:5000/setup/refresh-salesforce-tokens")
+            print(f"[WARN] Tokens {age_hours:.1f}h old. <2h until auto-refresh needed.")
         else:
-            print(f"[OK] Salesforce tokens valid ({age_hours:.1f}h old, 8h TTL)")
+            print(f"[OK] Salesforce tokens valid ({age_hours:.1f}h old, auto-refresh at 4h)")
+
     except RuntimeError:
         raise
     except Exception as e:
-        print(f"[WARN] Could not check token expiry: {e}")
+        print(f"[WARN] Token refresh check failed: {e}")
 
 
 def _instance_cache_key(key: str) -> str:
@@ -2961,8 +3028,8 @@ if __name__ == "__main__":
                 SKILL_PATHS[skill_name] = str(skill_path.resolve())
     print(f"[OK] {len(SKILL_PATHS)} skill paths registered\n")
 
-    # Check Salesforce token expiry (8h TTL, warn if <2h left)
-    _check_salesforce_token_expiry(env_file_path)
+    # Check Salesforce tokens and auto-refresh if needed (8h TTL, auto-refresh at 4h)
+    _check_and_refresh_salesforce_tokens(env_file_path)
 
     # Initialize consolidated temp directory (instance-specific)
     globals()["TEMP_ROOT"] = OUTPUTS.parent / ".temp"
