@@ -2693,6 +2693,16 @@ def api_setup_claude_credentials():
         cred_file.write_text(cred_json, encoding="utf-8")
         cred_file.chmod(0o600)
 
+        # Create .claude.json to indicate authenticated installation (prevents re-login prompt)
+        claude_config = {
+            "version": 1,
+            "authenticated": True,
+            "setup_timestamp": time.time()
+        }
+        claude_json_file = cred_dir / ".claude.json"
+        claude_json_file.write_text(json.dumps(claude_config), encoding="utf-8")
+        claude_json_file.chmod(0o600)
+
         # Validate: verify file was created and is readable
         if not cred_file.exists():
             return jsonify({"error": "Failed to create credentials file"}), 500
