@@ -2686,8 +2686,8 @@ def api_setup_claude_credentials():
 
         cred_json = json.dumps(cred_obj)
 
-        # Write credentials file
-        cred_dir = Path.home() / ".claude"
+        # Write credentials file to /app/.claude (where Claude CLI subprocess looks with HOME=/app)
+        cred_dir = Path("/app") / ".claude"
         cred_dir.mkdir(parents=True, exist_ok=True)
         cred_file = cred_dir / ".credentials.json"
         cred_file.write_text(cred_json, encoding="utf-8")
