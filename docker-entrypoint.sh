@@ -22,22 +22,37 @@ echo "Salesforce orgs will be authenticated on demand via Flask API /setup endpo
 echo "Alternatively, manually auth in container: sf org login access-token --alias <alias> --instance-url <url> --access-token <token> --no-prompt"
 echo "Environment variables available: SF_PROD_ACCESS_TOKEN, SF_PROD_INSTANCE_URL, SF_SANDBOX_ACCESS_TOKEN, SF_SANDBOX_INSTANCE_URL"
 
-# Verify environment is set before running Flask
-echo "Environment ready:"
-echo "  CASEOPS_LLM_AUTH=$CASEOPS_LLM_AUTH"
-echo "  SF orgs authenticated"
-
-# Run Flask app with restart loop
-# If Flask exits (e.g., from /api/restart SIGTERM), restart it
+# Service restart loop: reinitialize everything on each restart
 while true; do
+  echo "========================================"
+  echo "Initializing CaseOps service..."
+  echo "========================================"
+
+  # Reinitialize Claude Code settings and credentials
+  mkdir -p ~/.claude || true
+
+  if [ -f ~/.claude/.credentials.json ]; then
+    echo "✓ Claude Code credentials found"
+  else
+    echo "⚠ Claude Code credentials not found"
+  fi
+
+  # Verify environment
+  echo "Environment ready:"
+  echo "  CASEOPS_LLM_AUTH=$CASEOPS_LLM_AUTH"
+  echo "  SF orgs authenticated"
+
+  # Run Flask app (main service)
   echo "Starting Flask app..."
   python app.py "$@"
   EXIT_CODE=$?
+
   if [ $EXIT_CODE -eq 0 ]; then
-    echo "Flask app exited cleanly"
+    echo "Flask app exited cleanly (exit 0)"
     break
   else
-    echo "Flask app crashed with exit code $EXIT_CODE, restarting in 2 seconds..."
+    echo "Flask app exited with code $EXIT_CODE"
+    echo "Restarting service in 2 seconds..."
     sleep 2
   fi
 done
