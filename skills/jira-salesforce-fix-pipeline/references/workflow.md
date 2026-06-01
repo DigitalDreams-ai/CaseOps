@@ -13,13 +13,15 @@
 | 5 | **Sub-agent** | Production metadata (read-only) → investigation record |
 | 6 | **Sub-agent** | Identify problem location (type, artifact, failure point) |
 | 7 | Orchestrator | Engineering escalation gate |
-| 8 | Orchestrator | Implement (Support path only) |
-| 9 | **Sub-agent** | Deploy + test in allowlisted Sandbox (mandatory on Support path) |
-| 10 | **Sub-agent** | Internal notes + Jira message drafts |
+| 8 | Orchestrator | Implement (both paths: propose fix) |
+| 9 | **Sub-agent** | Deploy + test in allowlisted Sandbox (both paths: validate proposed solution) |
+| 10 | **Sub-agent** | Internal notes + Jira message + escalation handoff (if needed) |
 | 11 | Orchestrator | Dated issue summary |
 | 12 | Orchestrator | Inform the user |
 
 **Delegated skills:** Step 3 → `jira-issue-analysis`; Step 5 → `salesforce-production-metadata-investigation`; Step 6 → `salesforce-production-metadata-investigation` (drilling); Step 9 → `salesforce-sandbox-deploy-test`; Step 10 → `jira-response-drafting`.
+
+**Both paths run full Steps 1-12.** Escalation routing decision in Step 7 determines how Step 10 routes: Support issues deploy to Production; Escalation issues hand off to Engineering with Sandbox-validated proposed solution.
 
 ---
 
@@ -141,11 +143,13 @@ Using the Step 6 problem location (exact artifact + failure point), classify:
 - **Escalate to Engineering** if the artifact requires Apex/code changes, Flow modifications, approval processes, validation rule updates, or other Engineering-owned automation to fix.
 - **Support-resolvable** only for data updates, permission assignments, config changes (like enabling a feature flag), or read-only metadata that do **not** require Engineering code ownership.
 
-**If escalating:** Do **not** implement or deploy. Draft `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with problem location details from Step 6 (exact artifact, location, failure point, root cause). Then go to **Step 10** (drafting) with test result **”N/A - Engineering escalation”** — skip Steps **8** and **9**.
+**Both paths continue to Steps 8-9.** Steps 8-9 generate a Sandbox-validated proposed solution that will be handed to Engineering in Step 10. This lets Engineering receive a concrete fix proposal with validation evidence, not just a problem statement.
 
 ---
 
-## Step 8 — Implement [ORCHESTRATOR]
+## Step 8 — Implement [ORCHESTRATOR] (Both paths)
+
+Propose and document the fix. For Support issues, this becomes the Production fix. For Escalation issues, this becomes the proposed solution to hand to Engineering.
 
 Make local changes scoped to the issue. Avoid unrelated refactors. Record changed files in `outputs/investigations/<KEY>.md`.
 
@@ -153,9 +157,9 @@ Before creating new metadata, confirm it does not already exist in Production (S
 
 Update **`Solution Plan` → Production vs sandbox deployment state** in the investigation record: pre-fill what Production has vs what will be Sandbox-only, and the expected **Production deploy?** (**Yes — Gearset** / **No** / **N/A**). Refine after Step 9 with test evidence.
 
-## Step 9 — Deploy, test, and iterate [SUB-AGENT] (mandatory on Support path)
+## Step 9 — Deploy, test, and iterate [SUB-AGENT] (Both paths)
 
-**Spawn this sub-agent** after Step 8 for every Support-resolvable issue. **Do not skip** deploy and test to “finalize” in prose first.
+**Spawn this sub-agent** after Step 8 for every issue — both Support-resolvable and Engineering-escalation. Sandbox testing validates the proposed solution so Engineering receives evidence-backed handoffs, not just hypotheses.
 
 **Allowlist:** Read **`CASEOPS_SANDBOX_TARGET_ORG`** from `.env.jira`. If missing or empty, **STOP**. Only that org may receive deploys or mutating operations. See **`references/sub-agent-prompts.md`** — **”Step 9 — Deploy, test, and iterate”** for the full prompt and failure-loop behavior.
 
@@ -163,9 +167,18 @@ On **Fail:** revise hypothesis (Step 4), re-run Step 5 if needed (and Step 6 if 
 
 ---
 
-## Step 10 — Draft internal notes and Jira message [SUB-AGENT]
+## Step 10 — Draft internal notes, Jira message, and escalation handoff (if needed) [SUB-AGENT]
 
-Spawn a sub-agent using **”Step 10 — Draft internal notes and Jira message”** in **`references/sub-agent-prompts.md`**. For Support path, **test result** must come from Step 9; for Engineering escalation from Step 7, use **”N/A - Engineering escalation”**.
+Spawn a sub-agent using **”Step 10 — Draft internal notes and Jira message”** in **`references/sub-agent-prompts.md`**. Pass the test results from Step 9 (both Support and Escalation paths ran Step 9 and have Sandbox validation).
+
+**If Support-resolvable:** Drafts are ready for Production deployment via Gearset or standard change control.
+
+**If Engineering-escalation:** Create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with:
+- Problem location (from Step 6)
+- Root cause (from Step 4)
+- **Proposed solution** (from Step 9 test results: what was deployed in Sandbox and whether tests passed)
+- Why it requires Engineering
+- Sandbox test evidence
 
 **Production vs Sandbox in every customer-facing and internal summary:** Drafts must **never** read as if new metadata already exists in **Production** when it was only created or deployed in **Sandbox**. Always include an explicit line: **Production deploy required** (e.g. Gearset) vs **already in Production** vs **N/A** (no metadata change). This pipeline does not promote to Production unless the operator explicitly asks.
 
