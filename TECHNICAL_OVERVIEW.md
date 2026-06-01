@@ -1,0 +1,581 @@
+# CaseOps Technical Overview
+
+## Table of Contents
+1. [Architecture](#architecture)
+2. [Token Management System](#token-management-system)
+3. [Pipeline Orchestration](#pipeline-orchestration)
+4. [API Endpoints](#api-endpoints)
+5. [Database & Storage](#database--storage)
+6. [Security & Access Control](#security--access-control)
+7. [Deployment](#deployment)
+8. [Troubleshooting](#troubleshooting)
+
+---
+
+## Architecture
+
+### System Components
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Flask Web App (app.py)                                     │
+│  - REST API endpoints                                       │
+│  - Dashboard rendering                                      │
+│  - Token management & refresh                               │
+│  - Salesforce/Jira API clients                              │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+   ┌────▼───┐  ┌────▼────┐  ┌───▼─────┐
+   │  Jira  │  │Salesforce│  │ Claude  │
+   │  API   │  │   API    │  │  CLI    │
+   └────────┘  └──────────┘  └─────────┘
+        │            │            │
+   ┌────▼─────────────┴────────────▼─────────┐
+   │  Outputs Directory Structure             │
+   │  instance1/                              │
+   │  ├── outputs/                            │
+   │  │   ├── jira/                           │
+   │  │   ├── investigations/                 │
+   │  │   ├── internal-notes/                 │
+   │  │   ├── jira-messages/                  │
+   │  │   ├── test-reports/                   │
+   │  │   ├── engineering-escalations/        │
+   │  │   └── pipeline-logs/                  │
+   │  └── .temp/                              │
+   └──────────────────────────────────────────┘
+```
+
+### Request Flow
+
+```
+1. User clicks "Auto-Process All" on dashboard
+   ↓
+2. Flask receives POST /api/run with action="full"
+   ↓
+3. Flask spawns: `claude -p <orchestrator prompt>`
+   ↓
+4. Claude Code subprocess:
+   - Reads ORCHESTRATOR-PROMPT.md
+   - Executes jira_sync.py (Step 1)
+   - Calls sub-agents for Steps 3-7
+   - Collects outputs
+   - Exits
+   ↓
+5. Flask reads pipeline-logs/__global__.jsonl
+   ↓
+6. Dashboard updates with results
+   - Badge states change
+   - New files appear
+   - Issue detail panel refreshes
+```
+
+---
+
+## Token Management System
+
+### Access Token Lifecycle
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  0h: Token Issued (Valid)                                │
+│  - Access token: ~1000 char OAuth token                  │
+│  - Refresh token: Separate long-lived token              │
+│  - Stored: .env.jira (SF_PROD_ACCESS_TOKEN etc.)         │
+│  - SF_TOKENS_REFRESHED_AT = current timestamp            │
+└──────────────────────────────────────────────────────────┘
+                       │
+                       │ (4h of operation)
+                       ▼
+┌──────────────────────────────────────────────────────────┐
+│  4h: Auto-Refresh Window (Warning Threshold)             │
+│  - Startup check: if age > 4h, trigger refresh           │
+│  - Call: _refresh_salesforce_token_from_refresh_token()  │
+│  - New token obtained via OAuth2 refresh_token grant     │
+│  - Update .env.jira with new token + new timestamp       │
+│  - App continues without interruption                    │
+└──────────────────────────────────────────────────────────┘
+                       │
+                       │ (4h more)
+                       ▼
+┌──────────────────────────────────────────────────────────┐
+│  8h: Token Expiration (Hard Deadline)                    │
+│  - If no refresh token: token becomes invalid            │
+│  - If refresh token: already refreshed at 4h mark        │
+│  - Without refresh: Pipeline cannot access Salesforce    │
+│  - With refresh: Already renewed, operating normally     │
+└──────────────────────────────────────────────────────────┘
+```
+
+### Token Refresh Mechanism
+
+**File:** `app.py`, functions:
+- `_refresh_salesforce_token_from_refresh_token()` (line 147)
+- `_check_and_refresh_salesforce_tokens()` (line 176)
+- `_attempt_token_refresh()` (line 240)
+
+**Flow:**
+
+1. **Startup:**
+   ```python
+   _check_and_refresh_salesforce_tokens(env_file_path)
+   ```
+   - Reads SF_TOKENS_REFRESHED_AT from .env.jira
+   - If missing: initialize to now + attempt refresh
+   - If age > 8h: warn (don't crash), attempt refresh
+   - If age > 4h: attempt refresh
+   - Update .env.jira with new timestamp
+
+2. **OAuth Token Refresh:**
+   ```
+   POST https://login.salesforce.com/services/oauth2/token
+   grant_type=refresh_token
+   refresh_token=<refresh_token>
+   client_id=PlatformCLI
+   ```
+   - Returns new access_token
+   - Old token immediately invalidated
+   - New token valid for 8 more hours
+
+3. **Persistence:**
+   - Write to `/app/.env.jira`
+   - Docker mounts from NAS: `/volume1/docker/stacks/caseops/.env.jira.nas`
+   - Survives container restarts
+   - Next startup reads fresh tokens
+
+### Auto-Refresh Configuration
+
+**With Refresh Tokens (Recommended):**
+```env
+SF_PROD_ACCESS_TOKEN=<current access token>
+SF_PROD_REFRESH_TOKEN=<long-lived refresh token>
+SF_TOKENS_REFRESHED_AT=<unix timestamp>
+```
+- Startup auto-refreshes at 4h mark
+- No manual intervention needed
+- Pipeline runs indefinitely
+
+**Without Refresh Tokens:**
+```env
+SF_PROD_ACCESS_TOKEN=<current access token>
+# SF_PROD_REFRESH_TOKEN=<missing>
+SF_TOKENS_REFRESHED_AT=<unix timestamp>
+```
+- Manual refresh required every 8h
+- User navigates to /setup/refresh-salesforce-tokens
+- Must re-authenticate locally: `sf org login web -o 10xhealth`
+
+### Token Sources
+
+| Source | Method | Duration | Refresh? |
+|--------|--------|----------|----------|
+| `sf org auth show-access-token` | Session token | 8h | Manual |
+| `.sfdx/` cache file | OAuth token + refresh | 8h + indefinite | Auto |
+| `.env.jira` | Manual paste | 8h | Manual or Auto |
+
+**Best practice:** Use refresh tokens from `.sfdx/` cache.
+
+---
+
+## Pipeline Orchestration
+
+### Pipeline Steps (1-12)
+
+| Step | Name | Input | Process | Output | Time |
+|------|------|-------|---------|--------|------|
+| 1 | Sync | Jira API | Fetch active cases | `jira/*.md` | 2m |
+| 2 | Triage | Manifest | Separate by status | folders | 1m |
+| 3 | Analysis | Jira + SF | Root cause research | `investigations/*.md` | 3m |
+| 4 | Hypotheses | Analysis | Propose fixes | `step-4-hypothesis/*.md` | 2m |
+| 5 | Metadata | Hypothesis | Identify changes | step-5-metadata | 1m |
+| 6 | Sandbox Test | Metadata | Deploy + validate | `test-reports/*.md` | 3m |
+| 7 | Messaging | Test results | Draft customer msg | `jira-messages/*.md` | 1m |
+| 11 | Summary | All steps | Rollup report | `issue-summary-YYYY-MM-DD.md` | 1m |
+| 12 | Logs | Execution | Collect logs | `pipeline-logs/*` | 0m |
+
+### Sub-Agent Architecture
+
+**Skill files:** `skills/jira-salesforce-fix-pipeline/`
+
+Each step runs as a **sub-agent** (Claude API call with specific prompt + context):
+- `jira-issue-analysis` — Step 3
+- `jira-response-drafting` — Step 7
+- `salesforce-production-metadata-investigation` — Step 5
+- `salesforce-sandbox-deploy-test` — Step 6
+- (Orchestrator runs Steps 1, 2, 4, 11, 12)
+
+### Pipeline State Machine
+
+```
+UNTRIAGED
+   │
+   ├─→ [Step 3: Investigation]
+   │
+   ▼
+INVESTIGATING
+   │
+   ├─→ [Step 4: Hypotheses]
+   │
+   ▼
+ANALYZED
+   │
+   ├─→ [Step 6: Sandbox Test]
+   │
+   ▼
+VALIDATED
+   │
+   ├─→ [If eng_handoff file exists]
+   │
+   ▼
+ESCALATED_TO_ENGINEERING
+   │
+   └─→ (Handoff to Engineering)
+```
+
+**Transitions triggered by:**
+- File existence: `investigations/HEAL-*.md` → INVESTIGATING
+- File existence: `step-4-hypothesis/HEAL-*.md` → ANALYZED
+- File existence: `test-reports/HEAL-*.md` → VALIDATED
+- File existence: `engineering-escalations/HEAL-*.md` + `eng_handoff/HEAL-*.md` → ESCALATED
+
+---
+
+## API Endpoints
+
+### Issue & Pipeline
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/api/issues` | List all issues with flags |
+| GET | `/api/issue/<key>` | Single issue detail + files |
+| POST | `/api/run` | Trigger pipeline action |
+| GET | `/api/pipeline-log/<key>` | Streaming pipeline output |
+| POST | `/api/pipeline-log/clear` | Delete log file |
+
+### Token Management
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/setup/refresh-salesforce-tokens` | HTML form for manual refresh |
+| POST | `/api/setup/refresh-salesforce-tokens` | Save tokens + refresh |
+| POST | `/api/setup/salesforce-auth` | Auth SF CLI orgs |
+| GET | `/api/status` | Check SF, Claude, Jira health |
+
+### Claude Authentication
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/setup/claude-login` | HTML wizard for auth |
+| POST | `/api/setup/claude-credentials` | Save + persist credentials |
+
+### System
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/` | Dashboard |
+| GET | `/settings` | Settings page |
+| POST | `/api/restart` | Graceful restart |
+
+---
+
+## Database & Storage
+
+### File Structure
+
+```
+outputs/
+├── jira/
+│   ├── issues-raw.json          # Raw Jira API response
+│   ├── issues-summary-*.md      # Parsed issues
+│   └── manifest.json            # Issue list + metadata
+├── investigations/
+│   └── HEAL-*.md                # Root cause analysis
+├── internal-notes/
+│   └── HEAL-*.md                # Engineering notes
+├── jira-messages/
+│   └── HEAL-*.md                # Customer message draft
+├── test-reports/
+│   └── HEAL-*.md                # Sandbox test results
+├── engineering-escalations/
+│   └── HEAL-*.md                # Handoff docs
+├── step-4-hypothesis/
+│   └── HEAL-*.md                # Fix proposals
+├── pipeline-logs/
+│   ├── __global__.jsonl         # Full pipeline log
+│   ├── HEAL-*.jsonl             # Per-issue logs
+│   └── YYYY-MM-DD-*.log         # Timestamped runs
+└── issue-summary-YYYY-MM-DD.md  # Daily rollup
+```
+
+### Pipeline Log Format (JSONL)
+
+Each line is JSON:
+```json
+{
+  "ts": "2026-06-01T12:51:46.406337+00:00",
+  "run_key": "HEAL-30437",
+  "kind": "line|done|error",
+  "text": "Investigation starting..."
+}
+```
+
+**Types:**
+- `line` — Status/progress message
+- `done` — Task completed
+- `error` — Failure (stops pipeline)
+
+### Manifest Structure
+
+File: `outputs/jira/manifest.json`
+
+```json
+[
+  {
+    "Key": "HEAL-30437",
+    "Status": "In Progress",
+    "Summary": "Automate Shopify Network Order Release Process",
+    "Priority": "Medium",
+    "Assignee": "sean@example.com",
+    "Updated": "2026-05-29T11:08:58.216-0400",
+    "Due": "",
+    "HasNewComments": true
+  }
+]
+```
+
+Used for: Issue list, status tracking, SLA calculations.
+
+---
+
+## Security & Access Control
+
+### Salesforce Access Control
+
+**Production (10xhealth):**
+- **Read-only** API calls
+- Can query: metadata, org config, user data
+- Cannot deploy, execute scripts, modify data
+- Used for: Investigation, metadata analysis
+
+**Sandbox (10xhealth-sean):**
+- **Full deploy access**
+- Can deploy metadata changes
+- Can run test code
+- Used for: Testing fixes before Production
+
+### Token Security
+
+**Storage:**
+- Never logged or printed (redacted in debug output)
+- Stored in `.env.jira` (restricted permissions: 0o600)
+- Persisted in base64-encoded form in Docker env vars
+- NAS storage: restricted to docker user only
+
+**Rotation:**
+- Access tokens: 8h automatic rotation
+- Refresh tokens: Indefinite (user controls revocation)
+- Immediate invalidation on refresh
+
+**Audit:**
+- All SF API calls logged with timestamp
+- User who ran pipeline recorded
+- Escalation docs include investigation audit trail
+
+### Claude Code Security
+
+**Credentials:**
+- Stored in `/app/.claude/.credentials.json` (0o600)
+- Persisted in base64 env var CLAUDE_CREDENTIALS_B64
+- Mounted from NAS, survives restarts
+- Only accessible to Claude CLI subprocess
+
+**Capabilities:**
+- Can invoke Claude API (limited to registered skills)
+- Can read Jira + Salesforce APIs
+- Cannot directly access Production data (read-only Salesforce token)
+- All sub-agent prompts reviewed + approved
+
+---
+
+## Deployment
+
+### Docker Setup
+
+**File:** `docker-compose.yml`
+
+```yaml
+services:
+  caseops:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5350:5000"
+    env_file:
+      - .env.jira.nas
+    volumes:
+      - ./instance1/outputs:/app/instance1/outputs
+      - ./.env.jira.nas:/app/.env.jira:ro
+    environment:
+      CASEOPS_OUTPUTS_DIR: /app/instance1/outputs
+      CASEOPS_WORKSPACE: default
+```
+
+**Key points:**
+- Source code mounted via `build:` (rebuild on changes)
+- `.env.jira.nas` mounted **read-only** (NAS is source of truth)
+- Outputs directory volume-mounted (persistent across restarts)
+- Port 5350 on host → 5000 in container
+
+### Dockerfile
+
+**File:** `Dockerfile`
+
+Base image: `python:3.11`
+
+Installs:
+- Python dependencies: Flask, requests, etc.
+- Salesforce CLI (sf)
+- Claude Code CLI
+- Git
+
+Entrypoint: `docker-entrypoint.sh` → `python app.py`
+
+### Multi-Instance Support
+
+Two instances can run simultaneously:
+
+**Instance 1 (default):**
+```bash
+docker-compose up -d
+# Outputs: instance1/outputs/
+# Port: 5350
+```
+
+**Instance 2:**
+```bash
+docker-compose -f docker-compose.instance2.yml up -d
+# Outputs: instance2/outputs/
+# Port: 5351
+# Env: CASEOPS_WORKSPACE=instance2
+```
+
+Each instance:
+- Isolated outputs directory
+- Separate .env.jira config
+- Separate Jira project (if needed)
+- Different Salesforce orgs (optional)
+
+---
+
+## Troubleshooting
+
+### Token Debugging
+
+**Check current token age:**
+```bash
+ssh docker@10.0.1.10
+docker exec caseops python -c "
+import os, time, re
+env = open('/app/.env.jira').read()
+ts = int(re.search(r'SF_TOKENS_REFRESHED_AT=(\d+)', env).group(1))
+age_h = (time.time() - ts) / 3600
+print(f'Token age: {age_h:.1f}h')
+"
+```
+
+**Check refresh token exists:**
+```bash
+docker exec caseops grep "SF_PROD_REFRESH_TOKEN=" /app/.env.jira
+# If empty, no auto-refresh available
+```
+
+**Manual refresh trigger:**
+```bash
+docker exec caseops python -c "
+from app import _check_and_refresh_salesforce_tokens
+from pathlib import Path
+_check_and_refresh_salesforce_tokens(Path('/app/.env.jira'))
+"
+```
+
+### Salesforce API Issues
+
+**Check org accessibility:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+  https://10xhealth.my.salesforce.com/services/data/
+# Should return 200 with version info
+```
+
+**If 401 INVALID_SESSION_ID:**
+- Token expired or invalid
+- Run token refresh
+- Verify token format (check for typos)
+
+### Pipeline Debugging
+
+**Watch real-time logs:**
+```bash
+ssh docker@10.0.1.10
+docker logs -f caseops | grep -E "ERROR|WARN|Step"
+```
+
+**Check specific issue logs:**
+```bash
+tail -f /volume1/docker/stacks/caseops/instance1/outputs/pipeline-logs/HEAL-30437.jsonl
+```
+
+**Inspect investigation file:**
+```bash
+cat /volume1/docker/stacks/caseops/instance1/outputs/investigations/HEAL-30437.md
+```
+
+### Container Restart
+
+**Graceful:**
+```bash
+curl -X POST http://10.0.1.10:5350/api/restart
+# Waits 1s, then kills app (Docker restarts)
+```
+
+**Force:**
+```bash
+ssh docker@10.0.1.10
+cd /volume1/docker/stacks/caseops
+docker-compose restart caseops
+```
+
+---
+
+## Performance Tuning
+
+### Caching
+
+**Investigation cache** (in-memory):
+- Stores: `has_investigation`, `has_solution` flags
+- TTL: 1000 entries (auto-evict oldest)
+- Rebuilt on app restart
+- Located: `investigation_cache` dict in app.py
+
+**SF Org list cache:**
+- Caches: `sf org list --json` output
+- TTL: 10 minutes
+- Prevents repeated CLI calls
+- Located: `_sf_orgs_cache` dict
+
+### Optimization Tips
+
+1. **Batch operations:** Run "Auto-Process All" instead of per-issue
+2. **Off-peak runs:** Pipeline uses significant API quota (200+ Jira calls)
+3. **Refresh tokens:** Enable auto-refresh to avoid manual interruptions
+4. **Clean outputs:** Archive old `instance1/outputs/` directories (keep latest)
+
+---
+
+## Further Reading
+
+- See [USER_GUIDE.md](USER_GUIDE.md) for operational docs
+- See [ARCHITECTURE_STRATEGY.md](ARCHITECTURE_STRATEGY.md) for design rationale
+- See [references/](references/) for detailed specifications
