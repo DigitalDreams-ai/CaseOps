@@ -440,25 +440,33 @@
                 <hr style="border: none; border-top: 1px solid var(--color-border); margin: 20px 0;">
 
                 <div style="background: var(--color-bg); padding: 12px; border-radius: 4px; font-size: 12px; color: var(--color-text-secondary); line-height: 1.6;">
-                    <strong>📋 Initial Setup (Required Once)</strong><br>
-                    1. On your <strong>local machine</strong>, run:<br>
-                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto;">
-                        sf org auth show-access-token -o 10xhealth --no-prompt
+                    <strong>📋 Initial Setup (Required Once)</strong><br><br>
+                    <strong style="color: var(--color-text);">1️⃣ Production Token</strong><br>
+                    On your <strong>local machine</strong>, run to get the <strong>Production</strong> access token:<br>
+                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
+                        sf org auth show-access-token -o &lt;your-production-org-alias&gt; --no-prompt
                     </div>
-                    Copy the token value (starts with session ID like <code style="background: var(--color-surface); padding: 1px 3px; border-radius: 2px;">00D0b...</code>)
+                    <span style="color: #888;">Replace <code style="background: var(--color-surface); padding: 1px 3px;">&lt;your-production-org-alias&gt;</code> with your org alias (e.g., <code style="background: var(--color-surface); padding: 1px 3px;">10xhealth</code>)</span>
+                    <br>Copy the token value (session ID starting with <code style="background: var(--color-surface); padding: 1px 3px;">00D0b...</code>)
                     <br><br>
-                    2. Then get the sandbox token:<br>
-                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto;">
-                        sf org auth show-access-token -o 10xhealth-sean --no-prompt
+                    <strong style="color: var(--color-text);">2️⃣ Sandbox Token</strong><br>
+                    Then get the <strong>Sandbox</strong> access token:<br>
+                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
+                        sf org auth show-access-token -o &lt;your-sandbox-org-alias&gt; --no-prompt
                     </div>
-                    Copy the token value<br><br>
-                    3. Visit <a href="/setup/refresh-sf-tokens" target="_blank" style="color: var(--color-primary); text-decoration: underline;">Refresh Tokens page</a> and paste both tokens, then save.
+                    <span style="color: #888;">Replace <code style="background: var(--color-surface); padding: 1px 3px;">&lt;your-sandbox-org-alias&gt;</code> with your sandbox alias (e.g., <code style="background: var(--color-surface); padding: 1px 3px;">10xhealth-sean</code>)</span>
+                    <br>Copy the token value
+                    <br><br>
+                    <strong style="color: var(--color-text);">3️⃣ Save Tokens</strong><br>
+                    Visit <a href="/setup/refresh-sf-tokens" target="_blank" style="color: var(--color-primary); text-decoration: underline;">Refresh Tokens page</a> and paste both tokens, then save.
                     <br><br>
                     <strong>✅ Automatic Refresh</strong><br>
                     Once setup, tokens are <strong>automatically refreshed</strong> on service startup if they're older than 4 hours. Access tokens valid for 8 hours; refresh happens before expiry. No manual action needed.
                     <br><br>
                     <strong>🔐 Token Storage</strong><br>
-                    Stored securely in <code style="background: var(--color-surface); padding: 1px 3px; border-radius: 2px;">SF_PROD_ACCESS_TOKEN</code>, <code style="background: var(--color-surface); padding: 1px 3px; border-radius: 2px;">SF_SANDBOX_ACCESS_TOKEN</code> with refresh tokens in <code style="background: var(--color-surface); padding: 1px 3px; border-radius: 2px;">.env.jira</code> on the NAS.
+                    <strong>Production:</strong> Stored in <code style="background: var(--color-surface); padding: 1px 3px;">SF_PROD_ACCESS_TOKEN</code> with refresh token<br>
+                    <strong>Sandbox:</strong> Stored in <code style="background: var(--color-surface); padding: 1px 3px;">SF_SANDBOX_ACCESS_TOKEN</code> with refresh token<br>
+                    Both in <code style="background: var(--color-surface); padding: 1px 3px;">.env.jira</code> on the NAS.
                 </div>
             </div>
 
