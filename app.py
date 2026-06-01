@@ -174,7 +174,7 @@ def _refresh_salesforce_token_from_refresh_token(instance_url: str, refresh_toke
 
 
 def _check_and_refresh_salesforce_tokens(env_file_path: Path) -> None:
-    """Check SF token age. Auto-refresh if <4h left, warn if <2h left, error if expired."""
+    """Check SF token age. Auto-refresh if expiring/expired, warn on failure but don't crash."""
     try:
         env_content = env_file_path.read_text(encoding="utf-8")
 
@@ -183,59 +183,77 @@ def _check_and_refresh_salesforce_tokens(env_file_path: Path) -> None:
         match_prod_token = re.search(r'SF_PROD_REFRESH_TOKEN=([^\n]+)', env_content)
         match_sandbox_token = re.search(r'SF_SANDBOX_REFRESH_TOKEN=([^\n]+)', env_content)
 
+        now = int(time.time())
+
+        # If timestamp missing, initialize it now and attempt refresh if refresh tokens exist
         if not match_ts:
-            print("[WARN] SF_TOKENS_REFRESHED_AT not in .env.jira")
+            print("[WARN] SF_TOKENS_REFRESHED_AT not in .env.jira. Initializing...")
+            if match_prod_token or match_sandbox_token:
+                _attempt_token_refresh(env_file_path, env_content, match_prod_token, match_sandbox_token)
+            else:
+                # No refresh tokens, just set timestamp
+                lines = env_content.split("\n")
+                new_lines = [l for l in lines if not l.startswith("SF_TOKENS_REFRESHED_AT=")]
+                new_lines.append(f"SF_TOKENS_REFRESHED_AT={now}")
+                env_file_path.write_text("\n".join(new_lines), encoding="utf-8")
+                print("[WARN] No refresh tokens available. Manual token refresh required every 8h.")
             return
 
         refreshed_at = int(match_ts.group(1))
-        now = int(time.time())
         age_hours = (now - refreshed_at) / 3600
 
+        # Warn if expired, but don't crash - let API handle auth
         if age_hours > 8:
-            print("[ERROR] Salesforce tokens EXPIRED (>8h old). Auto-refresh failed or not configured.")
-            raise RuntimeError("Salesforce tokens expired. Please refresh manually.")
+            print(f"[WARN] Salesforce tokens EXPIRED ({age_hours:.1f}h old). Auto-refresh will attempt on next API call.")
+            if match_prod_token or match_sandbox_token:
+                _attempt_token_refresh(env_file_path, env_content, match_prod_token, match_sandbox_token)
+            return
 
-        # Auto-refresh if <4h left (4h into 8h TTL)
+        # Auto-refresh if <4h left (4h into 8h TTL) or expired
         if age_hours > 4:
             print(f"[*] Salesforce tokens {age_hours:.1f}h old (<4h until expiry). Auto-refreshing...")
-            prod_ok, prod_new = False, None
-            sandbox_ok, sandbox_new = False, None
-
-            if match_prod_token:
-                prod_ok, prod_new = _refresh_salesforce_token_from_refresh_token(
-                    "https://10xhealth.my.salesforce.com",
-                    match_prod_token.group(1)
-                )
-
-            if match_sandbox_token:
-                sandbox_ok, sandbox_new = _refresh_salesforce_token_from_refresh_token(
-                    "https://10xhealth--sean.sandbox.my.salesforce.com",
-                    match_sandbox_token.group(1)
-                )
-
-            if prod_ok or sandbox_ok:
-                # Update .env.jira with new tokens
-                lines = env_content.split("\n")
-                new_lines = [l for l in lines if not l.startswith(("SF_PROD_ACCESS_TOKEN=", "SF_SANDBOX_ACCESS_TOKEN=", "SF_TOKENS_REFRESHED_AT="))]
-                if prod_new:
-                    new_lines.append(f"SF_PROD_ACCESS_TOKEN={prod_new}")
-                if sandbox_new:
-                    new_lines.append(f"SF_SANDBOX_ACCESS_TOKEN={sandbox_new}")
-                new_lines.append(f"SF_TOKENS_REFRESHED_AT={int(time.time())}")
-                env_file_path.write_text("\n".join(new_lines), encoding="utf-8")
-                print(f"[OK] Salesforce tokens auto-refreshed (prod={prod_ok}, sandbox={sandbox_ok})")
-            else:
-                print(f"[WARN] Auto-refresh failed (prod: {prod_new}, sandbox: {sandbox_new})")
+            _attempt_token_refresh(env_file_path, env_content, match_prod_token, match_sandbox_token)
+            return
 
         if age_hours > 6:
             print(f"[WARN] Tokens {age_hours:.1f}h old. <2h until auto-refresh needed.")
         else:
             print(f"[OK] Salesforce tokens valid ({age_hours:.1f}h old, auto-refresh at 4h)")
 
-    except RuntimeError:
-        raise
     except Exception as e:
         print(f"[WARN] Token refresh check failed: {e}")
+
+
+def _attempt_token_refresh(env_file_path: Path, env_content: str, prod_token_match, sandbox_token_match) -> None:
+    """Attempt to refresh SF tokens using refresh tokens. Update .env on success."""
+    prod_ok, prod_new = False, None
+    sandbox_ok, sandbox_new = False, None
+
+    if prod_token_match:
+        prod_ok, prod_new = _refresh_salesforce_token_from_refresh_token(
+            "https://10xhealth.my.salesforce.com",
+            prod_token_match.group(1)
+        )
+
+    if sandbox_token_match:
+        sandbox_ok, sandbox_new = _refresh_salesforce_token_from_refresh_token(
+            "https://10xhealth--sean.sandbox.my.salesforce.com",
+            sandbox_token_match.group(1)
+        )
+
+    if prod_ok or sandbox_ok:
+        # Update .env.jira with new tokens and timestamp
+        lines = env_content.split("\n")
+        new_lines = [l for l in lines if not l.startswith(("SF_PROD_ACCESS_TOKEN=", "SF_SANDBOX_ACCESS_TOKEN=", "SF_TOKENS_REFRESHED_AT="))]
+        if prod_new:
+            new_lines.append(f"SF_PROD_ACCESS_TOKEN={prod_new}")
+        if sandbox_new:
+            new_lines.append(f"SF_SANDBOX_ACCESS_TOKEN={sandbox_new}")
+        new_lines.append(f"SF_TOKENS_REFRESHED_AT={int(time.time())}")
+        env_file_path.write_text("\n".join(new_lines), encoding="utf-8")
+        print(f"[OK] Salesforce tokens auto-refreshed (prod={prod_ok}, sandbox={sandbox_ok})")
+    else:
+        print(f"[WARN] Auto-refresh failed (prod: {prod_new}, sandbox: {sandbox_new})")
 
 
 def _instance_cache_key(key: str) -> str:
@@ -2704,6 +2722,19 @@ def api_setup_claude_credentials():
         claude_json_file.write_text(json.dumps(claude_config), encoding="utf-8")
         claude_json_file.chmod(0o600)
 
+        # Persist credentials to .env.jira for container restarts
+        # Store as base64-encoded CLAUDE_CREDENTIALS_B64 so it survives env file reloads
+        import base64
+        cred_b64 = base64.b64encode(cred_json.encode()).decode()
+        env_file = Path("/app/.env.jira")
+        if env_file.exists():
+            env_content = env_file.read_text(encoding="utf-8")
+            # Remove old CLAUDE_CREDENTIALS_B64 if present
+            lines = env_content.split("\n")
+            new_lines = [l for l in lines if not l.startswith("CLAUDE_CREDENTIALS_B64=")]
+            new_lines.append(f"CLAUDE_CREDENTIALS_B64={cred_b64}")
+            env_file.write_text("\n".join(new_lines), encoding="utf-8")
+
         # Validate: verify file was created and is readable
         if not cred_file.exists():
             return jsonify({"error": "Failed to create credentials file"}), 500
@@ -3051,6 +3082,24 @@ if __name__ == "__main__":
                 skill_name = skill_path.name
                 SKILL_PATHS[skill_name] = str(skill_path.resolve())
     print(f"[OK] {len(SKILL_PATHS)} skill paths registered\n")
+
+    # Restore Claude credentials from .env.jira if they were persisted
+    claude_creds_b64 = os.environ.get("CLAUDE_CREDENTIALS_B64")
+    if claude_creds_b64:
+        try:
+            import base64
+            cred_json = base64.b64decode(claude_creds_b64).decode()
+            cred_obj = json.loads(cred_json)
+            cred_dir = Path("/app") / ".claude"
+            cred_dir.mkdir(parents=True, exist_ok=True)
+            cred_file = cred_dir / ".credentials.json"
+            cred_file.write_text(cred_json, encoding="utf-8")
+            cred_file.chmod(0o600)
+            print(f"[OK] Claude credentials restored from environment")
+        except Exception as e:
+            print(f"[WARN] Failed to restore Claude credentials: {e}")
+    else:
+        print(f"[WARN] Claude credentials not found in environment - Claude Code CLI will require /setup/claude-login")
 
     # Check Salesforce tokens and auto-refresh if needed (8h TTL, auto-refresh at 4h)
     _check_and_refresh_salesforce_tokens(env_file_path)
