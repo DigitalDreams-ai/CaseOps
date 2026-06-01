@@ -336,10 +336,10 @@ sf org login web --alias 10xhealth
 **A:** No. Steps 5-7 require Salesforce API access. Steps 1-4 (sync, triage, analysis, hypotheses) can run without SF access, but pipeline will stop at Step 5.
 
 ### Q: How do I check if tokens are valid?
-**A:** Go to **Settings** → **Status Check**. It will:
-- Ping both Salesforce orgs
-- Verify Claude CLI is ready
-- Report token expiry time
+**A:** Tokens are automatically checked at startup. If expired:
+- App warns in logs but continues (with auto-refresh if refresh tokens available)
+- Pipeline will fail at Step 8-9 if Salesforce tokens required but invalid
+- Go to **Settings** → **Refresh Salesforce Tokens** to manually refresh
 
 ### Q: Can I have multiple instances?
 **A:** Yes! CaseOps supports multi-instance via isolated output directories:

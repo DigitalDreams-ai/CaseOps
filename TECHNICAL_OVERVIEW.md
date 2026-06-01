@@ -452,21 +452,27 @@ Two instances can run simultaneously:
 docker-compose up -d
 # Outputs: instance1/outputs/
 # Port: 5350
+# Env: CASEOPS_WORKSPACE=instance1
 ```
 
-**Instance 2:**
-```bash
-docker-compose -f docker-compose.instance2.yml up -d
-# Outputs: instance2/outputs/
-# Port: 5351
-# Env: CASEOPS_WORKSPACE=instance2
+**Instance 2+ (separate containers):**
+Create a second docker-compose override with different:
+```yaml
+services:
+  caseops:
+    ports:
+      - "5351:5000"
+    environment:
+      - CASEOPS_WORKSPACE=instance2
+    volumes:
+      - ./instance2/outputs:/app/instance2/outputs
 ```
 
 Each instance:
 - Isolated outputs directory
-- Separate .env.jira config
-- Separate Jira project (if needed)
-- Different Salesforce orgs (optional)
+- Separate .env.jira config (or shared)
+- Separate Jira query (if needed)
+- Optional: Different Salesforce orgs
 
 ---
 
