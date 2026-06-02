@@ -1,340 +1,172 @@
-# CaseOps Docker + Cloudflare Tunnel Setup
+# CaseOps Docker Setup
 
-## Quick Start
+## Current NAS Deployment
 
-### 1. Build image
-```powershell
-docker build -t caseops:latest .
-```
+NAS access:
 
-### 2. Run container (with Cloudflare tunnel)
-
-#### Option A: Local dev (localhost:5350)
-```powershell
-docker-compose up -d
-# Access at http://localhost:5350
-```
-
-#### Option B: Synology NAS via Docker GUI
-1. Open Synology Docker app
-2. Images → Upload → select Dockerfile (or build via CLI)
-3. Containers → Create → choose `caseops:latest`
-4. Set:
-   - Container name: `caseops`
-   - Memory limit: 2GB+ (Claude Code CLI is heavy)
-   - Port settings: Container port 5000 → Local port 5350
-   - Volume: Add path `/app/instance1/outputs` → map to `/volume1/docker/stacks/caseops/instance1/outputs`
-   - Volume: Add path `/app/instance1/.temp` → map to `/volume1/docker/stacks/caseops/instance1/.temp` if metadata workspace persistence/audit is required
-   - Volume: Add path `/app/.env.jira` → bind mount your local `.env.jira`
-5. Start container
-
----
-
-## Cloudflare Tunnel (Remote Access)
-
-### Install Cloudflared locally on Synology
-
-SSH into Synology:
 ```bash
-# Download cloudflared ARM64 (for Synology x86, use amd64)
-wget https://github.com/cloudflare/cloudflared/releases/download/2025.1.0/cloudflared-linux-arm64
-chmod +x cloudflared-linux-arm64
+ssh docker@10.0.1.10
 ```
 
-### Authenticate Cloudflared
+Paths:
+
+```text
+/volume1/docker/stacks/caseops      # stack, code, compose, env
+/volume1/docker/appdata/caseops     # appdata reference
+```
+
+Container:
+
+```text
+caseops
+```
+
+Synology Docker binary:
+
 ```bash
-./cloudflared-linux-arm64 tunnel login
-# Opens browser → authorize with Cloudflare account → returns cert.pem
+/volume1/@appstore/ContainerManager/usr/bin/docker
 ```
 
-### Create tunnel config
-Create `~/.cloudflared/config.yml`:
-```yaml
-tunnel: caseops
-credentials-file: /root/.cloudflare/cert.pem
+## Compose Model
 
-ingress:
-  - hostname: caseops.yourdomain.com
-    service: http://localhost:5350
-  - service: http_status:404
-```
+The pilot deployment bind-mounts source files for predictable updates:
 
-**Replace `yourdomain.com` with your actual Cloudflare domain.**
-
-### Start tunnel
-```bash
-./cloudflared-linux-arm64 tunnel run caseops
-```
-
-Or daemonize (systemd):
-```bash
-./cloudflared-linux-arm64 service install
-systemctl start cloudflared
-```
-
----
-
-## Environment & Secrets
-
-### Config Files
-
-**Local Windows development:** `.env.jira`
-**NAS/Linux deployment:** `.env.jira.nas` (copy of .env.jira, Windows paths removed)
-
-### .env.jira (Windows — DO NOT COMMIT)
-Create `.env.jira` in repo root:
-```env
-JIRA_BASE_URL=https://your-jira.atlassian.net
-JIRA_EMAIL=your-email@example.com
-JIRA_API_TOKEN=your-jira-api-token
-CASEOPS_LLM_AUTH=claude_code
-CLAUDE_CODE_OAUTH_TOKEN=...
-CASEOPS_SANDBOX_TARGET_ORG=sandbox-alias
-CASEOPS_PRODUCTION_READ_ORG=prod-alias
-CASEOPS_SANDBOX_INSTANCE_URL=https://test.salesforce.com
-CASEOPS_PRODUCTION_INSTANCE_URL=https://login.salesforce.com
-CASEOPS_SANDBOX_MAGIC_LINK=https://...       # optional, visual UI checks only
-CASEOPS_PRODUCTION_MAGIC_LINK=https://...    # optional, visual UI checks only
-```
-
-### .env.jira.nas (NAS/Linux — DO NOT COMMIT)
-For NAS deployment, copy `.env.jira` → `.env.jira.nas` and remove Windows paths:
-```env
-# Same as .env.jira, EXCEPT:
-# DELETE this line (Windows-specific path):
-# CASEOPS_CLAUDE_BROWSER=C:\Program Files\Google\Chrome Dev\Application\chrome.exe
-
-# Keep everything else (Jira, Salesforce, Claude token, etc.)
-JIRA_BASE_URL=https://your-jira.atlassian.net
-JIRA_EMAIL=your-email@example.com
-...
-```
-
-**In docker-compose.yml:**
 ```yaml
 volumes:
+  - ./instance1/outputs:/app/instance1/outputs
   - ./.env.jira.nas:/app/.env.jira
+  - ./app.py:/app/app.py:ro
+  - ./templates:/app/templates:ro
+  - ./static:/app/static:ro
+  - ./skills:/app/skills:ro
+  - ./scripts:/app/scripts:ro
 ```
 
-This keeps your Windows `.env.jira` pristine for local dev, while `.env.jira.nas` is for NAS deployment. The NAS env file must be writable because CaseOps refreshes Salesforce tokens and saves auth Settings there. Canned message customizations are saved under the mounted outputs tree at `outputs/settings/canned-messages.json`.
+Current exposed port:
 
-### Claude Code CLI inside container
+```text
+host 5350 -> container 5000
+```
 
-`claude` CLI is pre-installed in Dockerfile.
+## Start, Restart, Recreate
 
-### Auth approach: Save a Claude Code OAuth token
+From the NAS stack directory:
 
-**On your local machine:**
 ```bash
-npm install -g @anthropic-ai/claude-code
+cd /volume1/docker/stacks/caseops
+/volume1/@appstore/ContainerManager/usr/bin/docker compose up -d caseops
+/volume1/@appstore/ContainerManager/usr/bin/docker restart caseops
+```
+
+Use `compose up -d caseops` when `docker-compose.yml` mount definitions change. A plain restart is enough for `app.py`, `templates/`, `static/`, `skills/`, or `scripts/` changes because they are bind-mounted.
+
+Use rebuild only for:
+
+- `Dockerfile`
+- Python dependencies
+- npm/global CLI installs
+- OS packages
+
+```bash
+cd /volume1/docker/stacks/caseops
+/volume1/@appstore/ContainerManager/usr/bin/docker compose up -d --build caseops
+```
+
+## Authentication Files
+
+NAS env file:
+
+```text
+/volume1/docker/stacks/caseops/.env.jira.nas
+```
+
+Container env file:
+
+```text
+/app/.env.jira
+```
+
+This file must be writable. CaseOps saves Salesforce token refreshes and Settings changes there.
+
+## Claude Code Auth
+
+On a local machine:
+
+```bash
 claude setup-token
 ```
 
-Copy only the token printed by the command. In CaseOps, open `/setup/claude-login` and paste it. CaseOps saves it to the active env file as `CLAUDE_CODE_OAUTH_TOKEN`.
+Paste the token at:
 
-The container can then invoke `claude -p ...` non-interactively without mounting `~/.claude`.
+```text
+http://10.0.1.10:5350/setup/claude-login
+```
 
-**Alternative:** Use Anthropic API instead (CASEOPS_LLM_AUTH=api_key)
+CaseOps saves `CLAUDE_CODE_OAUTH_TOKEN` in the active env file. Do not mount host `~/.claude` into the container.
 
-If you prefer direct API calls: set `CASEOPS_LLM_AUTH=api_key` in `.env.jira.nas` and provide `ANTHROPIC_API_KEY`. No Claude CLI auth needed.
+## Salesforce Auth
 
----
+On an authenticated local machine:
 
-## Salesforce CLI inside container
-
-`sf` CLI is pre-installed in Dockerfile. 
-
-### Auth approach: tokens in `.env.jira.nas` (recommended)
-
-CaseOps does not mount host `~/.sf` or `~/.sfdx` into the container. The current NAS deployment authenticates `sf` inside the container from tokens stored in `.env.jira.nas`.
-
-**On your authenticated local machine (one-time, then whenever access tokens expire):**
 ```bash
-# Authenticate each org locally
 sf org login web --alias 10xhealth
 sf org login web --alias 10xhealth-sean --instance-url https://test.salesforce.com
 
-# Access tokens: copy result.accessToken
 sf org auth show-access-token -o 10xhealth --json
 sf org auth show-access-token -o 10xhealth-sean --json
-
-# Optional auto-refresh: copy result.sfdxAuthUrl
 sf org auth show-sfdx-auth-url -o 10xhealth --json
 sf org auth show-sfdx-auth-url -o 10xhealth-sean --json
 ```
 
-Paste the access tokens and optional SFDX auth URLs at:
+Paste access tokens and optional full `result.sfdxAuthUrl` values at:
 
 ```text
-http://localhost:5350/setup/refresh-salesforce-tokens
+http://10.0.1.10:5350/setup/refresh-salesforce-tokens
 ```
 
-**In .env.jira (or .env.jira.nas for NAS):**
-```env
-CASEOPS_PRODUCTION_READ_ORG=10xhealth
-CASEOPS_SANDBOX_TARGET_ORG=10xhealth-sean
-CASEOPS_PRODUCTION_INSTANCE_URL=https://login.salesforce.com
-CASEOPS_SANDBOX_INSTANCE_URL=https://test.salesforce.com
-SF_PROD_ACCESS_TOKEN=<current prod access token>
-SF_SANDBOX_ACCESS_TOKEN=<current sandbox access token>
-SF_PROD_REFRESH_TOKEN=<optional prod refresh token extracted from sfdxAuthUrl>
-SF_SANDBOX_REFRESH_TOKEN=<optional sandbox refresh token extracted from sfdxAuthUrl>
-SF_TOKENS_REFRESHED_AT=<unix timestamp>
-```
+CaseOps authenticates `sf` inside the container from env tokens. Do not mount host `~/.sf` or `~/.sfdx`.
 
-The Settings page's **Authenticate Salesforce Orgs** button calls `/api/setup/salesforce-auth`, which runs:
+## Salesforce CLI Rules
+
+Use modern `sf` CLI only. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest` for routine CaseOps retrieve/deploy.
+
+The helper script is available inside Docker:
 
 ```bash
-export SF_ACCESS_TOKEN=<token>
-sf org login access-token --alias <CASEOPS_*_ORG> --instance-url <CASEOPS_*_INSTANCE_URL> --no-prompt
+/volume1/@appstore/ContainerManager/usr/bin/docker exec caseops python /app/scripts/sf_caseops_helper.py --help
 ```
 
-The `sf org login access-token` command reads the token from the `SF_ACCESS_TOKEN` environment variable; it does not have a `--access-token` flag.
+## Health Checks
 
-### Alternative: Auth inside container (ephemeral, loses creds on container replacement)
+Check active runs:
+
 ```bash
-docker exec -it caseops sf org login web --alias 10xhealth
-docker exec -it caseops sf org login web --alias 10xhealth-sean --instance-url https://test.salesforce.com
+curl -fsS http://127.0.0.1:5350/api/status
 ```
 
-Creds are stored in the Salesforce CLI cache for the container user (current `sf` versions use `~/.sf`; older tooling may also use `~/.sfdx`). This is not recommended as the source of truth for the NAS deployment.
+Check logs:
 
----
-
-## Volume Mounts (Synology)
-
-Synology Docker paths (by default):
-- `/volume1/docker/stacks/caseops/instance1/outputs` ← CaseOps `outputs/` folder (persistent)
-- `/volume1/docker/stacks/caseops/instance1/.temp` ← metadata workspace, if explicitly mounted for persistence/audit
-- `.env.jira` ← bind mount your secrets file (writable; token refresh and Settings save here)
-- `/volume1/docker/stacks/caseops/app.py` → `/app/app.py` (read-only source mount)
-- `/volume1/docker/stacks/caseops/templates` → `/app/templates` (read-only source mount)
-- `/volume1/docker/stacks/caseops/static` → `/app/static` (read-only source mount)
-- `/volume1/docker/stacks/caseops/skills` → `/app/skills` (read-only source mount)
-
-To verify:
 ```bash
-docker exec caseops ls -la /app/instance1/outputs
-docker exec caseops cat /app/.env.jira
+/volume1/@appstore/ContainerManager/usr/bin/docker logs --tail 100 caseops
 ```
 
----
+Check helper and syntax:
 
-## Persistent Data
-
-- **outputs/** mounted from the host (survives container replacement)
-- **.temp/metadata/** stores raw Production retrievals, Sandbox attempts, revert packages, and confirmed metadata packages
-- **.env.jira** mounted at runtime (not in volume, safer for secrets)
-- **Salesforce CLI auth** is recreated inside the container from tokens in `.env.jira`; host `~/.sf` and `~/.sfdx` are not mounted in the current NAS flow
-
----
-
-## Deployment Rule
-
-The NAS deployment intentionally bind-mounts source files and skills so pilot updates are predictable:
-
-- Changes to `app.py`, `templates/`, `static/`, or `skills/`: sync the local repo to `/volume1/docker/stacks/caseops`, then restart `caseops`.
-- Changes to `Dockerfile`, Python dependencies, npm/global CLI installs, or OS packages: sync, rebuild the image, then restart `caseops`.
-- Changes to `.env.jira.nas`: save the env file, then restart `caseops` so startup auth is recreated from the new values.
-- Always verify inside the running container after deployment, not just in the NAS stack folder.
-
-Synology Docker binary:
 ```bash
-/volume1/@appstore/ContainerManager/usr/bin/docker compose up -d --build caseops
-/volume1/@appstore/ContainerManager/usr/bin/docker restart caseops
+/volume1/@appstore/ContainerManager/usr/bin/docker exec caseops python /app/scripts/sf_caseops_helper.py --help
+/volume1/@appstore/ContainerManager/usr/bin/docker exec caseops python -c "import py_compile; py_compile.compile('/app/app.py', cfile='/tmp/app.pyc', doraise=True)"
 ```
 
-To back up outputs:
+## Backups
+
+Back up persistent issue artifacts:
+
 ```bash
-tar czf ~/backup/caseops-instance1-outputs.tar.gz -C /volume1/docker/stacks/caseops instance1/outputs
-tar czf ~/backup/caseops-instance1-metadata.tar.gz -C /volume1/docker/stacks/caseops instance1/.temp/metadata
+tar czf ~/caseops-outputs.tgz -C /volume1/docker/stacks/caseops instance1/outputs
 ```
 
----
+If metadata audit data must be preserved, also back up:
 
-## Troubleshooting
-
-### "claude: command not found"
-- The Docker image installs Claude Code CLI with npm; rebuild the image if the binary is missing
-- Or switch to `CASEOPS_LLM_AUTH=api_key` (Anthropic API mode)
-
-### "sf: command not found"
-- Image has `sf` pre-installed via npm; check:
-  ```bash
-  docker exec caseops which sf
-  ```
-
-### Intermittent `sf --version` timeout during pipeline preflight
-- CaseOps disables Salesforce CLI telemetry, autoupdate, and progress output for pipeline subprocesses.
-- `sf --version` is diagnostic only; pipeline gating is based on `sf org display` and SOQL access for the configured Production and Sandbox aliases.
-- If org display or SOQL also time out, check NAS CPU/I/O load and restart the container after confirming `.env.jira.nas` has current Salesforce tokens.
-
-### Container exits immediately
-- Check logs:
-  ```bash
-  docker logs caseops
-  ```
-- Common: missing `.env.jira` file (Flask can't start)
-- Common: `.env.jira.nas` is missing, not mounted to `/app/.env.jira`, or mounted read-only. Token refresh and Settings updates require this file to be writable.
-
-### Port 5350 not responding
-- Verify container is running:
-  ```bash
-  docker ps | grep caseops
-  ```
-- Check port mapping:
-  ```bash
-  docker port caseops
-  # Should show: 5000/tcp -> 0.0.0.0:5350
-  ```
-- Verify Cloudflare tunnel points to `:5350`, not `:5000`
-
-### Cloudflare tunnel not routing
-- Verify tunnel credentials:
-  ```bash
-  cloudflared tunnel list
-  cloudflared tunnel info caseops
-  ```
-- Check DNS: does `caseops.yourdomain.com` resolve?
-
----
-
-## Performance Notes
-
-- Flask dev server (not production): fine for single-user, small batches
-- For production: consider Gunicorn + Nginx inside container
-- Memory: Claude Code CLI + Anthropic SDK can use 500MB+; allocate 2GB+ in Synology
-- Network: Cloudflare tunnel adds latency (~50ms); acceptable for UI
-
----
-
-## Next Steps
-
-1. On your authenticated local machine: authenticate Salesforce orgs and copy tokens into CaseOps
-   ```bash
-   sf org login web --alias 10xhealth
-   sf org login web --alias 10xhealth-sean --instance-url https://test.salesforce.com
-   sf org auth show-access-token -o 10xhealth --json
-   sf org auth show-access-token -o 10xhealth-sean --json
-   sf org auth show-sfdx-auth-url -o 10xhealth --json
-   sf org auth show-sfdx-auth-url -o 10xhealth-sean --json
-   ```
-
-2. Generate and save Claude Code token:
-   ```bash
-   claude setup-token
-   ```
-   Paste the token at `/setup/claude-login`.
-
-3. Build image: `docker build -t caseops:latest .`
-
-4. Copy `.env.jira.nas` to NAS (with org aliases matching step 1)
-
-5. In Synology Docker GUI:
-   - Create container from `caseops:latest`
-   - Port: 5000 (container) → 5350 (host)
-   - Volumes: outputs, `.env.jira.nas` (writable bind)
-
-6. Start container
-
-7. Test: `http://localhost:5350` on NAS, then `https://caseops.yourdomain.com` via Cloudflare tunnel
+```bash
+tar czf ~/caseops-metadata.tgz -C /volume1/docker/stacks/caseops instance1/.temp/metadata
+```

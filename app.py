@@ -188,6 +188,7 @@ _ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
             ],
             "files": [
                 "helper-scripts.md",
+                "salesforce-gotchas/fields-and-picklists.md",
                 "query-patterns/custom-field.md",
                 "query-patterns/picklist-values.md",
                 "deploy-patterns/custom-field-mdapi.md",
@@ -197,7 +198,11 @@ _ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
             "id": "layouts",
             "title": "Layouts and field placement",
             "keywords": ["layout", "page layout", "section", "field placement", "lightning page"],
-            "files": ["helper-scripts.md", "query-patterns/layouts.md"],
+            "files": [
+                "helper-scripts.md",
+                "salesforce-gotchas/layouts-and-record-types.md",
+                "query-patterns/layouts.md",
+            ],
         },
         {
             "id": "permission-sets",
@@ -206,7 +211,11 @@ _ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
                 "permission set", "permissionset", "fls", "fieldpermissions", "field permission",
                 "read edit", "read/write", "access", "profile"
             ],
-            "files": ["helper-scripts.md", "query-patterns/permission-sets.md"],
+            "files": [
+                "helper-scripts.md",
+                "salesforce-gotchas/access-and-visibility.md",
+                "query-patterns/permission-sets.md",
+            ],
         },
         {
             "id": "deploy-troubleshooting",
@@ -217,6 +226,7 @@ _ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
             ],
             "files": [
                 "helper-scripts.md",
+                "salesforce-gotchas/deploy-and-sandbox.md",
                 "deploy-patterns/custom-field-mdapi.md",
                 "deploy-patterns/source-tracking.md",
             ],
@@ -225,13 +235,13 @@ _ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
             "id": "flows",
             "title": "Flow investigation",
             "keywords": ["flow", "flowdefinition", "flow version", "triggered flow", "record-triggered"],
-            "files": ["query-patterns/flows.md"],
+            "files": ["salesforce-gotchas/automation-order.md", "query-patterns/flows.md"],
         },
         {
             "id": "apex",
             "title": "Apex investigation",
             "keywords": ["apex", "class", "trigger", "test class", "debug log"],
-            "files": ["query-patterns/apex.md"],
+            "files": ["salesforce-gotchas/automation-order.md", "query-patterns/apex.md"],
         },
     ],
 }
@@ -264,6 +274,76 @@ Rules:
 - Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy. Use `--metadata`, `--source-dir`, or `--metadata-dir`.
 - Helpers write compact JSON summaries into the issue-scoped directory and avoid raw access-token output.
 - If a helper fails, inspect the helper summary/error and replan. Do not try many ad hoc variants of the same query.
+""",
+    "salesforce-gotchas/fields-and-picklists.md": """# Salesforce Gotchas: Fields And Picklists
+
+Use these checks before concluding a field or picklist is missing or wrong.
+
+- Custom field API names use `Object.Field__c`, but Tooling `CustomField.DeveloperName` usually omits `__c`.
+- Picklist labels and API values can differ. Compare both label and value, and normalize trailing spaces and non-breaking spaces before reporting mismatch.
+- A value can exist in metadata but be inactive, unavailable for a record type, hidden by field-level security, or absent from a dependent picklist controlling matrix.
+- Record type picklist availability can make a field look wrong even when the field's global value set or valueSet is correct.
+- Dependent picklists require checking controlling field values, not just the dependent field's value list.
+- Custom field visibility can be blocked by FLS even when the field exists and is on the page layout.
+- Formula fields, rollups, and calculated fields may show stale-looking values if dependent records or async recalculation have not completed.
+- Standard fields often cannot be changed the same way custom fields can. Verify metadata type and mutability before proposing a deploy.
+- Before creating a new field, query Production for existing API name, label, and semantically similar fields. Extend existing metadata when possible.
+- For CaseOps, retrieve/deploy with modern `sf` CLI only. Prefer `--metadata`, `--source-dir`, or helper summaries; do not use `package.xml` or legacy `sfdx force:*`.
+""",
+    "salesforce-gotchas/layouts-and-record-types.md": """# Salesforce Gotchas: Layouts And Record Types
+
+Use these checks before concluding a page layout or field placement is wrong.
+
+- A field being present on one layout does not mean it appears for every profile, app, record type, or Lightning page.
+- Page layout assignment depends on profile and record type. Lightning App Builder visibility rules can further hide or show components.
+- A Lightning record page can display Dynamic Forms fields that are not visible in the classic page layout metadata shape.
+- A section label can be confused with a nearby field label. Confirm the field's actual `layoutSections[].layoutColumns[].layoutItems[].field` placement.
+- Record type picklist settings can make values unavailable even when the field and layout are correct.
+- Compact layouts, highlights panels, related lists, and Lightning components are separate surfaces. Do not treat one as evidence for the others.
+- Field-level security overrides layout visibility. If a user cannot see a field, check FLS and page layout/Lightning visibility.
+- Profiles are not valid Support-owned targets for CaseOps edits. Prefer permission sets or document admin steps.
+- For visual-only uncertainty, browser/frontdoor inspection is allowed, but API/SOQL/retrieve/deploy work must use `sf` CLI.
+""",
+    "salesforce-gotchas/access-and-visibility.md": """# Salesforce Gotchas: Access And Visibility
+
+Use these checks before concluding an access issue is fixed or escalated.
+
+- Object CRUD, field-level security, record sharing, app visibility, tab visibility, page layout, and Lightning component visibility are separate gates.
+- Permission sets and permission set groups can combine access. Missing access may be caused by absent assignment, muted permission, or group-level behavior.
+- FieldPermissions rows can include profile-owned permission sets. CaseOps should not modify Profile metadata; use permission sets or document admin steps.
+- Permission Set Groups can mute permissions. Granting access in an underlying permission set may not be enough if the group mutes it.
+- A user can have object access but still fail record access because sharing, ownership, role hierarchy, criteria sharing, teams, territories, or restriction rules block the record.
+- A field can be editable in metadata but effectively read-only because the page uses a formula, validation rule, automation overwrite, approval lock, or record type process.
+- Login as / UI inspection can prove visibility symptoms, but `sf data query`, `sf org`, and metadata retrieve are the source for API-level investigation.
+- Always map the affected user/persona to exact PermissionSetAssignment, PermissionSetGroup, Profile, UserRole, and record ownership facts before proposing access changes.
+""",
+    "salesforce-gotchas/deploy-and-sandbox.md": """# Salesforce Gotchas: Deploy And Sandbox
+
+Use these checks before trying repeated deploy variants.
+
+- CaseOps deploys only to the allowlisted Sandbox from `CASEOPS_SANDBOX_TARGET_ORG`; Production is read-only.
+- Use modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest` for routine CaseOps work.
+- Sandbox source tracking can produce `NothingToDeploy` even when candidate metadata exists. Prefer deterministic metadata-dir deploy via the CaseOps helper before inspecting `.sf` internals.
+- Always retrieve a Sandbox baseline for every component before deploying a candidate. The baseline is the rollback anchor.
+- Failed or abandoned attempts must be reverted before a new attempt starts. Verify revert by retrieve/diff, not by assumption.
+- Some metadata deploys merge partial XML, while others replace larger structures. Confirm metadata type behavior before deploying partial files.
+- Permission set field permissions can be deployed as narrow partial entries. Profile metadata must not be modified by the Support-owned pipeline.
+- Record type, picklist, layout, and FLS changes often need to be tested together because each can block the same user-visible outcome.
+- A successful deploy is not proof of a fixed issue. Validate the Jira acceptance criteria and record actual evidence.
+""",
+    "salesforce-gotchas/automation-order.md": """# Salesforce Gotchas: Automation Order
+
+Use these checks before blaming the first automation artifact found.
+
+- Salesforce save behavior can involve validation rules, before-save flows, Apex before triggers, duplicate rules, assignment rules, after-save flows, Apex after triggers, workflow/process leftovers, rollups, sharing recalculation, and async jobs.
+- A field value can be set correctly, then overwritten later by automation. Compare before/after behavior and inspect downstream flows/triggers before declaring root cause.
+- Record-triggered flows can have multiple entry conditions, order values, and active versions. Verify `FlowDefinition.ActiveVersionId` and the active version metadata.
+- Flow labels and API names can differ. Use Tooling queries to resolve active versions before retrieving or referencing a flow.
+- Apex triggers may delegate to handler classes. Query triggers first, then inspect only implicated classes instead of reading all Apex.
+- Validation rules can block automation updates even when UI updates work, or vice versa, depending on user context and bypass logic.
+- Assignment rules, auto-response rules, escalation rules, and email alerts can change Case behavior without changing the record fields the customer mentions.
+- Scheduled paths, queueable Apex, platform events, and integrations can make failures appear delayed. Check timing evidence before narrowing scope.
+- If the fix requires Apex, flow modification, validation rule change, approval process change, or business-critical automation ownership, route to Engineering with evidence and a Sandbox-validated proposal when possible.
 """,
     "run-rules.md": """# CaseOps Org Knowledge Run Rules
 

@@ -1,408 +1,114 @@
-# CaseOps REST API
+# CaseOps API
 
-All endpoints return JSON unless noted. Base URL: `http://localhost:5000`
+Base URL on NAS:
 
-## Core Operations
-
-### GET /api/issues
-
-List all synced issues from manifest.csv.
-
-**Response:**
-```json
-{
-  "issues": [
-    {
-      "key": "HEAL-33753",
-      "summary": "Create workflow for email to send scheduling link...",
-      "status": "In Progress",
-      "created": "2026-05-21T09:33:27Z",
-      "updated": "2026-05-21T14:15:21Z",
-      "assignee": "Sean Bingham",
-      "investigationExists": true,
-      "notesExists": true,
-      "messageExists": true,
-      "testReportExists": false
-    },
-    ...
-  ],
-  "openCount": 12,
-  "closedCount": 3,
-  "escalatedCount": 1
-}
+```text
+http://10.0.1.10:5350
 ```
 
-### GET /api/issue/:key
+Base URL locally:
 
-Get single issue detail including summaries and investigation record.
-
-**Response:**
-```json
-{
-  "key": "HEAL-33753",
-  "summary": "Create workflow for email to send scheduling link...",
-  "status": "In Progress",
-  "created": "2026-05-21T09:33:27Z",
-  "updated": "2026-05-21T14:15:21Z",
-  "assignee": "Sean Bingham",
-  "jiraSummary": "<html>...rendered markdown...</html>",
-  "investigation": "<html>...rendered investigation...</html>",
-  "internalNotes": "<html>...rendered notes...</html>",
-  "jiraMessage": "<html>...rendered message...</html>",
-  "testReport": null
-}
+```text
+http://localhost:5000
 ```
 
-### GET /api/file/:key/:type
+## Core
 
-Get raw file content for a specific issue and type.
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/` | Dashboard |
+| `GET` | `/api/issues` | List synced issues with tags/artifact status |
+| `GET` | `/api/issue/<key>` | Issue detail and rendered artifact content |
+| `GET` | `/api/file/<key>/<type>` | Raw or rendered issue file |
+| `POST` | `/api/run` | Start sync, triage, issue pipeline, or custom instruction |
+| `GET` | `/api/stream` | Server-Sent Events stream for pipeline logs |
+| `GET` | `/api/status` | Active run status |
 
-**Query Params:**
-- `format` — `raw` (markdown) or `html` (rendered, default)
+## `/api/run`
 
-**Types:**
-- `jira_summary` — From outputs/jira/summary/
-- `investigation` — From outputs/investigations/
-- `internal_notes` — From outputs/internal-notes/
-- `jira_message` — From outputs/jira-messages/
-- `test_report` — From outputs/test-reports/
-- `engineering_escalation` — From outputs/engineering-escalations/
+Common actions:
 
-**Example:**
-```bash
-curl http://localhost:5000/api/file/HEAL-33753/investigation?format=raw
-# Returns markdown content
-```
+| Action | Scope | Purpose |
+| --- | --- | --- |
+| `sync` | Global | Full Jira sync |
+| `sync_new` | Global | Incremental Jira sync |
+| `sync_issue` | Single issue | Refresh one Jira issue |
+| `triage` | Global | Triage/scaffold without AI |
+| `full` | Global | Sync plus triage/scaffold |
+| `full_issue` | Single issue | Run Steps 1-12 through Claude |
+| `claude_instruction` | Single issue | Run a custom instruction against one issue |
 
-### POST /api/run
+Example:
 
-Trigger a pipeline action.
-
-**Request:**
 ```json
 {
-  "action": "full_issue|sync_issue|sync|triage|full|claude_instruction",
-  "key": "HEAL-33753",  // optional (required for single-issue actions)
-  "instruction": "..."  // optional (for claude_instruction action only)
-}
-```
-
-**Actions:**
-
-| Action | Purpose | Scope |
-|--------|---------|-------|
-| `sync` | Full Jira sync | Global (all issues) |
-| `sync_new` | Sync new/updated only | Global |
-| `sync_issue` | Sync single issue | Single issue |
-| `triage` | Triage + scaffold (no AI) | Global |
-| `full` | Sync + triage + scaffold (no AI) | Global |
-| `full_issue` | Full pipeline Steps 1–12 with Claude | Single issue |
-| `claude_instruction` | Custom Claude instruction | Single issue |
-
-**Response:**
-```json
-{
-  "started": true,
   "action": "full_issue",
-  "key": "HEAL-33753",
-  "run_key": "HEAL-33753"
+  "key": "HEAL-12345"
 }
 ```
 
-**Errors:**
-- `409` — Action already running on this key
-- `400` — Missing required params (e.g., no instruction for claude_instruction)
-- `500` — Subprocess failure
+## File Types
 
-### GET /api/stream
+`/api/file/<key>/<type>` supports:
 
-Server-Sent Events (SSE) stream for real-time pipeline logs.
+- `jira_summary`
+- `investigation`
+- `internal_notes`
+- `jira_message`
+- `test_report`
+- `engineering_escalation`
+- `closed_resolved`
+- `pipeline_log`
 
-**Streaming Format:**
-```
-data: HEAL-33753|STEP_3 HEAL-33753
-data: HEAL-33753|Reading jira-issue-analysis skill...
-data: __done__|HEAL-33753
-```
+Use `?format=raw` for raw markdown/text.
 
-**Message Format:**
-- `run_key|text` — Log line for a specific run
-- `__done__|run_key` — Signals completion of run
+## Settings And Auth
 
-**Usage (JavaScript):**
-```javascript
-const eventSource = new EventSource('/api/stream');
-eventSource.onmessage = (event) => {
-  const [runKey, line] = event.data.split('|');
-  console.log(`[${runKey}] ${line}`);
-};
-```
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/settings` | Read masked settings |
+| `POST` | `/api/settings` | Save supported settings |
+| `GET` | `/api/settings/status` | Fast runtime readiness summary |
+| `POST` | `/api/setup/salesforce-auth` | Authenticate container `sf` from saved tokens |
+| `GET` | `/setup/refresh-salesforce-tokens` | Salesforce token form |
+| `POST` | `/api/setup/refresh-salesforce-tokens` | Save Salesforce access/refresh tokens |
+| `GET` | `/setup/claude-login` | Claude Code token form |
+| `POST` | `/api/setup/claude-credentials` | Save `CLAUDE_CODE_OAUTH_TOKEN` |
 
-### GET /api/status
+Salesforce refresh token input may be either a raw refresh token or the full `result.sfdxAuthUrl` from `sf org auth show-sfdx-auth-url --json`.
 
-Get current system status (running operations, etc.).
+## Canned Messages
 
-**Response:**
-```json
-{
-  "idle": false,
-  "activeRuns": ["HEAL-33753"],
-  "uptime": "12 hours 34 min"
-}
-```
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/settings/canned-messages` | Read canned message config |
+| `POST` | `/api/settings/canned-messages` | Save custom canned messages |
+| `POST` | `/api/settings/canned-messages/reset` | Remove custom override |
+| `POST` | `/api/issue/<key>/send-canned-message` | Post selected canned message to Jira |
 
-### GET /api/orgs
+Custom canned messages are saved to:
 
-Get org identifiers from .env.jira for artifact linking.
-
-**Response:**
-```json
-{
-  "prod": "10xhealth",
-  "sandbox": "10xhealth-sean"
-}
+```text
+outputs/settings/canned-messages.json
 ```
 
-**Usage:** Used by JavaScript to build Salesforce URLs without magic links.
+## Jira
 
-## Jira Integration
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/issue/<key>/comments` | Read cached Jira comments |
+| `GET` | `/api/issue/<key>/transitions` | List available Jira transitions |
+| `POST` | `/api/issue/<key>/transition` | Change Jira status |
 
-### POST /api/issue/:key/send-canned-message
+CaseOps drafts Jira messages. Posting is manual unless the user explicitly invokes a post action.
 
-Post a canned message to a Jira issue comment.
+## Logs
 
-**Request:**
-```json
-{
-  "message_id": "escalate_to_tier2",
-  "customText": "Additional context..."  // optional
-}
+`/api/stream` emits:
+
+```text
+run_key|log line
+__done__|run_key
 ```
 
-**Canned Messages:**
-- `confirm_receipt` — "Thanks for submitting..."
-- `escalate_to_tier2` — "This requires advanced investigation..."
-- `status_update` — "Here's what we found..."
-- Custom messages from `outputs/settings/canned-messages.json` when saved through Settings, falling back to repo default `canned-messages.json`
-
-**Response:**
-```json
-{
-  "success": true,
-  "commentId": "10001234",
-  "created": "2026-05-21T15:30:00Z"
-}
-```
-
-**Errors:**
-- `404` — Issue not found or Jira API unreachable
-- `400` — Invalid message_id
-
-### POST /api/issue/:key/transition
-
-Change Jira issue status.
-
-**Request:**
-```json
-{
-  "transition": "In Progress",  // or "Done", "Escalated", etc.
-  "comment": "..."              // optional
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "oldStatus": "To Do",
-  "newStatus": "In Progress"
-}
-```
-
-### GET /api/issue/:key/transitions
-
-List available status transitions for an issue.
-
-**Response:**
-```json
-{
-  "current": "In Progress",
-  "available": [
-    {
-      "id": "11",
-      "name": "Done",
-      "description": "Mark as complete"
-    },
-    {
-      "id": "12",
-      "name": "Escalated",
-      "description": "Escalate to Engineering"
-    }
-  ]
-}
-```
-
-### GET /api/issue/:key/comments
-
-Get all comments on a Jira issue (from cached summary).
-
-**Response:**
-```json
-{
-  "total": 3,
-  "comments": [
-    {
-      "author": "Sean Bingham",
-      "body": "Hi...",
-      "created": "2026-05-21T09:42:00Z",
-      "updated": "2026-05-21T09:42:00Z"
-    }
-  ]
-}
-```
-
-## Deployment & Testing
-
-### GET /api/issue/:key/deployment-status
-
-Get Sandbox deployment and Production readiness status.
-
-**Response:**
-```json
-{
-  "supportResolvable": true,
-  "sandboxDeployed": true,
-  "sandboxOrg": "10xhealth-sean",
-  "productionReady": "Yes",  // Yes, No, TBD
-  "productionChangeSet": null,  // Gearset deployment link (if applicable)
-  "notes": "All validation passed. Ready for Gearset promotion."
-}
-```
-
-### POST /api/issue/:key/deployment-status
-
-Update deployment readiness metadata for an issue.
-
-## Settings & Auth
-
-### GET /api/settings
-
-Return current persisted settings with secrets masked.
-
-### POST /api/settings
-
-Update supported settings in the active env file.
-
-### GET /api/settings/status
-
-Return runtime readiness, including Claude auth, Salesforce CLI availability, configured orgs, token age, and exact pipeline preflight status.
-
-### POST /api/setup/salesforce-auth
-
-Authenticate the Salesforce CLI inside the container from access tokens saved in the active env file. Uses `sf org login access-token` with `SF_ACCESS_TOKEN` in the subprocess environment.
-
-### GET /setup/refresh-salesforce-tokens
-
-HTML form for pasting Salesforce access tokens and SFDX auth URLs.
-
-### POST /api/setup/refresh-salesforce-tokens
-
-Save current Salesforce access tokens and optional SFDX auth URLs. CaseOps extracts refresh tokens from the full SFDX auth URL.
-
-### GET /setup/claude-login
-
-HTML form for saving the Claude Code OAuth token generated by `claude setup-token`.
-
-### POST /api/setup/claude-credentials
-
-Save `CLAUDE_CODE_OAUTH_TOKEN` into the active env file.
-
-### GET /api/settings/canned-messages
-
-Return canned message definitions. Customizations are read from `outputs/settings/canned-messages.json`.
-
-### POST /api/settings/canned-messages
-
-Save customized canned messages to `outputs/settings/canned-messages.json`.
-
-### POST /api/settings/canned-messages/reset
-
-Remove the custom canned message override and return to repo defaults.
-
-## Caching & Performance
-
-**Cached Resources:**
-- Jira summaries (invalidated after `/api/run` sync)
-- Investigation/notes/message HTML (invalidated after pipeline run)
-
-**Cache Invalidation:**
-- Global actions (sync, triage, full) → Clear all caches
-- Single-issue operations → Clear that issue's cache
-- Manual: Use browser refresh or `/api/file` with `?cache=bust` (not implemented)
-
-## Pagination & Filtering
-
-**Issue List Filtering (GET /api/issues):**
-- `?status=In%20Progress` — Filter by status
-- `?assignee=Sean%20Bingham` — Filter by assignee
-- `?search=workflow` — Search summary text
-- Combined: `?status=In%20Progress&search=workflow`
-
-**Limit & Offset:**
-- `?limit=20&offset=0` — Pagination (default 100)
-
-## Error Responses
-
-**4xx Errors:**
-```json
-{
-  "error": "Issue HEAL-99999 not found",
-  "code": 404
-}
-```
-
-**5xx Errors:**
-```json
-{
-  "error": "Jira API unreachable. Check .env.jira credentials.",
-  "code": 500
-}
-```
-
-## Rate Limiting
-
-- **Jira API:** Depends on your Jira instance (typically 100–200 req/min)
-- **CaseOps API:** No rate limiting; runs enforce sequential operation locks
-
-## CORS
-
-CORS is NOT enabled by default (single-origin usage). To enable:
-```python
-# In app.py
-from flask_cors import CORS
-CORS(app)
-```
-
-## WebHooks (Future)
-
-Not yet implemented. Planned for:
-- Jira → CaseOps (auto-trigger on issue created/updated)
-- Salesforce → CaseOps (notify of Production errors)
-
-## Debugging
-
-**Enable request logging:**
-```bash
-FLASK_ENV=development FLASK_DEBUG=1 python app.py
-```
-
-**Check SSE stream:**
-```bash
-curl -N http://localhost:5000/api/stream
-# Watch live events (Ctrl+C to stop)
-```
-
-**List running operations:**
-```bash
-curl http://localhost:5000/api/status
-```
+The frontend uses this stream for live logs and step indicators.

@@ -256,17 +256,9 @@ Do **not** conflate “fix confirmed in Sandbox” with “Production is fixed�
 
 ---
 
-## Step 11 — Create or update the dated summary [ORCHESTRATOR — OPTIONAL]
+## Step 11 — Create or update the dated summary [ORCHESTRATOR]
 
-**When using Claude Code skill** (`/jira-salesforce-fix-pipeline`): This step is typically deferred or run separately. After processing all issues through Steps 1-10, run:
-
-```bash
-python run_pipeline.py --no-sync --no-agents
-```
-
-This executes the Python orchestrator’s Steps 11-12 without re-syncing Jira or re-running sub-agents. It rolls up all processed issues into a dated summary.
-
-**When using Python orchestrator** (`run_pipeline.py`): Steps 11-12 execute automatically after all issues complete.
+Create or update the dated summary directly in the active Claude Code run after active issues complete Steps 3-10. Do not call deprecated Python orchestration paths.
 
 ---
 
@@ -288,13 +280,11 @@ This executes the Python orchestrator’s Steps 11-12 without re-syncing Jira or
 
 ---
 
-## Step 12 — Inform the user [ORCHESTRATOR — MANUAL]
+## Step 12 — Inform the user [ORCHESTRATOR]
 
 After all issues are processed and Step 11 summary is created, report back to stakeholders.
 
-**When using Claude Code skill** (`/jira-salesforce-fix-pipeline`): Report is generated inline during skill execution. Manually summarize for stakeholders: reference the dated summary file (`outputs/issue-summary-YYYY-MM-DD.md`) and individual Jira message drafts (`outputs/jira-messages/<KEY>.md`).
-
-**When using Python orchestrator** (`run_pipeline.py`): Summary is printed to stdout and written to dated summary file.
+Report is generated inline during skill execution. Reference the dated summary file (`outputs/issue-summary-YYYY-MM-DD.md`) and individual Jira message drafts (`outputs/jira-messages/<KEY>.md`).
 
 ---
 

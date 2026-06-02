@@ -1,6 +1,6 @@
-# Pipeline Architecture
+# CaseOps Pipeline Architecture
 
-This document records the current CaseOps skill architecture. The refactor has already happened: the pipeline is an orchestrator skill with specialized sub-agents and file-based state.
+The CaseOps pipeline is an orchestrator skill with specialized sub-agents and file-based state.
 
 ## Current Architecture
 
@@ -21,6 +21,14 @@ jira-salesforce-fix-pipeline skill
 ```
 
 Both Support-owned and Engineering-owned paths can produce Sandbox-validated proposed solutions. CaseOps never deploys to Production.
+
+Pipeline Salesforce work follows the current command contract:
+
+- modern `sf` CLI only
+- no legacy `sfdx force:*`
+- no routine `package.xml`
+- no routine `--manifest`
+- frontdoor/magic links only for visual inspection
 
 ## Metadata State
 
@@ -51,3 +59,7 @@ outputs/
 ```
 
 The orchestrator reads compact sub-agent summaries and output file presence. It does not load entire investigation records into context unless a step explicitly requires a narrow excerpt.
+
+## Org Knowledge
+
+The orchestrator receives selected org-knowledge files from `outputs/org-knowledge/`. It should not bulk-read the full directory. Sub-agents receive relevant selected bullets in their prompts because they start with isolated context.

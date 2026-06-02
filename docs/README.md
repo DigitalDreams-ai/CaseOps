@@ -1,181 +1,33 @@
-# CaseOps — Jira-to-Salesforce Support Automation
+# CaseOps Documentation
 
-**CaseOps** is an AI-powered support case automation system that triages Jira issues, diagnoses Salesforce problems, implements fixes in Sandbox, and drafts customer responses.
+All general CaseOps documentation lives in this directory. Skill instructions stay under `skills/` because Claude Code loads them from those paths at runtime.
 
-## What It Does
+## Start Here
 
-1. **Syncs Jira** → Pulls assigned support issues
-2. **Triages automatically** → Sorts by status (Closed, Escalated, Active)
-3. **Diagnoses Salesforce** → Analyzes Production metadata and logs
-4. **Implements fixes** → Modifies Sandbox metadata only
-5. **Validates in Sandbox** → Deploys and tests changes
-6. **Drafts responses** → Writes internal notes + customer-facing replies
-7. **Escalates to Engineering** → Routes complex issues with full handoffs
+- [Project Overview](PROJECT_OVERVIEW.md) - what CaseOps is and how it is used.
+- [User Guide](USER_GUIDE.md) - dashboard usage, Settings, tokens, pipeline actions.
+- [Docker Setup](DOCKER_SETUP.md) - current NAS deployment and update rules.
+- [Architecture](ARCHITECTURE.md) - runtime model, pipeline, storage, org knowledge.
+- [Technical Overview](TECHNICAL_OVERVIEW.md) - deeper implementation notes.
 
-All orchestrated by Claude Code via the `jira-salesforce-fix-pipeline` skill. No manual agent management required.
+## Reference
 
-## Quick Start
+- [API](API.md) - Flask routes and endpoint behavior.
+- [Agents](AGENTS.md) - Claude Code skills and sub-agent model.
+- [Pipeline Architecture](PIPELINE_ARCHITECTURE.md) - pipeline-specific orchestration notes.
+- [Instance Routing](INSTANCE_ROUTING.md) - workspace and path isolation.
+- [Workspaces](WORKSPACES.md) - local multi-workspace usage.
+- [Claude Launcher Guide](CLAUDE_LAUNCHER_GUIDE.md) - Claude Code authentication notes.
+- [Nightly Setup](NIGHTLY_SETUP.md) - scheduled operation notes.
+- [Enhancement Plan](CASEOPS_ENHANCEMENT_PLAN.md) - current backlog and pilot hardening items.
+- [Deprecated Components](DEPRECATED.md) - archived legacy agents retained outside the active pipeline.
 
-### 1. Setup
+## Current Non-Negotiables
 
-```bash
-# Copy and configure credentials
-cp .env.jira.example .env.jira
-# Edit: Jira credentials, org identifiers, Salesforce tokens, Claude token
-```
-
-### 2. Start the GUI
-
-```bash
-python app.py
-# Opens: http://localhost:5000
-```
-
-### 3. Process Issues
-
-**Option A: GUI Button (Recommended)**
-1. Open http://localhost:5000
-2. Click **"Run Pipeline For This Issue"** on any active issue
-3. Watch real-time progress logs
-
-**Option B: Claude Code CLI**
-```
-/jira-salesforce-fix-pipeline
-
-Process HEAL-12345 through the full pipeline.
-```
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────┐
-│  Flask GUI (app.py)                         │
-│  - Issue dashboard & detail views           │
-│  - Investigation/notes/message editors      │
-│  - Real-time pipeline progress tracking     │
-└─────────────────────────────────────────────┘
-                      ↓
-┌─────────────────────────────────────────────┐
-│  Python Setup (run_pipeline.py)             │
-│  - Sync Jira                                │
-│  - Triage by status                         │
-│  - Archive Closed/Escalated                 │
-│  - Scaffold investigation records           │
-└─────────────────────────────────────────────┘
-                      ↓
-┌─────────────────────────────────────────────┐
-│  Claude Skill: jira-salesforce-fix-pipeline │
-│  (Steps 1–12 orchestration)                 │
-│  - Spawns sub-agents for Steps 3,5,6,9,10   │
-│  - Implements fixes in Sandbox (Step 8)     │
-│  - Routes escalations to Engineering        │
-└─────────────────────────────────────────────┘
-```
-
-## Configuration (.env.jira)
-
-```env
-# Jira
-JIRA_BASE_URL=https://your-org.atlassian.net
-JIRA_EMAIL=your-email@example.com
-JIRA_API_TOKEN=jira-api-token-here
-CASEOPS_DEFAULT_ASSIGNEE=your-jira-username
-
-# Salesforce
-CASEOPS_SANDBOX_TARGET_ORG=10xhealth-sean      # Single writable Sandbox
-CASEOPS_PRODUCTION_READ_ORG=10xhealth           # Production (read-only)
-CASEOPS_SANDBOX_INSTANCE_URL=https://test.salesforce.com
-CASEOPS_PRODUCTION_INSTANCE_URL=https://login.salesforce.com
-
-# Optional: Session URLs for UI investigation (auto-expire)
-CASEOPS_SANDBOX_MAGIC_LINK=https://...
-CASEOPS_PRODUCTION_MAGIC_LINK=https://...
-
-# LLM Auth (choose one)
-CASEOPS_LLM_AUTH=claude_code   # Use Claude Code CLI
-CLAUDE_CODE_OAUTH_TOKEN=...    # Save via /setup/claude-login after `claude setup-token`
-# OR
-CASEOPS_LLM_AUTH=api_key       # Use Anthropic API
-ANTHROPIC_API_KEY=sk-...
-```
-
-## GUI Actions
-
-| Action | What Happens |
-|--------|--------------|
-| **Fetch from Jira** | Full sync (Steps 1–2 setup only) |
-| **Prepare Issues** | Sync + triage + scaffold (no AI) |
-| **Run Pipeline For This Issue** | Full workflow Steps 1–12 (AI-powered) |
-| **Sync This Issue** | Update single issue from Jira |
-| **Auto-Process All** | Full pipeline on all active issues |
-
-## Outputs
-
-After processing, check:
-
-| File | Contents |
-|------|----------|
-| `outputs/investigations/<KEY>.md` | Diagnosis record (issue understanding + metadata findings) |
-| `outputs/internal-notes/<KEY>.md` | Root cause analysis + escalation decision |
-| `outputs/jira-messages/<KEY>.md` | Customer-facing response draft (post to Jira manually) |
-| `outputs/test-reports/<KEY>.md` | Sandbox validation results |
-| `outputs/engineering-escalations/<KEY>.md` | Engineering handoff (if escalated) |
-| `outputs/issue-summary-YYYY-MM-DD.md` | Daily rollup of all processed issues |
-
-Runtime Salesforce metadata is kept outside `outputs/`:
-
-| Path | Contents |
-| --- | --- |
-| `.temp/metadata/raw-production/<KEY>/` | Read-only Production retrievals |
-| `.temp/metadata/sandbox-work/<KEY>/attempt-N/` | Sandbox baseline, candidate, and revert packages |
-| `.temp/metadata/confirmed/<KEY>/...` | Confirmed Support package or Engineering proposal |
-
-## Safety Constraints
-
-✅ **Allowed:**
-- Read Production metadata (diagnosis only)
-- Use `sf` CLI and SOQL for Salesforce API work
-- Write/deploy to `CASEOPS_SANDBOX_TARGET_ORG` only
-- Test in Sandbox before promotion
-
-❌ **Forbidden:**
-- Direct Production writes
-- Deploying to other Sandboxes
-- Using frontdoor or magic-link session IDs for API/SOQL/metadata access
-- Automatic Jira posting (you review & post manually)
-- Automatic Production promotion (you use Gearset)
-
-## Troubleshooting
-
-**"Sync failed"**
-- Check `.env.jira` Jira credentials
-- Verify network access to `JIRA_BASE_URL`
-
-**"Pipeline stalled"**
-- Check `CASEOPS_SANDBOX_TARGET_ORG` is set and reachable
-- Run: `sf org list` to verify Sandbox authentication
-
-**"Links in investigation are broken"**
-- Only raw Salesforce record IDs (15-18 char alphanumeric) are linkified
-- API names require actual IDs from metadata queries
-
-## Documentation
-
-- **[CASEOPS_QUICKSTART.md](CASEOPS_QUICKSTART.md)** — User guide (setup, usage, workflow)
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — System design & data flow
-- **[API.md](API.md)** — Flask endpoints & webhook reference
-- **[AGENTS.md](AGENTS.md)** — Skill & sub-agent architecture
-- **[WORKSPACES.md](WORKSPACES.md)** — Multi-org setup
-- **[NIGHTLY_SETUP.md](NIGHTLY_SETUP.md)** — Scheduled pipeline
-- **[CLAUDE_LAUNCHER_GUIDE.md](CLAUDE_LAUNCHER_GUIDE.md)** — Claude Code CLI setup
-
-## Current Runtime Notes
-
-- Claude Code auth uses `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`.
-- Salesforce CLI auth is recreated inside the container from tokens saved in the active env file.
-- The pipeline preflight verifies Claude auth plus Production and Sandbox `sf` CLI access before Salesforce work begins.
-- Magic links are visual UI fallback only.
-
-## License
-
-[Include your license here]
+- Production Salesforce is read-only.
+- The only writable Salesforce org is `CASEOPS_SANDBOX_TARGET_ORG`.
+- Salesforce retrieve/deploy uses modern `sf` CLI only.
+- Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest` for routine CaseOps retrieve/deploy.
+- Frontdoor and magic links are only for visual UI inspection, not API/SOQL/retrieve/deploy.
+- Runtime appdata is under the active instance, primarily `instance1/outputs/` and `instance1/.temp/metadata/`.
+- Org knowledge lives in `outputs/org-knowledge/` and is selected progressively by topic.

@@ -1,4 +1,4 @@
-# Deprecated Legacy Agents
+# Deprecated Components
 
 Scripts in this directory are superseded by the **skill-based pipeline** (`skills/jira-salesforce-fix-pipeline/`).
 

@@ -1,327 +1,127 @@
 # CaseOps Architecture
 
-## System Overview
+## Overview
 
-CaseOps is a three-tier system:
+CaseOps combines a Flask dashboard, deterministic Python/Jira helpers, Claude Code skills, and Salesforce CLI helpers.
 
-1. **Frontend Tier** — Flask GUI (app.py, templates/, static/)
-2. **Python Setup Tier** — Deterministic scaffolding (run_pipeline.py, jira_sync.py)
-3. **AI Orchestration Tier** — Claude Code skill (skills/jira-salesforce-fix-pipeline/)
-
-## Data Flow
-
-```
+```text
 Jira API
-   ↓
-jira_sync.py → outputs/jira/
-   ├── raw/<KEY>.json
-   ├── summary/<KEY>.md
-   └── manifest.csv
-   ↓
-run_pipeline.py → Triage → Scaffold
-   ├── outputs/investigations/<KEY>.md (template)
-   ├── outputs/closed-resolved/<KEY>.md
-   ├── outputs/engineering-escalations/<KEY>.md
-   └── outputs/issue-summary-YYYY-MM-DD.md
-   ↓
-Flask GUI (app.py)
-   ├── /api/issues → manifest.csv
-   ├── /api/issue/<key> → investigations/<KEY>.md
-   ├── /api/file/<key>/<type> → various outputs
-   └── /api/run → invoke pipeline
-   ↓
-Claude Code Skill (Steps 3,5,6,9,10)
-   ├── Sub-agent: jira-issue-analysis
-   ├── Sub-agent: salesforce-production-metadata-investigation
-   ├── Sub-agent: salesforce-sandbox-deploy-test
-   └── Sub-agent: jira-response-drafting
-   ↓
-Outputs (final)
-   ├── investigations/<KEY>.md (complete diagnosis)
-   ├── internal-notes/<KEY>.md (root cause + decision)
-   ├── jira-messages/<KEY>.md (customer response draft)
-   ├── test-reports/<KEY>.md (Sandbox validation)
-   └── engineering-escalations/<KEY>.md (if escalated)
+  -> jira_sync.py
+  -> instance outputs
+  -> Flask dashboard
+  -> Claude Code pipeline
+  -> Salesforce sf CLI
+  -> Sandbox validation artifacts
 ```
 
-## Component Details
+## Major Components
 
-### Flask GUI (app.py)
+| Component | Purpose |
+| --- | --- |
+| `app.py` | Flask app, APIs, Settings, pipeline launcher, SSE logs, path validation |
+| `jira_sync.py` | Jira issue sync and manifest generation |
+| `templates/` | Jinja/HTML UI |
+| `static/` | CSS, JS, icons |
+| `skills/` | Claude Code skills and prompts |
+| `scripts/sf_caseops_helper.py` | Deterministic Salesforce helper commands |
+| `instance1/outputs/` | Persistent issue artifacts and appdata |
+| `instance1/.temp/metadata/` | Current Salesforce metadata workspace |
 
-**Responsibilities:**
-- Serve HTML dashboard at http://localhost:5000
-- Expose REST API for issue data, file access, and pipeline operations
-- Stream real-time pipeline logs via Server-Sent Events (SSE)
-- Cache Jira summaries & investigation records
-- Handle Jira comment posting & issue transitions
+## Pipeline
 
-**Key Routes:**
-- `GET /` — Dashboard
-- `GET /api/issues` — List all issues (from manifest.csv)
-- `GET /api/issue/<key>` — Issue detail
-- `GET /api/file/<key>/<type>` — File content (investigation, notes, message, etc.)
-- `POST /api/run` — Start pipeline action (sync, triage, full, full_issue, etc.)
-- `GET /api/stream` — SSE stream for real-time log updates
-- `GET /api/orgs` — Org identifiers from .env.jira
-- `POST /api/issue/<key>/send-canned-message` — Post canned comment to Jira
+| Step | Owner | Purpose |
+| --- | --- | --- |
+| 1 | Orchestrator | Sync Jira |
+| 2 | Orchestrator | Triage by Jira status |
+| 3 | Sub-agent | Analyze issue |
+| 4 | Orchestrator | Hypothesis and smallest viable fix |
+| 5 | Sub-agent | Retrieve relevant Production metadata read-only |
+| 6 | Sub-agent | Pinpoint problem artifact and failure point |
+| 7 | Orchestrator | Support vs Engineering gate |
+| 8 | Orchestrator | Prepare proposed solution |
+| 9 | Sub-agent | Deploy/test in allowlisted Sandbox |
+| 10 | Sub-agent | Draft customer, internal, and handoff docs |
+| 11 | Orchestrator | Dated summary |
+| 12 | Orchestrator | Completion report |
 
-**Caching:**
-- `jira_summary_cache` — Caches rendered investigation/notes/messages
-- Cleared after sync/triage/full operations (global) or individual issue syncs
-- Prevents stale data in UI after Jira/Salesforce changes
+Sub-agents run with isolated context and return compact summaries. Detailed evidence is written to files.
 
-### Python Setup Pipeline (run_pipeline.py)
+## Runtime Storage
 
-**Execution Flow:**
+Current NAS runtime:
 
-1. **Sync** (conditional, `--no-sync` skips)
-   - Calls `jira_sync.py` to fetch from Jira
-   - Outputs: raw/<KEY>.json, summary/<KEY>.md, manifest.csv
-
-2. **Triage**
-   - Reads manifest.csv
-   - Classifies issues:
-     - Closed/Resolved/Canceled → `outputs/closed-resolved/`
-     - Escalated to Engineering → `outputs/engineering-escalations/`
-     - Others → Active (proceed to next steps)
-
-3. **Archive Closed**
-   - Creates summary file for closed issues
-   - Prevents reprocessing
-
-4. **Archive Escalated**
-   - Pre-escalated issues route to Engineering without processing
-
-5. **Scaffold Investigations**
-   - Creates empty `outputs/investigations/<KEY>.md` templates
-   - AI agents fill these during Steps 3–10
-
-6. **Dated Summary**
-   - Generates `outputs/issue-summary-YYYY-MM-DD.md`
-   - Tracks total, closed, escalated, active counts
-
-7. **Handoff to Claude Code Skill**
-   - Prints handoff message for AI processing
-   - (Or skipped with `--no-agents`, requires manual skill invocation)
-
-**Command Examples:**
-```bash
-# Full setup + handoff to AI
-python run_pipeline.py
-
-# Sync only one issue, merge into manifest
-python run_pipeline.py --issue HEAL-12345
-
-# Triage from existing manifest (no sync)
-python run_pipeline.py --no-sync
-
-# Dry run (show counts, write nothing)
-python run_pipeline.py --dry-run
+```text
+instance1/
+  outputs/
+    jira/
+    investigations/
+    step-4-hypothesis/
+    internal-notes/
+    jira-messages/
+    test-reports/
+    engineering-escalations/
+    closed-resolved/
+    pipeline-logs/
+    settings/
+    org-knowledge/
+  .temp/
+    metadata/
+      raw-production/
+      sandbox-work/
+      confirmed/
 ```
 
-### Jira Sync (jira_sync.py)
+`outputs/` is persistent appdata. `.temp/metadata/` is the current metadata workspace. The pilot hardening backlog tracks moving long-lived confirmed/rollback metadata into persistent `outputs/metadata-workspaces/`.
 
-**Responsibilities:**
-- Query Jira API for assigned issues
-- Serialize to JSON (raw details preserved)
-- Create markdown summaries (human-readable)
-- Update/merge manifest.csv
-- Support incremental sync (`--incremental` flag)
+## Salesforce Metadata Rules
 
-**Outputs:**
-- `outputs/jira/raw/<KEY>.json` — Full issue JSON from Jira
-- `outputs/jira/summary/<KEY>.md` — Stripped-down markdown (title, status, summary, comments)
-- `outputs/jira/manifest.csv` — Index of all keys, statuses, summaries
+Raw Production metadata:
 
-### Claude Code Skill (jira-salesforce-fix-pipeline)
+- stored under `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`
+- read-only evidence
+- never edited in place
 
-**Orchestrator Architecture:**
+Sandbox attempts:
 
-The skill runs Steps 1–12 sequentially:
+- stored under `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/`
+- each attempt contains `baseline-sandbox/`, `candidate/`, and `revert/`
+- failed or abandoned attempts must be reverted before a new attempt starts
 
-| Step | Type | Action |
-|------|------|--------|
-| 1 | Orchestrator | `python jira_sync.py` (in skill context) |
-| 2 | Orchestrator | Read manifest, classify issues |
-| 3 | Sub-agent | Analyze Jira issue (`jira-issue-analysis`) |
-| 4 | Orchestrator | Synthesize hypothesis from Step 3 output |
-| 5 | Sub-agent | Query Production metadata (`salesforce-production-metadata-investigation`) |
-| 6 | Sub-agent | Identify exact problem location (metadata drilling) |
-| 7 | Orchestrator | Decide: Support-resolvable or escalate? |
-| 8 | Orchestrator | Implement fix in Sandbox (web UI, CLI, declarative) |
-| 9 | Sub-agent | Deploy & test in Sandbox (`salesforce-sandbox-deploy-test`) |
-| 10 | Sub-agent | Draft internal notes + Jira message (`jira-response-drafting`) |
-| 11 | Orchestrator | Generate dated summary (rollup of all processed issues) |
-| 12 | Orchestrator | Return action report to user |
+Confirmed work:
 
-**Sub-agents:**
-- Each spawned via `Agent` tool
-- Clean context window (no spillover from prior steps)
-- Return compact summaries (~300–500 tokens)
-- Write outputs to `outputs/` (orchestrator reads artifacts, not context)
+- copied to `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/` or `engineering-proposal/`
+- still not deployed to Production by CaseOps
 
-**Progress Tracking:**
-- Emits `STEP_N <ISSUE_KEY>` to stdout (e.g., `STEP_3 HEAL-33753`)
-- GUI parses via SSE stream regex: `/STEP_(\d+)\s+(HEAL-\d+)/`
-- Updates step indicator on issue card in real-time
+## Salesforce Command Rules
 
-**Safety Gates:**
-- Before Step 9: Confirms `CASEOPS_SANDBOX_TARGET_ORG` is set
-- Before any write: Validates target org matches allowlist
-- Production read-only: All queries use `CASEOPS_PRODUCTION_READ_ORG`
-- No Production deploys, ever
+CaseOps uses modern `sf` CLI commands only.
 
-**Salesforce Metadata Workspace:**
-- Raw Production metadata is retrieved per issue under `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/` and treated as read-only.
-- Sandbox testing uses one attempt directory per candidate solution: `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/`.
-- Each attempt contains `baseline-sandbox/`, `candidate/`, and `revert/` so failed solutions can be backed out before the next attempt.
-- Confirmed packages are copied to `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/` or `engineering-proposal/`.
-- Agents must not create root-level `temp*`, `retrieve*`, `deploy*`, or `metadata*` folders.
+Allowed:
 
-## File Organization
+- `sf org ...`
+- `sf data query ...`
+- `sf project retrieve start --metadata ...`
+- `sf project retrieve start --source-dir ...`
+- `sf project deploy start --source-dir ...`
+- `sf project deploy start --metadata-dir ...`
 
-```
-CaseOps/
-├── app.py                          # Flask GUI & API
-├── run_pipeline.py                 # Python setup (Steps 1–2, 4, 7, 8, 11–12 prep)
-├── jira_sync.py                    # Jira API client
-├── caseops_paths.py                # Constants (repo paths, defaults)
-│
-├── templates/                      # HTML/Jinja2
-│   └── index.html                  # Main SPA dashboard
-│
-├── static/
-│   ├── css/
-│   │   └── caseops.css             # Styling (dark theme)
-│   ├── favicon.svg
-│   └── logo.svg
-│
-├── skills/jira-salesforce-fix-pipeline/
-│   ├── SKILL.md                    # Orchestrator instructions (canonical)
-│   ├── references/
-│   │   ├── workflow.md             # Steps 1–12 (authoritative)
-│   │   ├── sub-agent-prompts.md    # Copy-paste prompts for Steps 3,5,6,9,10
-│   │   ├── safety-policy.md        # Safety constraints & rules
-│   │   ├── quality-checklist.md    # Pre-completion gates
-│   │   └── orchestration-loop-controller.md
-│   └── assets/                     # Templates (markdown)
-│       ├── investigation-record-template.md
-│       ├── internal-notes-template.md
-│       ├── jira-message-template.md
-│       ├── engineering-handoff-template.md
-│       └── ...
-│
-├── .claude/skills/jira-salesforce-fix-pipeline/
-│   └── SKILL.md                    # Symlink to canonical skill
-│
-├── outputs/                        # Generated artifacts (gitignored)
-│   ├── jira/
-│   │   ├── raw/<KEY>.json
-│   │   ├── summary/<KEY>.md
-│   │   └── manifest.csv
-│   ├── investigations/<KEY>.md
-│   ├── internal-notes/<KEY>.md
-│   ├── jira-messages/<KEY>.md
-│   ├── test-reports/<KEY>.md
-│   ├── engineering-escalations/<KEY>.md
-│   ├── closed-resolved/<KEY>.md
-│   ├── issue-summary-YYYY-MM-DD.md
-│   ├── pipeline-logs/<RUN_ID>.jsonl (streaming progress)
-│   └── ...
-│
-├── .temp/metadata/                 # Instance-scoped Salesforce metadata workspace
-│   ├── raw-production/<KEY>/        # Read-only Production retrievals
-│   ├── sandbox-work/<KEY>/          # Per-attempt Sandbox baselines/candidates/reverts
-│   └── confirmed/<KEY>/             # Passed packages for Support or Engineering handoff
-│
-├── deprecated/                     # Removed agents (archived for reference)
-│   ├── agent_*.py
-│   └── ...
-│
-├── .env.jira                       # Configuration (gitignored)
-├── .env.jira.example               # Template
-└── .gitignore
-```
+Forbidden for routine CaseOps retrieve/deploy:
 
-## Execution Models
+- legacy `sfdx force:*`
+- `package.xml`
+- `--manifest`
+- frontdoor or magic-link sessions as API bearer tokens
 
-### Model 1: GUI Button (Recommended)
+## Org Knowledge
 
-```
-User clicks "Run Pipeline For This Issue"
-  ↓
-app.py /api/run → action="full_issue", key="HEAL-12345"
-  ↓
-_stream_full_issue(key, run_key)
-  ↓
-_build_claude_prompt(key, instruction) → context-rich prompt
-  ↓
-_do_stream_claude() → Claude Code CLI
-  ↓
-claude -p "prompt..." --output-format stream-json
-  ↓
-Parses stream-json events
-  ↓
-Emits STEP_N lines via _log_emit_line() → SSE queue
-  ↓
-Browser receives SSE stream → regex matches STEP_N → updateStepIndicator()
-  ↓
-GUI updates step badge in real-time
-```
+Org knowledge lives under `outputs/org-knowledge/`. Startup seeds default files and merges required rules without overwriting operator edits.
 
-### Model 2: CLI Direct
+The index selects topic files by keyword so Claude reads only relevant knowledge. Current seed topics include Salesforce gotchas for fields, layouts, access, deploys, and automation.
 
-```
-User: /jira-salesforce-fix-pipeline (in Claude Code IDE)
-  ↓
-Claude reads SKILL.md (canonical)
-  ↓
-Executes Steps 1–12 orchestration
-  ↓
-Emits logs to stdout
-  ↓
-(No GUI; user sees raw Claude output)
-```
+## Safety
 
-## State Management
-
-**Issue States:**
-- `Closed` / `Resolved` / `Canceled` → Archived, not reprocessed
-- `Escalated to Engineering` → Archived with handoff, not reprocessed
-- Active (all others) → Processed through Steps 3–12
-
-**Pipeline State:**
-- `_active_keys` (in-memory set) → Prevents concurrent runs on same issue
-- `pipelineProgress` (JS) → Tracks step per issue for UI indicator
-- `jira_summary_cache` (Python) → Caches rendered artifacts (cleared post-sync)
-
-## Error Handling
-
-**Sync Failures:**
-- Credential errors → Stop, ask user to verify `.env.jira`
-- Network errors → Stop, ask user to check connectivity
-- Retry not automatic; user must run again
-
-**Pipeline Failures:**
-- Sub-agent timeouts → Logged, can retry specific step
-- Implementation errors → Recorded in test-report, escalation decision made
-- Sandbox deploy failures → Iteration loop (revise hypothesis → Step 5–6 → Step 8–9)
-
-**Safety Violations:**
-- Production write detected → Stop immediately, exit with error
-- Wrong org target → Stop, validate `CASEOPS_SANDBOX_TARGET_ORG`
-
-## Performance Considerations
-
-- **Sync:** ~2–5 sec for 20 issues (depends on Jira API rate limits)
-- **Triage:** ~100ms
-- **Full Pipeline per issue:** ~5–15 min (depends on Salesforce metadata size, sub-agent latency)
-- **Cache:** Reduces latency for repeated issue views by ~90% (avoids re-rendering)
-- **Parallel:** Not yet implemented; processes issues sequentially
-
-## Future Roadmap
-
-- Parallel sub-agent execution (batch 3+ issues together)
-- Webhook integration (Jira → auto-trigger CaseOps)
-- Metric dashboards (resolution time, escalation rate, etc.)
-- Custom rules engine for routing & escalation logic
+- Production is read-only.
+- Only `CASEOPS_SANDBOX_TARGET_ORG` can receive deploys or writes.
+- CaseOps drafts Jira messages but does not post automatically unless explicitly requested.
+- CaseOps does not promote changes to Production.
+- Settings and token writes are persisted to the active env file or mounted outputs.
