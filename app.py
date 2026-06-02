@@ -26,6 +26,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from enum import Enum
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -152,6 +153,7 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
     "JIRA_AUTH_HEADER_COMMAND",
     "JIRA_BEARER_TOKEN",
     "CASEOPS_ANTHROPIC_MODEL",
+    "CASEOPS_GLOBAL_MAX_PARALLEL",
     "CASEOPS_USE_CCI_FOR_AUTH",
     "CASEOPS_PRODUCTION_READ_ORG",
     "CASEOPS_SANDBOX_TARGET_ORG",
@@ -209,11 +211,13 @@ _ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
             "title": "Permission sets and FLS",
             "keywords": [
                 "permission set", "permissionset", "fls", "fieldpermissions", "field permission",
-                "read edit", "read/write", "access", "profile"
+                "read edit", "read/write", "access", "profile", "sharing", "share object",
+                "usershare", "accountshare", "opportunityshare", "rowcause", "userorgroupid"
             ],
             "files": [
                 "helper-scripts.md",
                 "salesforce-gotchas/access-and-visibility.md",
+                "query-patterns/share-objects.md",
                 "query-patterns/permission-sets.md",
             ],
         },
@@ -264,12 +268,14 @@ Available helpers:
 python scripts/sf_caseops_helper.py custom-field --org "$ORG" --object Case --field Supplement_Inquiry__c --out-dir "$RAW_DIR"
 python scripts/sf_caseops_helper.py layout --org "$ORG" --object Case --contains "Customer Experience" --field Supplement_Inquiry__c --out-dir "$RAW_DIR"
 python scripts/sf_caseops_helper.py fls --org "$ORG" --field Case.Supplement_Inquiry__c --out-dir "$RAW_DIR"
+python scripts/sf_caseops_helper.py sobject-fields --org "$ORG" --sobject OpportunityShare --contains "AccessLevel" --out-dir "$RAW_DIR"
 python scripts/sf_caseops_helper.py deploy-mdapi --sandbox-org "$SANDBOX_ORG" --candidate "$CANDIDATE" --attempt "$ATTEMPT"
 ```
 
 Rules:
 
 - Run helpers first for custom field, picklist, layout, FLS, and custom-field MDAPI deploy work.
+- Before querying setup/share objects with unfamiliar fields, run `sobject-fields` and use only fields returned by describe.
 - Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands.
 - Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy. Use `--metadata`, `--source-dir`, or `--metadata-dir`.
 - Helpers write compact JSON summaries into the issue-scoped directory and avoid raw access-token output.
@@ -313,6 +319,8 @@ Use these checks before concluding an access issue is fixed or escalated.
 - FieldPermissions rows can include profile-owned permission sets. CaseOps should not modify Profile metadata; use permission sets or document admin steps.
 - Permission Set Groups can mute permissions. Granting access in an underlying permission set may not be enough if the group mutes it.
 - A user can have object access but still fail record access because sharing, ownership, role hierarchy, criteria sharing, teams, territories, or restriction rules block the record.
+- Share objects do not all expose the same fields. Do not assume `Name`, `Description`, or `SharingType` exist on `UserShare`, `AccountShare`, `OpportunityShare`, or `Object__Share`; use `sf sobject describe` or query only documented fields such as `Id`, `UserOrGroupId`, `<Object>AccessLevel`, `RowCause`, and parent relationship fields valid for that share object.
+- For share-object investigation, run the `query-patterns/share-objects.md` describe pattern first. Never query `UserShare.Name`; `UserShare` is not a user record and does not expose that field.
 - A field can be editable in metadata but effectively read-only because the page uses a formula, validation rule, automation overwrite, approval lock, or record type process.
 - Login as / UI inspection can prove visibility symptoms, but `sf data query`, `sf org`, and metadata retrieve are the source for API-level investigation.
 - Always map the affected user/persona to exact PermissionSetAssignment, PermissionSetGroup, Profile, UserRole, and record ownership facts before proposing access changes.
@@ -462,6 +470,48 @@ Guidance:
 - Ignore session/profile-like permission records only when they are not part of the requested audience, and say why.
 - If the customer asked for a team, map labels to that team explicitly instead of assuming every matching permission set is in scope.
 """,
+    "query-patterns/share-objects.md": """# Share Object Query Pattern
+
+Use this pattern before querying `UserShare`, `AccountShare`, `OpportunityShare`, or custom `Object__Share` rows.
+
+## Describe first
+
+Share-object fields vary by object. Do not assume fields such as `Name`, `Description`, or `SharingType`.
+
+```bash
+python scripts/sf_caseops_helper.py sobject-fields --org "$ORG" --sobject OpportunityShare --contains "AccessLevel" --out-dir "$RAW_DIR"
+python scripts/sf_caseops_helper.py sobject-fields --org "$ORG" --sobject UserShare --out-dir "$RAW_DIR"
+```
+
+Use only fields returned in the helper output or by `sf sobject describe`.
+
+## Safe common patterns
+
+Opportunity share rows:
+
+```bash
+sf data query --target-org "$ORG" --json --query "SELECT Id, UserOrGroupId, UserOrGroup.Name, OpportunityId, OpportunityAccessLevel, RowCause FROM OpportunityShare WHERE UserOrGroup.Name = 'Tier 1 Tech Support' LIMIT 20"
+```
+
+Account share rows:
+
+```bash
+sf data query --target-org "$ORG" --json --query "SELECT Id, UserOrGroupId, UserOrGroup.Name, AccountId, AccountAccessLevel, RowCause FROM AccountShare WHERE UserOrGroup.Name = 'Tier 1 Tech Support' LIMIT 20"
+```
+
+User share rows:
+
+```bash
+sf data query --target-org "$ORG" --json --query "SELECT Id, UserId, UserOrGroupId, RowCause, UserAccessLevel FROM UserShare WHERE UserId = '005...' LIMIT 20"
+```
+
+Rules:
+
+- `UserShare` does not have a `Name` field. Query `User` separately for the user's name, or use a relationship field only if describe confirms it.
+- For standard object share rows, the object-specific access field is usually `<Object>AccessLevel`, such as `OpportunityAccessLevel` or `AccountAccessLevel`.
+- `UserOrGroup.Name` is useful for groups/users when the relationship is present, but it is not the same as a top-level `Name` field on the share row.
+- If a share query fails once with `No such column`, stop and describe the sObject before trying another variant.
+""",
     "query-patterns/flows.md": """# Flow Query Pattern
 
 Use Tooling queries to resolve FlowDefinition and active versions before retrieving full XML.
@@ -542,8 +592,14 @@ _ORG_KNOWLEDGE_REQUIRED_LINES: dict[str, list[str]] = {
         "- Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands. Do not use `package.xml` or `--manifest` unless the operator explicitly approves a metadata-type exception.",
     ],
     "helper-scripts.md": [
+        'python scripts/sf_caseops_helper.py sobject-fields --org "$ORG" --sobject OpportunityShare --contains "AccessLevel" --out-dir "$RAW_DIR"',
+        "- Before querying setup/share objects with unfamiliar fields, run `sobject-fields` and use only fields returned by describe.",
         "- Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands.",
         "- Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy. Use `--metadata`, `--source-dir`, or `--metadata-dir`.",
+    ],
+    "salesforce-gotchas/access-and-visibility.md": [
+        "- Share objects do not all expose the same fields. Do not assume `Name`, `Description`, or `SharingType` exist on `UserShare`, `AccountShare`, `OpportunityShare`, or `Object__Share`; use `sf sobject describe` or query only documented fields such as `Id`, `UserOrGroupId`, `<Object>AccessLevel`, `RowCause`, and parent relationship fields valid for that share object.",
+        "- For share-object investigation, run the `query-patterns/share-objects.md` describe pattern first. Never query `UserShare.Name`; `UserShare` is not a user record and does not expose that field.",
     ],
     "deploy-patterns/custom-field-mdapi.md": [
         "2. Do not create or use `package.xml` for routine CaseOps deploys. Prefer explicit `--source-dir`, `--metadata`, or `--metadata-dir`.",
@@ -739,18 +795,28 @@ def _merge_org_knowledge_index(index: dict[str, Any]) -> tuple[dict[str, Any], b
 def _ensure_org_knowledge_defaults() -> None:
     """Seed editable org knowledge files without overwriting user updates."""
     root = _org_knowledge_dir()
-    root.mkdir(parents=True, exist_ok=True)
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        print(f"WARNING: unable to create org-knowledge directory {root}: {exc}", file=sys.stderr)
+        return
     index_path = root / "index.json"
     if not index_path.exists():
-        index_path.write_text(
-            json.dumps(_ORG_KNOWLEDGE_DEFAULT_INDEX, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+        try:
+            index_path.write_text(
+                json.dumps(_ORG_KNOWLEDGE_DEFAULT_INDEX, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            print(f"WARNING: unable to seed org-knowledge index {index_path}: {exc}", file=sys.stderr)
     for rel, content in _ORG_KNOWLEDGE_DEFAULT_FILES.items():
         path = root / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if not path.exists():
-            path.write_text(content, encoding="utf-8")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if not path.exists():
+                path.write_text(content, encoding="utf-8")
+        except OSError as exc:
+            print(f"WARNING: unable to seed org-knowledge file {path}: {exc}", file=sys.stderr)
     for rel, lines in _ORG_KNOWLEDGE_REQUIRED_LINES.items():
         path = root / rel
         try:
@@ -760,17 +826,23 @@ def _ensure_org_knowledge_defaults() -> None:
         missing = [line for line in lines if line not in existing]
         if missing:
             suffix = "\n" if existing and not existing.endswith("\n") else ""
-            path.write_text(existing + suffix + "\n".join(missing) + "\n", encoding="utf-8")
+            try:
+                path.write_text(existing + suffix + "\n".join(missing) + "\n", encoding="utf-8")
+            except OSError as exc:
+                print(f"WARNING: unable to update org-knowledge file {path}: {exc}", file=sys.stderr)
     try:
         data = json.loads(index_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         data = {}
     merged, changed = _merge_org_knowledge_index(data if isinstance(data, dict) else {})
     if changed:
-        index_path.write_text(
-            json.dumps(merged, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+        try:
+            index_path.write_text(
+                json.dumps(merged, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            print(f"WARNING: unable to update org-knowledge index {index_path}: {exc}", file=sys.stderr)
 
 
 def _read_org_knowledge_index() -> dict[str, Any]:
@@ -1573,7 +1645,13 @@ def _resume_step(step: int, name: str, status: str, reason: str, action: str, ar
     }
 
 
-def _build_pipeline_resume_plan(key: str, status: str = "", jira_updated: str | None = None) -> dict[str, Any]:
+def _build_pipeline_resume_plan(
+    key: str,
+    status: str = "",
+    jira_updated: str | None = None,
+    *,
+    force_active: bool = False,
+) -> dict[str, Any]:
     """Build a conservative file-based resume plan for a single issue run."""
     source_mtime = _issue_source_mtime(key, jira_updated)
     paths = {
@@ -1612,7 +1690,8 @@ def _build_pipeline_resume_plan(key: str, status: str = "", jira_updated: str | 
     }
 
     steps: list[dict[str, Any]] = []
-    disposition = _disposition(status or "")
+    original_disposition = _disposition(status or "")
+    disposition = "active" if force_active and original_disposition == "escalated" else original_disposition
     if disposition == "closed":
         closed_current = artifacts["closed_resolved"]["current"]
         steps.append(_resume_step(
@@ -1766,6 +1845,8 @@ def _build_pipeline_resume_plan(key: str, status: str = "", jira_updated: str | 
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source_mtime": datetime.fromtimestamp(source_mtime, timezone.utc).isoformat() if source_mtime else "",
         "mode": disposition,
+        "original_mode": original_disposition,
+        "force_active": force_active,
         "next_step": next_step,
         "artifacts": artifacts,
         "metadata": metadata,
@@ -1795,6 +1876,14 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
         "- Rule: recent evidence below is run history, not a prompt. Use it to avoid rediscovering confirmed facts; if it proves a route, update the durable artifact and continue.",
         "",
     ]
+    if plan.get("force_active"):
+        lines.extend([
+            "## Operator Force-Run Override",
+            "- The Jira status is already Escalated to Engineering, but the operator explicitly requested a full CaseOps pipeline run anyway.",
+            "- Ignore the normal pre-escalated skip rule for this run only. Process the issue through investigation, Salesforce diagnosis, sandbox-safe validation/proposal, notes, Jira message draft, and summary as applicable.",
+            "- This override does not relax safety rules: Production remains read-only, Jira writes are not allowed unless separately approved, and Sandbox writes/deploys must use the allowlisted Sandbox only.",
+            "",
+        ])
     recent_evidence = plan.get("recent_evidence") or []
     if recent_evidence:
         lines.extend([
@@ -1812,8 +1901,14 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
     return "\n".join(lines)
 
 
-def _prepare_resume_plan(key: str, status: str = "", jira_updated: str | None = None) -> tuple[dict[str, Any], Path, str]:
-    plan = _build_pipeline_resume_plan(key, status, jira_updated)
+def _prepare_resume_plan(
+    key: str,
+    status: str = "",
+    jira_updated: str | None = None,
+    *,
+    force_active: bool = False,
+) -> tuple[dict[str, Any], Path, str]:
+    plan = _build_pipeline_resume_plan(key, status, jira_updated, force_active=force_active)
     plan_path = _write_pipeline_resume_plan(plan)
     return plan, plan_path, _format_resume_plan_for_prompt(plan, plan_path)
 
@@ -1949,7 +2044,17 @@ def _claude_process_env() -> dict[str, str]:
     env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")
     env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
     if TEMP_ROOT:
-        env["CASEOPS_TEMP_DIR"] = str(TEMP_ROOT)
+        temp_root = Path(TEMP_ROOT)
+        claude_tmp = temp_root / "claude-code"
+        try:
+            claude_tmp.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            claude_tmp = temp_root
+        env["CASEOPS_TEMP_DIR"] = str(temp_root)
+        env["CLAUDE_CODE_TMPDIR"] = str(claude_tmp)
+        env["TMPDIR"] = str(claude_tmp)
+        env["TEMP"] = str(claude_tmp)
+        env["TMP"] = str(claude_tmp)
     metadata_dirs = _metadata_workspace_dirs()
     env["CASEOPS_METADATA_ROOT"] = str(metadata_dirs["root"])
     env["CASEOPS_METADATA_CACHE_DIR"] = str(metadata_dirs["cache_root"])
@@ -2091,6 +2196,74 @@ def _content_text_fragments(value: Any) -> list[str]:
     return fragments
 
 
+_TOKEN_USAGE_FIELDS = (
+    "input_tokens",
+    "output_tokens",
+    "cache_creation_input_tokens",
+    "cache_read_input_tokens",
+)
+
+
+def _usage_value(usage: Any, key: str) -> int:
+    if isinstance(usage, dict):
+        raw = usage.get(key, 0)
+    else:
+        raw = getattr(usage, key, 0)
+    try:
+        return int(raw or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _merge_token_usage(total: dict[str, int], usage: Any) -> None:
+    """Add Claude token usage into an accumulator."""
+    if not usage:
+        return
+    for field in _TOKEN_USAGE_FIELDS:
+        total[field] = total.get(field, 0) + _usage_value(usage, field)
+
+
+def _extract_token_usage_payloads(event: dict[str, Any]) -> list[Any]:
+    """Find usage payloads in Claude stream/API events without assuming one shape."""
+    payloads: list[Any] = []
+    if not isinstance(event, dict):
+        return payloads
+    if isinstance(event.get("usage"), dict):
+        payloads.append(event["usage"])
+    message = event.get("message")
+    if isinstance(message, dict) and isinstance(message.get("usage"), dict):
+        payloads.append(message["usage"])
+    result = event.get("result")
+    if isinstance(result, dict) and isinstance(result.get("usage"), dict):
+        payloads.append(result["usage"])
+    if any(event.get(field) is not None for field in _TOKEN_USAGE_FIELDS):
+        payloads.append(event)
+    return payloads
+
+
+def _format_token_usage(usage: dict[str, int], cost_usd: float | None = None) -> str:
+    input_tokens = usage.get("input_tokens", 0)
+    output_tokens = usage.get("output_tokens", 0)
+    cache_create = usage.get("cache_creation_input_tokens", 0)
+    cache_read = usage.get("cache_read_input_tokens", 0)
+    total = input_tokens + output_tokens + cache_create + cache_read
+    if total == 0 and cost_usd is not None:
+        return f"Token usage: unavailable, cost=${cost_usd:.4f}"
+    parts = [
+        f"total={total:,}",
+        f"input={input_tokens:,}",
+        f"output={output_tokens:,}",
+    ]
+    if cache_create or cache_read:
+        parts.extend([
+            f"cache_create={cache_create:,}",
+            f"cache_read={cache_read:,}",
+        ])
+    if cost_usd is not None:
+        parts.append(f"cost=${cost_usd:.4f}")
+    return "Token usage: " + ", ".join(parts)
+
+
 def _is_file_read_tool(tool: str, detail: str) -> bool:
     tool_name = (tool or "").lower()
     normalized = (detail or "").replace("\\", "/").lower()
@@ -2199,6 +2372,8 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
         # was slow.
         result["sf"]["version_warning"] = _command_error(version)
 
+    env_file_path = Path(app.config["ENV_FILE_PATH"]) if app.config.get("ENV_FILE_PATH") else ROOT / ".env.jira"
+
     def check_org(role: str, alias: str) -> None:
         role_status = result["sf"][role]
         if not alias:
@@ -2213,6 +2388,49 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
         )
         access_token = _env_first(token_key, settings=settings)
         instance_url = _env_first(*url_keys, settings=settings)
+
+        def refresh_and_auth(reason: str) -> bool:
+            nonlocal access_token
+            refresh_key = "SF_PROD_REFRESH_TOKEN" if role == "prod" else "SF_SANDBOX_REFRESH_TOKEN"
+            refresh_token = _extract_salesforce_refresh_token(_env_first(refresh_key, settings=settings))
+            if not refresh_token or not instance_url:
+                role_status["refresh_error"] = "missing refresh token or instance URL"
+                return False
+
+            role_status["refresh_attempted"] = True
+            role_status["refresh_reason"] = reason
+            refresh_ok, refreshed = _refresh_salesforce_token_from_refresh_token(instance_url, refresh_token)
+            if not refresh_ok or not refreshed:
+                role_status["refresh_error"] = str(refreshed or "refresh failed")[:500]
+                return False
+
+            access_token = refreshed
+            settings[token_key] = refreshed
+            settings["SF_TOKENS_REFRESHED_AT"] = str(int(time.time()))
+            _write_env_file(
+                {
+                    token_key: refreshed,
+                    "SF_TOKENS_REFRESHED_AT": settings["SF_TOKENS_REFRESHED_AT"],
+                },
+                env_file_path,
+            )
+            auth = _sf_auth_from_access_token(
+                sf_bin=sf_bin,
+                alias=alias,
+                token=refreshed,
+                instance_url=instance_url,
+                env=env,
+            )
+            role_status["auth_attempted_from_refresh_token"] = True
+            role_status["auth_returncode"] = auth.returncode
+            if auth.returncode != 0:
+                role_status["auth_error"] = _command_error(auth)
+                return False
+
+            global _sf_orgs_cache, _sf_orgs_cache_time
+            _sf_orgs_cache = None
+            _sf_orgs_cache_time = 0.0
+            return True
 
         display = _run_cli_command(
             [sf_bin, "org", "display", "--target-org", alias, "--json"],
@@ -2254,33 +2472,55 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
 
         data = _json_from_stdout(display.stdout)
         org = data.get("result", {}) if isinstance(data, dict) else {}
+        connected_status = str(org.get("connectedStatus") or "").strip()
+        if connected_status and connected_status.lower() != "connected":
+            role_status["connectedStatus"] = connected_status
+            if refresh_and_auth(f"org display connectedStatus={connected_status}"):
+                display = _run_cli_command(
+                    [sf_bin, "org", "display", "--target-org", alias, "--json"],
+                    env=env,
+                    timeout=25,
+                    retries=1,
+                )
+                role_status["display_returncode_after_refresh"] = display.returncode
+                data = _json_from_stdout(display.stdout)
+                org = data.get("result", {}) if isinstance(data, dict) else {}
+                connected_status = str(org.get("connectedStatus") or "").strip()
+                role_status["connectedStatus"] = connected_status
+            if connected_status and connected_status.lower() != "connected":
+                fail(f"Salesforce {role} org `{alias}` is stale in the pipeline runtime environment and refresh did not restore it.")
+                return
+
         role_status.update({
             "authenticated": True,
             "username": org.get("username", ""),
             "orgId": org.get("id", ""),
             "instanceUrl": org.get("instanceUrl", ""),
+            "connectedStatus": connected_status,
         })
 
         if run_soql:
-            query = _run_cli_command(
-                [
-                    sf_bin,
-                    "data",
-                    "query",
-                    "--target-org",
-                    alias,
-                    "--query",
-                    "SELECT Id FROM Organization LIMIT 1",
-                    "--json",
-                ],
-                env=env,
-                timeout=30,
-                retries=1,
-            )
+            query_cmd = [
+                sf_bin,
+                "data",
+                "query",
+                "--target-org",
+                alias,
+                "--query",
+                "SELECT Id FROM Organization LIMIT 1",
+                "--json",
+            ]
+            query = _run_cli_command(query_cmd, env=env, timeout=30, retries=1)
+            query_error = _command_error(query)
+            if query.returncode != 0 and "INVALID_SESSION_ID" in query_error.upper():
+                role_status["soql_refresh_attempted"] = True
+                if refresh_and_auth("SOQL preflight returned INVALID_SESSION_ID"):
+                    query = _run_cli_command(query_cmd, env=env, timeout=30, retries=1)
+                    query_error = _command_error(query)
             role_status["soql_returncode"] = query.returncode
             role_status["soql_ok"] = query.returncode == 0
             if query.returncode != 0:
-                role_status["soql_error"] = _command_error(query)
+                role_status["soql_error"] = query_error
                 fail(f"Salesforce {role} org `{alias}` failed SOQL preflight in the pipeline runtime environment.")
 
     check_org("prod", prod_alias)
@@ -2486,6 +2726,7 @@ def _do_stream_anthropic_messages_api(prompt: str, run_key: str, issue_key: str 
         client = Anthropic(api_key=api_key)
         buf = ""
         full_response = ""
+        token_usage = {field: 0 for field in _TOKEN_USAGE_FIELDS}
         system_prompt = """You are CaseOps, a Jira triage and issue investigation assistant owned by Sean.
 
 ## Your voice
@@ -2541,9 +2782,16 @@ Analyze the issue. Draft both formats. If you don't have enough info for a solid
                     line, buf = buf.split("\n", 1)
                     if line.strip():
                         _log_emit_line(run_key, line.rstrip())
-            if buf.strip():
-                _log_emit_line(run_key, buf.strip())
+                if buf.strip():
+                    _log_emit_line(run_key, buf.strip())
+                try:
+                    final_message = stream.get_final_message()
+                    _merge_token_usage(token_usage, getattr(final_message, "usage", None))
+                except Exception:
+                    pass
         _log_emit_line(run_key, "-- stream complete --")
+        if any(token_usage.values()):
+            _log_emit_line(run_key, _format_token_usage(token_usage))
         return full_response
 
     try:
@@ -2591,6 +2839,8 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
 
         env = _claude_process_env()
         env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
+        if env.get("CLAUDE_CODE_TMPDIR"):
+            _log_emit_line(run_key, f"Claude temp dir: {env['CLAUDE_CODE_TMPDIR']}")
         _log_emit_line(run_key, f"Invoking: {claude_bin} -p <stdin redacted> --output-format stream-json ...")
         proc = subprocess.Popen(
             cmd,
@@ -2613,6 +2863,9 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
         assistant_text = []
         tool_uses: dict[str, tuple[str, str]] = {}
         stream_q: queue.Queue[tuple[str, str | None]] = queue.Queue()
+        token_usage = {field: 0 for field in _TOKEN_USAGE_FIELDS}
+        final_token_usage = {field: 0 for field in _TOKEN_USAGE_FIELDS}
+        total_cost_usd: float | None = None
 
         def _read_pipe(pipe: Any, label: str) -> None:
             try:
@@ -2676,6 +2929,9 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
 
             etype = event.get("type", "")
             emitted_progress = False
+            usage_target = final_token_usage if etype == "result" else token_usage
+            for usage_payload in _extract_token_usage_payloads(event):
+                _merge_token_usage(usage_target, usage_payload)
 
             if etype == "assistant":
                 for block in event.get("message", {}).get("content", []):
@@ -2720,7 +2976,13 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
             elif etype == "result":
                 subtype = event.get("subtype", "")
                 cost = event.get("cost_usd")
-                cost_str = f"  cost: ${cost:.4f}" if cost else ""
+                if cost is None:
+                    cost = event.get("total_cost_usd")
+                try:
+                    total_cost_usd = float(cost) if cost is not None else total_cost_usd
+                except (TypeError, ValueError):
+                    pass
+                cost_str = f"  cost: ${total_cost_usd:.4f}" if total_cost_usd is not None else ""
                 _log_emit_line(run_key, f"-- {subtype}{cost_str} --")
                 emitted_progress = True
 
@@ -2743,6 +3005,9 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
 
         if killed_for_timeout:
             return
+        effective_usage = final_token_usage if any(final_token_usage.values()) else token_usage
+        if any(effective_usage.values()) or total_cost_usd is not None:
+            _log_emit_line(run_key, _format_token_usage(effective_usage, total_cost_usd))
         if returncode == 0 and issue_key and assistant_text:
             full_output = "\n".join(assistant_text)
             _save_claude_output(full_output, issue_key)
@@ -2891,7 +3156,36 @@ def _stream_claude_proc(prompt: str, run_key: str, issue_key: str | None = None)
         _log_emit_done(run_key)
 
 
-def _stream_full_issue(key: str, run_key: str) -> None:
+def _issue_pipeline_runtime_ready(run_key: str) -> bool:
+    """Validate runtime gates before an issue pipeline run starts."""
+    sandbox_target = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
+    if not sandbox_target:
+        _log_emit_line(run_key, "ERROR: CASEOPS_SANDBOX_TARGET_ORG not set in .env.jira")
+        _log_emit_line(run_key, "       Step 9 (deploy+test) requires an allowlisted Sandbox org.")
+        _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env.jira and retry.")
+        return False
+    if not _emit_runtime_preflight_or_stop(run_key):
+        return False
+
+    if not caseops_llm_auth_uses_anthropic_api_key():
+        try:
+            claude_bin = shutil.which("claude") or "/usr/local/bin/claude"
+            subprocess.run([claude_bin, "--version"], capture_output=True, timeout=5, check=True)
+        except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
+            _log_emit_line(run_key, "ERROR: `claude` CLI not found or not responding")
+            _log_emit_line(run_key, "       CASEOPS_LLM_AUTH=claude_code requires Claude Code installed.")
+            _log_emit_line(run_key, "       Verify: `claude --version` runs, then use `/setup/claude-login` with `claude setup-token`.")
+            return False
+
+    if caseops_llm_auth_uses_anthropic_api_key():
+        api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+        if not api_key:
+            _log_emit_line(run_key, "WARNING: CASEOPS_LLM_AUTH=api_key but ANTHROPIC_API_KEY not set")
+            _log_emit_line(run_key, "         Sub-agents (Steps 3–10) will not execute. Text-only response only.")
+    return True
+
+
+def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force_active: bool = False) -> None:
     """Run full CaseOps fix pipeline via the mounted jira-salesforce-fix-pipeline playbook.
 
     This invokes Claude Code with direct file-path instructions for Steps 1-12 orchestration.
@@ -2901,36 +3195,16 @@ def _stream_full_issue(key: str, run_key: str) -> None:
         _log_emit_run_start(run_key, key)
         _log_emit_line(run_key, f"-- Processing {key} via jira-salesforce-fix-pipeline playbook --")
 
-        # Safety check: CASEOPS_SANDBOX_TARGET_ORG must be set before Step 9
-        sandbox_target = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
-        if not sandbox_target:
-            _log_emit_line(run_key, "ERROR: CASEOPS_SANDBOX_TARGET_ORG not set in .env.jira")
-            _log_emit_line(run_key, "       Step 9 (deploy+test) requires an allowlisted Sandbox org.")
-            _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env.jira and retry.")
+        if run_preflight and not _issue_pipeline_runtime_ready(run_key):
             return
-        if not _emit_runtime_preflight_or_stop(run_key):
-            return
-
-        # Safety check: if claude_code mode, verify `claude` CLI is available
-        if not caseops_llm_auth_uses_anthropic_api_key():
-            try:
-                claude_bin = shutil.which("claude") or "/usr/local/bin/claude"
-                subprocess.run([claude_bin, "--version"], capture_output=True, timeout=5, check=True)
-            except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
-                _log_emit_line(run_key, "ERROR: `claude` CLI not found or not responding")
-                _log_emit_line(run_key, "       CASEOPS_LLM_AUTH=claude_code requires Claude Code installed.")
-                _log_emit_line(run_key, "       Verify: `claude --version` runs, then use `/setup/claude-login` with `claude setup-token`.")
-                return
-
-        # Safety check: if api_key mode, verify API key is set
-        if caseops_llm_auth_uses_anthropic_api_key():
-            api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
-            if not api_key:
-                _log_emit_line(run_key, "WARNING: CASEOPS_LLM_AUTH=api_key but ANTHROPIC_API_KEY not set")
-                _log_emit_line(run_key, "         Sub-agents (Steps 3–10) will not execute. Text-only response only.")
 
         row = next((r for r in _read_manifest() if r.get("Key") == key), {})
-        resume_plan, resume_path, resume_block = _prepare_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
+        resume_plan, resume_path, resume_block = _prepare_resume_plan(
+            key,
+            row.get("Status", ""),
+            row.get("Updated", ""),
+            force_active=force_active,
+        )
         _log_resume_plan_summary(run_key, resume_plan, resume_path)
         if _resume_plan_short_circuit(run_key, resume_plan):
             return
@@ -2938,7 +3212,11 @@ def _stream_full_issue(key: str, run_key: str) -> None:
             key,
             "Run the full CaseOps fix pipeline for this issue through completion of investigation, "
             "internal notes, and Jira customer message (and any sandbox/escalation steps the playbook "
-            "requires for this issue). Read the mounted playbook files directly; do not invoke a slash-skill.",
+            "requires for this issue). Read the mounted playbook files directly; do not invoke a slash-skill."
+            + (
+                " Operator override: ignore the normal pre-escalated Jira-status skip for this issue and process it as active."
+                if force_active else ""
+            ),
             resume_block,
         )
         _do_stream_claude(prompt, run_key, key)
@@ -2952,7 +3230,7 @@ def _stream_full_issue(key: str, run_key: str) -> None:
         _log_emit_done(run_key)
 
 
-def _stream_reprocess_issue(key: str, run_key: str) -> None:
+def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, force_active: bool = False) -> None:
     """Reprocess single issue without Jira sync via the mounted jira-salesforce-fix-pipeline playbook.
 
     Useful for re-running a single issue that failed or needs investigation updates.
@@ -2961,43 +3239,27 @@ def _stream_reprocess_issue(key: str, run_key: str) -> None:
         _log_emit_run_start(run_key, f"{key} reprocess")
         _log_emit_line(run_key, f"-- Reprocessing {key} (no sync) via jira-salesforce-fix-pipeline playbook --")
 
-        # Safety check: CASEOPS_SANDBOX_TARGET_ORG must be set before Step 9
-        sandbox_target = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
-        if not sandbox_target:
-            _log_emit_line(run_key, "ERROR: CASEOPS_SANDBOX_TARGET_ORG not set in .env.jira")
-            _log_emit_line(run_key, "       Step 9 (deploy+test) requires an allowlisted Sandbox org.")
-            _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env.jira and retry.")
+        if run_preflight and not _issue_pipeline_runtime_ready(run_key):
             return
-        if not _emit_runtime_preflight_or_stop(run_key):
-            return
-
-        # Safety check: if claude_code mode, verify `claude` CLI is available
-        if not caseops_llm_auth_uses_anthropic_api_key():
-            try:
-                claude_bin = shutil.which("claude") or "/usr/local/bin/claude"
-                subprocess.run([claude_bin, "--version"], capture_output=True, timeout=5, check=True)
-            except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
-                _log_emit_line(run_key, "ERROR: `claude` CLI not found or not responding")
-                _log_emit_line(run_key, "       CASEOPS_LLM_AUTH=claude_code requires Claude Code installed.")
-                _log_emit_line(run_key, "       Verify: `claude --version` runs, then use `/setup/claude-login` with `claude setup-token`.")
-                return
-
-        # Safety check: if api_key mode, verify API key is set
-        if caseops_llm_auth_uses_anthropic_api_key():
-            api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
-            if not api_key:
-                _log_emit_line(run_key, "WARNING: CASEOPS_LLM_AUTH=api_key but ANTHROPIC_API_KEY not set")
-                _log_emit_line(run_key, "         Sub-agents (Steps 3–10) will not execute. Text-only response only.")
 
         row = next((r for r in _read_manifest() if r.get("Key") == key), {})
-        resume_plan, resume_path, resume_block = _prepare_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
+        resume_plan, resume_path, resume_block = _prepare_resume_plan(
+            key,
+            row.get("Status", ""),
+            row.get("Updated", ""),
+            force_active=force_active,
+        )
         _log_resume_plan_summary(run_key, resume_plan, resume_path)
         if _resume_plan_short_circuit(run_key, resume_plan):
             return
         prompt = _build_claude_prompt(
             key,
             "Reprocess the CaseOps fix pipeline for this issue without re-syncing from Jira. "
-            "Read the mounted jira-salesforce-fix-pipeline playbook files directly; do not invoke a slash-skill.",
+            "Read the mounted jira-salesforce-fix-pipeline playbook files directly; do not invoke a slash-skill."
+            + (
+                " Operator override: ignore the normal pre-escalated Jira-status skip for this issue and process it as active."
+                if force_active else ""
+            ),
             resume_block,
         )
         _do_stream_claude(prompt, run_key, key)
@@ -3010,62 +3272,129 @@ def _stream_reprocess_issue(key: str, run_key: str) -> None:
         _log_emit_done(run_key)
 
 
-def _stream_global_skill(instruction: str, run_key: str) -> None:
-    """Run global CaseOps pipeline via the mounted jira-salesforce-fix-pipeline playbook.
+def _global_max_parallel() -> int:
+    raw = (os.environ.get("CASEOPS_GLOBAL_MAX_PARALLEL") or "1").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 1
+    return max(1, min(value, 4))
 
-    This invokes Claude Code for global actions like "full" (sync + process all)
-    or "reprocess" (process existing without sync).
-    """
+
+def _plan_pending_issue_steps(plan: dict[str, Any]) -> list[dict[str, Any]]:
+    """Steps that require per-issue work. Global summary/report steps are excluded."""
+    return [
+        step for step in (plan.get("steps") or [])
+        if step.get("step") not in {11, 12}
+        and step.get("status") not in {"complete", "skipped"}
+    ]
+
+
+def _select_global_issue_queue(run_key: str) -> list[str]:
+    rows = _read_manifest()
+    queued: list[str] = []
+    skipped = 0
+    for row in rows:
+        key = (row.get("Key") or "").strip()
+        if not key:
+            continue
+        plan = _build_pipeline_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
+        pending = _plan_pending_issue_steps(plan)
+        if pending:
+            next_step = pending[0]
+            _log_emit_line(
+                run_key,
+                f"Queue: {key} next STEP_{next_step.get('step')} ({next_step.get('name')}, {next_step.get('status')})",
+            )
+            queued.append(key)
+        else:
+            skipped += 1
+    _log_emit_line(run_key, f"Queue: {len(queued)} issue(s) need pipeline work; {skipped} already current.")
+    return queued
+
+
+def _run_global_issue_worker(key: str, index: int, total: int, *, reprocess: bool) -> tuple[str, bool, str]:
+    with _state_lock:
+        if key in _active_keys:
+            return key, False, "already running"
+        _active_keys.add(key)
+
+    _log_emit_line(_GLOBAL_KEY, f"Queue: starting {key} ({index}/{total})")
+    try:
+        if reprocess:
+            _stream_reprocess_issue(key, key, run_preflight=False)
+        else:
+            _stream_full_issue(key, key, run_preflight=False)
+
+        row = next((r for r in _read_manifest() if r.get("Key") == key), {})
+        plan = _build_pipeline_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
+        pending = _plan_pending_issue_steps(plan)
+        if pending:
+            next_step = pending[0]
+            detail = f"incomplete; next STEP_{next_step.get('step')} ({next_step.get('name')}, {next_step.get('status')})"
+            _log_emit_line(_GLOBAL_KEY, f"Queue: {key} {detail}")
+            return key, False, detail
+        _log_emit_line(_GLOBAL_KEY, f"Queue: {key} complete")
+        return key, True, "complete"
+    except Exception as exc:
+        detail = f"failed unexpectedly: {type(exc).__name__}: {exc}"
+        _log_emit_line(_GLOBAL_KEY, f"Queue: {key} {detail}")
+        return key, False, detail
+
+
+def _stream_global_skill(instruction: str, run_key: str) -> None:
+    """Run global CaseOps pipeline as a CaseOps-owned issue queue."""
     try:
         _log_emit_line(run_key, f"-- Running CaseOps pipeline: {instruction.split(':')[1].strip() if ':' in instruction else instruction} --")
 
-        # Safety check: CASEOPS_SANDBOX_TARGET_ORG must be set before Step 9
-        sandbox_target = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
-        if not sandbox_target:
-            _log_emit_line(run_key, "ERROR: CASEOPS_SANDBOX_TARGET_ORG not set in .env.jira")
-            _log_emit_line(run_key, "       Step 9 (deploy+test) requires an allowlisted Sandbox org.")
-            _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env.jira and retry.")
-            return
-        if not _emit_runtime_preflight_or_stop(run_key):
+        if not _issue_pipeline_runtime_ready(run_key):
             return
 
-        # Safety check: if claude_code mode, verify `claude` CLI is available
-        if not caseops_llm_auth_uses_anthropic_api_key():
-            try:
-                claude_bin = shutil.which("claude") or "/usr/local/bin/claude"
-                subprocess.run([claude_bin, "--version"], capture_output=True, timeout=5, check=True)
-            except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
-                _log_emit_line(run_key, "ERROR: `claude` CLI not found or not responding")
-                _log_emit_line(run_key, "       CASEOPS_LLM_AUTH=claude_code requires Claude Code installed.")
-                _log_emit_line(run_key, "       Verify: `claude --version` runs, then use `/setup/claude-login` with `claude setup-token`.")
+        if "sync all issues from jira" in instruction.lower():
+            env_file = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+            _log_emit_line(run_key, "STEP_1 __sync__")
+            _log_emit_line(run_key, "CaseOps runtime: running Jira sync in the foreground")
+            rc = _do_stream_proc(
+                [sys.executable, "jira_sync.py", "--env-file", env_file, "--out-dir", str(OUTPUTS / "jira")],
+                run_key,
+            )
+            if rc != 0:
+                _log_emit_line(run_key, f"ERROR: Jira sync failed with exit code {rc}; stopping Auto-Process All before issue processing.")
                 return
+            manifest_changed()
+            _log_emit_line(run_key, "STEP_1 __sync__ complete")
 
-        # Safety check: if api_key mode, verify API key is set
-        if caseops_llm_auth_uses_anthropic_api_key():
-            api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
-            if not api_key:
-                _log_emit_line(run_key, "WARNING: CASEOPS_LLM_AUTH=api_key but ANTHROPIC_API_KEY not set")
-                _log_emit_line(run_key, "         Sub-agents (Steps 3–10) will not execute. Text-only response only.")
+        _log_emit_line(run_key, "STEP_2 __queue__")
+        queue_keys = _select_global_issue_queue(run_key)
+        if not queue_keys:
+            _log_emit_line(run_key, "Queue: no issue pipeline work needed.")
+            return
 
-        prompt = (
-            f"Run the CaseOps jira-salesforce-fix-pipeline playbook with instruction:\n\n{instruction}\n\n"
-            f"Do not invoke a slash-skill. Read the mounted playbook entrypoint at "
-            f"skills/jira-salesforce-fix-pipeline/SKILL.md and read "
-            f"ORCHESTRATOR-PROMPT.md for decision logic.\n\n"
-            f"At the start of processing each issue, emit `Run started: <ISSUE_KEY> at YYYY-MM-DD HH:MM:SS <TZ>`.\n\n"
-            f"Operator log hygiene: do not echo, restate, or summarize the playbook, this prompt, "
-            f"skill files, or reference files into stdout. Stream the actual run only: step markers, "
-            f"concise status, commands/tools used, files written, test results, and blockers.\n\n"
-            f"Resume efficiency: for each active issue, inspect existing artifacts first and skip completed "
-            f"checkpoints unless Jira source changed after the artifact or downstream evidence invalidates it. "
-            f"Do not reread or rewrite full existing artifacts just to restate them; read targeted sections only "
-            f"when a pending/stale step requires exact details.\n\n"
-            f"Org knowledge efficiency: for each active issue, read `{_path_relative_for_prompt(_org_knowledge_dir() / 'index.json')}` "
-            f"and `{_path_relative_for_prompt(_org_knowledge_dir() / 'run-rules.md')}` first, then select only the matching "
-            f"topic files for that issue. Do not bulk-read `{_path_relative_for_prompt(_org_knowledge_dir())}`. "
-            f"Pass relevant selected bullets into Step 5, Step 6, Step 8, and Step 9 sub-agent prompts."
-        )
-        _do_stream_claude(prompt, run_key, issue_key=None)
+        reprocess = "reprocess all active issues" in instruction.lower()
+        max_parallel = _global_max_parallel()
+        _log_emit_line(run_key, f"Queue: processing {len(queue_keys)} issue(s), max_parallel={max_parallel}")
+
+        results: list[tuple[str, bool, str]] = []
+        if max_parallel == 1:
+            for idx, key in enumerate(queue_keys, start=1):
+                results.append(_run_global_issue_worker(key, idx, len(queue_keys), reprocess=reprocess))
+        else:
+            with ThreadPoolExecutor(max_workers=max_parallel) as executor:
+                futures = {
+                    executor.submit(_run_global_issue_worker, key, idx, len(queue_keys), reprocess=reprocess): key
+                    for idx, key in enumerate(queue_keys, start=1)
+                }
+                for future in as_completed(futures):
+                    results.append(future.result())
+
+        complete = sum(1 for _key, ok, _detail in results if ok)
+        incomplete = len(results) - complete
+        _log_emit_line(run_key, f"Queue: finished. complete={complete}, incomplete={incomplete}")
+        if incomplete:
+            for key, ok, detail in results:
+                if not ok:
+                    _log_emit_line(run_key, f"Queue incomplete: {key} — {detail}")
+        manifest_changed()
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
@@ -3316,6 +3645,13 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
     is_jira_escalated = _is_jira_engineering_escalated(status)
     is_jira_escalated_any = _is_jira_escalated_any(status)
     state = _calculate_pipeline_state(key, status)
+    is_blocked = _investigation_indicates_blocked(key)
+    is_data_only = (
+        _test_report_is_data_only(key)
+        and not is_blocked
+        and not has_eng_handoff
+        and not is_jira_escalated_any
+    )
 
     return {
         # Legacy flags (kept for backward compatibility during transition)
@@ -3334,8 +3670,8 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
         # Pipeline state machine: all determined by file existence
         "pipeline_state": state.value,
         "is_escalation_path": has_eng_handoff,  # Source of truth: eng_handoff file presence
-        "is_blocked": _investigation_indicates_blocked(key),
-        "is_data_only": _test_report_is_data_only(key),
+        "is_blocked": is_blocked,
+        "is_data_only": is_data_only,
     }
 
 
@@ -3418,16 +3754,84 @@ def _extract_blocker_reason(key: str) -> str:
     return " ".join(block_lines) if block_lines else ""
 
 
+def _issue_resolution_text(key: str) -> str:
+    """Return the issue's resolution artifacts used for derived tags."""
+    rels = (
+        "test_report",
+        "internal_notes",
+        "jira_message",
+        "investigation",
+    )
+    parts: list[str] = []
+    for rel in rels:
+        path = OUTPUTS / FILE_LOCATIONS[rel].format(key=key)
+        if not path.is_file():
+            continue
+        try:
+            parts.append(path.read_text(encoding="utf-8", errors="replace")[:50000])
+        except OSError:
+            continue
+    return "\n\n".join(parts)
+
+
+def _text_requires_production_deploy(text: str) -> bool:
+    """True when artifacts say a Production metadata/config deploy is required."""
+    if not text:
+        return False
+    patterns = (
+        r"(?is)production\s+(?:metadata\s+)?deploy(?:ment)?\s+required[^.\n|:]*[:?|]?\s*\*{0,2}yes\b",
+        r"(?is)production\s+(?:metadata\s+)?deploy(?:ment)?\s+required[^.\n]*\bgearset\b",
+        r"(?is)\b(?:yes|ready)\s*[-—]\s*gearset\b",
+        r"(?is)\bgearset\s+(?:promotion|deploy(?:ment)?)\s+(?:required|needed)\b",
+        r"(?is)\bmust\s+(?:be\s+)?(?:promote|promoted|deploy|deployed)\s+(?:from\s+sandbox\s+)?to\s+production\b",
+        r"(?is)\bdeploy\s+(?:.+?\s+)?to\s+production\s+via\s+gearset\b",
+        r"(?is)\bproduction\s+deployment\s+via\s+gearset\b",
+    )
+    return any(re.search(pattern, text) for pattern in patterns)
+
+
+def _text_confirms_no_deploy(text: str) -> bool:
+    """True when artifacts explicitly state no deploy/metadata deployment is needed."""
+    if not text:
+        return False
+    patterns = (
+        r"(?is)production\s+(?:metadata\s+)?deploy(?:ment)?\s+required[^.\n|:]*[:?|]?\s*\*{0,2}(?:no|n/?a)\b",
+        r"(?is)sandbox\s+deploy\s+required[^.\n|:]*[:?|]?\s*\*{0,2}no\b",
+        r"(?is)\bno\s+(?:production\s+)?(?:metadata\s+)?deploy(?:ment)?\s+(?:required|needed)\b",
+        r"(?is)\bno-deploy\s+(?:rationale|fix|action)\b",
+        r"(?is)\bfix\s+type:\s*\*{0,2}(?:data[-\s]?only|data\s+record\s+(?:creation|update)|no-deploy)\b",
+        r"(?is)\bdata[-\s]?only\s+fix\b",
+    )
+    return any(re.search(pattern, text) for pattern in patterns)
+
+
+def _text_has_data_or_admin_action(text: str) -> bool:
+    """True when no-deploy resolution is a data/admin action, not a metadata candidate."""
+    patterns = (
+        r"(?is)\bdata[-\s]?only\b",
+        r"(?is)\bdata\s+(?:record\s+)?(?:update|creation|correction|backfill|remediation|fix)\b",
+        r"(?is)\brecord\s+(?:update|creation|correction|backfill|remediation)\b",
+        r"(?is)\bpermission\s+set\s+assignment\b",
+        r"(?is)\bassign(?:ing)?\s+(?:an?\s+)?(?:existing\s+)?permission\s+set\b",
+        r"(?is)\bno-deploy\s+(?:admin|operator|support)\s+action\b",
+    )
+    return any(re.search(pattern, text) for pattern in patterns)
+
+
 def _test_report_is_data_only(key: str) -> bool:
-    """True when test report indicates fix is data-only (no metadata deployment)."""
-    path = OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)
-    if not path.is_file():
+    """True when artifacts identify a no-deploy data/admin fix.
+
+    `Data Only` must never appear for issues that require metadata promotion,
+    Gearset, or any other Production deployment. Permission-set assignment can
+    be no-deploy only when the needed permission set already exists in
+    Production and the artifacts explicitly say no deploy is required.
+    """
+    text = _issue_resolution_text(key)
+    if not text:
         return False
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
+    if _text_requires_production_deploy(text):
         return False
-    return bool(re.search(r"(?im)data.?only|no\s+metadata|no\s+deploy|permission\s+set|report|record\s+update", text))
+    return _text_confirms_no_deploy(text) and _text_has_data_or_admin_action(text)
 
 
 def _calculate_pipeline_state(key: str, status: str = "") -> PipelineState:
@@ -3671,6 +4075,7 @@ def api_run():
     use_claude_cli = False
     use_full_issue = False
     use_reprocess_issue = False
+    use_force_reprocess_issue = False
     use_global_skill = False
 
     if action == "sync":
@@ -3701,6 +4106,8 @@ def api_run():
         use_full_issue = True
     elif action == "reprocess_issue" and key:
         use_reprocess_issue = True
+    elif action == "force_reprocess_issue" and key:
+        use_force_reprocess_issue = True
     elif action == "claude_instruction" and key:
         instruction = data.get("instruction", "").strip()
         if not instruction:
@@ -3722,6 +4129,8 @@ def api_run():
         t = threading.Thread(target=_stream_full_issue, args=(key, run_key), daemon=True)
     elif use_reprocess_issue:
         t = threading.Thread(target=_stream_reprocess_issue, args=(key, run_key), daemon=True)
+    elif use_force_reprocess_issue:
+        t = threading.Thread(target=_stream_reprocess_issue, args=(key, run_key, True, True), daemon=True)
     elif use_global_skill:
         t = threading.Thread(target=_stream_global_skill, args=(instruction, run_key), daemon=True)
     elif use_claude_cli:
@@ -5006,6 +5415,7 @@ if __name__ == "__main__":
     # Initialize instance-specific runtime and metadata workspaces.
     globals()["TEMP_ROOT"] = OUTPUTS.parent / ".temp"
     TEMP_ROOT.mkdir(parents=True, exist_ok=True)
+    (TEMP_ROOT / "claude-code").mkdir(parents=True, exist_ok=True)
     _ensure_metadata_workspace_dirs()
 
     # Initialize instance-specific pipeline logs directory

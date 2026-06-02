@@ -52,6 +52,10 @@ a:hover {
   display: inline-flex !important;
 }
 
+.force-hidden {
+  display: none !important;
+}
+
 select.desktop-only {
   display: block !important;
 }

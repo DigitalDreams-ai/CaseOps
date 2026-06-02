@@ -99,6 +99,37 @@ def _query(org: str, soql: str, *, tooling: bool = False, timeout: int = 90) -> 
     }
 
 
+def _describe_sobject(org: str, sobject: str, *, timeout: int = 90) -> dict[str, Any]:
+    proc = _run([
+        "sf",
+        "sobject",
+        "describe",
+        "--target-org",
+        org,
+        "--sobject",
+        sobject,
+        "--json",
+    ], timeout=timeout)
+    data = _json_from_stdout(proc.stdout)
+    if proc.returncode != 0:
+        return {
+            "ok": False,
+            "returncode": proc.returncode,
+            "error": _redact(proc.stderr or proc.stdout),
+            "sobject": sobject,
+        }
+    result = data.get("result", {}) if isinstance(data, dict) else {}
+    return {
+        "ok": True,
+        "sobject": sobject,
+        "fields": result.get("fields", []),
+        "name": result.get("name"),
+        "label": result.get("label"),
+        "queryable": result.get("queryable"),
+        "retrieveable": result.get("retrieveable"),
+    }
+
+
 def _write_json(path: Path | None, data: dict[str, Any]) -> None:
     if not path:
         return
@@ -269,6 +300,44 @@ def fls(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def sobject_fields(args: argparse.Namespace) -> int:
+    out_dir = Path(args.out_dir) if args.out_dir else None
+    describe = _describe_sobject(args.org, args.sobject)
+    fields = []
+    contains = (args.contains or "").lower()
+    for field in describe.get("fields", []):
+        name = str(field.get("name") or "")
+        if contains and contains not in name.lower():
+            continue
+        fields.append({
+            "name": name,
+            "label": field.get("label"),
+            "type": field.get("type"),
+            "relationshipName": field.get("relationshipName"),
+            "referenceTo": field.get("referenceTo"),
+            "queryable": field.get("queryable"),
+            "createable": field.get("createable"),
+            "updateable": field.get("updateable"),
+        })
+    result = {
+        "kind": "sobject-fields",
+        "org": args.org,
+        "sobject": args.sobject,
+        "ok": describe.get("ok", False),
+        "contains": args.contains,
+        "fieldCount": len(fields),
+        "fields": fields,
+    }
+    if not describe.get("ok"):
+        result["describe"] = describe
+    if out_dir:
+        safe_sobject = re.sub(r"[^A-Za-z0-9_.-]+", "_", args.sobject)
+        suffix = f".{re.sub(r'[^A-Za-z0-9_.-]+', '_', args.contains)}" if args.contains else ""
+        _write_json(out_dir / f"{safe_sobject}{suffix}.sobject-fields.json", result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result["ok"] else 1
+
+
 def deploy_mdapi(args: argparse.Namespace) -> int:
     candidate = Path(args.candidate).resolve()
     attempt = Path(args.attempt).resolve()
@@ -364,6 +433,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--field", required=True)
     p.add_argument("--out-dir")
     p.set_defaults(func=fls)
+
+    p = sub.add_parser("sobject-fields", help="Describe sObject fields before writing SOQL")
+    p.add_argument("--org", required=True)
+    p.add_argument("--sobject", required=True)
+    p.add_argument("--contains")
+    p.add_argument("--out-dir")
+    p.set_defaults(func=sobject_fields)
 
     p = sub.add_parser("deploy-mdapi", help="Deploy candidate metadata through deterministic MDAPI path")
     p.add_argument("--sandbox-org", required=True)

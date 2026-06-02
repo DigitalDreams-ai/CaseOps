@@ -32,6 +32,7 @@
       <button class="menu-item" id="sync-issue-btn" onclick="runAction('sync_issue',activeKey); closeIssueActionsMenu();">Sync This Issue</button>
       <button class="menu-item primary" id="run-issue-btn" onclick="runAction('full_issue',activeKey); closeIssueActionsMenu();">Run Pipeline For This Issue</button>
       <button class="menu-item" id="reprocess-issue-btn" onclick="runAction('reprocess_issue',activeKey); closeIssueActionsMenu();">Reprocess Issue (No Sync)</button>
+      <button class="menu-item" id="force-reprocess-issue-btn" onclick="confirmForceReprocess(activeKey); closeIssueActionsMenu();" title="Run even if Jira status is Escalated to Engineering">Force Reprocess</button>
       <div style="border-top:1px solid var(--color-border); margin:6px 0; padding:0 12px;">
         <select id="transition-select-topbar" class="menu-select" style="margin-bottom:4px; width:100%;"><option value="">Change status…</option></select>
         <button class="menu-item" id="transition-btn-topbar" onclick="applyTransitionTopbar(activeKey); closeIssueActionsMenu();" disabled>Apply</button>
@@ -104,6 +105,7 @@
       <button class="btn desktop-only" id="detail-sync-btn" onclick="runAction('sync_issue',activeKey)" style="display:none;">Sync This Issue</button>
       <button class="btn primary desktop-only" id="detail-pipeline-btn" onclick="runAction('full_issue',activeKey)" style="display:none;">Run Pipeline</button>
       <button class="btn desktop-only" id="detail-reprocess-btn" onclick="runAction('reprocess_issue',activeKey)" style="display:none;">Reprocess</button>
+      <button class="btn desktop-only" id="detail-force-reprocess-btn" onclick="confirmForceReprocess(activeKey)" title="Run even if Jira status is Escalated to Engineering" style="display:none;">Force Reprocess</button>
       <select id="detail-transition-select" class="action-menu-select desktop-only" style="display:none; padding:5px 8px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:4px; font-size:12px;"><option value="">Change status…</option></select>
       <button class="btn desktop-only" id="detail-transition-btn" onclick="applyTransitionDetail(activeKey)" disabled style="display:none; padding:6px 8px;">Apply</button>
       <select id="detail-message-select" class="action-menu-select desktop-only" style="display:none; padding:5px 8px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:4px; font-size:12px;"><option value="">Send message…</option></select>
@@ -119,6 +121,7 @@
             <button class="action-menu-item" onclick="runAction('sync_issue',activeKey)">Sync This Issue</button>
             <button class="action-menu-item primary" onclick="runAction('full_issue',activeKey)">Run Pipeline For This Issue</button>
             <button class="action-menu-item" onclick="runAction('reprocess_issue',activeKey)">Reprocess Issue (No Sync)</button>
+            <button class="action-menu-item" id="detail-force-reprocess-mobile-btn" onclick="confirmForceReprocess(activeKey); closeDetailActionsMenu();" title="Run even if Jira status is Escalated to Engineering">Force Reprocess</button>
             <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
               <select id="detail-transition-select-mobile" class="action-menu-select" style="width:100%; margin-bottom:4px; font-size:12px; padding:4px;"><option value="">Change status…</option></select>
               <button class="action-menu-item" id="detail-transition-btn-mobile" onclick="applyTransitionDetailMobile(activeKey)" disabled style="width:100%; padding:6px 8px;">Apply</button>
@@ -1142,6 +1145,7 @@
       const updated = issue.updated ? issue.updated.split('.')[0] : '—';
       metaEl.textContent = `Status: ${issue.status}   |   Updated: ${updated}`;
     }
+    updateForceReprocessVisibility(issue);
 
     const headerEl = document.getElementById('detail-header');
     if (headerEl) headerEl.style.display = 'block';
@@ -1910,7 +1914,12 @@
 
     activeRuns.add(runKey);
     if (runKey !== '__global__') {
-      const initialStep = (action === 'full_issue' || action === 'reprocess_issue' || action === 'claude_instruction') ? 3 : 1;
+      const initialStep = (
+        action === 'full_issue'
+        || action === 'reprocess_issue'
+        || action === 'force_reprocess_issue'
+        || action === 'claude_instruction'
+      ) ? 3 : 1;
       updateStepIndicator(runKey, initialStep);
     }
     updateStatus();
@@ -2244,6 +2253,29 @@
       await loadIssues();
       await selectIssue(key);
     }
+  }
+
+  function updateForceReprocessVisibility(issue) {
+    const show = !!(issue && issue.is_jira_escalated);
+    [
+      'force-reprocess-issue-btn',
+      'detail-force-reprocess-btn',
+      'detail-force-reprocess-mobile-btn',
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('force-hidden', !show);
+    });
+  }
+
+  async function confirmForceReprocess(key) {
+    if (!key) return;
+    const ok = confirm(
+      `Force reprocess ${key}?\n\n` +
+      'This ignores the normal CaseOps skip for Jira issues already Escalated to Engineering. ' +
+      'Production remains read-only and Jira will not be updated automatically.'
+    );
+    if (!ok) return;
+    await runAction('force_reprocess_issue', key);
   }
 
   // ── Lightbox ──────────────────────────────────────────────
