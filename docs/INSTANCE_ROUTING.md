@@ -18,7 +18,8 @@ Claude Code subprocesses inherit the same paths from `app.py`.
 
 ```text
 /app/instance1/outputs
-/app/instance1/.temp/metadata
+/app/instance1/outputs/metadata-cache
+/app/instance1/outputs/metadata-workspaces
 /app/.env.jira
 ```
 
@@ -36,6 +37,8 @@ Host paths:
 - `outputs/org-knowledge/`
 - `outputs/pipeline-logs/`
 - `CASEOPS_METADATA_ROOT`
+- `CASEOPS_METADATA_CACHE_DIR`
+- `CASEOPS_METADATA_WORKSPACES_DIR`
 - `CASEOPS_METADATA_RAW_PROD_DIR`
 - `CASEOPS_METADATA_SANDBOX_WORK_DIR`
 - `CASEOPS_METADATA_CONFIRMED_DIR`
@@ -57,17 +60,16 @@ Shared source folders such as `skills/`, `static/`, `templates/`, and `scripts/`
 ## Metadata Workspace
 
 ```text
-${CASEOPS_METADATA_ROOT}/
-  raw-production/<KEY>/
-  sandbox-work/<KEY>/
+${CASEOPS_METADATA_WORKSPACES_DIR}/
+  <KEY>/
     metadata-workspace.json
     attempt-001/
       baseline-sandbox/
       candidate/
       revert/
-  confirmed/<KEY>/
-    support-owned/
-    engineering-proposal/
+    confirmed/
+      support-owned/
+      engineering-proposal/
 ```
 
 ## Runtime Checks

@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REAL_SF="${CASEOPS_REAL_SF:-/usr/local/bin/sf}"
+
+if [[ ! -x "$REAL_SF" ]]; then
+  echo "CaseOps sf guard: real Salesforce CLI not executable: $REAL_SF" >&2
+  exit 127
+fi
+
+prod_aliases=()
+[[ -n "${CASEOPS_PRODUCTION_READ_ORG:-}" ]] && prod_aliases+=("$CASEOPS_PRODUCTION_READ_ORG")
+[[ -n "${CASEOPS_PRODUCTION_ORG:-}" ]] && prod_aliases+=("$CASEOPS_PRODUCTION_ORG")
+
+target_org=""
+args=("$@")
+for ((i=0; i<${#args[@]}; i++)); do
+  case "${args[$i]}" in
+    --target-org|--targetusername|-o|-u)
+      if (( i + 1 < ${#args[@]} )); then
+        target_org="${args[$((i+1))]}"
+      fi
+      ;;
+    --target-org=*|--targetusername=*)
+      target_org="${args[$i]#*=}"
+      ;;
+  esac
+done
+
+is_mutating=0
+first="${1:-}"
+second="${2:-}"
+third="${3:-}"
+
+case "$first $second" in
+  "data create"|"data update"|"data delete"|"data upsert"|"data import"|"data tree"|"project deploy"|"project delete"|"apex run"|"org assign")
+    is_mutating=1
+    ;;
+esac
+
+case "$first $second $third" in
+  "data create record"|"data update record"|"data delete record"|"data upsert bulk"|"project deploy start"|"project delete source"|"apex run test"|"org assign permset"|"org assign permsetlicense")
+    is_mutating=1
+    ;;
+esac
+
+case "$first" in
+  force:data:*:create|force:data:*:update|force:data:*:delete|force:source:deploy|force:mdapi:deploy|force:apex:execute|force:user:permset:assign)
+    is_mutating=1
+    ;;
+esac
+
+if [[ "$is_mutating" == "1" ]]; then
+  if [[ -z "$target_org" ]]; then
+    echo "CaseOps sf guard: blocked mutating sf command without explicit --target-org/-o. Use the allowlisted Sandbox alias for writes." >&2
+    exit 64
+  fi
+  for prod in "${prod_aliases[@]}"; do
+    if [[ -n "$prod" && "$target_org" == "$prod" ]]; then
+      echo "CaseOps sf guard: blocked mutating sf command against Production alias '$target_org'. Production is read-only in normal pipeline runs." >&2
+      exit 64
+    fi
+  done
+fi
+
+exec "$REAL_SF" "$@"

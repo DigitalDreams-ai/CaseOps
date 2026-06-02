@@ -119,20 +119,27 @@ The orchestrator keeps sub-agent summaries compact and relies on files for detai
 Current implementation:
 
 ```text
-instance1/.temp/metadata/
-  raw-production/<KEY>/
-  sandbox-work/<KEY>/attempt-N/
-    baseline-sandbox/
-    candidate/
-    revert/
-  confirmed/<KEY>/
-    support-owned/
-    engineering-proposal/
+instance1/outputs/metadata-cache/
+  production/<org>/<api-version>/
+    raw/<KEY>/
+    summaries/
+instance1/outputs/metadata-workspaces/
+  <KEY>/
+    metadata-workspace.json
+    attempt-N/
+      baseline-sandbox/
+      candidate/
+      revert/
+    confirmed/
+      support-owned/
+      engineering-proposal/
 ```
 
 These paths are exposed to Claude subprocesses through:
 
 - `CASEOPS_METADATA_ROOT`
+- `CASEOPS_METADATA_CACHE_DIR`
+- `CASEOPS_METADATA_WORKSPACES_DIR`
 - `CASEOPS_METADATA_RAW_PROD_DIR`
 - `CASEOPS_METADATA_SANDBOX_WORK_DIR`
 - `CASEOPS_METADATA_CONFIRMED_DIR`

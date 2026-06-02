@@ -25,7 +25,8 @@ Jira API
 | `skills/` | Claude Code skills and prompts |
 | `scripts/sf_caseops_helper.py` | Deterministic Salesforce helper commands |
 | `instance1/outputs/` | Persistent issue artifacts and appdata |
-| `instance1/.temp/metadata/` | Current Salesforce metadata workspace |
+| `instance1/outputs/metadata-cache/` | Persistent read-only Production metadata cache |
+| `instance1/outputs/metadata-workspaces/` | Persistent issue workspaces, Sandbox attempts, rollback evidence, confirmed packages |
 
 ## Pipeline
 
@@ -64,14 +65,23 @@ instance1/
     pipeline-logs/
     settings/
     org-knowledge/
-  .temp/
-    metadata/
-      raw-production/
-      sandbox-work/
+  metadata-cache/
+    production/<org>/<api-version>/
+      raw/
+      summaries/
+  metadata-workspaces/
+    <KEY>/
+      metadata-workspace.json
+      attempt-001/
+        baseline-sandbox/
+        candidate/
+        revert/
       confirmed/
+        support-owned/
+        engineering-proposal/
 ```
 
-`outputs/` is persistent appdata. `.temp/metadata/` is the current metadata workspace. The pilot hardening backlog tracks moving long-lived confirmed/rollback metadata into persistent `outputs/metadata-workspaces/`.
+`outputs/` is persistent appdata. Legacy `.temp/metadata/` is migration-only historical evidence and is not used for new work.
 
 ## Salesforce Metadata Rules
 
@@ -89,7 +99,7 @@ Sandbox attempts:
 
 Confirmed work:
 
-- copied to `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/` or `engineering-proposal/`
+- copied to `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/support-owned/` or `confirmed/engineering-proposal/`
 - still not deployed to Production by CaseOps
 
 ## Salesforce Command Rules

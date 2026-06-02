@@ -47,6 +47,6 @@ If validation fails:
 
 If validation passes:
 
-- Copy the final deployable package to `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/` for Support-owned fixes, or `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/engineering-proposal/` for Engineering handoff proposals.
+- Copy the final deployable package to `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/support-owned/` for Support-owned fixes, or `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/engineering-proposal/` for Engineering handoff proposals.
 - Record the confirmed package path in `outputs/test-reports/<KEY>.md`.
 - Mark the confirmed package path in `metadata-workspace.json`.

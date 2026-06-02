@@ -21,7 +21,7 @@
 - Read that value from the file **before** every deploy or write. The CLI target **must match it exactly**. If it does not match, **STOP** — do not deploy elsewhere, including another sandbox.
 - If **`CASEOPS_SANDBOX_TARGET_ORG`** is unset or empty, **STOP** — do not deploy until the operator sets it.
 - Changing the allowlisted org is done by editing **`.env.jira`**, not by choosing a different org in chat.
-- `jira-salesforce-fix-pipeline` **always** invokes **`salesforce-sandbox-deploy-test`** after a Support-resolvable implementation (deploy + test are mandatory on that path).
+- `jira-salesforce-fix-pipeline` invokes **`salesforce-sandbox-deploy-test`** only when there is a deployable metadata/code candidate or a Sandbox-safe configuration change. Existing Production permission assignments, data corrections, and admin/config actions are documented as no-deploy operator actions and must not be executed by CaseOps.
 - "Run the pipeline" or any general instruction does **not** authorize writes to Production or to any org other than **`CASEOPS_SANDBOX_TARGET_ORG`**.
 - Record all deployment commands and results.
 - Test in the allowlisted Sandbox before claiming the issue is fixed.
@@ -55,7 +55,7 @@ Examples in docs may show org aliases like `10xhealth-sean` — your environment
 
 - **Never** describe a fix as if new or changed metadata already exists in **Production** when it was only deployed or validated in **Sandbox**, unless a **read-only Production check** confirms it.
 - Every **confirmed** Support outcome must say whether the operator must **promote metadata to Production** (e.g. **Gearset**) or whether **no Production deploy** is needed because the relevant metadata **already exists in Production** (or the fix was data/config/access only).
-- This pipeline **does not** deploy to or mutate **Production** unless the operator **explicitly** requests it. Phrases like “add a permission set” must clarify **Sandbox create** vs **already in Production** vs **deploy pending**.
+- This normal pipeline **does not** deploy to or mutate **Production**. Phrases like “add a permission set” or “create this data record” must be documented as operator/admin actions, not executed commands.
 
 ## Check Before Creating
 

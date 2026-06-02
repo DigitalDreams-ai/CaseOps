@@ -551,8 +551,53 @@ _ORG_KNOWLEDGE_REQUIRED_LINES: dict[str, list[str]] = {
 }
 
 
+def _safe_path_component(value: str, default: str) -> str:
+    """Return a conservative path component for metadata cache/workspace paths."""
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(value or "").strip()).strip(".-")
+    return cleaned or default
+
+
 def _metadata_workspace_dirs() -> dict[str, Path]:
-    """Return the instance-scoped Salesforce metadata workspace directories."""
+    """Return persistent Salesforce metadata cache/workspace directories.
+
+    Env var names stay stable for skills, but the backing paths now live under
+    OUTPUTS so rollback evidence and confirmed packages survive as appdata.
+    """
+    prod_org = _safe_path_component(
+        os.environ.get("CASEOPS_PRODUCTION_READ_ORG") or "production",
+        "production",
+    )
+    api_version_raw = (
+        os.environ.get("CASEOPS_SALESFORCE_API_VERSION")
+        or os.environ.get("SF_API_VERSION")
+        or "v66.0"
+    )
+    api_version = _safe_path_component(
+        api_version_raw if str(api_version_raw).startswith("v") else f"v{api_version_raw}",
+        "v66.0",
+    )
+    cache_root = OUTPUTS / "metadata-cache"
+    workspace_root = OUTPUTS / "metadata-workspaces"
+    raw_prod = cache_root / "production" / prod_org / api_version / "raw"
+    return {
+        "root": workspace_root,
+        "cache_root": cache_root,
+        "raw_prod": raw_prod,
+        "raw_prod_summaries": cache_root / "production" / prod_org / api_version / "summaries",
+        "sandbox_work": workspace_root,
+        "confirmed": workspace_root,
+    }
+
+
+def _ensure_metadata_workspace_dirs() -> None:
+    """Create the shared directory contract used by Salesforce pipeline agents."""
+    for path in _metadata_workspace_dirs().values():
+        path.mkdir(parents=True, exist_ok=True)
+    _migrate_legacy_metadata_workspace()
+
+
+def _legacy_metadata_workspace_dirs() -> dict[str, Path]:
+    """Return the old `.temp/metadata` workspace directories for migration only."""
     base_temp = TEMP_ROOT if TEMP_ROOT is not None else OUTPUTS.parent / ".temp"
     root = base_temp / "metadata"
     return {
@@ -563,10 +608,67 @@ def _metadata_workspace_dirs() -> dict[str, Path]:
     }
 
 
-def _ensure_metadata_workspace_dirs() -> None:
-    """Create the shared directory contract used by Salesforce pipeline agents."""
-    for path in _metadata_workspace_dirs().values():
-        path.mkdir(parents=True, exist_ok=True)
+def _copy_tree_missing(src: Path, dst: Path) -> int:
+    """Copy files from src to dst without overwriting existing files."""
+    copied = 0
+    if not src.is_dir():
+        return copied
+    for item in src.rglob("*"):
+        rel = item.relative_to(src)
+        target = dst / rel
+        if item.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+            continue
+        if target.exists():
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(item, target)
+        copied += 1
+    return copied
+
+
+def _migrate_legacy_metadata_workspace() -> None:
+    """Copy old `.temp/metadata` evidence into the persistent outputs layout.
+
+    The old tree is left untouched. This is deliberately non-destructive and
+    missing-file only so reruns cannot overwrite newer workspace artifacts.
+    """
+    legacy = _legacy_metadata_workspace_dirs()
+    current = _metadata_workspace_dirs()
+    legacy_root = legacy["root"]
+    if not legacy_root.is_dir():
+        return
+    marker = current["root"] / ".legacy-migration.json"
+    copied: dict[str, int] = {}
+
+    copied["raw-production"] = _copy_tree_missing(legacy["raw_prod"], current["raw_prod"])
+    copied["sandbox-work"] = _copy_tree_missing(legacy["sandbox_work"], current["sandbox_work"])
+
+    confirmed_count = 0
+    if legacy["confirmed"].is_dir():
+        for issue_dir in legacy["confirmed"].iterdir():
+            if issue_dir.is_dir():
+                confirmed_count += _copy_tree_missing(
+                    issue_dir,
+                    current["confirmed"] / issue_dir.name / "confirmed",
+                )
+    copied["confirmed"] = confirmed_count
+
+    if any(copied.values()) or not marker.exists():
+        marker.write_text(
+            json.dumps(
+                {
+                    "legacyRoot": str(legacy_root),
+                    "persistentRoot": str(current["root"]),
+                    "copied": copied,
+                    "migratedAt": datetime.now(timezone.utc).isoformat(),
+                    "note": "Legacy files were copied missing-file-only; legacy tree was not deleted.",
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
 
 
 def _org_knowledge_dir() -> Path:
@@ -1275,6 +1377,8 @@ _ANSI_CONTROL_RE = re.compile(
 )
 _BROKEN_ANSI_CONTROL_RE = re.compile(r"\uFFFD\[[0-?]*[ -/]*[@-~]")
 _SALESFORCE_ACCESS_TOKEN_RE = re.compile(r"\b00D[A-Za-z0-9]{12,18}![A-Za-z0-9._~=-]{20,}\b")
+_SALESFORCE_FRONTDOOR_SID_RE = re.compile(r"(?i)([?&]sid=)[^\s&\"'<>]+")
+_SFDX_AUTH_URL_RE = re.compile(r"force://[^\s\"'<>]+")
 
 
 def _pipeline_log_path(run_key: str) -> Path:
@@ -1287,6 +1391,8 @@ def _sanitize_pipeline_log_text(text: str) -> str:
     cleaned = _ANSI_CONTROL_RE.sub("", str(text))
     cleaned = _BROKEN_ANSI_CONTROL_RE.sub("", cleaned)
     cleaned = _SALESFORCE_ACCESS_TOKEN_RE.sub("[REDACTED_SF_ACCESS_TOKEN]", cleaned)
+    cleaned = _SALESFORCE_FRONTDOOR_SID_RE.sub(r"\1[REDACTED_SF_FRONTDOOR_SID]", cleaned)
+    cleaned = _SFDX_AUTH_URL_RE.sub("[REDACTED_SFDX_AUTH_URL]", cleaned)
     cleaned = cleaned.replace("\r", "\n").replace("\b", "")
     return cleaned.rstrip()
 
@@ -1345,6 +1451,54 @@ def _read_text_for_resume(path: Path, max_chars: int = 80_000) -> str:
     except OSError:
         return ""
     return text if len(text) <= max_chars else text[:max_chars]
+
+
+_RECENT_EVIDENCE_RE = re.compile(
+    r"(?is)"
+    r"(?:root cause confirmed|confirmed root cause|classification complete|fix confirmed|"
+    r"support-resolvable|no-deploy|no deploy|no apex changes needed|sandbox deploy skipped|"
+    r"production deploy|engineering escalation|engineering-required|missing .*access|"
+    r"missing .*permission|permission set|ready for production|artifacts written)"
+)
+
+
+def _recent_pipeline_evidence(key: str, max_lines: int = 10) -> list[str]:
+    """Return compact decision evidence from recent runs for resume prompts."""
+    try:
+        log_path = _pipeline_log_path(key)
+    except Exception:
+        log_path = OUTPUTS / "pipeline-logs" / f"{re.sub(r'[^A-Za-z0-9._-]', '_', key) or 'unknown'}.jsonl"
+    if not log_path.is_file():
+        return []
+    try:
+        raw_lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+
+    evidence: list[str] = []
+    seen: set[str] = set()
+    for raw in raw_lines[-250:]:
+        try:
+            rec = json.loads(raw)
+        except Exception:
+            continue
+        if rec.get("kind") == "done":
+            continue
+        text = _sanitize_pipeline_log_text(str(rec.get("text") or "")).strip()
+        if not text or text.startswith("[Bash]") or text.startswith("[Read]") or text.startswith("[Edit]") or text.startswith("[Write]"):
+            continue
+        if not _RECENT_EVIDENCE_RE.search(text):
+            continue
+        compact = re.sub(r"\s+", " ", text)
+        if len(compact) > 500:
+            compact = compact[:497].rstrip() + "..."
+        key_norm = compact.lower()
+        if key_norm in seen:
+            continue
+        seen.add(key_norm)
+        evidence.append(compact)
+
+    return evidence[-max_lines:]
 
 
 def _artifact_snapshot(path: Path, source_mtime: float | None = None) -> dict[str, Any]:
@@ -1440,12 +1594,15 @@ def _build_pipeline_resume_plan(key: str, status: str = "", jira_updated: str | 
     internal_notes = _read_text_for_resume(paths["internal_notes"])
     jira_message = _read_text_for_resume(paths["jira_message"])
     eng_handoff = _read_text_for_resume(paths["eng_handoff"])
+    recent_evidence = _recent_pipeline_evidence(key)
     diagnosis_text = "\n".join([investigation, hypothesis, internal_notes, eng_handoff])
+    recent_evidence_text = "\n".join(recent_evidence)
+    diagnosis_and_recent_text = "\n".join([diagnosis_text, recent_evidence_text])
 
     metadata_dirs = _metadata_workspace_dirs()
     raw_metadata_dir = metadata_dirs["raw_prod"] / key
     sandbox_work_dir = metadata_dirs["sandbox_work"] / key
-    confirmed_dir = metadata_dirs["confirmed"] / key
+    confirmed_dir = metadata_dirs["confirmed"] / key / "confirmed"
     metadata_manifest = sandbox_work_dir / "metadata-workspace.json"
     metadata = {
         "raw_production_dir": {"path": _path_relative_for_prompt(raw_metadata_dir), "has_files": _directory_has_files(raw_metadata_dir)},
@@ -1481,16 +1638,23 @@ def _build_pipeline_resume_plan(key: str, status: str = "", jira_updated: str | 
         step4_current = artifacts["step4_hypothesis"]["current"] and artifacts["step4_hypothesis"]["size"] > 80
         step4_inline = bool(artifacts["investigation"]["current"] and re.search(r"(?is)root cause hypothesis|smallest viable fix|sandbox validation plan|solution plan", investigation))
         problem_location = bool(artifacts["investigation"]["current"] and re.search(r"(?is)problem location|specific artifact|failure point|confirmed root cause|root cause", investigation))
-        route_known = bool(artifacts["eng_handoff"]["current"] or re.search(r"(?is)support-resolvable|engineering[- ]required|engineering escalation|escalate to engineering", diagnosis_text))
+        route_known = bool(artifacts["eng_handoff"]["current"] or re.search(r"(?is)support-resolvable|engineering[- ]required|engineering escalation|escalate to engineering|classification complete|no-deploy|no deploy|sandbox deploy skipped", diagnosis_and_recent_text))
         candidate_exists = bool(
             metadata["sandbox_work_dir"]["has_files"]
             or metadata["confirmed_dir"]["has_files"]
-            or re.search(r"(?is)proposed solution|candidate|changed files|components changed|deploy", "\n".join([investigation, test_report]))
+            or re.search(r"(?is)proposed solution|candidate|changed files|components changed|deploy|permission set assignment|assigning .*permission set|no-deploy", "\n".join([investigation, test_report, recent_evidence_text]))
         )
         test_current = artifacts["test_report"]["current"] and artifacts["test_report"]["size"] > 80
         test_passed = _test_report_confirms_fix(key)
         test_failed = bool(test_current and not test_passed and re.search(r"(?is)\bfail(?:ed|ing)?\b|not fixed|revert|required: yes|blocked", test_report))
-        engineering_path = bool(artifacts["eng_handoff"]["current"] or re.search(r"(?is)engineering escalation|escalate to engineering|engineering-required", diagnosis_text))
+        support_path = bool(re.search(r"(?is)support-resolvable|no\s+engineering\s+escalation|engineering\s+escalation:\s*(?:none|no)|no-deploy|no deploy|sandbox deploy skipped", diagnosis_and_recent_text))
+        engineering_path = bool(
+            artifacts["eng_handoff"]["current"]
+            or (
+                re.search(r"(?is)engineering escalation|escalate to engineering|engineering-required", diagnosis_and_recent_text)
+                and not support_path
+            )
+        )
         step10_artifacts_current = bool(
             artifacts["internal_notes"]["current"]
             and artifacts["internal_notes"]["size"] > 80
@@ -1538,7 +1702,7 @@ def _build_pipeline_resume_plan(key: str, status: str = "", jira_updated: str | 
                 "Engineering escalation gate",
                 "complete" if route_known else ("blocked" if not problem_location else "pending"),
                 "Routing decision is already documented." if route_known else "Requires exact problem location first." if not problem_location else "Routing decision is not explicit.",
-                "Emit STEP_7 resume-skip; preserve existing Support vs Engineering route." if route_known else "Classify Support-resolvable vs Engineering-required and document decision.",
+                "Emit STEP_7 resume-skip; preserve existing Support vs Engineering route. If the route is known only from recent evidence, write it into the investigation artifact before continuing." if route_known else "Classify Support-resolvable vs Engineering-required and document decision.",
                 [artifacts["eng_handoff"]["path"], artifacts["investigation"]["path"]],
             ),
             _resume_step(
@@ -1605,6 +1769,7 @@ def _build_pipeline_resume_plan(key: str, status: str = "", jira_updated: str | 
         "next_step": next_step,
         "artifacts": artifacts,
         "metadata": metadata,
+        "recent_evidence": recent_evidence,
         "steps": steps,
     }
 
@@ -1627,10 +1792,21 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
         "- Rule: completed steps are not work items. Emit one concise `STEP_N <KEY> resume-skip` line if needed for progress, then continue.",
         "- Rule: do not reread or rewrite completed artifacts unless a pending/stale downstream step needs exact details.",
         "- Rule: if Jira source changed after an artifact, treat that artifact and downstream artifacts as stale.",
+        "- Rule: recent evidence below is run history, not a prompt. Use it to avoid rediscovering confirmed facts; if it proves a route, update the durable artifact and continue.",
         "",
+    ]
+    recent_evidence = plan.get("recent_evidence") or []
+    if recent_evidence:
+        lines.extend([
+            "## Recent Pipeline Evidence",
+            "These concise lines are from prior/current run logs and should prevent repeated investigation:",
+        ])
+        lines.extend(f"- {line}" for line in recent_evidence[:10])
+        lines.append("")
+    lines.extend([
         "| Step | Status | Action |",
         "| --- | --- | --- |",
-    ]
+    ])
     for step in plan.get("steps", []):
         lines.append(f"| {step.get('step')} {step.get('name')} | {step.get('status')} | {step.get('action')} |")
     return "\n".join(lines)
@@ -1654,6 +1830,29 @@ def _log_resume_plan_summary(run_key: str, plan: dict[str, Any], plan_path: Path
         run_key,
         f"Resume planner: next STEP_{step_num} ({name}, {status}); {completed}/{total} step checkpoints complete. Plan: {_path_relative_for_prompt(plan_path)}",
     )
+
+
+def _resume_plan_short_circuit(run_key: str, plan: dict[str, Any]) -> bool:
+    """Return True after logging completion when no Claude work remains."""
+    steps = plan.get("steps") or []
+    pending_work = [
+        step for step in steps
+        if step.get("step") != 12 and step.get("status") not in {"complete", "skipped"}
+    ]
+    if pending_work:
+        return False
+
+    mode = str(plan.get("mode") or "")
+    key = str(plan.get("key") or run_key)
+    if mode == "closed":
+        _log_emit_line(run_key, f"STEP_2 {key} resume-skip — closed/resolved archive is already current.")
+    elif mode == "escalated":
+        _log_emit_line(run_key, f"STEP_2 {key} resume-skip — pre-escalated handoff is already current.")
+    else:
+        _log_emit_line(run_key, f"Resume planner: no actionable pipeline steps remain for {key}.")
+    _log_emit_line(run_key, "STEP_12 __complete__")
+    _log_emit_line(run_key, "No Claude run needed; existing artifacts are current.")
+    return True
 
 
 def manifest_changed(changed_keys: list[str] | None = None) -> None:
@@ -1700,6 +1899,29 @@ _log_q: queue.Queue[str] = queue.Queue()  # tagged messages: "key|line" or "__do
 _manifest_q: queue.Queue[str] = queue.Queue()  # manifest change notifications
 
 
+def _apply_caseops_env_aliases(env: dict[str, str]) -> None:
+    """Expose stable alias names for Claude/subprocess prompts without changing canonical settings."""
+    prod_alias = (env.get("CASEOPS_PRODUCTION_READ_ORG") or "").strip()
+    sandbox_alias = (env.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
+    if prod_alias and not (env.get("CASEOPS_PRODUCTION_ORG") or "").strip():
+        env["CASEOPS_PRODUCTION_ORG"] = prod_alias
+    if sandbox_alias and not (env.get("CASEOPS_SANDBOX_ORG") or "").strip():
+        env["CASEOPS_SANDBOX_ORG"] = sandbox_alias
+
+
+def _apply_caseops_sf_guard_env(env: dict[str, str]) -> None:
+    """Route Claude/subprocess sf calls through the CaseOps Production write guard."""
+    if os.name == "nt":
+        return
+    guard_dir = ROOT / "scripts" / "sf-guard"
+    guard = guard_dir / "sf"
+    if not guard.exists():
+        return
+    env.setdefault("CASEOPS_REAL_SF", "/usr/local/bin/sf")
+    path = env.get("PATH") or os.environ.get("PATH") or ""
+    env["PATH"] = f"{guard_dir}{os.pathsep}{path}" if path else str(guard_dir)
+
+
 def _claude_process_env() -> dict[str, str]:
     """Environment for Claude Code CLI subprocess.
 
@@ -1720,6 +1942,8 @@ def _claude_process_env() -> dict[str, str]:
         env["BROWSER"] = chrome
         if not (env.get("CLAUDE_CODE_CHROME_PATH") or "").strip():
             env["CLAUDE_CODE_CHROME_PATH"] = chrome
+    _apply_caseops_env_aliases(env)
+    _apply_caseops_sf_guard_env(env)
     # Pass instance-specific directories to Claude Skill
     env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
     env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")
@@ -1728,6 +1952,8 @@ def _claude_process_env() -> dict[str, str]:
         env["CASEOPS_TEMP_DIR"] = str(TEMP_ROOT)
     metadata_dirs = _metadata_workspace_dirs()
     env["CASEOPS_METADATA_ROOT"] = str(metadata_dirs["root"])
+    env["CASEOPS_METADATA_CACHE_DIR"] = str(metadata_dirs["cache_root"])
+    env["CASEOPS_METADATA_WORKSPACES_DIR"] = str(metadata_dirs["root"])
     env["CASEOPS_METADATA_RAW_PROD_DIR"] = str(metadata_dirs["raw_prod"])
     env["CASEOPS_METADATA_SANDBOX_WORK_DIR"] = str(metadata_dirs["sandbox_work"])
     env["CASEOPS_METADATA_CONFIRMED_DIR"] = str(metadata_dirs["confirmed"])
@@ -1813,6 +2039,38 @@ def _run_cli_command(
     return subprocess.CompletedProcess(cmd, 124, stdout=stdout, stderr=stderr)
 
 
+def _sf_auth_from_access_token(
+    *,
+    sf_bin: str,
+    alias: str,
+    token: str,
+    instance_url: str,
+    env: dict[str, str],
+    timeout: int = 35,
+) -> subprocess.CompletedProcess[str]:
+    """Authenticate one Salesforce CLI alias from an env-held access token."""
+    auth_env = env.copy()
+    auth_env["SF_ACCESS_TOKEN"] = token
+    auth_env.setdefault("HOME", str(Path.home()))
+    return _run_cli_command(
+        [
+            sf_bin,
+            "org",
+            "login",
+            "access-token",
+            "--alias",
+            alias,
+            "--instance-url",
+            instance_url,
+            "--no-prompt",
+            "--json",
+        ],
+        env=auth_env,
+        timeout=timeout,
+        retries=1,
+    )
+
+
 def _content_text_fragments(value: Any) -> list[str]:
     """Extract readable text fragments from Claude stream-json content blocks."""
     fragments: list[str] = []
@@ -1852,10 +2110,23 @@ def _is_file_read_tool(tool: str, detail: str) -> bool:
     return tool_name in {"bash", "powershell", "shell"} and any(cmd in normalized for cmd in read_commands)
 
 
-def _emit_tool_result_text(run_key: str, text: str, *, suppress: bool, max_lines: int = 80) -> None:
+def _is_suppressed_tool_result(tool: str, detail: str) -> bool:
+    """Hide tool results that are prompts/transcripts rather than useful operator progress."""
+    tool_name = (tool or "").lower()
+    if tool_name in {"agent", "workflow"}:
+        return True
+    return _is_file_read_tool(tool, detail)
+
+
+def _emit_tool_result_text(run_key: str, text: str, *, suppress: bool, max_lines: int = 12) -> None:
     if suppress:
         return
-    lines = [line for line in text.splitlines() if line.strip()]
+    noisy_json_keys = ('"stack":', '"cause":')
+    lines = [
+        line
+        for line in text.splitlines()
+        if line.strip() and not any(key in line for key in noisy_json_keys)
+    ]
     for line in lines[:max_lines]:
         _log_emit_line(run_key, line)
     if len(lines) > max_lines:
@@ -1934,16 +2205,51 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
             fail(f"Missing {role} Salesforce org alias in .env.jira.")
             return
 
+        token_key = "SF_PROD_ACCESS_TOKEN" if role == "prod" else "SF_SANDBOX_ACCESS_TOKEN"
+        url_keys = (
+            ("SF_PROD_INSTANCE_URL", "CASEOPS_PRODUCTION_INSTANCE_URL")
+            if role == "prod"
+            else ("SF_SANDBOX_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL")
+        )
+        access_token = _env_first(token_key, settings=settings)
+        instance_url = _env_first(*url_keys, settings=settings)
+
         display = _run_cli_command(
             [sf_bin, "org", "display", "--target-org", alias, "--json"],
             env=env,
             timeout=25,
             retries=1,
         )
+        if display.returncode != 0 and access_token and instance_url:
+            role_status["auth_attempted_from_env_token"] = True
+            auth = _sf_auth_from_access_token(
+                sf_bin=sf_bin,
+                alias=alias,
+                token=access_token,
+                instance_url=instance_url,
+                env=env,
+            )
+            role_status["auth_returncode"] = auth.returncode
+            if auth.returncode != 0:
+                role_status["auth_error"] = _command_error(auth)
+            else:
+                global _sf_orgs_cache, _sf_orgs_cache_time
+                _sf_orgs_cache = None
+                _sf_orgs_cache_time = 0.0
+                display = _run_cli_command(
+                    [sf_bin, "org", "display", "--target-org", alias, "--json"],
+                    env=env,
+                    timeout=25,
+                    retries=1,
+                )
+
         role_status["display_returncode"] = display.returncode
         if display.returncode != 0:
             role_status["error"] = _command_error(display)
-            fail(f"Salesforce {role} org `{alias}` is not authenticated in the pipeline runtime environment.")
+            if access_token and instance_url:
+                fail(f"Salesforce {role} org `{alias}` could not be authenticated from the saved CaseOps token.")
+            else:
+                fail(f"Salesforce {role} org `{alias}` is not authenticated in the pipeline runtime environment and the saved token/url is missing.")
             return
 
         data = _json_from_stdout(display.stdout)
@@ -2004,6 +2310,10 @@ def _emit_runtime_preflight_or_stop(run_key: str, run_soql: bool = True) -> bool
     _log_emit_line(run_key, f"Preflight: subprocess HOME={home}")
     if sf_status.get("version_warning"):
         _log_emit_line(run_key, f"Preflight warning: sf --version did not complete cleanly: {sf_status.get('version_warning')}")
+    if prod.get("auth_attempted_from_env_token"):
+        _log_emit_line(run_key, "Preflight: Production sf alias was authenticated from saved CaseOps token")
+    if sandbox.get("auth_attempted_from_env_token"):
+        _log_emit_line(run_key, "Preflight: Sandbox sf alias was authenticated from saved CaseOps token")
     _log_emit_line(run_key, f"Preflight: Production org `{prod.get('alias')}` authenticated={bool(prod.get('authenticated'))} soql={bool(prod.get('soql_ok')) if run_soql else 'skipped'}")
     _log_emit_line(run_key, f"Preflight: Sandbox org `{sandbox.get('alias')}` authenticated={bool(sandbox.get('authenticated'))} soql={bool(sandbox.get('soql_ok')) if run_soql else 'skipped'}")
 
@@ -2019,7 +2329,7 @@ def _emit_runtime_preflight_or_stop(run_key: str, run_soql: bool = True) -> bool
 
 
 def _salesforce_browser_prompt_section() -> str:
-    """Tell Claude how to open Salesforce when CaseOps spawns the CLI (no secrets logged to SSE)."""
+    """Tell Claude how to open Salesforce when CaseOps spawns the CLI without exposing link secrets."""
     chrome = (os.environ.get("CASEOPS_CLAUDE_BROWSER") or "").strip()
     generic = (os.environ.get("CASEOPS_SALESFORCE_MAGIC_LINK") or "").strip()
     prod_magic = (os.environ.get("CASEOPS_PRODUCTION_MAGIC_LINK") or "").strip()
@@ -2045,22 +2355,21 @@ def _salesforce_browser_prompt_section() -> str:
         )
     if generic:
         lines.append(
-            "- Open this **session / frontdoor link** in Chrome Dev only for visual inspection when the target org is not specified below "
-            "(do not paste into Jira, git commits, or customer-facing artifacts):"
+            "- Generic visual-only Salesforce session link is configured in `CASEOPS_SALESFORCE_MAGIC_LINK`. "
+            "Read it only at the moment a browser inspection is required. Do not echo, print, log, paste, or store its value."
         )
-        lines.append(generic)
     if prod_magic:
         lines.append(
             f"- **Production ({prod_label})** via `CASEOPS_PRODUCTION_MAGIC_LINK` — **visual read-only only**. "
-            "Use `sf` CLI/SOQL for queries and metadata inspection. No Production creates, edits, deletes, deployments, or API calls with the frontdoor SID:"
+            "Use `sf` CLI/SOQL for queries and metadata inspection. No Production creates, edits, deletes, deployments, "
+            "or API calls with the frontdoor SID. Do not echo, print, log, paste, or store this env var value."
         )
-        lines.append(prod_magic)
     if sand_magic:
         lines.append(
             f"- **Sandbox ({sand_label})** via `CASEOPS_SANDBOX_MAGIC_LINK` — visual UI fallback only. "
-            "Use `sf project deploy`, `sf data query`, Apex tests, and other CLI commands for investigation/deploy/test unless a browser-only action is required:"
+            "Use `sf project deploy`, `sf data query`, Apex tests, and other CLI commands for investigation/deploy/test unless "
+            "a browser-only action is required. Do not echo, print, log, paste, or store this env var value."
         )
-        lines.append(sand_magic)
     if not has_magic:
         lines.append(
             "- No Salesforce session link is set in `.env.jira` "
@@ -2082,6 +2391,15 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
         env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
         if TEMP_ROOT:
             env["CASEOPS_TEMP_DIR"] = str(TEMP_ROOT)
+        metadata_dirs = _metadata_workspace_dirs()
+        env["CASEOPS_METADATA_ROOT"] = str(metadata_dirs["root"])
+        env["CASEOPS_METADATA_CACHE_DIR"] = str(metadata_dirs["cache_root"])
+        env["CASEOPS_METADATA_WORKSPACES_DIR"] = str(metadata_dirs["root"])
+        env["CASEOPS_METADATA_RAW_PROD_DIR"] = str(metadata_dirs["raw_prod"])
+        env["CASEOPS_METADATA_SANDBOX_WORK_DIR"] = str(metadata_dirs["sandbox_work"])
+        env["CASEOPS_METADATA_CONFIRMED_DIR"] = str(metadata_dirs["confirmed"])
+        _apply_caseops_env_aliases(env)
+        _apply_caseops_sf_guard_env(env)
 
         # Pass skill paths (registered at startup)
         env["CASEOPS_SKILL_PATHS"] = json.dumps(SKILL_PATHS)
@@ -2249,7 +2567,8 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
     cmd = [
         claude_bin,
         "-p",
-        prompt,
+        "--input-format",
+        "text",
         "--output-format",
         "stream-json",
         "--verbose",
@@ -2272,13 +2591,13 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
 
         env = _claude_process_env()
         env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
-        _log_emit_line(run_key, f"Invoking: {claude_bin} -p [prompt redacted] --output-format stream-json ...")
+        _log_emit_line(run_key, f"Invoking: {claude_bin} -p <stdin redacted> --output-format stream-json ...")
         proc = subprocess.Popen(
             cmd,
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            stdin=subprocess.DEVNULL,
+            stdin=subprocess.PIPE,
             text=True,
             encoding="utf-8",
             errors="replace",
@@ -2286,20 +2605,77 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
             bufsize=1,
         )
         _log_emit_line(run_key, f"Process started (PID: {proc.pid})")
+        assert proc.stdin
+        proc.stdin.write(prompt)
+        proc.stdin.close()
         assert proc.stdout
+        assert proc.stderr
         assistant_text = []
         tool_uses: dict[str, tuple[str, str]] = {}
-        for raw in proc.stdout:
-            raw = raw.strip()
+        stream_q: queue.Queue[tuple[str, str | None]] = queue.Queue()
+
+        def _read_pipe(pipe: Any, label: str) -> None:
+            try:
+                for line in pipe:
+                    stream_q.put((label, line))
+            finally:
+                stream_q.put((label, None))
+
+        threading.Thread(target=_read_pipe, args=(proc.stdout, "stdout"), daemon=True).start()
+        threading.Thread(target=_read_pipe, args=(proc.stderr, "stderr"), daemon=True).start()
+
+        idle_timeout = int(os.environ.get("CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS", "240"))
+        total_timeout = int(os.environ.get("CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS", "1200"))
+        started_at = time.monotonic()
+        last_output_at = started_at
+        open_streams = {"stdout", "stderr"}
+        killed_for_timeout = False
+
+        while open_streams:
+            try:
+                source, raw_value = stream_q.get(timeout=15)
+            except queue.Empty:
+                now = time.monotonic()
+                if proc.poll() is not None:
+                    continue
+                if now - last_output_at > idle_timeout:
+                    _log_emit_line(
+                        run_key,
+                        f"ERROR: Claude process produced no output for {idle_timeout}s — killing subprocess",
+                    )
+                    proc.kill()
+                    killed_for_timeout = True
+                    break
+                if now - started_at > total_timeout:
+                    _log_emit_line(
+                        run_key,
+                        f"ERROR: Claude process exceeded total timeout of {total_timeout}s — killing subprocess",
+                    )
+                    proc.kill()
+                    killed_for_timeout = True
+                    break
+                continue
+
+            if raw_value is None:
+                open_streams.discard(source)
+                continue
+
+            raw = raw_value.strip()
             if not raw:
+                continue
+            if source == "stderr":
+                _log_emit_line(run_key, f"ERR: {raw}")
+                last_output_at = time.monotonic()
                 continue
             try:
                 event = json.loads(raw)
             except json.JSONDecodeError:
                 _log_emit_line(run_key, raw)
+                last_output_at = time.monotonic()
                 continue
 
             etype = event.get("type", "")
+            emitted_progress = False
 
             if etype == "assistant":
                 for block in event.get("message", {}).get("content", []):
@@ -2311,6 +2687,7 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                         for line in text.splitlines():
                             if line.strip():
                                 _log_emit_line(run_key, line)
+                                emitted_progress = True
                     elif btype == "tool_use":
                         tool = block.get("name", "tool")
                         inp = block.get("input", {})
@@ -2320,6 +2697,7 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                         if tool_id:
                             tool_uses[tool_id] = (str(tool), detail)
                         _log_emit_line(run_key, f"[{tool}]{' ' + detail if detail else ''}")
+                        emitted_progress = True
 
             elif etype == "user":
                 # Claude Code reports tool results as user/tool_result stream events.
@@ -2331,31 +2709,31 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                     if isinstance(block, dict):
                         tool_id = str(block.get("tool_use_id") or "")
                         tool, detail = tool_uses.get(tool_id, ("", ""))
-                    suppress_result = _is_file_read_tool(tool, detail)
+                    suppress_result = _is_suppressed_tool_result(tool, detail)
                     for text in _content_text_fragments(block):
                         if issue_key and not suppress_result:
                             assistant_text.append(text)
                         _emit_tool_result_text(run_key, text, suppress=suppress_result)
+                        if not suppress_result and text.strip():
+                            emitted_progress = True
 
             elif etype == "result":
                 subtype = event.get("subtype", "")
                 cost = event.get("cost_usd")
                 cost_str = f"  cost: ${cost:.4f}" if cost else ""
                 _log_emit_line(run_key, f"-- {subtype}{cost_str} --")
+                emitted_progress = True
 
             elif etype == "system":
                 pass  # ignore init events
 
-        if proc.stderr:
-            err = proc.stderr.read().strip()
-            if err:
-                for line in err.splitlines():
-                    _log_emit_line(run_key, f"ERR: {line}")
+            if emitted_progress:
+                last_output_at = time.monotonic()
 
         try:
-            returncode = proc.wait(timeout=600)  # 10 min timeout
+            returncode = proc.wait(timeout=30)
         except subprocess.TimeoutExpired:
-            _log_emit_line(run_key, "ERROR: Claude process timeout (10 min) — killing subprocess")
+            _log_emit_line(run_key, "ERROR: Claude process did not exit after stream timeout — killing subprocess")
             proc.kill()
             try:
                 proc.wait(timeout=5)
@@ -2363,6 +2741,8 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                 proc.terminate()
             return
 
+        if killed_for_timeout:
+            return
         if returncode == 0 and issue_key and assistant_text:
             full_output = "\n".join(assistant_text)
             _save_claude_output(full_output, issue_key)
@@ -2552,6 +2932,8 @@ def _stream_full_issue(key: str, run_key: str) -> None:
         row = next((r for r in _read_manifest() if r.get("Key") == key), {})
         resume_plan, resume_path, resume_block = _prepare_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
         _log_resume_plan_summary(run_key, resume_plan, resume_path)
+        if _resume_plan_short_circuit(run_key, resume_plan):
+            return
         prompt = _build_claude_prompt(
             key,
             "Run the full CaseOps fix pipeline for this issue through completion of investigation, "
@@ -2610,6 +2992,8 @@ def _stream_reprocess_issue(key: str, run_key: str) -> None:
         row = next((r for r in _read_manifest() if r.get("Key") == key), {})
         resume_plan, resume_path, resume_block = _prepare_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
         _log_resume_plan_summary(run_key, resume_plan, resume_path)
+        if _resume_plan_short_circuit(run_key, resume_plan):
+            return
         prompt = _build_claude_prompt(
             key,
             "Reprocess the CaseOps fix pipeline for this issue without re-syncing from Jira. "
@@ -2742,17 +3126,23 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"- Read Jira credentials and Salesforce orgs from: `{env_file_relative}`\n"
         f"- Do NOT read from `ROOT/.env.jira` (this is another instance's config)\n"
         f"- Environment variable available: `CASEOPS_JIRA_ENV_FILE={env_file_path}`\n"
-        f"- Example: `source {env_file_relative}` or pass it explicitly to commands that need Jira/Salesforce config\n\n"
+        f"- Canonical Salesforce aliases: Production uses `CASEOPS_PRODUCTION_READ_ORG`; Sandbox uses `CASEOPS_SANDBOX_TARGET_ORG`.\n"
+        f"- Do not invent generic `ORG`, `PROD_ORG`, or `SANDBOX_ORG` variables unless you assign them from the canonical aliases in the same shell command.\n"
+        f"- Do not `source {env_file_relative}` in shell commands. Some values contain spaces and are not shell-safe. CaseOps already exports the needed runtime env vars to this process.\n"
+        f"- If a command needs local aliases, assign them from exported vars inline, e.g. `PROD_ORG=\"$CASEOPS_PRODUCTION_READ_ORG\"; SANDBOX_ORG=\"$CASEOPS_SANDBOX_TARGET_ORG\"; ...`.\n\n"
         f"## Salesforce Metadata Workspace\n"
         f"**CRITICAL for multi-instance deployments and clean rollback:** Do not use root-level `temp*`, "
-        f"`retrieve*`, `deploy*`, or `metadata*` directories. Use this instance-scoped workspace contract:\n"
-        f"- Raw Production retrievals, read-only: `${{CASEOPS_METADATA_RAW_PROD_DIR}}/{key}/`\n"
+        f"`retrieve*`, `deploy*`, or `metadata*` directories. Use this persistent workspace contract:\n"
+        f"- Raw Production retrievals, read-only cache: `${{CASEOPS_METADATA_RAW_PROD_DIR}}/{key}/`\n"
+        f"- Issue workspace: `${{CASEOPS_METADATA_WORKSPACES_DIR}}/{key}/`\n"
         f"- Sandbox solution attempts: `${{CASEOPS_METADATA_SANDBOX_WORK_DIR}}/{key}/attempt-001/`, "
         f"`attempt-002/`, etc.\n"
-        f"- Confirmed packages: `${{CASEOPS_METADATA_CONFIRMED_DIR}}/{key}/support-owned/` or "
-        f"`${{CASEOPS_METADATA_CONFIRMED_DIR}}/{key}/engineering-proposal/`\n"
+        f"- Confirmed packages: `${{CASEOPS_METADATA_CONFIRMED_DIR}}/{key}/confirmed/support-owned/` or "
+        f"`${{CASEOPS_METADATA_CONFIRMED_DIR}}/{key}/confirmed/engineering-proposal/`\n"
         f"- Environment variables available:\n"
         f"  - `CASEOPS_METADATA_ROOT={str(_metadata_workspace_dirs()['root'])}`\n"
+        f"  - `CASEOPS_METADATA_CACHE_DIR={str(_metadata_workspace_dirs()['cache_root'])}`\n"
+        f"  - `CASEOPS_METADATA_WORKSPACES_DIR={str(_metadata_workspace_dirs()['root'])}`\n"
         f"  - `CASEOPS_METADATA_RAW_PROD_DIR={str(_metadata_workspace_dirs()['raw_prod'])}`\n"
         f"  - `CASEOPS_METADATA_SANDBOX_WORK_DIR={str(_metadata_workspace_dirs()['sandbox_work'])}`\n"
         f"  - `CASEOPS_METADATA_CONFIRMED_DIR={str(_metadata_workspace_dirs()['confirmed'])}`\n"
@@ -2766,12 +3156,15 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"- Maintain `${{CASEOPS_METADATA_SANDBOX_WORK_DIR}}/{key}/metadata-workspace.json` with "
         f"attempt number, components touched, baseline path, candidate path, revert status, and confirmed "
         f"package path when applicable.\n"
+        f"- Do not use legacy `.temp/metadata` for new work; it is migration-only historical evidence.\n"
         f"- Sub-agents spawned in Steps 5, 6, and 9 must follow this workspace contract "
         f"(see sub-agent-prompts.md).\n\n"
         f"## Instruction\n"
         f"{instruction}\n\n"
         f"## Live Progress Requirement\n"
         f"- Execute the pipeline in this Claude Code process. Do not start background work and say you will be notified later.\n"
+        f"- Do not use the Workflow tool, `/workflows`, detached scripts, background agents, background shell jobs, `nohup`, or any runner that returns a task ID instead of streaming current work.\n"
+        f"- Sub-agents are allowed only for the specific playbook steps that require them, and only when their result is awaited before continuing to the next pipeline step.\n"
         f"- Before each numbered pipeline step, print a standalone progress line exactly like `STEP_N {key}`.\n"
         f"- For Step 11 print `STEP_11 __summary__`; for Step 12 print `STEP_12 __complete__`.\n"
         f"- Continue streaming concise status after each step completes, including file paths written and blockers.\n\n"
@@ -2792,6 +3185,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"   - UI clicks (when automation can't use CLI, e.g., custom buttons, flow runs)\n"
         f"   - Human-readable confirmation\n"
         f"5. If `sf` reports no authenticated orgs, treat that as a CaseOps/container auth configuration blocker. Do **not** test frontdoor SIDs with `curl` and do not conclude Salesforce API is unreachable from frontdoor 401s.\n"
+        f"6. **Production is read-only in normal pipeline runs.** Do not run `sf data create`, `sf data update`, `sf data delete`, permission-set assignment commands, Apex anonymous execution, deploys, or any other mutating command against Production. For Support-resolvable Production data/config/permission fixes, document the exact operator action and validation plan only.\n"
         f"\n{_salesforce_browser_prompt_section()}"
         f"## CaseOps Output Files (update these when your task is complete)\n"
         f"You can read and write these files directly for issue {key}:\n"
@@ -2807,6 +3201,8 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"\n"
         f"**Update guidance:**\n"
         f"- Read existing files first (if they exist) to preserve prior work\n"
+        f"- For any existing output file, use Read followed by Edit. Use Write only when the file does not already exist.\n"
+        f"- For `issue-summary-YYYY-MM-DD.md`, check whether today's file exists before writing; if it exists, Read it and Edit it.\n"
         f"- Update them directly (do not ask operator or wait for confirmation)\n"
         f"- Commit your changes with `git add` + `git commit` if substantial updates\n"
         f"- If you cannot complete a task, update the relevant file to document progress and blockers\n"
@@ -2816,6 +3212,8 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"- Proceed with the next pipeline steps implied by the playbook and by which files "
         f"already exist for {key} in `{outputs_dir_relative}/`.\n"
         f"- Create or update artifacts in `{outputs_dir_relative}/` that this issue needs (paths as shown above).\n"
+        f"- If direct evidence confirms a no-deploy Support action such as assigning an existing permission set or making a data/config correction, stop deep investigation, skip Sandbox deploy, write a no-deploy test report, and proceed to internal notes/Jira message. Do **not** execute the Production action; leave it as an operator/admin action unless the operator explicitly starts an approved Production-write workflow.\n"
+        f"- Hard stop for permission-set assignment fixes: once an existing permission set is identified as the missing access package, do not run further Apex/class/Flow-access checks unless the issue text or Salesforce error explicitly names Apex/class access as the failure.\n"
         f"- In every confirmed solution, state **Production vs Sandbox** clearly: what Production has (read-only verification), "
         f"what is **Sandbox-only**, and whether **Production metadata deploy** is required (**Yes — e.g. Gearset** / **No** / **N/A**). "
         f"Never imply Production has new metadata just because Sandbox validation passed. Do not deploy to Production unless the operator explicitly requests it.\n"
@@ -3061,7 +3459,7 @@ def _calculate_pipeline_state(key: str, status: str = "") -> PipelineState:
 
 
 def _test_report_confirms_fix(key: str) -> bool:
-    """True when outputs/test-reports/<KEY>.md marks Fixed? affirmatively (Sandbox validation)."""
+    """True when outputs/test-reports/<KEY>.md confirms validation or a no-deploy fix."""
     path = OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)
     if not path.is_file():
         return False
@@ -3069,6 +3467,10 @@ def _test_report_confirms_fix(key: str) -> bool:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return False
+    if re.search(r"(?is)(resolution type:\*\*\s*no-deploy|fix type:\*\*\s*(?:data record creation|data-only|no-deploy)|##\s*No-Deploy Rationale|sandbox deploy required:\*\*\s*no|production metadata deploy required\s*\|\s*\*\*?no|production deploy required:\s*\*\*?n/?a)", text):
+        if re.search(r"(?is)\b(blocked|not viable|not fixed|unresolved|do not proceed)\b", text):
+            return False
+        return bool(re.search(r"(?is)\bconfirmed\b|\[x\]|production metadata deploy required:\*\*\s*no", text))
     m = re.search(r"(?im)^##\s*Fixed\?\s*$", text)
     if not m:
         return False
@@ -4594,6 +4996,13 @@ if __name__ == "__main__":
         OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
     OUTPUTS.mkdir(parents=True, exist_ok=True)
 
+    if _args.env_file:
+        env_file_path = Path(_args.env_file)
+        _load_jira_env(env_file_path)
+    else:
+        env_file_path = ROOT / f".env.jira.{WORKSPACE}" if WORKSPACE != "default" else ROOT / ".env.jira"
+        _load_jira_env(env_file_path)
+
     # Initialize instance-specific runtime and metadata workspaces.
     globals()["TEMP_ROOT"] = OUTPUTS.parent / ".temp"
     TEMP_ROOT.mkdir(parents=True, exist_ok=True)
@@ -4606,17 +5015,11 @@ if __name__ == "__main__":
     for subdir in [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
         "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state",
-        "org-knowledge"
+        "org-knowledge", "metadata-cache", "metadata-workspaces"
     ]:
         (OUTPUTS / subdir).mkdir(parents=True, exist_ok=True)
     _ensure_org_knowledge_defaults()
 
-    if _args.env_file:
-        env_file_path = Path(_args.env_file)
-        _load_jira_env(env_file_path)
-    else:
-        env_file_path = ROOT / f".env.jira.{WORKSPACE}" if WORKSPACE != "default" else ROOT / ".env.jira"
-        _load_jira_env(env_file_path)
     JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "").rstrip("/")
     app.config["WORKSPACE"] = WORKSPACE
     app.config["ENV_FILE_PATH"] = str(env_file_path)
@@ -4660,7 +5063,7 @@ if __name__ == "__main__":
     required_subdirs = [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
         "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state",
-        "closed-resolved", "org-knowledge"
+        "closed-resolved", "org-knowledge", "metadata-cache", "metadata-workspaces"
     ]
     for subdir in required_subdirs:
         subdir_path = OUTPUTS / subdir
@@ -4686,6 +5089,8 @@ if __name__ == "__main__":
     metadata_dirs = _metadata_workspace_dirs()
     print(f"  - CASEOPS_TEMP_DIR={TEMP_ROOT}")
     print(f"  - CASEOPS_METADATA_ROOT={metadata_dirs['root']}")
+    print(f"  - CASEOPS_METADATA_CACHE_DIR={metadata_dirs['cache_root']}")
+    print(f"  - CASEOPS_METADATA_WORKSPACES_DIR={metadata_dirs['root']}")
     print(f"  - CASEOPS_METADATA_RAW_PROD_DIR={metadata_dirs['raw_prod']}")
     print(f"  - CASEOPS_METADATA_SANDBOX_WORK_DIR={metadata_dirs['sandbox_work']}")
     print(f"  - CASEOPS_METADATA_CONFIRMED_DIR={metadata_dirs['confirmed']}")
@@ -4734,6 +5139,7 @@ if __name__ == "__main__":
 
     print(f"[OK] Temp directory: {TEMP_ROOT}")
     print(f"[OK] Metadata workspace: {_metadata_workspace_dirs()['root']}")
+    print(f"[OK] Metadata cache: {_metadata_workspace_dirs()['cache_root']}")
 
     # use_reloader=False prevents the dev reloader from killing SSE streams
     app.run(debug=True, threaded=True, host="0.0.0.0", port=_args.port, use_reloader=False)

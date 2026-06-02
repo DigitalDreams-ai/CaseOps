@@ -26,7 +26,7 @@ Each workspace should have its own:
 When `--outputs-dir instance1/outputs` is used, metadata defaults beside it:
 
 ```text
-instance1/.temp/metadata/
+instance1/outputs/metadata-workspaces/
 ```
 
 Do not share a metadata workspace between two active instances.

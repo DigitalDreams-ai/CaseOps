@@ -65,7 +65,9 @@ This skill orchestrates the complete pipeline from issue sync through summary ge
 
 **CRITICAL: Step Progress Tracking**
 
-Throughout Steps 1–12, you MUST emit step progress lines to stdout in the format `STEP_N identifier` (e.g., `STEP_3 HEAL-33753`). These lines are parsed by the CaseOps GUI in real-time to update the pipeline progress indicator. Without these explicit output lines, the progress indicator will not display. Do not launch background pipeline work and say you will be notified later; execute sequentially in the current Claude Code run and stream progress as each step starts and finishes.
+Throughout Steps 1–12, you MUST emit step progress lines to stdout in the format `STEP_N identifier` (e.g., `STEP_3 HEAL-33753`). These lines are parsed by the CaseOps GUI in real-time to update the pipeline progress indicator. Without these explicit output lines, the progress indicator will not display. Do not launch background pipeline work and say you will be notified later; execute sequentially in the current Claude Code run and stream progress as each step starts and finishes. Do not use the Workflow tool, `/workflows`, detached scripts, background shell jobs, `nohup`, or any runner that returns a task ID instead of streaming current work. Sub-agents are allowed only when the playbook calls for them and their results are awaited before the next pipeline step.
+
+Do not `source .env.jira` in shell commands. CaseOps exports the runtime variables needed by the pipeline, and `.env.jira` may contain values with spaces that are not shell-safe. Use the exported canonical aliases directly: `CASEOPS_PRODUCTION_READ_ORG` for Production and `CASEOPS_SANDBOX_TARGET_ORG` for Sandbox.
 
 For global runs that process multiple issues, emit a single timestamped line at the start of each issue in this format: `Run started: <ISSUE_KEY> at YYYY-MM-DD HH:MM:SS <TZ>`.
 
@@ -142,7 +144,7 @@ For each active issue:
 1. **Emit to stdout:** `STEP_7 <ISSUE_KEY>`
 2. Using Step 6 problem location, classify:
 
-- **Support-resolvable:** Mark as support path. Proceed to Step 8.
+- **Support-resolvable:** Mark as support path. Proceed to Step 8. If direct evidence confirms an existing permission-set assignment, data correction, or other no-deploy admin action, stop deep investigation and do not keep checking Apex/classes unless the evidence specifically points there. Do not execute the Production action; document it for the operator.
 - **Engineering-required:** Mark as escalation path. Proceed to Step 8 (both paths run implementation + test to generate proposed solution).
 
 Log decision in `outputs/pipeline-logs/<RUN_DATE>.log`.
@@ -151,15 +153,17 @@ Log decision in `outputs/pipeline-logs/<RUN_DATE>.log`.
 
 For all active issues (both Support-resolvable and Engineering-required):
 1. **Emit to stdout:** `STEP_8 <ISSUE_KEY>`
-2. Prepare the proposed solution package under `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/candidate/`. Never touch Production.
-3. Record changed files/components in `outputs/investigations/<KEY>.md`.
+2. For deployable metadata/code fixes, prepare the proposed solution package under `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/candidate/`. Never touch Production.
+3. For no-deploy Support actions, do not create a metadata candidate and do not execute the Production action. Document the exact admin/data/config action, expected validation, and Production deploy required = N/A.
+4. Record changed files/components or no-deploy action details in `outputs/investigations/<KEY>.md`.
 
 **Step 9 — Deploy, test, and iterate (Sub-agent)**
 
-For each active issue (all paths):
+For each active issue:
 1. **Emit to stdout:** `STEP_9 <ISSUE_KEY>`
-2. Spawn `salesforce-sandbox-deploy-test` with the Step 9 prompt from `references/sub-agent-prompts.md`.
-3. Ensure the sub-agent captures `baseline-sandbox/`, deploys `candidate/`, tests acceptance criteria, and writes `outputs/test-reports/<KEY>.md`.
+2. If there is no deployable metadata/code candidate because the fix is an existing permission assignment/data/config action, write `outputs/test-reports/<KEY>.md` directly as a no-deploy validation plan and skip the deploy/test sub-agent. Mark the fix as an operator/admin action not executed by CaseOps.
+3. Otherwise, spawn `salesforce-sandbox-deploy-test` with the Step 9 prompt from `references/sub-agent-prompts.md`.
+4. Ensure the sub-agent captures `baseline-sandbox/`, deploys `candidate/`, tests acceptance criteria, and writes `outputs/test-reports/<KEY>.md`.
 
 - **On Pass:** Proceed to Step 10.
 - **On Fail:** Confirm the Sandbox attempt was reverted from `baseline-sandbox/`, revise Step 4 hypothesis, loop back to Step 5–6 if more metadata is needed, re-run Step 8–9. Record iterations in `outputs/investigations/<KEY>.md`.
@@ -184,6 +188,8 @@ After messaging, create `outputs/engineering-escalations/<KEY>.md` using `assets
 **Emit to stdout:** `STEP_11 __summary__`
 
 After all active issues are processed through Steps 3–10, generate `outputs/issue-summary-YYYY-MM-DD.md` using `assets/issue-summary-template.md`.
+
+Before writing the dated summary, check whether today's `outputs/issue-summary-YYYY-MM-DD.md` already exists. If it exists, Read it and then Edit it. Use Write only when the dated summary file does not already exist.
 
 **Required sections:**
 
@@ -287,13 +293,13 @@ Total runtime: H hours M minutes
 - ✓ Use `CASEOPS_METADATA_SANDBOX_WORK_DIR/<KEY>/attempt-N/` for Sandbox candidates, baselines, and revert packages
 - ✓ Capture `baseline-sandbox/` before every deploy attempt
 - ✓ Revert failed or abandoned attempts before trying another candidate
-- ✓ Copy the passed package to `CASEOPS_METADATA_CONFIRMED_DIR/<KEY>/support-owned/` or `engineering-proposal/`
+- ✓ Copy the passed package to `CASEOPS_METADATA_CONFIRMED_DIR/<KEY>/confirmed/support-owned/` or `confirmed/engineering-proposal/`
 - ✗ Do not use root-level `temp*`, `retrieve*`, `deploy*`, or `metadata*` directories
 
 **Mandatory safety checks:**
 
-1. **Before Step 8:** Read `CASEOPS_SANDBOX_TARGET_ORG` from `.env.jira`
-   - If missing or empty: STOP and report error. User must set `.env.jira`.
+1. **Before Step 8:** Read exported env var `CASEOPS_SANDBOX_TARGET_ORG`
+   - If missing or empty: STOP and report error. User must set it in Settings / `.env.jira`.
    
 2. **Before Step 9 (first time):** Verify Sandbox org is reachable
    - Test: `sf org list` should include the org alias
@@ -316,7 +322,7 @@ Total runtime: H hours M minutes
 - ✗ Do not automatically post to Jira
 
 **Blocker exits (system errors):**
-- `.env.jira` missing CASEOPS_SANDBOX_TARGET_ORG → STOP
+- Exported env var `CASEOPS_SANDBOX_TARGET_ORG` missing → STOP
 - Sandbox org unreachable or credentials expired → STOP
 - Production write detected → STOP immediately, investigate, do not proceed
 

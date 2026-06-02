@@ -20,9 +20,8 @@ This is the current pilot hardening backlog. It does not describe completed runt
 ## Pilot Hardening
 
 1. Metadata storage hybrid
-   - Current: `instance1/.temp/metadata/`.
-   - Target: shared read-only raw cache plus persistent issue workspaces under outputs.
-   - Keep per-attempt `baseline-sandbox/`, `candidate/`, and `revert/`.
+   - Complete: new work uses `outputs/metadata-cache/` and `outputs/metadata-workspaces/`.
+   - Remaining: add UI/API review of workspace manifests and optional cleanup/archive tools.
 
 2. Org-knowledge review workflow
    - Current: file-based updates are possible.

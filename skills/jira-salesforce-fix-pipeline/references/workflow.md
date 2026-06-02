@@ -106,10 +106,10 @@ Use the environment-provided workspace instead of ad hoc root directories:
 | --- | --- |
 | Raw Production metadata, read-only | `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/` |
 | Sandbox test attempts | `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/` |
-| Confirmed Support package | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/` |
-| Confirmed Engineering proposal | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/engineering-proposal/` |
+| Confirmed Support package | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/support-owned/` |
+| Confirmed Engineering proposal | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/engineering-proposal/` |
 
-Raw Production metadata may be reused as evidence, but it must not be edited. Every Sandbox attempt gets its own directory with `baseline-sandbox/`, `candidate/`, and `revert/` subdirectories. Failed or abandoned attempts must be reverted in Sandbox before the next attempt starts.
+Raw Production metadata is stored in the persistent metadata cache and may be reused as read-only evidence, but it must not be edited. Every Sandbox attempt gets its own persistent issue-workspace directory with `baseline-sandbox/`, `candidate/`, and `revert/` subdirectories. Failed or abandoned attempts must be reverted in Sandbox before the next attempt starts.
 
 Each issue with Sandbox work must maintain `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/metadata-workspace.json` with attempt number, touched components, baseline path, candidate path, revert status, test outcome, and confirmed package path when applicable. This is the index that keeps the workspace auditable without spreading metadata across root-level folders.
 
@@ -198,25 +198,42 @@ Using the Step 6 problem location (exact artifact + failure point), classify:
 - **Escalate to Engineering** if the artifact requires Apex/code changes, Flow modifications, approval processes, validation rule updates, or other Engineering-owned automation to fix.
 - **Support-resolvable** only for data updates, permission assignments, config changes (like enabling a feature flag), or read-only metadata that do **not** require Engineering code ownership.
 
-**Both paths continue to Steps 8-9.** Steps 8-9 generate a Sandbox-validated proposed solution that will be handed to Engineering in Step 10. This lets Engineering receive a concrete fix proposal with validation evidence, not just a problem statement.
+**Stop condition:** Once direct evidence confirms a Support-resolvable permission assignment, data update, or existing-config action, stop deep investigation. Do not continue into Apex/class/automation checks unless the evidence specifically points to Apex, Flow modification, validation rules, or another Engineering-owned artifact.
+
+**Permission-set assignment hard stop:** If the fix is assigning an existing permission set that comparable users already have, and that permission set supplies the missing object/field access, stop there. Do not perform additional Apex class access checks unless the issue text, flow fault, or debug evidence explicitly names Apex/class access as the failure.
+
+**Production write hard stop:** Normal pipeline runs must never execute Production data writes, permission-set assignments, deletes, Apex anonymous execution, or deploys. For Support-resolvable no-deploy actions, document the exact operator/admin action and validation plan only. Do not run `sf data create`, `sf data update`, `sf data delete`, or assignment commands against Production unless the operator explicitly starts a separate approved Production-write workflow.
+
+**Routing:**
+- Support-resolvable metadata changes continue to Steps 8-9 for Sandbox validation.
+- Support-resolvable no-deploy admin actions (existing permission-set assignment, data correction, feature/config toggle) continue to Step 8, then create a no-deploy test report and skip Sandbox deploy in Step 9. These actions are operator instructions, not commands to execute in Production.
+- Engineering-required changes continue to Steps 8-9 when a Sandbox proposal can be safely built and tested.
 
 ---
 
-## Step 8 — Implement [ORCHESTRATOR] (Both paths)
+## Step 8 — Implement / Prepare Action [ORCHESTRATOR]
 
 Propose and document the fix. For Support issues, this becomes the Production fix. For Escalation issues, this becomes the proposed solution to hand to Engineering.
 
-Make local changes scoped to the issue. Avoid unrelated refactors. Record changed files in `outputs/investigations/<KEY>.md`.
+Make local changes scoped to the issue only when a metadata/code candidate is required. Avoid unrelated refactors. Record changed files in `outputs/investigations/<KEY>.md`.
+
+For no-deploy Support actions, do not create a metadata workspace attempt and do not execute the Production action. Document the exact admin/data action, why it is Support-resolvable, expected validation steps, and Production deploy state = **N/A**.
 
 Before creating new metadata, confirm it does not already exist in Production (Step 5 existence check and **`references/safety-policy.md`**). Extend existing components when possible.
 
 Update **`Solution Plan` → Production vs sandbox deployment state** in the investigation record: pre-fill what Production has vs what will be Sandbox-only, and the expected **Production deploy?** (**Yes — Gearset** / **No** / **N/A**). Refine after Step 9 with test evidence.
 
-## Step 9 — Deploy, test, and iterate [SUB-AGENT] (Both paths)
+## Step 9 — Deploy, test, and iterate [SUB-AGENT OR NO-DEPLOY TEST REPORT]
 
-**Spawn this sub-agent** after Step 8 for every issue — both Support-resolvable and Engineering-escalation. Sandbox testing validates the proposed solution so Engineering receives evidence-backed handoffs, not just hypotheses.
+Spawn this sub-agent after Step 8 only when there is a metadata/code candidate to deploy or a Sandbox-safe configuration change to test. Sandbox testing validates proposed metadata/code solutions so Engineering receives evidence-backed handoffs, not just hypotheses.
 
-**Allowlist:** Read **`CASEOPS_SANDBOX_TARGET_ORG`** from `.env.jira`. If missing or empty, **STOP**. Only that org may receive deploys or mutating operations. See **`references/sub-agent-prompts.md`** — **”Step 9 — Deploy, test, and iterate”** for the full prompt and failure-loop behavior.
+For no-deploy Support actions, do **not** spawn the deploy/test sub-agent. Create `outputs/test-reports/<KEY>.md` directly with:
+- Root cause evidence from Production read-only checks.
+- Exact admin/data action to perform, explicitly marked as **operator action not executed by CaseOps**.
+- Validation steps after the operator applies the action.
+- Production deploy required: **N/A**.
+
+**Allowlist:** Read exported env var **`CASEOPS_SANDBOX_TARGET_ORG`**. If missing or empty, **STOP**. Only that org may receive deploys or mutating operations. See **`references/sub-agent-prompts.md`** — **”Step 9 — Deploy, test, and iterate”** for the full prompt and failure-loop behavior.
 
 On **Fail:** revise hypothesis (Step 4), re-run Step 5 if needed (and Step 6 if more drilling required), re-implement (Step 8), re-run Step 9. Record iterations in `outputs/investigations/<KEY>.md`.
 
@@ -226,9 +243,9 @@ Before returning Fail, the Step 9 sub-agent must revert non-viable Sandbox chang
 
 ## Step 10 — Draft internal notes, Jira message, and escalation handoff (if needed) [SUB-AGENT]
 
-Spawn a sub-agent using **”Step 10 — Draft internal notes and Jira message”** in **`references/sub-agent-prompts.md`**. Pass the test results from Step 9 (both Support and Escalation paths ran Step 9 and have Sandbox validation).
+Spawn a sub-agent using **”Step 10 — Draft internal notes and Jira message”** in **`references/sub-agent-prompts.md`**. Pass the test results from Step 9, or the no-deploy test report for Support admin/data actions.
 
-**If Support-resolvable:** Drafts are ready for Production deployment via Gearset or standard change control.
+**If Support-resolvable:** Drafts are ready for operator-controlled Production action via Gearset, standard change control, or manual admin/data correction. CaseOps does not execute Production writes in normal pipeline runs.
 
 **If Engineering-escalation:** Create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with:
 - Problem location (from Step 6)
@@ -259,6 +276,8 @@ Do **not** conflate “fix confirmed in Sandbox” with “Production is fixed�
 ## Step 11 — Create or update the dated summary [ORCHESTRATOR]
 
 Create or update the dated summary directly in the active Claude Code run after active issues complete Steps 3-10. Do not call deprecated Python orchestration paths.
+
+Before writing the dated summary, check whether `outputs/issue-summary-YYYY-MM-DD.md` already exists. If it exists, Read it and then Edit it. Use Write only when the dated summary file does not already exist.
 
 ---
 

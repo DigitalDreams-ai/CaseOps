@@ -53,7 +53,7 @@
 
 - Raw Production metadata: `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`
 - Sandbox attempts: `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/`
-- Confirmed package: `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/`
+- Confirmed package: `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/`
 
 ### Attempt History
 

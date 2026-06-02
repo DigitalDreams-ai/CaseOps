@@ -29,5 +29,5 @@ All general CaseOps documentation lives in this directory. Skill instructions st
 - Salesforce retrieve/deploy uses modern `sf` CLI only.
 - Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest` for routine CaseOps retrieve/deploy.
 - Frontdoor and magic links are only for visual UI inspection, not API/SOQL/retrieve/deploy.
-- Runtime appdata is under the active instance, primarily `instance1/outputs/` and `instance1/.temp/metadata/`.
+- Runtime appdata is under the active instance outputs tree, including `instance1/outputs/metadata-cache/` and `instance1/outputs/metadata-workspaces/`.
 - Org knowledge lives in `outputs/org-knowledge/` and is selected progressively by topic.

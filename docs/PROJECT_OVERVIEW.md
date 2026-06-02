@@ -40,7 +40,7 @@ Issue artifacts are stored under the active outputs directory, currently `instan
 - `settings/` - persistent Settings overrides, including canned messages.
 - `org-knowledge/` - reusable Salesforce knowledge selected by topic.
 
-Salesforce metadata workspaces are currently under `instance1/.temp/metadata/`.
+Salesforce metadata cache and workspaces are under `instance1/outputs/metadata-cache/` and `instance1/outputs/metadata-workspaces/`.
 
 ## Pipeline Summary
 

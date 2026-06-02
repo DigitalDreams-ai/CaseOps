@@ -35,10 +35,11 @@ Pipeline Salesforce work follows the current command contract:
 Salesforce metadata is separated by lifecycle:
 
 ```
-${CASEOPS_METADATA_ROOT}/
-├── raw-production/<KEY>/          # Read-only Production evidence
-├── sandbox-work/<KEY>/attempt-N/  # Baseline, candidate, revert
-└── confirmed/<KEY>/               # Passed Support package or Engineering proposal
+${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/      # Read-only Production cache
+${CASEOPS_METADATA_WORKSPACES_DIR}/<KEY>/
+├── metadata-workspace.json
+├── attempt-N/                              # Baseline, candidate, revert
+└── confirmed/                              # Passed Support package or Engineering proposal
 ```
 
 Failed or abandoned Sandbox attempts must be reverted from the captured baseline before another attempt starts.

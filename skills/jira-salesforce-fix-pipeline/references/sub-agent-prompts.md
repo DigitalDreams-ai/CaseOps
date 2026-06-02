@@ -105,13 +105,13 @@ Return a compact summary (max 400 tokens) containing:
 
 ## Step 9 — Deploy, test, and iterate
 
-**Before spawning:** Read **`CASEOPS_SANDBOX_TARGET_ORG`** from `.env.jira`. If missing or empty, **STOP** and tell the operator to set it. Pass that exact string into the prompt below. Only that org may receive deploys or writes.
+**Before spawning:** Read exported env var **`CASEOPS_SANDBOX_TARGET_ORG`**. If missing or empty, **STOP** and tell the operator to set it in Settings / `.env.jira`. Pass that exact string into the prompt below. Only that org may receive deploys or writes.
 
 ```
 You are deploying and testing a Salesforce fix in Sandbox.
 
 Issue key: <KEY>
-Allowlisted Sandbox (from .env.jira CASEOPS_SANDBOX_TARGET_ORG): <paste exact value read from .env.jira>
+Allowlisted Sandbox (from exported CASEOPS_SANDBOX_TARGET_ORG): <paste exact value>
 Fix description: <paste the solution from Step 8>
 Investigation record: outputs/investigations/<KEY>.md
 Selected org knowledge: <paste only relevant deploy/query bullets from the run's Org Knowledge Context>
@@ -126,7 +126,7 @@ CRITICAL: Sandbox Attempt Workspace and Revert Contract
   ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/revert/
 - If an attempt fails or is not viable, revert the Sandbox to the captured baseline before starting another attempt, then verify by retrieve/diff.
 - When an attempt passes, copy the final package to:
-  ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/ or ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/engineering-proposal/
+  ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/support-owned/ or ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/engineering-proposal/
 - Maintain ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/metadata-workspace.json with attempt number, components touched, baseline path, candidate path, revert status, and confirmed package path when applicable.
 - Do not write to root-level temp/retrieve/deploy/metadata directories.
 
@@ -149,7 +149,7 @@ Return a compact summary (max 400 tokens) containing:
 - Whether the issue is confirmed fixed
 - If failed: what broke, what hypothesis was wrong, what was reverted, what to try next
 - Attempt directory: ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N
-- Confirmed package directory, if passed: ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/<support-owned|engineering-proposal>
+- Confirmed package directory, if passed: ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/<support-owned|engineering-proposal>
 - Workspace manifest: ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/metadata-workspace.json
 - Path written: outputs/test-reports/<KEY>.md
 ```

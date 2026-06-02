@@ -105,13 +105,14 @@ Current runtime paths:
 | --- | --- |
 | Raw Production metadata, read-only | `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/` |
 | Sandbox attempts | `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/` |
-| Confirmed Support package | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/support-owned/` |
-| Confirmed Engineering proposal | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/engineering-proposal/` |
+| Confirmed Support package | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/support-owned/` |
+| Confirmed Engineering proposal | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/engineering-proposal/` |
 
 Current NAS values resolve under:
 
 ```text
-/app/instance1/.temp/metadata/
+/app/instance1/outputs/metadata-cache/
+/app/instance1/outputs/metadata-workspaces/
 ```
 
 Rules:
@@ -121,7 +122,7 @@ Rules:
 - Put proposed deployable metadata under `candidate/`.
 - Put rollback metadata or destructive changes under `revert/`.
 - Revert failed or abandoned attempts before starting another attempt.
-- Copy passed work to `confirmed/`.
+- Copy passed work to `<KEY>/confirmed/`.
 
 ## Org Knowledge
 

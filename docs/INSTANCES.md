@@ -7,7 +7,8 @@ The active pilot uses a single NAS instance:
 ```text
 instance1/
   outputs/
-  .temp/metadata/
+    metadata-cache/
+    metadata-workspaces/
 ```
 
 ## Local Multi-Instance Pattern
@@ -42,7 +43,7 @@ Add more containers only after deciding how to isolate ports, env files, outputs
 Stop the instance first, then archive or remove its state:
 
 ```bash
-tar czf caseops-instance1-backup.tgz instance1/outputs instance1/.temp/metadata
+tar czf caseops-instance1-backup.tgz instance1/outputs
 ```
 
 Do not delete state while a pipeline is active.

@@ -165,8 +165,8 @@ Back up persistent issue artifacts:
 tar czf ~/caseops-outputs.tgz -C /volume1/docker/stacks/caseops instance1/outputs
 ```
 
-If metadata audit data must be preserved, also back up:
+Back up persistent metadata cache and workspaces:
 
 ```bash
-tar czf ~/caseops-metadata.tgz -C /volume1/docker/stacks/caseops instance1/.temp/metadata
+tar czf ~/caseops-metadata.tgz -C /volume1/docker/stacks/caseops instance1/outputs/metadata-cache instance1/outputs/metadata-workspaces
 ```
