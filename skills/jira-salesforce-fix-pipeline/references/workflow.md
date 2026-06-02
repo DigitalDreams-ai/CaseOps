@@ -134,6 +134,21 @@ Before spawning Step 5, Step 6, Step 8, or Step 9 sub-agents, include the releva
 
 Use org knowledge to avoid relearning Salesforce CLI behavior. If a selected pattern fails twice, stop and replan; do not try many small variants of the same failed command.
 
+For known Salesforce mechanics, use the CaseOps helper before improvising:
+
+```bash
+python scripts/sf_caseops_helper.py --help
+```
+
+The helper is the preferred path for custom field/picklist summaries, layout placement, FLS checks, and deterministic MDAPI candidate deploys. It writes compact JSON summaries in the issue workspace and keeps noisy CLI progress out of the pipeline log.
+
+Retrieve/deploy command contract:
+
+- Use modern `sf` CLI commands only.
+- Do not use legacy `sfdx force:*` commands.
+- Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy.
+- Prefer `sf project retrieve start --metadata`, `sf project retrieve start --source-dir`, `sf project deploy start --source-dir`, and `sf project deploy start --metadata-dir`.
+
 If a run discovers a durable, verified, reusable org fact, update the most specific selected topic file with one short bullet. Do not store secrets, raw access tokens, frontdoor links, or customer-private narrative.
 
 ---

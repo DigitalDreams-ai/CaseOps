@@ -22,6 +22,7 @@ services:
       - ./templates:/app/templates:ro
       - ./static:/app/static:ro
       - ./skills:/app/skills:ro
+      - ./scripts:/app/scripts:ro
       # Note: .sfdx and .claude mounted from NAS had permission conflicts.
       # Claude Code auth is stored in .env.jira.nas as CLAUDE_CODE_OAUTH_TOKEN.
       # Use /setup/claude-login to save/update the token.

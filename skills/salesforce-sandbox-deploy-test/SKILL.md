@@ -32,7 +32,7 @@ description: Mandatory for jira-salesforce-fix-pipeline after a proposed solutio
 2. Create an attempt directory under `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/`.
 3. Retrieve Sandbox baseline metadata for every component that may change.
 4. Review changed metadata and expected deployment scope.
-5. Deploy **only** to the allowlisted Sandbox (target must match step 1).
+5. Deploy **only** to the allowlisted Sandbox (target must match step 1). Prefer `python scripts/sf_caseops_helper.py deploy-mdapi ...` for issue-scoped candidate metadata.
 6. Run automated tests when available.
 7. Run manual or data-driven validation against Jira acceptance criteria.
 8. Record results in `outputs/test-reports/<KEY>.md` using `assets/test-report-template.md` (paths per parent pipeline). Fill **Production deployment state** (Sandbox vs Production; whether **Gearset** or other promote is required).
@@ -52,6 +52,8 @@ description: Mandatory for jira-salesforce-fix-pipeline after a proposed solutio
 - Target was verified against `.env.jira` before deploy, not assumed from memory or defaults.
 - Engineering proposal packages are clearly marked as Sandbox-only proposals, not Production changes.
 - Deployment command and result are recorded.
+- Deployment uses modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
+- Deploys use deterministic MDAPI helper flow before repeated source-tracking variants.
 - Tests map to Jira acceptance criteria.
 - Failure evidence is preserved.
 - Failed or abandoned attempts were reverted and verified.

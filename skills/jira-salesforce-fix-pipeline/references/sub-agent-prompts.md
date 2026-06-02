@@ -51,7 +51,9 @@ Instructions:
 5. If additional metadata is discovered to be needed (e.g., during drilling in Step 6), 
    Step 6 will loop back to you with a refined request.
 6. Use selected org knowledge first. If a known query/retrieve pattern fails twice, stop and replan instead of trying many variants.
-7. Do not print raw access tokens or use `SF_TEMP_SHOW_SECRETS=true sf org display`.
+7. For custom field, picklist, layout, and FLS questions, run `python scripts/sf_caseops_helper.py custom-field|layout|fls ...` first and use its compact JSON output.
+8. Retrieve with modern `sf project retrieve start --metadata` or `--source-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
+9. Do not print raw access tokens or use `SF_TEMP_SHOW_SECRETS=true sf org display`.
 
 Return a compact summary (max 400 tokens) containing:
 - Metadata items retrieved and why
@@ -137,8 +139,9 @@ Instructions:
 6. Write results to outputs/test-reports/<KEY>.md using
    skills/jira-salesforce-fix-pipeline/assets/test-report-template.md.
    Fill **Production deployment state** (Sandbox vs Production; Gearset required Y/N/N/A).
-7. Use selected org knowledge first. Prefer deterministic MDAPI deploy patterns for metadata types where source tracking is known to cause `NothingToDeploy`.
-8. Never print raw Salesforce access tokens. Do not use `SF_TEMP_SHOW_SECRETS=true sf org display`; use `sf` commands or JSON outputs that do not reveal secrets.
+7. Use selected org knowledge first. Prefer `python scripts/sf_caseops_helper.py deploy-mdapi ...` for candidate metadata and deterministic MDAPI deploy patterns where source tracking is known to cause `NothingToDeploy`.
+8. Deploy with modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
+9. Never print raw Salesforce access tokens. Do not use `SF_TEMP_SHOW_SECRETS=true sf org display`; use `sf` commands or JSON outputs that do not reveal secrets.
 
 Return a compact summary (max 400 tokens) containing:
 - Pass or Fail

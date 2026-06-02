@@ -9,6 +9,7 @@ Then open http://localhost:5000 in your browser.
 from __future__ import annotations
 
 import base64
+import copy
 import csv
 import json
 import os
@@ -186,6 +187,7 @@ _ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
                 "__c", "field-level", "field level", "supplement", "values"
             ],
             "files": [
+                "helper-scripts.md",
                 "query-patterns/custom-field.md",
                 "query-patterns/picklist-values.md",
                 "deploy-patterns/custom-field-mdapi.md",
@@ -195,7 +197,7 @@ _ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
             "id": "layouts",
             "title": "Layouts and field placement",
             "keywords": ["layout", "page layout", "section", "field placement", "lightning page"],
-            "files": ["query-patterns/layouts.md"],
+            "files": ["helper-scripts.md", "query-patterns/layouts.md"],
         },
         {
             "id": "permission-sets",
@@ -204,7 +206,7 @@ _ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
                 "permission set", "permissionset", "fls", "fieldpermissions", "field permission",
                 "read edit", "read/write", "access", "profile"
             ],
-            "files": ["query-patterns/permission-sets.md"],
+            "files": ["helper-scripts.md", "query-patterns/permission-sets.md"],
         },
         {
             "id": "deploy-troubleshooting",
@@ -214,6 +216,7 @@ _ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
                 "candidate", "baseline", "revert", "gearset"
             ],
             "files": [
+                "helper-scripts.md",
                 "deploy-patterns/custom-field-mdapi.md",
                 "deploy-patterns/source-tracking.md",
             ],
@@ -235,13 +238,42 @@ _ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
 
 
 _ORG_KNOWLEDGE_DEFAULT_FILES: dict[str, str] = {
+    "helper-scripts.md": """# CaseOps Salesforce Helper Scripts
+
+Use deterministic helpers before improvising Salesforce CLI/SOQL/curl commands.
+
+Helper entrypoint:
+
+```bash
+python scripts/sf_caseops_helper.py --help
+```
+
+Available helpers:
+
+```bash
+python scripts/sf_caseops_helper.py custom-field --org "$ORG" --object Case --field Supplement_Inquiry__c --out-dir "$RAW_DIR"
+python scripts/sf_caseops_helper.py layout --org "$ORG" --object Case --contains "Customer Experience" --field Supplement_Inquiry__c --out-dir "$RAW_DIR"
+python scripts/sf_caseops_helper.py fls --org "$ORG" --field Case.Supplement_Inquiry__c --out-dir "$RAW_DIR"
+python scripts/sf_caseops_helper.py deploy-mdapi --sandbox-org "$SANDBOX_ORG" --candidate "$CANDIDATE" --attempt "$ATTEMPT"
+```
+
+Rules:
+
+- Run helpers first for custom field, picklist, layout, FLS, and custom-field MDAPI deploy work.
+- Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands.
+- Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy. Use `--metadata`, `--source-dir`, or `--metadata-dir`.
+- Helpers write compact JSON summaries into the issue-scoped directory and avoid raw access-token output.
+- If a helper fails, inspect the helper summary/error and replan. Do not try many ad hoc variants of the same query.
+""",
     "run-rules.md": """# CaseOps Org Knowledge Run Rules
 
 These rules are always safe to include in Salesforce pipeline runs.
 
 - Read this file plus only the topic files selected by `index.json`; do not bulk-read the entire org-knowledge directory.
 - Use org knowledge to avoid relearning Salesforce CLI behavior. Prefer the known pattern first, then investigate only if the known pattern fails.
+- Use `python scripts/sf_caseops_helper.py ...` helpers first for known Salesforce mechanics before writing ad hoc SOQL/curl/Python snippets.
 - Use `sf` CLI and SOQL for Salesforce API work. Do not use frontdoor links, magic links, or browser session IDs for API, SOQL, retrieve, deploy, or tests.
+- Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands. Do not use `package.xml` or `--manifest` unless the operator explicitly approves a metadata-type exception.
 - Never print, export, or embed raw Salesforce access tokens. Do not run `SF_TEMP_SHOW_SECRETS=true sf org display`. If a REST call is unavoidable, use an internal helper that does not log the token.
 - Stay inside the current issue workspace. Do not inspect other `HEAL-*` metadata or output directories unless the operator explicitly asks for cross-issue comparison.
 - Stop after two failed variants of the same query/deploy pattern. Replan using the selected org knowledge instead of trying many small variations.
@@ -278,9 +310,10 @@ Avoid repeated `PicklistValueInfo` experiments. In this org it can fail with uns
 
 Preferred path for custom picklist truth:
 
-1. Resolve the field through Tooling `CustomField`.
-2. Inspect `CustomField.Metadata.valueSet.valueSetDefinition.value`.
-3. If active/default behavior is ambiguous, perform Metadata API retrieve or a UI/API describe check and record which source was authoritative.
+1. Run `python scripts/sf_caseops_helper.py custom-field --org "$ORG" --object Case --field Field_Name__c --out-dir "$RAW_DIR"`.
+2. If the helper cannot answer the question, resolve the field through Tooling `CustomField`.
+3. Inspect `CustomField.Metadata.valueSet.valueSetDefinition.value`.
+4. If active/default behavior is ambiguous, perform Metadata API retrieve or a UI/API describe check and record which source was authoritative.
 
 Example:
 
@@ -297,6 +330,12 @@ Comparison guidance:
     "query-patterns/layouts.md": """# Layout Query Pattern
 
 For layout section and field placement checks, Tooling `Layout.Metadata` is often faster and cleaner than repeated `sf project retrieve` attempts.
+
+Preferred helper:
+
+```bash
+python scripts/sf_caseops_helper.py layout --org "$ORG" --object Case --contains "Customer Experience" --field Field_Name__c --out-dir "$RAW_DIR"
+```
 
 Find Case layouts:
 
@@ -320,6 +359,12 @@ Rules:
     "query-patterns/permission-sets.md": """# Permission Set and FLS Query Pattern
 
 Resolve candidate permission sets first:
+
+Preferred helper:
+
+```bash
+python scripts/sf_caseops_helper.py fls --org "$ORG" --field Case.Field_Name__c --out-dir "$RAW_DIR"
+```
 
 ```bash
 sf data query --target-org "$ORG" --json --query "SELECT Id, Name, Label FROM PermissionSet WHERE Name LIKE '%Customer%' OR Label LIKE '%Customer%'"
@@ -360,18 +405,25 @@ Run targeted tests first. Broad test runs need a clear reason.
 """,
     "deploy-patterns/custom-field-mdapi.md": """# Custom Field Deploy Pattern
 
-If source deploy returns `NothingToDeploy` or appears affected by source tracking, do not inspect `.sf` internals for long. Use a Metadata API package path.
+If source deploy returns `NothingToDeploy` or appears affected by source tracking, do not inspect `.sf` internals for long. Use the deterministic `sf project deploy start --metadata-dir ...` path.
+
+Preferred helper:
+
+```bash
+python scripts/sf_caseops_helper.py deploy-mdapi --sandbox-org "$SANDBOX_ORG" --candidate "$CANDIDATE" --attempt "$ATTEMPT"
+```
 
 Preferred sequence:
 
 1. Build candidate source under the issue attempt directory.
-2. Convert source to MDAPI when possible:
+2. Do not create or use `package.xml` for routine CaseOps deploys. Prefer explicit `--source-dir`, `--metadata`, or `--metadata-dir`.
+3. Convert source to metadata-dir when possible:
 
 ```bash
 sf project convert source --source-dir "$CANDIDATE/force-app" --output-dir "$ATTEMPT/mdapi-converted"
 ```
 
-3. Deploy with metadata-dir:
+4. Deploy with metadata-dir:
 
 ```bash
 sf project deploy start --metadata-dir "$ATTEMPT/mdapi-converted" --single-package --target-org "$SANDBOX_ORG" --json
@@ -405,6 +457,20 @@ Format:
 }
 
 
+_ORG_KNOWLEDGE_REQUIRED_LINES: dict[str, list[str]] = {
+    "run-rules.md": [
+        "- Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands. Do not use `package.xml` or `--manifest` unless the operator explicitly approves a metadata-type exception.",
+    ],
+    "helper-scripts.md": [
+        "- Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands.",
+        "- Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy. Use `--metadata`, `--source-dir`, or `--metadata-dir`.",
+    ],
+    "deploy-patterns/custom-field-mdapi.md": [
+        "2. Do not create or use `package.xml` for routine CaseOps deploys. Prefer explicit `--source-dir`, `--metadata`, or `--metadata-dir`.",
+    ],
+}
+
+
 def _metadata_workspace_dirs() -> dict[str, Path]:
     """Return the instance-scoped Salesforce metadata workspace directories."""
     base_temp = TEMP_ROOT if TEMP_ROOT is not None else OUTPUTS.parent / ".temp"
@@ -428,6 +494,66 @@ def _org_knowledge_dir() -> Path:
     return OUTPUTS / "org-knowledge"
 
 
+def _merge_org_knowledge_index(index: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+    """Merge new default topic wiring without replacing operator-edited content."""
+    if not isinstance(index, dict):
+        return copy.deepcopy(_ORG_KNOWLEDGE_DEFAULT_INDEX), True
+
+    merged = copy.deepcopy(index)
+    changed = False
+
+    for key in ("version", "description", "max_context_chars", "max_topic_files"):
+        if key not in merged:
+            merged[key] = copy.deepcopy(_ORG_KNOWLEDGE_DEFAULT_INDEX.get(key))
+            changed = True
+
+    existing_always = merged.get("always_read")
+    if not isinstance(existing_always, list):
+        merged["always_read"] = copy.deepcopy(_ORG_KNOWLEDGE_DEFAULT_INDEX["always_read"])
+        changed = True
+    else:
+        for rel in _ORG_KNOWLEDGE_DEFAULT_INDEX["always_read"]:
+            if rel not in existing_always:
+                existing_always.append(rel)
+                changed = True
+
+    topics = merged.get("topics")
+    if not isinstance(topics, list):
+        merged["topics"] = copy.deepcopy(_ORG_KNOWLEDGE_DEFAULT_INDEX["topics"])
+        return merged, True
+
+    existing_by_id = {
+        topic.get("id"): topic
+        for topic in topics
+        if isinstance(topic, dict) and isinstance(topic.get("id"), str)
+    }
+    for default_topic in _ORG_KNOWLEDGE_DEFAULT_INDEX["topics"]:
+        topic_id = default_topic.get("id")
+        existing_topic = existing_by_id.get(topic_id)
+        if not existing_topic:
+            topics.append(copy.deepcopy(default_topic))
+            changed = True
+            continue
+
+        for key in ("title", "keywords", "files"):
+            if key not in existing_topic:
+                existing_topic[key] = copy.deepcopy(default_topic.get(key))
+                changed = True
+
+        for list_key in ("keywords", "files"):
+            current = existing_topic.get(list_key)
+            if not isinstance(current, list):
+                existing_topic[list_key] = copy.deepcopy(default_topic.get(list_key, []))
+                changed = True
+                continue
+            for item in default_topic.get(list_key, []):
+                if item not in current:
+                    current.append(item)
+                    changed = True
+
+    return merged, changed
+
+
 def _ensure_org_knowledge_defaults() -> None:
     """Seed editable org knowledge files without overwriting user updates."""
     root = _org_knowledge_dir()
@@ -443,6 +569,26 @@ def _ensure_org_knowledge_defaults() -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
             path.write_text(content, encoding="utf-8")
+    for rel, lines in _ORG_KNOWLEDGE_REQUIRED_LINES.items():
+        path = root / rel
+        try:
+            existing = path.read_text(encoding="utf-8")
+        except OSError:
+            existing = ""
+        missing = [line for line in lines if line not in existing]
+        if missing:
+            suffix = "\n" if existing and not existing.endswith("\n") else ""
+            path.write_text(existing + suffix + "\n".join(missing) + "\n", encoding="utf-8")
+    try:
+        data = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        data = {}
+    merged, changed = _merge_org_knowledge_index(data if isinstance(data, dict) else {})
+    if changed:
+        index_path.write_text(
+            json.dumps(merged, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
 
 
 def _read_org_knowledge_index() -> dict[str, Any]:
@@ -1510,13 +1656,9 @@ def _claude_process_env() -> dict[str, str]:
     # The CLI can otherwise spend time on telemetry/update/progress initialization
     # before even returning from simple commands such as `sf --version`.
     env.setdefault("SF_DISABLE_TELEMETRY", "true")
-    env.setdefault("SFDX_DISABLE_TELEMETRY", "true")
     env.setdefault("SF_AUTOUPDATE_DISABLE", "true")
-    env.setdefault("SFDX_AUTOUPDATE_DISABLE", "true")
     env.setdefault("SF_DISABLE_AUTOUPDATE", "true")
-    env.setdefault("SFDX_DISABLE_AUTOUPDATE", "true")
     env.setdefault("SF_USE_PROGRESS_BAR", "false")
-    env.setdefault("SFDX_USE_PROGRESS_BAR", "false")
     env.setdefault("SF_JSON_TO_STDOUT", "true")
     env.setdefault("NO_COLOR", "1")
 

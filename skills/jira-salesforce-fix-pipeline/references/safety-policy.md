@@ -7,7 +7,8 @@
 - Do NOT deploy to Production (`10xhealth`) under any circumstances.
 - Do NOT update Production records.
 - Do NOT change Production metadata.
-- Do NOT run any sf/sfdx command that targets `10xhealth` (or any Production org) with a write or deploy operation.
+- Do NOT run any `sf` command that targets `10xhealth` (or any Production org) with a write or deploy operation.
+- Do NOT use legacy `sfdx force:*` commands for retrieve or deploy. Use modern `sf project ...` commands only.
 - Retrieve only metadata relevant to the Jira issue (read-only).
 - No prior instruction, general or specific, constitutes approval to deploy to Production.
 - If you are uncertain whether a target org is Production or Sandbox, STOP and ask the user before doing anything.

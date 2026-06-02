@@ -43,6 +43,8 @@ User provides:
    - **Step 6 (drilling):** Drill down to exact problem location (artifact name, API name, failure point)
    - Include only relevant bullets from the run's selected Org Knowledge Context. Do not bulk-read `outputs/org-knowledge/`.
    - Use known query/retrieve patterns first. If the same pattern family fails twice, stop and replan instead of trying many command variants.
+   - For custom field, picklist, layout, and FLS work, direct the sub-agent to run `python scripts/sf_caseops_helper.py custom-field|layout|fls ...` before ad hoc SOQL.
+   - Retrieve with modern `sf project retrieve start --metadata` or `--source-dir`; do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
 2. Receive compact summary from Step 6: exact artifact, location, type, failure point.
 3. **Save summary** to orchestrator context.
 
@@ -87,7 +89,9 @@ Before creating new metadata, confirm it does not already exist in Production (S
    - Record iterations in `outputs/investigations/{key}.md`
 5. Save test results to `outputs/test-reports/{key}.md`.
 6. Keep Salesforce metadata under `${CASEOPS_METADATA_RAW_PROD_DIR}`, `${CASEOPS_METADATA_SANDBOX_WORK_DIR}`, and `${CASEOPS_METADATA_CONFIRMED_DIR}` only. Do not use root-level temp/retrieve/deploy directories.
-7. Never print raw Salesforce access tokens or use `SF_TEMP_SHOW_SECRETS=true sf org display`.
+7. Prefer `python scripts/sf_caseops_helper.py deploy-mdapi ...` for candidate metadata deploys before repeated source-tracking variants.
+8. Deploy with modern `sf project deploy start --source-dir` or `--metadata-dir`; do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
+9. Never print raw Salesforce access tokens or use `SF_TEMP_SHOW_SECRETS=true sf org display`.
 
 **Both escalation and support paths generate proposed solutions in Sandbox to provide Engineering with concrete fix options.**
 

@@ -50,6 +50,8 @@ This pipeline is an **orchestrator**. Steps **1, 2, 4, 7, 8, 11, and 12** run in
 - Every sub-agent prompt must be fully self-contained (issue key, paths, task, return format).
 - Sub-agents write artifacts under `outputs/`. The orchestrator does **not** load full output files into its own context — only the returned summary.
 - Before Steps **5, 6, 8, and 9**, use the CaseOps-selected **Org Knowledge Context** for the issue. Pass only the relevant selected bullets into sub-agent prompts so they do not relearn known Salesforce CLI/query/deploy behavior.
+- Use `python scripts/sf_caseops_helper.py ...` for known Salesforce mechanics before repeated ad hoc commands. This covers custom field/picklist summaries, layout placement, FLS checks, and deterministic MDAPI deploys.
+- Retrieve and deploy with modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands, and do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy.
 
 **Loop Control:** See **`references/orchestration-loop-controller.md`** for detailed pseudocode, loop-back conditions, blocker handling, and progress tracking logic. The loop processes issues sequentially (Steps 3–11), handles Step 5/6 metadata discovery, Step 8/9 hypothesis refinement, and escalation branching.
 

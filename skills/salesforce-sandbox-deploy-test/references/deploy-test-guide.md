@@ -19,6 +19,14 @@
 - Review the local diff between `baseline-sandbox/` and `candidate/`.
 - Confirm the deployment scope.
 - Identify tests to run.
+- Deploy with modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
+- For issue-scoped candidate metadata, prefer the deterministic helper before trying source-tracking variants:
+
+```bash
+python scripts/sf_caseops_helper.py deploy-mdapi --sandbox-org "$CASEOPS_SANDBOX_TARGET_ORG" --candidate "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/candidate" --attempt "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N"
+```
+
+- If the helper or deploy pattern fails twice, stop and summarize the blocker. Do not inspect `.sf` internals or try many small deploy variants.
 
 After deploying:
 
