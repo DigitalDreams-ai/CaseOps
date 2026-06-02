@@ -99,6 +99,43 @@
       <div id="detail-meta"></div>
     </div>
     <div id="tabs" style="display:none"></div>
+    <div id="detail-actions">
+      <!-- Desktop: always visible -->
+      <button class="btn desktop-only" id="detail-sync-btn" onclick="runAction('sync_issue',activeKey)" style="display:none;">Sync This Issue</button>
+      <button class="btn primary desktop-only" id="detail-pipeline-btn" onclick="runAction('full_issue',activeKey)" style="display:none;">Run Pipeline</button>
+      <button class="btn desktop-only" id="detail-reprocess-btn" onclick="runAction('reprocess_issue',activeKey)" style="display:none;">Reprocess</button>
+      <select id="detail-transition-select" class="action-menu-select desktop-only" style="display:none; padding:5px 8px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:4px; font-size:12px;"><option value="">Change status…</option></select>
+      <button class="btn desktop-only" id="detail-transition-btn" onclick="applyTransitionDetail(activeKey)" disabled style="display:none; padding:6px 8px;">Apply</button>
+      <select id="detail-message-select" class="action-menu-select desktop-only" style="display:none; padding:5px 8px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:4px; font-size:12px;"><option value="">Send message…</option></select>
+      <button class="btn desktop-only" id="detail-message-btn" onclick="sendCannedMessageDetail(activeKey)" disabled style="display:none; padding:6px 8px;">Send</button>
+      <button class="btn desktop-only" id="detail-jira-btn" onclick="window.open(document.getElementById('issue-jira-url').value,'_blank')" style="display:none; padding:6px 8px;">View in Jira</button>
+      <button class="btn desktop-only" id="detail-prompt-btn" onclick="copyFullPrompt(activeKey)" style="display:none; padding:6px 8px;">Copy Prompt</button>
+
+      <!-- Mobile: dropdown menu -->
+      <div style="position:relative;">
+        <button type="button" class="btn primary mobile-only" id="detail-actions-btn" onclick="toggleDetailActionsMenu()">Actions ▼</button>
+        <div id="detail-actions-menu" class="issue-actions-menu" style="display:none; position:absolute; top:100%; right:0; background:var(--color-surface); border:1px solid var(--color-border); border-radius:4px; z-index:100; min-width:200px;">
+          <div style="padding:6px;">
+            <button class="action-menu-item" onclick="runAction('sync_issue',activeKey)">Sync This Issue</button>
+            <button class="action-menu-item primary" onclick="runAction('full_issue',activeKey)">Run Pipeline For This Issue</button>
+            <button class="action-menu-item" onclick="runAction('reprocess_issue',activeKey)">Reprocess Issue (No Sync)</button>
+            <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
+              <select id="detail-transition-select-mobile" class="action-menu-select" style="width:100%; margin-bottom:4px; font-size:12px; padding:4px;"><option value="">Change status…</option></select>
+              <button class="action-menu-item" id="detail-transition-btn-mobile" onclick="applyTransitionDetailMobile(activeKey)" disabled style="width:100%; padding:6px 8px;">Apply</button>
+            </div>
+            <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
+              <select id="detail-message-select-mobile" class="action-menu-select" style="width:100%; margin-bottom:4px; font-size:12px; padding:4px;"><option value="">Send message…</option></select>
+              <button class="action-menu-item" id="detail-message-btn-mobile" onclick="sendCannedMessageDetailMobile(activeKey)" disabled style="width:100%; padding:6px 8px;">Send</button>
+            </div>
+            <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
+              <button class="action-menu-item" onclick="window.open(document.getElementById('issue-jira-url').value,'_blank')" style="width:100%; padding:6px 8px;">View in Jira</button>
+              <button class="action-menu-item" onclick="copyFullPrompt(activeKey); closeDetailActionsMenu();" style="width:100%; padding:6px 8px;">Copy Prompt</button>
+              <button class="action-menu-item" onclick="sendInstruction(); closeDetailActionsMenu();" style="width:100%; padding:6px 8px;">Send Request</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div id="instruction-panel">
       <div id="instruction-context"></div>
       <div id="instruction-row">
@@ -107,43 +144,6 @@
       </div>
     </div>
     <div id="content-area">
-      <div id="detail-actions" style="display:flex; padding:12px 16px; border-bottom:1px solid var(--color-border); gap:8px; align-items:center; flex-wrap:wrap; background:rgba(0,0,0,0.1);">
-        <!-- Desktop: always visible -->
-        <button class="btn desktop-only" id="detail-sync-btn" onclick="runAction('sync_issue',activeKey)" style="display:none;">Sync This Issue</button>
-        <button class="btn primary desktop-only" id="detail-pipeline-btn" onclick="runAction('full_issue',activeKey)" style="display:none;">Run Pipeline</button>
-        <button class="btn desktop-only" id="detail-reprocess-btn" onclick="runAction('reprocess_issue',activeKey)" style="display:none;">Reprocess</button>
-        <select id="detail-transition-select" class="action-menu-select desktop-only" style="display:none; padding:5px 8px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:4px; font-size:12px;"><option value="">Change status…</option></select>
-        <button class="btn desktop-only" id="detail-transition-btn" onclick="applyTransitionDetail(activeKey)" disabled style="display:none; padding:6px 8px;">Apply</button>
-        <select id="detail-message-select" class="action-menu-select desktop-only" style="display:none; padding:5px 8px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:4px; font-size:12px;"><option value="">Send message…</option></select>
-        <button class="btn desktop-only" id="detail-message-btn" onclick="sendCannedMessageDetail(activeKey)" disabled style="display:none; padding:6px 8px;">Send</button>
-        <button class="btn desktop-only" id="detail-jira-btn" onclick="window.open(document.getElementById('issue-jira-url').value,'_blank')" style="display:none; padding:6px 8px;">View in Jira</button>
-        <button class="btn desktop-only" id="detail-prompt-btn" onclick="copyFullPrompt(activeKey)" style="display:none; padding:6px 8px;">Copy Prompt</button>
-
-        <!-- Mobile: dropdown menu -->
-        <div style="position:relative;">
-          <button type="button" class="btn primary mobile-only" id="detail-actions-btn" onclick="toggleDetailActionsMenu()">Actions ▼</button>
-          <div id="detail-actions-menu" class="issue-actions-menu" style="display:none; position:absolute; top:100%; right:0; background:var(--color-surface); border:1px solid var(--color-border); border-radius:4px; z-index:100; min-width:200px;">
-            <div style="padding:6px;">
-              <button class="action-menu-item" onclick="runAction('sync_issue',activeKey)">Sync This Issue</button>
-              <button class="action-menu-item primary" onclick="runAction('full_issue',activeKey)">Run Pipeline For This Issue</button>
-              <button class="action-menu-item" onclick="runAction('reprocess_issue',activeKey)">Reprocess Issue (No Sync)</button>
-              <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
-                <select id="detail-transition-select-mobile" class="action-menu-select" style="width:100%; margin-bottom:4px; font-size:12px; padding:4px;"><option value="">Change status…</option></select>
-                <button class="action-menu-item" id="detail-transition-btn-mobile" onclick="applyTransitionDetailMobile(activeKey)" disabled style="width:100%; padding:6px 8px;">Apply</button>
-              </div>
-              <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
-                <select id="detail-message-select-mobile" class="action-menu-select" style="width:100%; margin-bottom:4px; font-size:12px; padding:4px;"><option value="">Send message…</option></select>
-                <button class="action-menu-item" id="detail-message-btn-mobile" onclick="sendCannedMessageDetailMobile(activeKey)" disabled style="width:100%; padding:6px 8px;">Send</button>
-              </div>
-              <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
-                <button class="action-menu-item" onclick="window.open(document.getElementById('issue-jira-url').value,'_blank')" style="width:100%; padding:6px 8px;">View in Jira</button>
-                <button class="action-menu-item" onclick="copyFullPrompt(activeKey); closeDetailActionsMenu();" style="width:100%; padding:6px 8px;">Copy Prompt</button>
-                <button class="action-menu-item" onclick="sendInstruction(); closeDetailActionsMenu();" style="width:100%; padding:6px 8px;">Send Request</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
       <div id="dashboard">
         <h2>Overview</h2>
         <p id="overview-meta" class="overview-meta"></p>
@@ -953,13 +953,17 @@
         if (state === 'untriaged') {
           stateBadge = '<span class="badge state-untriaged" title="No pipeline work started. Run investigation.">Not Triaged</span>';
         } else if (state === 'investigating') {
-          stateBadge = '<span class="badge state-investigating" title="Investigation in progress. Analyzing issue.">In Progress</span>';
+          stateBadge = '<span class="badge state-investigating" title="Pipeline investigation is in progress.">Investigating</span>';
         } else if (state === 'analyzed') {
           stateBadge = '<span class="badge state-analyzed" title="Analysis complete. Decision made (fix or escalate).">Analyzed</span>';
         } else if (state === 'validated') {
           stateBadge = '<span class="badge state-validated" title="Solution tested and confirmed in Sandbox.">Validated</span>';
+        } else if (state === 'engineering_handoff') {
+          stateBadge = issue.needs_escalation
+            ? '<span class="badge state-engineering-handoff" title="CaseOps has prepared an Engineering handoff; Jira has not been escalated yet.">Needs Escalation</span>'
+            : '<span class="badge state-engineering-handoff" title="CaseOps has prepared an Engineering handoff.">Engineering Handoff</span>';
         } else if (state === 'escalated_to_engineering') {
-          stateBadge = '<span class="badge state-escalated" title="Jira status: Escalated to Engineering.">Escalated to Engineering</span>';
+          stateBadge = '<span class="badge state-escalated" title="Jira status is Escalated to Engineering.">Escalated to Engineering</span>';
         }
 
         // Secondary flags: validated combinations only
@@ -971,10 +975,10 @@
         if (issue.is_data_only && !issue.is_blocked && !issue.has_eng_handoff) {
           secondaryBadges += '<span class="badge badge-data-only" title="Data-only fix (no metadata deploy).">Data Only</span>';
         }
-        if (issue.has_eng_handoff && !issue.is_data_only && !issue.is_jira_escalated) {
+        if (issue.needs_escalation && !issue.is_data_only && state !== 'engineering_handoff') {
           secondaryBadges += '<span class="badge badge-needs-escalation" title="Issue determined to need escalation (engineering-escalations file exists).">Needs Escalation</span>';
         }
-        if (issue.is_jira_escalated && !issue.is_data_only) {
+        if (issue.is_jira_escalated && !issue.is_data_only && state !== 'escalated_to_engineering') {
           secondaryBadges += '<span class="badge badge-escalated-jira" title="Escalated to Engineering (Jira status).">Escalated to Eng</span>';
         }
       }
@@ -1085,7 +1089,8 @@
       if (issue.has_internal_notes) badges.push({text: '✓ Notes', cls: ''});
       if (issue.has_jira_message) badges.push({text: '✓ Draft', cls: ''});
       if (issue.has_solution) badges.push({text: '✓ Solution', cls: 'solution'});
-      if (issue.has_eng_handoff && !issue.is_jira_escalated) badges.push({text: '📋 Needs Escalation', cls: 'escalated'});
+      if (issue.needs_escalation) badges.push({text: '📋 Needs Escalation', cls: 'escalated'});
+      else if (issue.has_eng_handoff && !issue.is_jira_escalated) badges.push({text: '📋 Engineering Handoff', cls: 'escalated'});
       if (issue.is_jira_escalated) badges.push({text: '🔀 Escalated to Engineering', cls: 'escalated'});
       badgesEl.innerHTML = badges.length > 0
         ? badges.map(b => `<span class="detail-badge${b.cls ? ' ' + b.cls : ''}">${escHtml(b.text)}</span>`).join('')

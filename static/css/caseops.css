@@ -163,6 +163,12 @@ select.desktop-only {
   font-weight: 600;
 }
 
+.badge.state-engineering-handoff {
+  background: rgba(210, 153, 34, 0.2);
+  color: #d29922;
+  font-weight: 600;
+}
+
 .badge.state-escalated {
   background: rgba(34, 180, 207, 0.2);
   color: #22b4cf;
@@ -884,7 +890,10 @@ select.desktop-only {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--color-bg);
+  flex-shrink: 0;
+  z-index: 35;
+  box-shadow: 0 1px 0 var(--color-border);
 }
 
 #detail-actions select {
@@ -924,6 +933,7 @@ select.desktop-only {
   flex-shrink: 0;
   overflow: hidden;
   position: static;
+  background: var(--color-bg);
 }
 
 #instruction-context {

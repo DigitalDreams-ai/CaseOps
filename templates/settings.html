@@ -563,19 +563,101 @@
             }
         }
 
+        let settingsStatusPromise = null;
+        let statusPollTimer = null;
+
+        async function fetchSettingsStatus(options = {}) {
+            const refresh = options.refresh === true;
+            if (!refresh && settingsStatusPromise) {
+                return settingsStatusPromise;
+            }
+            const url = refresh ? '/api/settings/status?refresh=1' : '/api/settings/status';
+            const promise = fetch(url).then(resp => {
+                if (!resp.ok) throw new Error(`Status check failed: HTTP ${resp.status}`);
+                return resp.json();
+            });
+            if (!refresh) {
+                settingsStatusPromise = promise.finally(() => {
+                    settingsStatusPromise = null;
+                });
+                return settingsStatusPromise;
+            }
+            return promise;
+        }
+
+        function scheduleStatusPoll(status) {
+            if (!status || !status.cache || !status.cache.refreshing || statusPollTimer) return;
+            statusPollTimer = window.setTimeout(async () => {
+                statusPollTimer = null;
+                await refreshStatusPanels();
+            }, 2500);
+        }
+
+        async function refreshStatusPanels(options = {}) {
+            const status = await fetchSettingsStatus(options);
+            renderClaudeStatus(status);
+            renderSalesforceStatus(status);
+            scheduleStatusPoll(status);
+            return status;
+        }
+
+        function renderClaudeStatus(status) {
+            const claudeDiv = document.getElementById('claude-status');
+            if (!claudeDiv) return;
+            if (status.claude && status.claude.installed && status.claude.authenticated) {
+                const runtimeText = status.runtime_preflight && status.runtime_preflight.ok ? ' - Pipeline runtime ready' : '';
+                claudeDiv.innerHTML = `<span style="color: var(--color-success);">✓ Claude CLI ${status.claude.version || ''} - Authenticated${runtimeText}</span>`;
+            } else if (status.claude && status.claude.installed) {
+                const tokenText = status.cache && status.cache.refreshing
+                    ? 'checking authentication...'
+                    : (status.claude.token_configured ? 'token configured but auth check failed' : 'needs token');
+                claudeDiv.innerHTML = `<span style="color: var(--color-warn);">⚠ Claude CLI ${status.claude.version || ''} - ${tokenText}</span>`;
+            } else {
+                claudeDiv.innerHTML = '<span style="color: var(--color-danger);">✗ Claude CLI not available</span>';
+            }
+        }
+
+        function renderSalesforceStatus(status) {
+            const statusDiv = document.getElementById('sf-auth-status');
+            if (!statusDiv) return;
+
+            if (status.sf_installed) {
+                let runtimeHtml = '';
+                if (status.runtime_preflight) {
+                    if (status.runtime_preflight.ok === true) {
+                        runtimeHtml = ` <span class="status-badge ok">✓ Pipeline runtime ready</span>`;
+                    } else if (status.runtime_preflight.ok === null || (status.cache && status.cache.refreshing)) {
+                        runtimeHtml = ` <span class="status-badge">Checking pipeline runtime...</span>`;
+                    } else {
+                        const issue = (status.runtime_preflight.issues || [])[0] || 'Pipeline runtime preflight failed';
+                        runtimeHtml = ` <span class="status-badge not-ok" title="${issue.replace(/"/g, '&quot;')}">✗ Pipeline runtime blocked</span>`;
+                    }
+                }
+                statusDiv.innerHTML = `<span class="status-badge ok">✓ Salesforce CLI installed</span>${runtimeHtml}`;
+
+                if (status.sf_prod && status.sf_prod.authenticated && status.sf_sandbox && status.sf_sandbox.authenticated) {
+                    displayAuthenticatedOrgs(status.sf_prod, status.sf_sandbox);
+                } else if (status.cache && status.cache.refreshing) {
+                    const orgsDiv = document.getElementById('sf-orgs-display');
+                    const orgsList = document.getElementById('sf-orgs-list');
+                    if (orgsDiv && orgsList) {
+                        orgsList.innerHTML = '<div style="font-size:12px;color:var(--color-text-secondary);">Checking authenticated Salesforce orgs...</div>';
+                        orgsDiv.style.display = 'block';
+                    }
+                } else {
+                    const orgsDiv = document.getElementById('sf-orgs-display');
+                    if (orgsDiv) orgsDiv.style.display = 'none';
+                }
+            } else {
+                statusDiv.innerHTML = `<span class="status-badge not-ok">✗ Salesforce CLI not installed</span>`;
+            }
+        }
+
         async function loadStatus() {
             try {
-                const resp = await fetch('/api/settings/status');
-                if (!resp.ok) return;
-                const status = await resp.json();
-
-                // Claude status
-                const claudeDiv = document.getElementById('claude-status');
-                if (status.claude && status.claude.installed) {
-                    claudeDiv.innerHTML = `<span class="status-badge ok">✓ Installed</span> ${status.claude.version || ''}`;
-                } else {
-                    claudeDiv.innerHTML = `<span class="status-badge not-ok">✗ Not installed</span>`;
-                }
+                const status = await fetchSettingsStatus();
+                renderClaudeStatus(status);
+                scheduleStatusPoll(status);
             } catch (e) {
                 console.error('Failed to load status:', e);
             }
@@ -583,35 +665,9 @@
 
         async function loadSalesforceStatus() {
             try {
-                const resp = await fetch('/api/settings/status');
-                if (!resp.ok) return;
-                const status = await resp.json();
-
-                // Load authenticated orgs from SF CLI
-                if (status.sf_installed) {
-                    const statusDiv = document.getElementById('sf-auth-status');
-                    let runtimeHtml = '';
-                    if (status.runtime_preflight) {
-                        if (status.runtime_preflight.ok) {
-                            runtimeHtml = ` <span class="status-badge ok">✓ Pipeline runtime ready</span>`;
-                        } else {
-                            const issue = (status.runtime_preflight.issues || [])[0] || 'Pipeline runtime preflight failed';
-                            runtimeHtml = ` <span class="status-badge not-ok" title="${issue.replace(/"/g, '&quot;')}">✗ Pipeline runtime blocked</span>`;
-                        }
-                    }
-                    statusDiv.innerHTML = `<span class="status-badge ok">✓ Salesforce CLI installed</span>${runtimeHtml}`;
-
-                    // Check authenticated orgs
-                    if (status.sf_prod && status.sf_prod.authenticated && status.sf_sandbox && status.sf_sandbox.authenticated) {
-                        displayAuthenticatedOrgs(status.sf_prod, status.sf_sandbox);
-                    } else {
-                        const orgsDiv = document.getElementById('sf-orgs-display');
-                        orgsDiv.style.display = 'none';
-                    }
-                } else {
-                    const statusDiv = document.getElementById('sf-auth-status');
-                    statusDiv.innerHTML = `<span class="status-badge not-ok">✗ Salesforce CLI not installed</span>`;
-                }
+                const status = await fetchSettingsStatus();
+                renderSalesforceStatus(status);
+                scheduleStatusPoll(status);
             } catch (e) {
                 console.error('Failed to load Salesforce status:', e);
             }
@@ -743,7 +799,7 @@
                 if (resp.ok) {
                     showBanner('Settings saved successfully', 'success');
                     await loadSettings();
-                    await loadStatus();
+                    await refreshStatusPanels({refresh: true});
                 } else {
                     const error = await resp.json();
                     showBanner('Error saving settings: ' + (error.error || 'Unknown error'), 'error');
@@ -779,6 +835,7 @@
                     }
 
                     showBanner('Salesforce orgs authenticated successfully', 'success');
+                    await refreshStatusPanels({refresh: true});
                 } else {
                     msgDiv.textContent = '✗ ' + (data.error || 'Authentication failed');
                     msgDiv.style.color = 'var(--color-danger)';
@@ -905,18 +962,9 @@
 
         async function loadClaudeStatus() {
             try {
-                const resp = await fetch('/api/settings/status');
-                const status = await resp.json();
-                const statusDiv = document.getElementById('claude-status');
-                if (status.claude && status.claude.installed && status.claude.authenticated) {
-                    const runtimeText = status.runtime_preflight && status.runtime_preflight.ok ? ' - Pipeline runtime ready' : '';
-                    statusDiv.innerHTML = `<span style="color: var(--color-success);">✓ Claude CLI ${status.claude.version || ''} - Authenticated${runtimeText}</span>`;
-                } else if (status.claude && status.claude.installed) {
-                    const tokenText = status.claude.token_configured ? 'token configured but auth check failed' : 'needs token';
-                    statusDiv.innerHTML = `<span style="color: var(--color-warn);">⚠ Claude CLI ${status.claude.version || ''} - ${tokenText}</span>`;
-                } else {
-                    statusDiv.innerHTML = '<span style="color: var(--color-danger);">✗ Claude CLI not available</span>';
-                }
+                const status = await fetchSettingsStatus();
+                renderClaudeStatus(status);
+                scheduleStatusPoll(status);
             } catch (e) {
                 document.getElementById('claude-status').textContent = 'Unable to check status';
             }
@@ -975,11 +1023,9 @@
 
         // Load on page open
         loadSettings();
-        loadStatus();
-        loadSalesforceStatus();
+        refreshStatusPanels();
         loadDisplayLabel();
         loadCannedMessages();
-        loadClaudeStatus();
     </script>
 </body>
 </html>

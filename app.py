@@ -41,6 +41,7 @@ class PipelineState(Enum):
     INVESTIGATING = "investigating"
     ANALYZED = "analyzed"
     VALIDATED = "validated"
+    ENGINEERING_HANDOFF = "engineering_handoff"
     ESCALATED_TO_ENGINEERING = "escalated_to_engineering"
 
 try:
@@ -133,6 +134,11 @@ SKILL_PATHS: dict[str, str] = {}
 _sf_orgs_cache: dict[str, dict[str, str]] | None = None
 _sf_orgs_cache_time = 0
 _SF_ORGS_CACHE_TTL = 600  # Cache for 10 minutes
+_settings_status_cache: dict[str, Any] | None = None
+_settings_status_cache_time = 0.0
+_settings_status_refreshing = False
+_SETTINGS_STATUS_CACHE_TTL = 120
+_SETTINGS_STATUS_LOCK = threading.Lock()
 
 _ENV_KEYS_RELOAD_FROM_FILE = {
     "ANTHROPIC_API_KEY",
@@ -2239,10 +2245,19 @@ def _disposition(status: str) -> str:
     return "active"
 
 
+def _is_jira_engineering_escalated(status: str = "") -> bool:
+    return (status or "").strip().lower() == ESCALATED_STATUS
+
+
+def _is_jira_escalated_any(status: str = "") -> bool:
+    return "escalated" in (status or "").strip().lower()
+
+
 def _available_tabs(key: str) -> list[dict[str, str]]:
     tabs = []
+    internal_only = {"step4_hypothesis"}
     for ftype, rel in FILE_LOCATIONS.items():
-        if ftype == "attachments":
+        if ftype == "attachments" or ftype in internal_only:
             continue
         path = OUTPUTS / rel.format(key=key)
         if path.exists():
@@ -2283,6 +2298,8 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
 
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
     has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
+    is_jira_escalated = _is_jira_engineering_escalated(status)
+    is_jira_escalated_any = _is_jira_escalated_any(status)
     state = _calculate_pipeline_state(key, status)
 
     return {
@@ -2295,8 +2312,9 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
         "has_eng_handoff": has_eng_handoff,
         "has_confirmed_solution": _test_report_confirms_fix(key),
         "has_solution": has_solution,
-        "needs_escalation": has_eng_handoff,  # Issue needs escalation (has escalation handoff file)
-        "is_jira_escalated": status == "Escalated to Engineering",  # User-driven Jira status
+        "needs_escalation": has_eng_handoff and not is_jira_escalated_any,
+        "is_jira_escalated": is_jira_escalated,
+        "is_jira_escalated_any": is_jira_escalated_any,
 
         # Pipeline state machine: all determined by file existence
         "pipeline_state": state.value,
@@ -2358,7 +2376,8 @@ def _test_report_is_data_only(key: str) -> bool:
 def _calculate_pipeline_state(key: str, status: str = "") -> PipelineState:
     """Calculate current pipeline state based on file existence.
 
-    Source of truth: eng_handoff file (engineering-escalations/{key}.md) marks escalation.
+    Jira status is the only source of truth for actual Jira escalation.
+    An eng_handoff file means CaseOps has prepared/recommended escalation.
     Support-resolvable progression based on pipeline file artifacts.
     """
     has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
@@ -2366,9 +2385,10 @@ def _calculate_pipeline_state(key: str, status: str = "") -> PipelineState:
     has_test_report = (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists()
     has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
 
-    # Escalation state: based on eng_handoff file (source of truth, pipeline determines this)
-    if has_eng_handoff:
+    if _is_jira_engineering_escalated(status):
         return PipelineState.ESCALATED_TO_ENGINEERING
+    if has_eng_handoff:
+        return PipelineState.ENGINEERING_HANDOFF
 
     # Support-resolvable progression
     if not has_investigation:
@@ -3390,23 +3410,34 @@ def api_settings_reset_canned_messages():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/settings/status", methods=["GET"])
-def api_settings_status():
-    """Return status of Claude CLI, sf CLI, and Salesforce orgs."""
+def _settings_status_skeleton() -> dict[str, Any]:
     env_file_path = app.config.get("ENV_FILE_PATH")
     settings = _read_env_file(Path(env_file_path) if env_file_path else None)
     prod_alias = _env_first("CASEOPS_PRODUCTION_READ_ORG", settings=settings)
     sand_alias = _env_first("CASEOPS_SANDBOX_TARGET_ORG", settings=settings)
 
-    status = {
-        "claude": {"installed": False, "authenticated": False, "token_configured": False},
-        "sf_installed": False,
+    return {
+        "claude": {
+            "installed": bool(shutil.which("claude")),
+            "authenticated": False,
+            "token_configured": bool((os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or "").strip()),
+        },
+        "sf_installed": bool(shutil.which("sf")),
         "sf_prod": {"authenticated": False, "alias": prod_alias},
         "sf_sandbox": {"authenticated": False, "alias": sand_alias},
-        "cci_installed": False,
+        "cci_installed": bool(shutil.which("cumulusci") or shutil.which("cci")),
         "cci_prod": {"authenticated": False},
         "cci_sandbox": {"authenticated": False},
     }
+
+
+def _build_settings_status() -> dict[str, Any]:
+    """Run the full Settings status probe. This may take several seconds."""
+    status = _settings_status_skeleton()
+    env_file_path = app.config.get("ENV_FILE_PATH")
+    settings = _read_env_file(Path(env_file_path) if env_file_path else None)
+    prod_alias = _env_first("CASEOPS_PRODUCTION_READ_ORG", settings=settings)
+    sand_alias = _env_first("CASEOPS_SANDBOX_TARGET_ORG", settings=settings)
 
     use_cci = os.environ.get("CASEOPS_USE_CCI_FOR_AUTH", "false").lower() == "true"
 
@@ -3533,6 +3564,84 @@ def api_settings_status():
             "issues": [f"Runtime preflight status failed: {type(e).__name__}: {e}"],
         }
 
+    status["cache"] = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "refreshing": False,
+        "source": "fresh",
+    }
+    return status
+
+
+def _settings_status_cache_fresh(now: float | None = None) -> bool:
+    now = now or time.time()
+    return bool(_settings_status_cache and (now - _settings_status_cache_time) < _SETTINGS_STATUS_CACHE_TTL)
+
+
+def _refresh_settings_status_cache() -> None:
+    global _settings_status_cache, _settings_status_cache_time, _settings_status_refreshing
+    try:
+        status = _build_settings_status()
+        with _SETTINGS_STATUS_LOCK:
+            _settings_status_cache = status
+            _settings_status_cache_time = time.time()
+    finally:
+        with _SETTINGS_STATUS_LOCK:
+            _settings_status_refreshing = False
+
+
+def _start_settings_status_refresh_if_needed(force: bool = False) -> None:
+    global _settings_status_refreshing
+    with _SETTINGS_STATUS_LOCK:
+        if _settings_status_refreshing:
+            return
+        if not force and _settings_status_cache_fresh():
+            return
+        _settings_status_refreshing = True
+    threading.Thread(target=_refresh_settings_status_cache, daemon=True).start()
+
+
+@app.route("/api/settings/status", methods=["GET"])
+def api_settings_status():
+    """Return cached Settings status quickly; use ?refresh=1 for a blocking deep probe."""
+    global _settings_status_cache, _settings_status_cache_time
+    force_refresh = request.args.get("refresh") in {"1", "true", "yes"}
+
+    if force_refresh:
+        status = _build_settings_status()
+        with _SETTINGS_STATUS_LOCK:
+            _settings_status_cache = status
+            _settings_status_cache_time = time.time()
+        status["cache"] = {**status.get("cache", {}), "source": "forced"}
+        return jsonify(status)
+
+    now = time.time()
+    with _SETTINGS_STATUS_LOCK:
+        cached = _settings_status_cache
+        cache_time = _settings_status_cache_time
+        refreshing = _settings_status_refreshing
+    if cached and (now - cache_time) < _SETTINGS_STATUS_CACHE_TTL:
+        status = json.loads(json.dumps(cached))
+        status["cache"] = {
+            **status.get("cache", {}),
+            "age_seconds": round(now - cache_time, 1),
+            "refreshing": refreshing,
+            "source": "cache",
+        }
+        return jsonify(status)
+
+    _start_settings_status_refresh_if_needed()
+    status = json.loads(json.dumps(cached)) if cached else _settings_status_skeleton()
+    status["runtime_preflight"] = status.get("runtime_preflight") or {
+        "ok": None,
+        "issues": ["Runtime preflight refresh is running."],
+        "refreshing": True,
+    }
+    status["cache"] = {
+        **status.get("cache", {}),
+        "age_seconds": round(now - cache_time, 1) if cached else None,
+        "refreshing": True,
+        "source": "stale-cache" if cached else "fast-skeleton",
+    }
     return jsonify(status)
 
 
