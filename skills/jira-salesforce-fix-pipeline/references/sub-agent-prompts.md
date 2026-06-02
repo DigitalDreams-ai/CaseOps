@@ -33,6 +33,7 @@ You are retrieving Salesforce Production metadata for a Jira issue.
 Issue key: <KEY>
 Problem hypothesis: <paste from outputs/step-4-hypothesis/<KEY>.md OR inline notes from Step 4>
 Investigation record: outputs/investigations/<KEY>.md
+Selected org knowledge: <paste only the relevant bullets from the run's Org Knowledge Context; do not paste unrelated org-knowledge files>
 
 CRITICAL: Metadata Workspace Contract
 - Retrieve Production metadata to: ${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/ (read-only)
@@ -49,6 +50,8 @@ Instructions:
    outputs/investigations/<KEY>.md.
 5. If additional metadata is discovered to be needed (e.g., during drilling in Step 6), 
    Step 6 will loop back to you with a refined request.
+6. Use selected org knowledge first. If a known query/retrieve pattern fails twice, stop and replan instead of trying many variants.
+7. Do not print raw access tokens or use `SF_TEMP_SHOW_SECRETS=true sf org display`.
 
 Return a compact summary (max 400 tokens) containing:
 - Metadata items retrieved and why
@@ -68,6 +71,7 @@ Issue key: <KEY>
 Problem hypothesis: <paste from outputs/step-4-hypothesis/<KEY>.md OR inline notes from Step 4>
 Production metadata: <paste the Summary from Step 5>
 Investigation record: outputs/investigations/<KEY>.md
+Selected org knowledge: <paste only relevant bullets from the run's Org Knowledge Context>
 
 CRITICAL: Metadata Workspace Contract
 - Read Step 5 Production metadata from: ${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/ (read-only)
@@ -85,6 +89,7 @@ Instructions:
 3. Add Problem Location section to outputs/investigations/<KEY>.md.
 4. If additional metadata is needed to complete drilling (e.g., "Found Flow reference, need Flow definition"),
    return request for Step 5 with specific metadata needed. Include the label "REQUEST: Step 5 refinement".
+5. Use selected org knowledge first and avoid re-running failed query patterns already known to be unreliable.
 
 Return a compact summary (max 400 tokens) containing:
 - Problem type identified
@@ -107,6 +112,7 @@ Issue key: <KEY>
 Allowlisted Sandbox (from .env.jira CASEOPS_SANDBOX_TARGET_ORG): <paste exact value read from .env.jira>
 Fix description: <paste the solution from Step 8>
 Investigation record: outputs/investigations/<KEY>.md
+Selected org knowledge: <paste only relevant deploy/query bullets from the run's Org Knowledge Context>
 
 CRITICAL: Sandbox Attempt Workspace and Revert Contract
 - Use one directory per solution attempt: ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-001/, attempt-002/, etc.
@@ -131,6 +137,8 @@ Instructions:
 6. Write results to outputs/test-reports/<KEY>.md using
    skills/jira-salesforce-fix-pipeline/assets/test-report-template.md.
    Fill **Production deployment state** (Sandbox vs Production; Gearset required Y/N/N/A).
+7. Use selected org knowledge first. Prefer deterministic MDAPI deploy patterns for metadata types where source tracking is known to cause `NothingToDeploy`.
+8. Never print raw Salesforce access tokens. Do not use `SF_TEMP_SHOW_SECRETS=true sf org display`; use `sf` commands or JSON outputs that do not reveal secrets.
 
 Return a compact summary (max 400 tokens) containing:
 - Pass or Fail

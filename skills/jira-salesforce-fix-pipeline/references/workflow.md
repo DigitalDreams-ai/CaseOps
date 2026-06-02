@@ -115,6 +115,29 @@ Each issue with Sandbox work must maintain `${CASEOPS_METADATA_SANDBOX_WORK_DIR}
 
 ---
 
+## Org knowledge progressive disclosure
+
+CaseOps maintains reusable org knowledge under the instance output directory:
+
+```text
+outputs/org-knowledge/
+  index.json
+  run-rules.md
+  query-patterns/
+  deploy-patterns/
+  lessons-learned.md
+```
+
+The orchestrator reads `index.json`, selects only files relevant to the active issue, and injects a capped **Org Knowledge Context** into the run prompt. Do not read every file under `org-knowledge/`.
+
+Before spawning Step 5, Step 6, Step 8, or Step 9 sub-agents, include the relevant selected org-knowledge bullets in the sub-agent prompt. Sub-agents start with isolated context and do not automatically know what the orchestrator read.
+
+Use org knowledge to avoid relearning Salesforce CLI behavior. If a selected pattern fails twice, stop and replan; do not try many small variants of the same failed command.
+
+If a run discovers a durable, verified, reusable org fact, update the most specific selected topic file with one short bullet. Do not store secrets, raw access tokens, frontdoor links, or customer-private narrative.
+
+---
+
 ## Step 5 — Retrieve relevant Production metadata [SUB-AGENT]
 
 Spawn a sub-agent using **“Step 5 — Retrieve relevant Production metadata”** in **`references/sub-agent-prompts.md`**. Paste the Step 4 hypothesis into the prompt.

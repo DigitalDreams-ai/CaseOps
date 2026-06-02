@@ -21,6 +21,7 @@ import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from enum import Enum
@@ -170,6 +171,240 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
 TEMP_ROOT = None  # Path | None — Set in __main__
 
 
+_ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
+    "version": 1,
+    "description": "CaseOps reusable Salesforce org knowledge. The orchestrator reads this index, then loads only matching files for each issue.",
+    "always_read": ["run-rules.md"],
+    "max_context_chars": 12000,
+    "max_topic_files": 6,
+    "topics": [
+        {
+            "id": "custom-field-picklist",
+            "title": "Custom fields and picklist values",
+            "keywords": [
+                "custom field", "fielddefinition", "customfield", "picklist", "picklist value",
+                "__c", "field-level", "field level", "supplement", "values"
+            ],
+            "files": [
+                "query-patterns/custom-field.md",
+                "query-patterns/picklist-values.md",
+                "deploy-patterns/custom-field-mdapi.md",
+            ],
+        },
+        {
+            "id": "layouts",
+            "title": "Layouts and field placement",
+            "keywords": ["layout", "page layout", "section", "field placement", "lightning page"],
+            "files": ["query-patterns/layouts.md"],
+        },
+        {
+            "id": "permission-sets",
+            "title": "Permission sets and FLS",
+            "keywords": [
+                "permission set", "permissionset", "fls", "fieldpermissions", "field permission",
+                "read edit", "read/write", "access", "profile"
+            ],
+            "files": ["query-patterns/permission-sets.md"],
+        },
+        {
+            "id": "deploy-troubleshooting",
+            "title": "Deploy mechanics and source tracking pitfalls",
+            "keywords": [
+                "deploy", "sandbox", "metadata api", "mdapi", "nothingtodeploy", "source tracking",
+                "candidate", "baseline", "revert", "gearset"
+            ],
+            "files": [
+                "deploy-patterns/custom-field-mdapi.md",
+                "deploy-patterns/source-tracking.md",
+            ],
+        },
+        {
+            "id": "flows",
+            "title": "Flow investigation",
+            "keywords": ["flow", "flowdefinition", "flow version", "triggered flow", "record-triggered"],
+            "files": ["query-patterns/flows.md"],
+        },
+        {
+            "id": "apex",
+            "title": "Apex investigation",
+            "keywords": ["apex", "class", "trigger", "test class", "debug log"],
+            "files": ["query-patterns/apex.md"],
+        },
+    ],
+}
+
+
+_ORG_KNOWLEDGE_DEFAULT_FILES: dict[str, str] = {
+    "run-rules.md": """# CaseOps Org Knowledge Run Rules
+
+These rules are always safe to include in Salesforce pipeline runs.
+
+- Read this file plus only the topic files selected by `index.json`; do not bulk-read the entire org-knowledge directory.
+- Use org knowledge to avoid relearning Salesforce CLI behavior. Prefer the known pattern first, then investigate only if the known pattern fails.
+- Use `sf` CLI and SOQL for Salesforce API work. Do not use frontdoor links, magic links, or browser session IDs for API, SOQL, retrieve, deploy, or tests.
+- Never print, export, or embed raw Salesforce access tokens. Do not run `SF_TEMP_SHOW_SECRETS=true sf org display`. If a REST call is unavoidable, use an internal helper that does not log the token.
+- Stay inside the current issue workspace. Do not inspect other `HEAL-*` metadata or output directories unless the operator explicitly asks for cross-issue comparison.
+- Stop after two failed variants of the same query/deploy pattern. Replan using the selected org knowledge instead of trying many small variations.
+- Prefer `--json` output and parse concise fields. Do not read full persisted deploy/retrieve logs unless the concise status is insufficient.
+- When a run discovers a durable, verified, reusable fact, update the most relevant org-knowledge topic file with one short bullet. Do not store secrets or customer-specific narrative.
+""",
+    "query-patterns/custom-field.md": """# Custom Field Query Pattern
+
+Use these patterns before experimenting.
+
+## Find a custom field
+
+FieldDefinition commonly uses DeveloperName without the `__c` suffix:
+
+```bash
+sf data query --target-org "$ORG" --json --query "SELECT Id, DeveloperName, Label, DataType FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName = 'Case' AND DeveloperName = 'Field_Name'"
+```
+
+Tooling `CustomField` is often better for metadata details:
+
+```bash
+sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, DeveloperName, TableEnumOrId, FullName, Metadata FROM CustomField WHERE TableEnumOrId = 'Case' AND DeveloperName = 'Field_Name'"
+```
+
+Notes:
+
+- `CustomField.DeveloperName` usually omits `__c`; `FullName` includes `Object.Field__c`.
+- Use the returned `00N...` Id for Salesforce artifact links.
+- Save large JSON to the issue-scoped metadata directory and summarize it; do not paste full metadata into the operator log.
+""",
+    "query-patterns/picklist-values.md": """# Picklist Value Query Pattern
+
+Avoid repeated `PicklistValueInfo` experiments. In this org it can fail with unsupported fields, complicated filters, or zero rows depending on endpoint and filter shape.
+
+Preferred path for custom picklist truth:
+
+1. Resolve the field through Tooling `CustomField`.
+2. Inspect `CustomField.Metadata.valueSet.valueSetDefinition.value`.
+3. If active/default behavior is ambiguous, perform Metadata API retrieve or a UI/API describe check and record which source was authoritative.
+
+Example:
+
+```bash
+sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, DeveloperName, TableEnumOrId, FullName, Metadata FROM CustomField WHERE TableEnumOrId = 'Case' AND DeveloperName = 'Field_Name'" > "$RAW_DIR/Case.Field_Name__c.json"
+```
+
+Comparison guidance:
+
+- Compare requested labels after trimming whitespace and normalizing non-breaking spaces.
+- Detect merged values by comparing requested count vs actual count and by checking adjacent requested labels.
+- Do not assume one source is definitive when it conflicts with user-visible behavior; verify with a second source and summarize.
+""",
+    "query-patterns/layouts.md": """# Layout Query Pattern
+
+For layout section and field placement checks, Tooling `Layout.Metadata` is often faster and cleaner than repeated `sf project retrieve` attempts.
+
+Find Case layouts:
+
+```bash
+sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, TableEnumOrId FROM Layout WHERE TableEnumOrId = 'Case'"
+```
+
+Fetch layout metadata:
+
+```bash
+sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, Metadata FROM Layout WHERE Id = '00h...'" > "$RAW_DIR/Case-Customer_Experience_layout.json"
+```
+
+Then parse `Metadata.layoutSections[].layoutColumns[].layoutItems[].field`.
+
+Rules:
+
+- Distinguish a section label from a nearby field label. A field beside `Call_Details__c` is not automatically in a section named `Call Details`.
+- If an acceptance criterion names a section that does not exist, document both the actual placement and the ambiguity.
+""",
+    "query-patterns/permission-sets.md": """# Permission Set and FLS Query Pattern
+
+Resolve candidate permission sets first:
+
+```bash
+sf data query --target-org "$ORG" --json --query "SELECT Id, Name, Label FROM PermissionSet WHERE Name LIKE '%Customer%' OR Label LIKE '%Customer%'"
+```
+
+Check FLS with parent details:
+
+```bash
+sf data query --target-org "$ORG" --json --query "SELECT Id, Field, PermissionsRead, PermissionsEdit, ParentId, Parent.Name, Parent.Type FROM FieldPermissions WHERE Field = 'Case.Field_Name__c'"
+```
+
+Guidance:
+
+- Report Read+Edit vs Read-only separately.
+- Ignore session/profile-like permission records only when they are not part of the requested audience, and say why.
+- If the customer asked for a team, map labels to that team explicitly instead of assuming every matching permission set is in scope.
+""",
+    "query-patterns/flows.md": """# Flow Query Pattern
+
+Use Tooling queries to resolve FlowDefinition and active versions before retrieving full XML.
+
+```bash
+sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, DeveloperName, ActiveVersionId, LatestVersionId FROM FlowDefinition WHERE DeveloperName = 'Flow_API_Name'"
+```
+
+Retrieve full metadata only for the flow(s) implicated by the issue. Do not retrieve every flow unless the issue is explicitly broad.
+""",
+    "query-patterns/apex.md": """# Apex Query Pattern
+
+Resolve Apex classes/triggers with Tooling API before reading or testing broadly.
+
+```bash
+sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, Status FROM ApexClass WHERE Name = 'ClassName'"
+sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, TableEnumOrId, Status FROM ApexTrigger WHERE Name = 'TriggerName'"
+```
+
+Run targeted tests first. Broad test runs need a clear reason.
+""",
+    "deploy-patterns/custom-field-mdapi.md": """# Custom Field Deploy Pattern
+
+If source deploy returns `NothingToDeploy` or appears affected by source tracking, do not inspect `.sf` internals for long. Use a Metadata API package path.
+
+Preferred sequence:
+
+1. Build candidate source under the issue attempt directory.
+2. Convert source to MDAPI when possible:
+
+```bash
+sf project convert source --source-dir "$CANDIDATE/force-app" --output-dir "$ATTEMPT/mdapi-converted"
+```
+
+3. Deploy with metadata-dir:
+
+```bash
+sf project deploy start --metadata-dir "$ATTEMPT/mdapi-converted" --single-package --target-org "$SANDBOX_ORG" --json
+```
+
+Rules:
+
+- Use only the allowlisted Sandbox org for deploys.
+- Do not deploy to Production from CaseOps.
+- Capture concise deploy status and deploy id. Do not read thousands of progress lines.
+- If conversion/deploy fails twice, stop and summarize the exact blocker rather than trying many variants.
+""",
+    "deploy-patterns/source-tracking.md": """# Source Tracking Pitfalls
+
+Sandbox source tracking can make a valid metadata change look like `NothingToDeploy`.
+
+Rules:
+
+- Do not delete or inspect `.sf` tracking internals unless the operator specifically requests it.
+- Prefer `sf project deploy start --metadata-dir ... --single-package --json` for deterministic issue-scoped packages.
+- Treat source tracking as a deploy mechanism detail, not as evidence that the candidate is empty.
+""",
+    "lessons-learned.md": """# Org Knowledge Lessons Learned
+
+Append only durable, verified, reusable lessons here when no more specific topic file fits.
+
+Format:
+
+- YYYY-MM-DD: Short reusable lesson. Evidence source: CLI/SOQL/metadata. No secrets. No customer narrative.
+""",
+}
+
+
 def _metadata_workspace_dirs() -> dict[str, Path]:
     """Return the instance-scoped Salesforce metadata workspace directories."""
     base_temp = TEMP_ROOT if TEMP_ROOT is not None else OUTPUTS.parent / ".temp"
@@ -186,6 +421,142 @@ def _ensure_metadata_workspace_dirs() -> None:
     """Create the shared directory contract used by Salesforce pipeline agents."""
     for path in _metadata_workspace_dirs().values():
         path.mkdir(parents=True, exist_ok=True)
+
+
+def _org_knowledge_dir() -> Path:
+    """Return the instance-scoped reusable org knowledge directory."""
+    return OUTPUTS / "org-knowledge"
+
+
+def _ensure_org_knowledge_defaults() -> None:
+    """Seed editable org knowledge files without overwriting user updates."""
+    root = _org_knowledge_dir()
+    root.mkdir(parents=True, exist_ok=True)
+    index_path = root / "index.json"
+    if not index_path.exists():
+        index_path.write_text(
+            json.dumps(_ORG_KNOWLEDGE_DEFAULT_INDEX, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+    for rel, content in _ORG_KNOWLEDGE_DEFAULT_FILES.items():
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_text(content, encoding="utf-8")
+
+
+def _read_org_knowledge_index() -> dict[str, Any]:
+    _ensure_org_knowledge_defaults()
+    index_path = _org_knowledge_dir() / "index.json"
+    try:
+        data = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return _ORG_KNOWLEDGE_DEFAULT_INDEX
+    return data if isinstance(data, dict) else _ORG_KNOWLEDGE_DEFAULT_INDEX
+
+
+def _read_small_text(path: Path, max_chars: int) -> str:
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    return text[:max_chars]
+
+
+def _issue_org_knowledge_search_text(key: str, row: dict[str, str]) -> str:
+    parts = [
+        key,
+        row.get("Summary", ""),
+        row.get("Status", ""),
+        _read_small_text(OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key), 12000),
+        _read_small_text(OUTPUTS / FILE_LOCATIONS["step4_hypothesis"].format(key=key), 8000),
+        _read_small_text(OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key), 12000),
+    ]
+    return "\n".join(part for part in parts if part).lower()
+
+
+def _select_org_knowledge_files(key: str, row: dict[str, str]) -> list[Path]:
+    """Select only the org-knowledge files relevant to this issue."""
+    index = _read_org_knowledge_index()
+    root = _org_knowledge_dir()
+    selected: list[str] = []
+    always_read = [rel for rel in index.get("always_read", []) if isinstance(rel, str)]
+    always_read_set = set(always_read)
+    for rel in always_read:
+        if isinstance(rel, str) and rel not in selected:
+            selected.append(rel)
+
+    search_text = _issue_org_knowledge_search_text(key, row)
+    topic_scores: list[tuple[int, str, list[str]]] = []
+    for topic in index.get("topics", []):
+        if not isinstance(topic, dict):
+            continue
+        files = [str(f) for f in topic.get("files", []) if isinstance(f, str)]
+        if not files:
+            continue
+        score = 0
+        for keyword in topic.get("keywords", []):
+            if isinstance(keyword, str) and keyword.lower() in search_text:
+                score += 1
+        if score:
+            topic_scores.append((score, str(topic.get("id", "")), files))
+
+    max_topic_files = int(index.get("max_topic_files") or 6)
+    for _score, _topic_id, files in sorted(topic_scores, key=lambda item: (-item[0], item[1])):
+        for rel in files:
+            if rel not in selected:
+                selected.append(rel)
+            topic_file_count = sum(1 for relpath in selected if relpath not in always_read_set)
+            if topic_file_count >= max_topic_files:
+                break
+        topic_file_count = sum(1 for relpath in selected if relpath not in always_read_set)
+        if topic_file_count >= max_topic_files:
+            break
+
+    paths: list[Path] = []
+    for rel in selected:
+        path = (root / rel).resolve()
+        try:
+            path.relative_to(root.resolve())
+        except ValueError:
+            continue
+        if path.is_file():
+            paths.append(path)
+    return paths
+
+
+def _build_org_knowledge_context_block(key: str, row: dict[str, str]) -> str:
+    """Build a capped progressive-disclosure context block for Claude runs."""
+    index = _read_org_knowledge_index()
+    paths = _select_org_knowledge_files(key, row)
+    max_chars = int(index.get("max_context_chars") or 12000)
+    remaining = max(4000, max_chars)
+    chunks: list[str] = []
+    rel_paths: list[str] = []
+    root = _org_knowledge_dir()
+
+    for path in paths:
+        rel = path.relative_to(root).as_posix()
+        rel_paths.append(f"- `{_path_relative_for_prompt(path)}`")
+        if remaining <= 0:
+            continue
+        text = _read_small_text(path, min(remaining, 3500)).strip()
+        if not text:
+            continue
+        remaining -= len(text)
+        chunks.append(f"### {rel}\n{text}")
+
+    selected_list = "\n".join(rel_paths) if rel_paths else "- None selected"
+    content = "\n\n".join(chunks) if chunks else "(No org knowledge content selected.)"
+    return (
+        "## Org Knowledge Context (selected, progressive disclosure)\n"
+        f"Org knowledge directory: `{_path_relative_for_prompt(root)}`\n"
+        "CaseOps selected only the reusable files below for this issue. Do not bulk-read the org-knowledge directory.\n"
+        "When spawning Step 5, Step 6, Step 8, or Step 9 sub-agents, include the relevant bullets from this section in the sub-agent prompt so the sub-agent does not relearn known Salesforce CLI behavior.\n\n"
+        f"Selected files:\n{selected_list}\n\n"
+        f"{content}\n\n"
+        "Learning rule: if this run discovers a durable, verified, reusable org fact, update the most specific selected topic file with one short bullet. Do not store secrets, access tokens, frontdoor links, or customer-private narrative.\n\n"
+    )
 
 
 def _cache_evict(cache: dict) -> None:
@@ -673,11 +1044,25 @@ OUTPUTS_PIPELINE_LOGS: Path = None  # type: ignore # Initialized in __main__ blo
 _PIPELINE_LOG_LOCK = threading.Lock()
 _PIPELINE_LOG_TAIL_BYTES = 3 * 1024 * 1024
 _PIPELINE_LOG_TAIL_LINES = 12_000
+_ANSI_CONTROL_RE = re.compile(
+    r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1B\\))"
+)
+_BROKEN_ANSI_CONTROL_RE = re.compile(r"\uFFFD\[[0-?]*[ -/]*[@-~]")
+_SALESFORCE_ACCESS_TOKEN_RE = re.compile(r"\b00D[A-Za-z0-9]{12,18}![A-Za-z0-9._~=-]{20,}\b")
 
 
 def _pipeline_log_path(run_key: str) -> Path:
     safe = re.sub(r"[^A-Za-z0-9._-]", "_", run_key) or "unknown"
     return OUTPUTS_PIPELINE_LOGS / f"{safe}.jsonl"
+
+
+def _sanitize_pipeline_log_text(text: str) -> str:
+    """Remove terminal redraw/color controls before logs are stored or shown."""
+    cleaned = _ANSI_CONTROL_RE.sub("", str(text))
+    cleaned = _BROKEN_ANSI_CONTROL_RE.sub("", cleaned)
+    cleaned = _SALESFORCE_ACCESS_TOKEN_RE.sub("[REDACTED_SF_ACCESS_TOKEN]", cleaned)
+    cleaned = cleaned.replace("\r", "\n").replace("\b", "")
+    return cleaned.rstrip()
 
 
 def _persist_pipeline_record(run_key: str, text: str, *, kind: str = "line") -> None:
@@ -707,6 +1092,7 @@ def _log_emit_run_start(run_key: str, label: str | None = None) -> None:
 
 def _log_emit_line(run_key: str, text: str) -> None:
     """Notify SSE clients and append to per-key pipeline history on disk."""
+    text = _sanitize_pipeline_log_text(text)
     _log_q.put(f"{run_key}|{text}")
     _persist_pipeline_record(run_key, text, kind="line")
 
@@ -1067,7 +1453,10 @@ def _read_pipeline_log_entries(run_key: str) -> list[dict[str, Any]]:
         if not raw_line:
             continue
         try:
-            rows.append(json.loads(raw_line))
+            row = json.loads(raw_line)
+            if isinstance(row, dict) and "text" in row:
+                row["text"] = _sanitize_pipeline_log_text(row.get("text", ""))
+            rows.append(row)
         except json.JSONDecodeError:
             continue
     if len(rows) > _PIPELINE_LOG_TAIL_LINES:
@@ -2064,7 +2453,11 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
             f"Resume efficiency: for each active issue, inspect existing artifacts first and skip completed "
             f"checkpoints unless Jira source changed after the artifact or downstream evidence invalidates it. "
             f"Do not reread or rewrite full existing artifacts just to restate them; read targeted sections only "
-            f"when a pending/stale step requires exact details."
+            f"when a pending/stale step requires exact details.\n\n"
+            f"Org knowledge efficiency: for each active issue, read `{_path_relative_for_prompt(_org_knowledge_dir() / 'index.json')}` "
+            f"and `{_path_relative_for_prompt(_org_knowledge_dir() / 'run-rules.md')}` first, then select only the matching "
+            f"topic files for that issue. Do not bulk-read `{_path_relative_for_prompt(_org_knowledge_dir())}`. "
+            f"Pass relevant selected bullets into Step 5, Step 6, Step 8, and Step 9 sub-agent prompts."
         )
         _do_stream_claude(prompt, run_key, issue_key=None)
     finally:
@@ -2092,6 +2485,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
             existing.append(f"  - {FILE_LABELS[ftype]}: {path.relative_to(ROOT).as_posix()}")
 
     files_block = "\n".join(existing) if existing else "  - None yet"
+    org_knowledge_block = _build_org_knowledge_context_block(key, row)
 
     skill_md = (ROOT / "skills" / "jira-salesforce-fix-pipeline" / "SKILL.md").resolve()
     skill_line = str(skill_md) if skill_md.is_file() else f"(missing) {skill_md}"
@@ -2108,6 +2502,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"Status: {status}\n\n"
         f"Existing pipeline files:\n{files_block}\n\n"
         f"{resume_block}\n\n"
+        f"{org_knowledge_block}"
         f"## Playbook (mandatory — read first)\n"
         f"Do not invoke `/jira-salesforce-fix-pipeline` or a Claude Code Skill tool in this subprocess. "
         f"The entrypoint is the mounted file below. Read SKILL.md fully, then read "
@@ -2325,7 +2720,12 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
 
 
 def _investigation_indicates_blocked(key: str) -> bool:
-    """True when outputs/investigations/<KEY>.md indicates issue is blocked/waiting."""
+    """True when the investigation explicitly marks the issue as externally blocked.
+
+    Do not treat narrative/debugging phrases such as "I am completely blocked"
+    as an issue blocker; those are Claude/runtime statements, not customer-facing
+    workflow state.
+    """
     path = OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)
     if not path.is_file():
         return False
@@ -2333,7 +2733,47 @@ def _investigation_indicates_blocked(key: str) -> bool:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return False
-    return bool(re.search(r"(?im)waiting\s+for|blocked|on\s+hold|requires?\s+customer|pending\s+customer|awaiting", text))
+    return _text_indicates_issue_blocked(text)
+
+
+def _blocker_section_text(text: str) -> str:
+    m = re.search(r"(?im)^##\s*Blocker\s*:?\s*$", text)
+    if not m:
+        return ""
+    after = text[m.end() :]
+    lines: list[str] = []
+    for raw in after.splitlines():
+        if re.match(r"^\s*##\s", raw) and lines:
+            break
+        if raw.strip():
+            lines.append(raw.strip())
+    return "\n".join(lines).strip()
+
+
+def _text_indicates_issue_blocked(text: str) -> bool:
+    """Classify explicit issue blockers without matching generic prose."""
+    blocker = _blocker_section_text(text)
+    if blocker:
+        if re.search(r"(?im)^\s*(none|n/a|not\s+blocked|no\s+blocker|no\s+external\s+blocker)\b", blocker):
+            return False
+        if re.search(
+            r"(?im)\b("
+            r"waiting\s+(?:for|on)|awaiting|pending\s+(?:customer|user|requester|support|engineering)|"
+            r"requires?\s+(?:customer|user|requester|external|support|engineering)|"
+            r"blocked\s+by|on\s+hold|cannot\s+proceed\s+until"
+            r")\b",
+            blocker,
+        ):
+            return True
+
+    explicit_line_patterns = (
+        r"^\s*(?:status|pipeline\s+status|issue\s+status)\s*:\s*(?:blocked|on\s+hold)\b",
+        r"^\s*(?:blocked\s+by|blocker)\s*:\s*(?!none\b|n/a\b|no\s+blocker\b).+",
+        r"^\s*(?:waiting\s+(?:for|on)|awaiting)\s+(?:customer|user|requester|support|engineering|external)\b",
+        r"^\s*(?:pending|requires?)\s+(?:customer|user|requester|external|support|engineering)\b",
+        r"^\s*cannot\s+proceed\s+until\b",
+    )
+    return any(re.search(pattern, text, flags=re.IGNORECASE | re.MULTILINE) for pattern in explicit_line_patterns)
 
 
 def _extract_blocker_reason(key: str) -> str:
@@ -2345,14 +2785,11 @@ def _extract_blocker_reason(key: str) -> str:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return ""
-    m = re.search(r"(?im)^##\s*Blocker\s*:?\s*$", text)
-    if not m:
+    blocker = _blocker_section_text(text)
+    if not blocker:
         return ""
-    after = text[m.end() :]
     block_lines: list[str] = []
-    for raw in after.splitlines():
-        if re.match(r"^\s*##\s", raw) and block_lines:
-            break
+    for raw in blocker.splitlines():
         s = raw.strip()
         if s:
             block_lines.append(s)
@@ -3946,9 +4383,11 @@ if __name__ == "__main__":
     # Pre-create all pipeline output subdirectories so Claude Code doesn't need write permissions to create them
     for subdir in [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
-        "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state"
+        "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state",
+        "org-knowledge"
     ]:
         (OUTPUTS / subdir).mkdir(parents=True, exist_ok=True)
+    _ensure_org_knowledge_defaults()
 
     if _args.env_file:
         env_file_path = Path(_args.env_file)
@@ -3998,7 +4437,8 @@ if __name__ == "__main__":
     # Validate all required subdirectories exist
     required_subdirs = [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
-        "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state", "closed-resolved"
+        "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state",
+        "closed-resolved", "org-knowledge"
     ]
     for subdir in required_subdirs:
         subdir_path = OUTPUTS / subdir

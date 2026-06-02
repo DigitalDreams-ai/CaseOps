@@ -49,6 +49,7 @@ This pipeline is an **orchestrator**. Steps **1, 2, 4, 7, 8, 11, and 12** run in
 - Spawn **one** sub-agent per step per issue. Do not batch multiple issues into one Agent call.
 - Every sub-agent prompt must be fully self-contained (issue key, paths, task, return format).
 - Sub-agents write artifacts under `outputs/`. The orchestrator does **not** load full output files into its own context — only the returned summary.
+- Before Steps **5, 6, 8, and 9**, use the CaseOps-selected **Org Knowledge Context** for the issue. Pass only the relevant selected bullets into sub-agent prompts so they do not relearn known Salesforce CLI/query/deploy behavior.
 
 **Loop Control:** See **`references/orchestration-loop-controller.md`** for detailed pseudocode, loop-back conditions, blocker handling, and progress tracking logic. The loop processes issues sequentially (Steps 3–11), handles Step 5/6 metadata discovery, Step 8/9 hypothesis refinement, and escalation branching.
 
@@ -67,6 +68,8 @@ Throughout Steps 1–12, you MUST emit step progress lines to stdout in the form
 For global runs that process multiple issues, emit a single timestamped line at the start of each issue in this format: `Run started: <ISSUE_KEY> at YYYY-MM-DD HH:MM:SS <TZ>`.
 
 **Operator log hygiene:** Do not echo, restate, or summarize this playbook, prompts, reference files, or checklists into stdout during a run. The CaseOps pipeline log is for live execution only: step markers, concise status, commands/tools used, files written, test results, and blockers.
+
+**Org knowledge hygiene:** Do not bulk-read `outputs/org-knowledge/`. The CaseOps prompt includes selected org-knowledge files for the active issue. Use those first, pass relevant bullets to sub-agents, and update only durable verified lessons. Never store secrets, raw access tokens, frontdoor links, or customer-private narrative in org knowledge.
 
 ### Operator Setup
 

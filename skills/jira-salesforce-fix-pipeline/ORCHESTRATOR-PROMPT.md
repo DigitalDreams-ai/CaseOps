@@ -41,6 +41,8 @@ User provides:
 1. Spawn salesforce-metadata-investigation sub-agent twice:
    - **Step 5:** Retrieve Production metadata relevant to hypothesis
    - **Step 6 (drilling):** Drill down to exact problem location (artifact name, API name, failure point)
+   - Include only relevant bullets from the run's selected Org Knowledge Context. Do not bulk-read `outputs/org-knowledge/`.
+   - Use known query/retrieve patterns first. If the same pattern family fails twice, stop and replan instead of trying many command variants.
 2. Receive compact summary from Step 6: exact artifact, location, type, failure point.
 3. **Save summary** to orchestrator context.
 
@@ -73,6 +75,7 @@ Before creating new metadata, confirm it does not already exist in Production (S
    - Sandbox org (CASEOPS_SANDBOX_TARGET_ORG)
    - Test plan
    - **Routing info:** Is this support-resolved or engineering-escalation?
+   - Selected Org Knowledge Context deploy/query bullets
 2. Receive summary: what was deployed, test results (pass/fail), or blocker.
 3. If test **passes**: proceed to Step 10.
 4. If test **fails**:
@@ -84,6 +87,7 @@ Before creating new metadata, confirm it does not already exist in Production (S
    - Record iterations in `outputs/investigations/{key}.md`
 5. Save test results to `outputs/test-reports/{key}.md`.
 6. Keep Salesforce metadata under `${CASEOPS_METADATA_RAW_PROD_DIR}`, `${CASEOPS_METADATA_SANDBOX_WORK_DIR}`, and `${CASEOPS_METADATA_CONFIRMED_DIR}` only. Do not use root-level temp/retrieve/deploy directories.
+7. Never print raw Salesforce access tokens or use `SF_TEMP_SHOW_SECRETS=true sf org display`.
 
 **Both escalation and support paths generate proposed solutions in Sandbox to provide Engineering with concrete fix options.**
 
