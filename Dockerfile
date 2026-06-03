@@ -47,8 +47,8 @@ COPY --chown=1027:100 skills/ /app/skills/
 COPY --chown=1027:100 scripts/ /app/scripts/
 
 # Create output/cache mount points with proper permissions.
-RUN mkdir -p /app/outputs /app/instance1/outputs /app/instance1/.temp && \
-    chown -R 1027:100 /app/outputs /app/instance1
+RUN mkdir -p /app/outputs /app/.temp /app/instance1/outputs /app/instance1/.temp && \
+    chown -R 1027:100 /app/outputs /app/.temp /app/instance1
 
 # Expose Flask port
 EXPOSE 5000

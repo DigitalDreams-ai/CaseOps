@@ -13,6 +13,8 @@ services:
       SFDX_DIR: /app/instance1/.sfdx
       CASEOPS_OUTPUTS_DIR: /app/instance1/outputs
       CASEOPS_JIRA_OUT_DIR: /app/instance1/outputs/jira
+      CASEOPS_TEMP_DIR: /app/instance1/.temp
+      CLAUDE_CODE_TMPDIR: /app/instance1/.temp/claude-code
     volumes:
       # Persistent runtime data: Jira sync output, pipeline logs, generated files,
       # Salesforce CLI state, metadata cache, and metadata workspaces.

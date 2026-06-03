@@ -7716,7 +7716,8 @@ if __name__ == "__main__":
         _load_jira_env(env_file_path)
 
     # Initialize instance-specific runtime and metadata workspaces.
-    globals()["TEMP_ROOT"] = OUTPUTS.parent / ".temp"
+    temp_override = (os.environ.get("CASEOPS_TEMP_DIR") or "").strip()
+    globals()["TEMP_ROOT"] = Path(temp_override) if temp_override else OUTPUTS.parent / ".temp"
     _ensure_directory_writable(TEMP_ROOT, ".temp root")
     _ensure_directory_writable(TEMP_ROOT / "claude-code", "Claude Code temp")
     _ensure_metadata_workspace_dirs()
