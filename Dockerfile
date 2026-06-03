@@ -51,11 +51,11 @@ RUN mkdir -p /app/outputs /app/.temp /app/instance1/outputs /app/instance1/.temp
     chown -R 1027:100 /app/outputs /app/.temp /app/instance1
 
 # Expose Flask port
-EXPOSE 5000
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/api/status || exit 1
+    CMD curl -f http://localhost:${CASEOPS_PORT:-8080}/health || exit 1
 
 # Create Claude Code settings directory before switching to caseops user.
 RUN mkdir -p /home/caseops/.claude && \
@@ -73,4 +73,4 @@ USER caseops
 # .env.jira is mounted at runtime (see docker-compose.yml)
 # Entrypoint initializes Claude Code sandbox settings before starting Flask
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
-CMD ["--port", "5000"]
+CMD ["--port", "8080"]

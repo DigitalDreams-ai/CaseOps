@@ -14,12 +14,12 @@ If testing from a shared image archive, load the image and use the provided comp
 
 ```bash
 docker load -i caseops-image.tar.gz
-cp .env.jira.example .env.jira
+cp .env.example .env
 mkdir -p caseops-data
 docker compose -f docker-compose.example.yml up -d
 ```
 
-Fill `.env.jira` with tester-owned Jira, Salesforce, and LLM credentials before running pipeline actions. Do not use the operator's credentials, internal filesystem paths, hostnames, or deployment-specific compose file.
+Fill `.env` with tester-owned Jira, Salesforce, and LLM credentials before running pipeline actions. Do not use the operator's credentials, internal filesystem paths, hostnames, or deployment-specific compose file.
 
 Open CaseOps at:
 

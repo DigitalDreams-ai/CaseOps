@@ -6,10 +6,12 @@
 # Variables like SF_PROD_*, SF_SANDBOX_*, CASEOPS_*, etc. are already in the environment.
 # No need to source here as it conflicts with comments containing special characters.
 
+env_file_path="${CASEOPS_JIRA_ENV_FILE:-/app/.env.jira}"
+
 # Load selected runtime secrets from the mounted env file. Do not source the
 # entire file; values such as Windows paths and comments can break shell parsing.
-if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && [ -f /app/.env.jira ]; then
-  CLAUDE_CODE_OAUTH_TOKEN="$(grep -m1 '^CLAUDE_CODE_OAUTH_TOKEN=' /app/.env.jira | cut -d= -f2-)"
+if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && [ -f "$env_file_path" ]; then
+  CLAUDE_CODE_OAUTH_TOKEN="$(grep -m1 '^CLAUDE_CODE_OAUTH_TOKEN=' "$env_file_path" | cut -d= -f2-)"
   export CLAUDE_CODE_OAUTH_TOKEN
 fi
 
@@ -43,8 +45,9 @@ while true; do
   echo "========================================"
 
   # Re-load selected runtime secrets in case /app/.env.jira changed before a restart.
-  if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && [ -f /app/.env.jira ]; then
-    CLAUDE_CODE_OAUTH_TOKEN="$(grep -m1 '^CLAUDE_CODE_OAUTH_TOKEN=' /app/.env.jira | cut -d= -f2-)"
+  env_file_path="${CASEOPS_JIRA_ENV_FILE:-/app/.env.jira}"
+  if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && [ -f "$env_file_path" ]; then
+    CLAUDE_CODE_OAUTH_TOKEN="$(grep -m1 '^CLAUDE_CODE_OAUTH_TOKEN=' "$env_file_path" | cut -d= -f2-)"
     export CLAUDE_CODE_OAUTH_TOKEN
   fi
 

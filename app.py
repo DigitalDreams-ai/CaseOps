@@ -6507,6 +6507,11 @@ def api_status():
         })
 
 
+@app.get("/health")
+def health():
+    return jsonify({"ok": True})
+
+
 @app.get("/api/pipeline-log/<key>")
 def api_pipeline_log(key: str):
     """JSONL-backed history for global runs (__global__) or a Jira issue key.
@@ -7700,16 +7705,23 @@ if __name__ == "__main__":
     _args = parser.parse_args()
 
     WORKSPACE = _args.workspace
+    data_dir = (os.environ.get("CASEOPS_DATA_DIR") or "").strip()
     if _args.outputs_dir:
         OUTPUTS = Path(_args.outputs_dir)
     elif os.environ.get("CASEOPS_OUTPUTS_DIR"):
         OUTPUTS = Path(os.environ["CASEOPS_OUTPUTS_DIR"])
+    elif data_dir:
+        OUTPUTS = Path(data_dir) / "outputs"
     else:
         OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
     _ensure_directory_writable(OUTPUTS, "outputs")
 
+    env_override = (os.environ.get("CASEOPS_JIRA_ENV_FILE") or "").strip()
     if _args.env_file:
         env_file_path = Path(_args.env_file)
+        _load_jira_env(env_file_path)
+    elif env_override:
+        env_file_path = Path(env_override)
         _load_jira_env(env_file_path)
     else:
         env_file_path = ROOT / f".env.jira.{WORKSPACE}" if WORKSPACE != "default" else ROOT / ".env.jira"
