@@ -20,14 +20,14 @@ The dashboard lists synced Jira issues and their CaseOps artifacts. Select an is
 
 - Jira summary
 - Investigation
-- Step 4 hypothesis
+- Hypothesis
 - Internal notes
 - Jira message draft
 - Test report
 - Engineering handoff, if present
 - Pipeline log
 
-The Step 4 hypothesis artifact is used internally by the pipeline and is not shown as a normal issue tab.
+The Hypothesis artifact is used internally by the pipeline and is not shown as a normal issue tab.
 
 ## Pipeline Actions
 

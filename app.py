@@ -12,6 +12,7 @@ import base64
 import copy
 import csv
 import json
+import hashlib
 import os
 import queue
 import re
@@ -28,6 +29,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import wraps
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +48,188 @@ class PipelineState(Enum):
     VALIDATED = "validated"
     ENGINEERING_HANDOFF = "engineering_handoff"
     ESCALATED_TO_ENGINEERING = "escalated_to_engineering"
+
+
+PIPELINE_STATE_SCHEMA_VERSION = 2
+PIPELINE_LOOP_LIMITS = {"metadata_rounds": 3, "deploy_rounds": 3}
+PIPELINE_TOOL_PERMISSION_VERSION = 1
+STEP_LOOP_MARKER_REASONS = {
+    "metadata": "repeat_metadata",
+    "deploy": "deploy_fail",
+    "candidate": "no_candidate_delta",
+    "stoppoint": "safe_stoppoint_hit",
+}
+PIPELINE_STEP_TOOL_ALLOWLIST = {
+    3: {
+        "role": "issue-diagnosis",
+        "tools": [
+            "agent",
+            "workflow",
+            "read",
+            "glob",
+            "grep",
+            "jira-issue-analysis",
+            "bash",
+            "powershell",
+            "shell",
+        ],
+    },
+    4: {
+        "role": "hypothesis-synthesis",
+        "tools": [
+            "agent",
+            "workflow",
+            "read",
+            "glob",
+            "grep",
+            "bash",
+            "powershell",
+            "shell",
+        ],
+    },
+    5: {
+        "role": "metadata-investigation",
+        "tools": [
+            "agent",
+            "salesforce-production-metadata-investigation",
+            "read",
+            "glob",
+            "grep",
+            "bash",
+            "powershell",
+            "shell",
+            "sf",
+        ],
+    },
+    6: {
+        "role": "problem-drilling",
+        "tools": [
+            "agent",
+            "salesforce-production-metadata-investigation",
+            "read",
+            "glob",
+            "grep",
+            "bash",
+            "powershell",
+            "shell",
+            "sf",
+        ],
+    },
+    7: {
+        "role": "routing-assessment",
+        "tools": [
+            "agent",
+            "workflow",
+            "read",
+            "glob",
+            "grep",
+        ],
+    },
+    8: {
+        "role": "candidate-implementation",
+        "tools": [
+            "agent",
+            "read",
+            "glob",
+            "grep",
+            "bash",
+            "powershell",
+            "shell",
+            "sf",
+        ],
+    },
+    9: {
+        "role": "sandbox-deploy-tester",
+        "tools": [
+            "agent",
+            "salesforce-sandbox-deploy-test",
+            "read",
+            "glob",
+            "grep",
+            "bash",
+            "powershell",
+            "shell",
+            "sf",
+        ],
+    },
+    10: {
+        "role": "final-message-composer",
+        "tools": [
+            "agent",
+            "read",
+            "glob",
+            "grep",
+            "bash",
+            "powershell",
+            "shell",
+        ],
+    },
+    11: {
+        "role": "summary-author",
+        "tools": [
+            "read",
+            "glob",
+            "grep",
+            "bash",
+            "powershell",
+            "shell",
+        ],
+    },
+}
+PIPELINE_TRANSITION_CONTRACTS = {
+    "step4_to_step5": {
+        "transition_from": 4,
+        "transition_to": 5,
+        "restart_step": 4,
+        "required_fields": (
+            "hypothesis_h2",
+            "problem_focus",
+        ),
+    },
+    "step5_to_step6": {
+        "transition_from": 6,
+        "transition_to": 6,
+        "restart_step": 6,
+        "required_fields": (
+            "problem_location",
+            "failure_point",
+            "artifact_reference",
+        ),
+    },
+    "step8_to_step9": {
+        "transition_from": 8,
+        "transition_to": 9,
+        "restart_step": 8,
+        "required_fields": (
+            "candidate_manifest",
+            "candidate_scope",
+        ),
+    },
+    "step9_to_step10": {
+        "transition_from": 9,
+        "transition_to": 10,
+        "restart_step": 10,
+        "required_fields": (
+            "messages_separated",
+            "internal_notes_audience",
+            "customer_message_audience",
+        ),
+    },
+}
+PIPELINE_CONTEXT_LIMITS = {
+    "org_knowledge_total_chars": 12_000,
+    "org_knowledge_max_file_chars": 1_200,
+    "org_knowledge_summary_chars": 900,
+    "artifact_summary_chars": 800,
+    "max_context_files": 8,
+    "context_packet_summary_chars": 2_000,
+    "long_run_seconds": 1_800,
+    "step_long_seconds": 900,
+    "repeated_output_lines": 3_000,
+    "output_chars_per_run": 40_000,
+}
+PIPELINE_CONTEXT_POLICY_VERSION = 1
+
 
 try:
     import markdown as md_lib
@@ -189,6 +373,8 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
     "JIRA_BEARER_TOKEN",
     "CASEOPS_ANTHROPIC_MODEL",
     "CASEOPS_GLOBAL_MAX_PARALLEL",
+    "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
+    "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
     "CASEOPS_USE_CCI_FOR_AUTH",
     "CASEOPS_PRODUCTION_READ_ORG",
     "CASEOPS_SANDBOX_TARGET_ORG",
@@ -898,13 +1084,126 @@ def _read_small_text(path: Path, max_chars: int) -> str:
     return text[:max_chars]
 
 
+def _estimate_token_count(text: str) -> int:
+    """Simple token estimate used for planning context budgets."""
+    if not text:
+        return 0
+    return max(1, len(text) // 4)
+
+
+def _compact_text(text: str, max_chars: int) -> str:
+    compact = re.sub(r"\s+", " ", (text or "").strip())
+    if len(compact) <= max_chars:
+        return compact
+    return compact[:max_chars].rstrip() + "..."
+
+
+def _find_manifest_row(key: str) -> dict[str, str]:
+    for row in _read_manifest():
+        if row.get("Key") == key:
+            return row
+    return {}
+
+
+def _build_context_packet_for_issue(key: str) -> tuple[dict[str, Any], int]:
+    """Build a compact context packet for planner/state and prompt injection."""
+    row = _find_manifest_row(key)
+    index = _read_org_knowledge_index()
+    selected_paths = _select_org_knowledge_files(key, row or {})
+    total_chars_budget = int(index.get("max_context_chars") or PIPELINE_CONTEXT_LIMITS["org_knowledge_total_chars"])
+    if total_chars_budget <= 0:
+        total_chars_budget = PIPELINE_CONTEXT_LIMITS["org_knowledge_total_chars"]
+    per_file_chars = int(index.get("max_context_chars_per_file", PIPELINE_CONTEXT_LIMITS["org_knowledge_max_file_chars"]) or PIPELINE_CONTEXT_LIMITS["org_knowledge_max_file_chars"])
+    if per_file_chars <= 0:
+        per_file_chars = PIPELINE_CONTEXT_LIMITS["org_knowledge_max_file_chars"]
+
+    selected_cap = max(1, int(index.get("max_topic_files") or PIPELINE_CONTEXT_LIMITS["max_context_files"]))
+    org_entries: list[dict[str, Any]] = []
+    used = 0
+    remaining = total_chars_budget
+    for path in selected_paths[:selected_cap]:
+        rel = str(path.relative_to(_org_knowledge_dir()))
+        signature = _file_signature(path)
+        evidence_id = f"org-knowledge:{rel}:{signature[:8] if signature else '?'}"
+        snippet = _compact_text(_read_small_text(path, per_file_chars), PIPELINE_CONTEXT_LIMITS["org_knowledge_summary_chars"])
+        char_estimate = len(snippet)
+        if remaining <= 0:
+            break
+        if char_estimate > remaining:
+            snippet = snippet[:max(1, remaining - 3)].rstrip() + "..."
+            char_estimate = len(snippet)
+            remaining = 0
+        else:
+            remaining -= char_estimate
+        org_entries.append({
+            "path": rel,
+            "evidence_id": evidence_id,
+            "signature": signature,
+            "signature_type": "sha256",
+            "size": path.stat().st_size if path.exists() else 0,
+            "snippet": snippet,
+            "summary_chars": char_estimate,
+        })
+        used += char_estimate
+        if used >= total_chars_budget:
+            break
+
+    artifact_fields = {
+        "jira_summary": "jira_summary",
+        "investigation": "investigation",
+        "hypothesis": "hypothesis",
+        "test_report": "test_report",
+        "internal_notes": "internal_notes",
+        "jira_message": "jira_message",
+    }
+    artifact_summaries: list[dict[str, Any]] = []
+    for label, key_name in artifact_fields.items():
+        rel = FILE_LOCATIONS[key_name].format(key=key)
+        path = OUTPUTS / rel
+        signature = _file_signature(path)
+        snippet = _compact_text(
+            _read_small_text(path, PIPELINE_CONTEXT_LIMITS["artifact_summary_chars"]),
+            PIPELINE_CONTEXT_LIMITS["artifact_summary_chars"],
+        )
+        if not signature and not snippet:
+            continue
+        artifact_summaries.append({
+            "name": label,
+            "path": rel,
+            "signature": signature,
+            "signature_type": "sha256",
+            "snippet": snippet,
+            "signature_chars": len(snippet),
+        })
+
+    total_context_chars = used + sum(item.get("signature_chars", 0) for item in artifact_summaries)
+    return {
+        "version": PIPELINE_CONTEXT_POLICY_VERSION,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "max_allowed_chars": total_chars_budget,
+        "org_knowledge": {
+            "selected_files": org_entries,
+            "file_budget": {
+                "total_chars": total_chars_budget,
+                "per_file_chars": per_file_chars,
+                "max_files": selected_cap,
+            },
+        },
+        "artifacts": artifact_summaries,
+        "estimated_tokens": _estimate_token_count(_compact_text(" ".join(item.get("snippet", "") for item in org_entries), PIPELINE_CONTEXT_LIMITS["context_packet_summary_chars"])),
+        "artifact_count": len(artifact_summaries),
+        "evidence_ids": [item.get("signature") for item in org_entries if item.get("signature")] + [item.get("signature") for item in artifact_summaries if item.get("signature")],
+        "notes": "Compact summaries and evidence IDs only; raw evidence remains in output files.",
+    }, total_context_chars
+
+
 def _issue_org_knowledge_search_text(key: str, row: dict[str, str]) -> str:
     parts = [
         key,
         row.get("Summary", ""),
         row.get("Status", ""),
         _read_small_text(OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key), 12000),
-        _read_small_text(OUTPUTS / FILE_LOCATIONS["step4_hypothesis"].format(key=key), 8000),
+        _read_small_text(OUTPUTS / FILE_LOCATIONS["hypothesis"].format(key=key), 8000),
         _read_small_text(OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key), 12000),
     ]
     return "\n".join(part for part in parts if part).lower()
@@ -1343,6 +1642,16 @@ def _load_jira_env(env_file: Path | None = None) -> None:
 
 JIRA_BASE_URL = ""  # Set in __main__ after _load_jira_env()
 
+_PREFLIGHT_ENV_LOCK = threading.Lock()
+
+
+def _env_flag(key: str, default: bool = False) -> bool:
+    """Parse common truthy env values to a boolean."""
+    value = (os.environ.get(key) or "").strip().lower()
+    if not value:
+        return bool(default)
+    return value in {"1", "true", "yes", "on", "enabled"}
+
 
 def caseops_llm_auth_uses_anthropic_api_key() -> bool:
     """If True, CaseOps LLM calls use the **Anthropic Messages API** (API key billing).
@@ -1477,7 +1786,7 @@ ESCALATED_STATUS = "escalated to engineering"
 FILE_LOCATIONS: dict[str, str] = {
     "jira_summary":       "jira/summary/{key}.md",
     "investigation":      "investigations/{key}.md",
-    "step4_hypothesis":   "step-4-hypothesis/{key}.md",
+    "hypothesis":         "hypothesis/{key}.md",
     "internal_notes":     "internal-notes/{key}.md",
     "jira_message":       "jira-messages/{key}.md",
     "test_report":        "test-reports/{key}.md",
@@ -1488,7 +1797,7 @@ FILE_LOCATIONS: dict[str, str] = {
 FILE_LABELS: dict[str, str] = {
     "jira_summary":    "Jira Summary",
     "investigation":   "Investigation",
-    "step4_hypothesis": "Step 4 Hypothesis",
+    "hypothesis":      "Hypothesis",
     "internal_notes":  "Internal Notes",
     "jira_message":    "Jira Message",
     "test_report":     "Test Report",
@@ -1512,6 +1821,8 @@ OUTPUTS_PIPELINE_LOGS: Path = None  # type: ignore # Initialized in __main__ blo
 _PIPELINE_LOG_LOCK = threading.Lock()
 _PIPELINE_LOG_TAIL_BYTES = 3 * 1024 * 1024
 _PIPELINE_LOG_TAIL_LINES = 12_000
+_PIPELINE_LOG_GOVERNANCE: dict[str, dict[str, Any]] = {}
+_PIPELINE_LOG_GOVERNANCE_LOCK = threading.Lock()
 _ANSI_CONTROL_RE = re.compile(
     r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1B\\))"
 )
@@ -1524,6 +1835,104 @@ _SFDX_AUTH_URL_RE = re.compile(r"force://[^\s\"'<>]+")
 def _pipeline_log_path(run_key: str) -> Path:
     safe = re.sub(r"[^A-Za-z0-9._-]", "_", run_key) or "unknown"
     return OUTPUTS_PIPELINE_LOGS / f"{safe}.jsonl"
+
+
+def _init_pipeline_log_governance(run_key: str) -> None:
+    """Reset output-governance counters for a run key."""
+    with _PIPELINE_LOG_GOVERNANCE_LOCK:
+        _PIPELINE_LOG_GOVERNANCE[run_key] = {
+            "non_critical_lines": 0,
+            "non_critical_chars": 0,
+            "critical_lines": 0,
+            "line_duplicates": Counter(),
+            "line_cap_logged": False,
+            "char_cap_logged": False,
+            "duplicate_logged": set(),
+            "active": True,
+        }
+
+
+def _finalize_pipeline_log_governance(run_key: str) -> None:
+    """Drop ephemeral output governance state for a completed run."""
+    with _PIPELINE_LOG_GOVERNANCE_LOCK:
+        _PIPELINE_LOG_GOVERNANCE.pop(run_key, None)
+
+
+def _is_log_line_critical(text: str) -> bool:
+    if _PIPELINE_STEP_MARKER_RE.search(text):
+        return True
+    if text.startswith("ERROR:") or text.startswith("WARNING:") or text.startswith("Run summary ["):
+        return True
+    if text.startswith("Done:") or text.startswith("Run started:"):
+        return True
+    if text.startswith("-- ") or "Token usage:" in text:
+        return True
+    return False
+
+
+def _governed_log_line(run_key: str, text: str) -> str | None:
+    """Apply context-governance caps and return the line to emit, or None to skip."""
+    try:
+        max_lines = int(PIPELINE_CONTEXT_LIMITS.get("repeated_output_lines", 0))
+    except (TypeError, ValueError):
+        max_lines = 3_000
+    if max_lines <= 0:
+        max_lines = 3_000
+    try:
+        max_chars = int(PIPELINE_CONTEXT_LIMITS.get("output_chars_per_run", 0))
+    except (TypeError, ValueError):
+        max_chars = 40_000
+    if max_chars <= 0:
+        max_chars = 40_000
+
+    with _PIPELINE_LOG_GOVERNANCE_LOCK:
+        state = _PIPELINE_LOG_GOVERNANCE.setdefault(
+            run_key,
+            {
+                "non_critical_lines": 0,
+                "non_critical_chars": 0,
+                "critical_lines": 0,
+                "line_duplicates": Counter(),
+                "line_cap_logged": False,
+                "char_cap_logged": False,
+                "duplicate_logged": set(),
+                "active": True,
+            },
+        )
+
+        if not state.get("active", False):
+            return text
+
+        if not _is_log_line_critical(text):
+            duplicate = int(state["line_duplicates"].get(text, 0)) + 1
+            state["line_duplicates"][text] = duplicate
+            if duplicate > max_lines:
+                if text not in state["duplicate_logged"]:
+                    state["duplicate_logged"].add(text)
+                    return (
+                        "Context governance: duplicate output suppressed for "
+                        f"{text[:80]!r}; further repeats suppressed."
+                    )
+                return None
+
+            if state["non_critical_lines"] >= max_lines:
+                if not bool(state.get("line_cap_logged")):
+                    state["line_cap_logged"] = True
+                    return "Context governance: non-critical line cap reached; further non-critical lines suppressed."
+                return None
+            state["non_critical_lines"] += 1
+
+            projected_chars = int(state["non_critical_chars"]) + len(text)
+            if projected_chars > max_chars:
+                if not bool(state.get("char_cap_logged")):
+                    state["char_cap_logged"] = True
+                    return "Context governance: run output cap reached; further non-critical lines suppressed."
+                return None
+            state["non_critical_chars"] = projected_chars
+        else:
+            state["critical_lines"] = int(state.get("critical_lines", 0)) + 1
+
+        return text
 
 
 def _ensure_directory_writable(path: Path, label: str) -> None:
@@ -1622,12 +2031,17 @@ def _format_run_timestamp() -> str:
 
 def _log_emit_run_start(run_key: str, label: str | None = None) -> None:
     target = label or run_key
+    _init_pipeline_log_governance(run_key)
     _log_emit_line(run_key, f"Run started: {target} at {_format_run_timestamp()}")
 
 
 def _log_emit_line(run_key: str, text: str) -> None:
     """Notify SSE clients and append to per-key pipeline history on disk."""
     text = _sanitize_pipeline_log_text(text)
+    governed = _governed_log_line(run_key, text)
+    if governed is None:
+        return
+    text = governed
     _log_q.put(f"{run_key}|{text}")
     _persist_pipeline_record(run_key, text, kind="line")
 
@@ -1635,6 +2049,7 @@ def _log_emit_line(run_key: str, text: str) -> None:
 def _log_emit_done(run_key: str) -> None:
     _log_q.put(f"__done__|{run_key}")
     _persist_pipeline_record(run_key, "", kind="done")
+    _finalize_pipeline_log_governance(run_key)
 
 
 def _path_relative_for_prompt(path: Path | None) -> str:
@@ -1723,6 +2138,494 @@ def _artifact_snapshot(path: Path, source_mtime: float | None = None) -> dict[st
     }
 
 
+def _pipeline_state_path(key: str) -> Path:
+    return OUTPUTS / "pipeline-state" / f"{key}.json"
+
+
+def _pipeline_state_evidence_dir(key: str) -> Path:
+    safe_key = re.sub(r"[^A-Za-z0-9._-]", "_", str(key) or "issue")
+    return OUTPUTS / "pipeline-state" / f"{safe_key}.evidence"
+
+
+def _read_pipeline_state(key: str) -> dict[str, Any]:
+    """Load persisted state for a key, including legacy fallback."""
+    path = _pipeline_state_path(key)
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    return payload
+
+
+def _sha256_signature(data: str | bytes) -> str:
+    if isinstance(data, str):
+        data = data.encode("utf-8")
+    return f"sha256:{hashlib.sha256(data).hexdigest()}"
+
+
+def _file_signature(path: Path | None) -> str:
+    if not path or not path.is_file():
+        return ""
+    try:
+        return _sha256_signature(path.read_bytes())
+    except OSError:
+        return ""
+
+
+def _dir_signature(path: Path | None) -> str:
+    if not path or not path.is_dir():
+        return ""
+    h = hashlib.sha256()
+    for child in sorted((p for p in path.rglob("*") if p.is_file()), key=lambda p: p.as_posix()):
+        try:
+            h.update(child.relative_to(path).as_posix().encode("utf-8"))
+            h.update(b"|")
+            h.update(str(child.stat().st_size).encode("utf-8"))
+            h.update(b"|")
+            h.update(str(int(child.stat().st_mtime)).encode("utf-8"))
+            h.update(b"|")
+        except OSError:
+            continue
+    return _sha256_signature(h.digest())
+
+
+def _build_jira_signature(key: str, source_mtime: float | None) -> str:
+    parts = [
+        _file_signature(OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key)),
+        _file_signature(OUTPUTS / "jira" / "raw" / f"{key}.json"),
+    ]
+    if source_mtime:
+        parts.append(f"source-mtime:{source_mtime}")
+    return _sha256_signature("|".join(part for part in parts if part))
+
+
+def _infer_routing_state(
+    state: dict[str, Any],
+    *,
+    has_eng_handoff: bool = False,
+    has_test_report: bool = False,
+) -> dict[str, Any]:
+    raw = state.get("routing") if isinstance(state.get("routing"), dict) else {}
+    path = (str(raw.get("path") or "") or "").strip().lower()
+    confidence = str(raw.get("confidence") or "low").strip().lower()
+    if path not in {"support_resolvable", "engineering_required", "on_hold", "unknown"}:
+        if has_eng_handoff and has_test_report:
+            path = "engineering_required"
+            confidence = "medium"
+        elif has_eng_handoff:
+            path = "engineering_required"
+            confidence = "low"
+        elif has_test_report:
+            path = "support_resolvable"
+            confidence = "low"
+        else:
+            path = "unknown"
+    return {
+        "path": path,
+        "confidence": confidence if confidence in {"low", "medium", "high"} else "low",
+        "reason": str(raw.get("reason") or "Routing not yet persisted.").strip(),
+    }
+
+
+def _infer_deliverable_state(
+    state: dict[str, Any],
+    *,
+    is_data_only_legacy: bool = False,
+) -> dict[str, Any]:
+    raw = state.get("deliverable") if isinstance(state.get("deliverable"), dict) else {}
+    deploy_required = (str(raw.get("production_deploy_required") or "").strip().lower() or "unknown")
+    if deploy_required == "na":
+        deploy_required = "n/a"
+    if deploy_required not in {"yes", "no", "n/a", "unknown"}:
+        deploy_required = "unknown"
+    return {
+        "type": str(raw.get("type") or "unknown").strip(),
+        "production_deploy_required": deploy_required,
+        "production_deploy_method": str(raw.get("production_deploy_method") or "").strip(),
+        "no_deploy_reason": str(raw.get("no_deploy_reason") or "").strip(),
+        "legacy_detected": bool(is_data_only_legacy),
+    }
+
+
+def _normalize_tool_name(tool_name: str) -> str:
+    """Normalize a tool name for policy checks."""
+    return (tool_name or "").strip().lower().replace("_", "-")
+
+
+def _build_step_tool_permissions(next_step: int | None = None) -> dict[str, Any]:
+    steps: dict[str, Any] = {}
+    for step_no, policy in PIPELINE_STEP_TOOL_ALLOWLIST.items():
+        steps[str(step_no)] = {
+            "role": policy["role"],
+            "allowlist": policy["tools"],
+        }
+
+    return {
+        "version": PIPELINE_TOOL_PERMISSION_VERSION,
+        "steps": steps,
+        "active_step": next_step,
+        "active_step_tools": steps.get(str(next_step or ""), {}).get("allowlist", []),
+    }
+
+
+def _contract_status_from_missing(missing: list[str]) -> str:
+    if not missing:
+        return "pass"
+    return "needs_rework"
+
+
+def _messages_are_separated(internal_notes: str, jira_message: str) -> bool:
+    if not internal_notes or not jira_message:
+        return False
+    if internal_notes.strip() == jira_message.strip():
+        return False
+    return True
+
+
+def _evaluate_transition_contract_step4_to_step5(hypothesis_text: str) -> dict[str, Any]:
+    missing: list[str] = []
+    evidence: dict[str, bool] = {}
+    text = hypothesis_text or ""
+    hypothesis_h2 = bool(re.search(r"(?im)^\s*#+\s*(root cause hypothesis|hypothesis)", text))
+    evidence["hypothesis_h2"] = hypothesis_h2
+    if not hypothesis_h2:
+        if not re.search(r"(?is)\broot cause\b", text):
+            missing.append("hypothesis_h2")
+        else:
+            evidence["hypothesis_h2"] = True
+
+    problem_focus = bool(
+        re.search(
+            r"(?is)problem\s*(?:focus|location|scope|type)|root cause|problem statement|issue statement|specific artifact|target component",
+            text,
+        )
+    )
+    evidence["problem_focus"] = problem_focus
+    if not problem_focus:
+        if not re.search(r"(?is)\b(summary|analysis|findings|candidate|proposed|scope)\b", text):
+            missing.append("problem_focus")
+        else:
+            evidence["problem_focus"] = True
+
+    return {
+        "status": _contract_status_from_missing(missing),
+        "missing": missing,
+        "observed": evidence,
+        "reason": "Missing required Step 4 artifact fields." if missing else "Step 4 → Step 5 contract satisfied.",
+        "required_fields": PIPELINE_TRANSITION_CONTRACTS["step4_to_step5"]["required_fields"],
+        "evidence": {
+            "hypothesis_chars": len(text),
+        },
+    }
+
+
+def _evaluate_transition_contract_step5_to_step6(investigation_text: str) -> dict[str, Any]:
+    missing: list[str] = []
+    text = investigation_text or ""
+    evidence = {
+        "problem_location": bool(re.search(r"(?im)^\s*#{1,6}\s*problem\s+location", text)),
+        "failure_point": bool(re.search(r"(?im)(failure\s+point|failure[:\-])", text)),
+        "artifact_reference": bool(re.search(r"(?im)(specific\s+artifact|artifact\s+name|api\s+name|file\s+name)", text)),
+        "investigation_chars": len(text),
+    }
+    if not evidence["problem_location"]:
+        if not re.search(r"(?is)problem location|problem area|affected component", text):
+            missing.append("problem_location")
+        else:
+            evidence["problem_location"] = True
+    if not evidence["failure_point"]:
+        if not re.search(r"(?is)problem\s*location|failure|failing|fails|breaks|error|blocked by|root cause|reproduc|symptom|not\s+working|unable to", text):
+            missing.append("failure_point")
+        else:
+            evidence["failure_point"] = True
+    if not evidence["artifact_reference"]:
+        if not re.search(r"(?is)object|field|flow|class|trigger|permission|profile|layout|metadata|component|candidate|method|record|query|deployment", text):
+            missing.append("artifact_reference")
+        else:
+            evidence["artifact_reference"] = True
+
+    return {
+        "status": _contract_status_from_missing(missing),
+        "missing": missing,
+        "observed": evidence,
+        "reason": "Missing required Step 5→6 handoff fields." if missing else "Step 5 → Step 6 contract satisfied.",
+        "required_fields": PIPELINE_TRANSITION_CONTRACTS["step5_to_step6"]["required_fields"],
+    }
+
+
+def _evaluate_transition_contract_step8_to_step9(metadata_manifest_text: str) -> dict[str, Any]:
+    missing: list[str] = []
+    evidence = {
+        "candidate_manifest": bool(metadata_manifest_text),
+        "candidate_scope": False,
+        "attempt_id_present": False,
+        "workspace_has_file": False,
+        "manifest_chars": len(metadata_manifest_text or ""),
+    }
+    if not metadata_manifest_text:
+        return {
+            "status": "needs_rework",
+            "missing": ["candidate_manifest"],
+            "observed": evidence,
+            "reason": "metadata-workspace.json is missing for Step 8 → Step 9 validation.",
+            "required_fields": PIPELINE_TRANSITION_CONTRACTS["step8_to_step9"]["required_fields"],
+        }
+
+    evidence["workspace_has_file"] = True
+    manifest_parsed: dict[str, Any] | None = None
+    parsed = {}
+    try:
+        parsed = json.loads(metadata_manifest_text)
+    except Exception:
+        parsed = {}
+    if isinstance(parsed, dict):
+        manifest_parsed = parsed
+    elif isinstance(parsed, list):
+        manifest_parsed = {"components": parsed}
+
+    if not manifest_parsed:
+        evidence["candidate_scope"] = False
+        missing.append("candidate_scope")
+    else:
+        candidates = []
+        for key in ("files", "components", "candidate_components", "changed_components", "artifacts", "file_candidates"):
+            value = manifest_parsed.get(key) if isinstance(manifest_parsed, dict) else None
+            if isinstance(value, list) and value:
+                candidates.extend(value)
+        evidence["candidate_scope"] = bool(candidates)
+        if not evidence["candidate_scope"]:
+            if any(term in metadata_manifest_text.lower() for term in ("attempt", "attempts", "candidate", "component", "package")):
+                evidence["candidate_scope"] = True
+            else:
+                missing.append("candidate_scope")
+
+        attempt = manifest_parsed.get("attempt") if isinstance(manifest_parsed, dict) else None
+        if attempt is None:
+            attempt = manifest_parsed.get("attempt_number") if isinstance(manifest_parsed, dict) else None
+        if attempt:
+            try:
+                evidence["attempt_id_present"] = int(str(attempt)) > 0
+            except (TypeError, ValueError):
+                evidence["attempt_id_present"] = bool(str(attempt).strip())
+        elif re.search(r"(?im)\battempt\b", metadata_manifest_text):
+            evidence["attempt_id_present"] = True
+        else:
+            evidence["attempt_id_present"] = True
+
+        if not evidence["attempt_id_present"]:
+            missing.append("attempt_id")
+
+    return {
+        "status": _contract_status_from_missing(missing),
+        "missing": missing,
+        "observed": evidence,
+        "reason": "Missing required Step 8 → Step 9 candidate constraints." if missing else "Step 8 → Step 9 contract satisfied.",
+        "required_fields": PIPELINE_TRANSITION_CONTRACTS["step8_to_step9"]["required_fields"],
+    }
+
+
+def _evaluate_transition_contract_step9_to_step10(
+    internal_notes: str,
+    jira_message: str,
+    messages_separated: bool,
+) -> dict[str, Any]:
+    missing: list[str] = []
+    evidence = {
+        "messages_separated": bool(messages_separated),
+        "internal_notes_audience": False,
+        "customer_message_audience": True,
+        "internal_chars": len(internal_notes or ""),
+        "jira_chars": len(jira_message or ""),
+    }
+    if not internal_notes:
+        missing.append("internal_notes")
+    if not jira_message:
+        missing.append("jira_message")
+
+    if not internal_notes:
+        evidence["internal_notes_audience"] = False
+    else:
+        evidence["internal_notes_audience"] = not bool(re.search(r"(?im)^agent|support\s*only|jira-only", internal_notes[:80]))
+
+    if not jira_message:
+        evidence["customer_message_audience"] = False
+    else:
+        evidence["customer_message_audience"] = not bool(re.search(r"(?im)internal only|for\s+engineer|engineering\s+details", jira_message[:120]))
+
+    if not messages_separated:
+        missing.append("messages_separated")
+    if not evidence["internal_notes_audience"]:
+        missing.append("internal_notes_audience")
+    if not evidence["customer_message_audience"]:
+        missing.append("customer_message_audience")
+    return {
+        "status": _contract_status_from_missing(missing),
+        "missing": missing,
+        "observed": evidence,
+        "reason": "Missing required Step 9 → Step 10 file separation/audience checks." if missing else "Step 9 → Step 10 contract satisfied.",
+        "required_fields": PIPELINE_TRANSITION_CONTRACTS["step9_to_step10"]["required_fields"],
+    }
+
+
+def _evaluate_transition_contracts(
+    *,
+    hypothesis: str,
+    investigation: str,
+    metadata_manifest_text: str,
+    internal_notes: str,
+    jira_message: str,
+    messages_separated: bool,
+) -> dict[str, Any]:
+    contracts = {
+        "step4_to_step5": _evaluate_transition_contract_step4_to_step5(hypothesis),
+        "step5_to_step6": _evaluate_transition_contract_step5_to_step6(investigation),
+        "step8_to_step9": _evaluate_transition_contract_step8_to_step9(metadata_manifest_text),
+        "step9_to_step10": _evaluate_transition_contract_step9_to_step10(internal_notes, jira_message, messages_separated),
+    }
+    return contracts
+
+
+def _apply_transition_contracts_to_plan(plan: dict[str, Any], contracts: dict[str, Any]) -> None:
+    by_step = {str(step.get("step")): step for step in plan.get("steps", []) if isinstance(step, dict)}
+    for key, contract in contracts.items():
+        if not isinstance(contract, dict):
+            continue
+        status = str(contract.get("status") or "").strip()
+        if status != "needs_rework":
+            continue
+        step_no = None
+        if key == "step4_to_step5":
+            step_no = 5
+        elif key == "step5_to_step6":
+            step_no = 6
+        elif key == "step8_to_step9":
+            step_no = 9
+        elif key == "step9_to_step10":
+            step_no = 10
+        if step_no is None:
+            continue
+        step = by_step.get(str(step_no))
+        if not step:
+            continue
+        if step.get("status") == "complete":
+            step["status"] = "stale"
+        elif step.get("status") not in {"blocked", "stale"}:
+            step["status"] = "stale"
+        step["reason"] = f"{step.get('reason', '').strip()} Contract failed ({key}): {contract.get('reason', 'inspect required fields')}"
+        step["action"] = (
+            f"Force corrective re-run of Step {step_no} to satisfy transition contract before Step {step_no + 1}."
+        )
+
+
+def _is_tool_allowlisted(step_no: int | None, tool_name: str) -> bool:
+    allowlist = PIPELINE_STEP_TOOL_ALLOWLIST.get(step_no or 0, {})
+    if not allowlist:
+        return True
+    normalized = _normalize_tool_name(tool_name)
+    return not normalized or normalized in [_normalize_tool_name(item) for item in allowlist.get("tools", [])]
+
+
+def _coerce_non_negative_int(value: Any, default: int = 0) -> int:
+    try:
+        num = int(value)
+    except (TypeError, ValueError):
+        return default
+    if num < 0:
+        return default
+    return num
+
+
+def _load_loop_state(state: dict[str, Any]) -> dict[str, Any]:
+    raw = state.get("loop_state", {}) if isinstance(state.get("loop_state"), dict) else {}
+    return {
+        "metadata_rounds": _coerce_non_negative_int(raw.get("metadata_rounds"), 0),
+        "deploy_rounds": _coerce_non_negative_int(raw.get("deploy_rounds"), 0),
+        "no_candidate_delta_count": _coerce_non_negative_int(raw.get("no_candidate_delta_count"), 0),
+        "last_stoppoint_code": str(raw.get("last_stoppoint_code") or "").strip().lower(),
+        "last_reason": str(raw.get("last_reason") or "").strip(),
+        "last_seen": str(raw.get("last_seen") or "").strip(),
+        "latest_stop_code": str(raw.get("latest_stop_code") or "").strip(),
+    }
+
+
+def _default_loop_state() -> dict[str, Any]:
+    return {
+        "metadata_rounds": 0,
+        "deploy_rounds": 0,
+        "no_candidate_delta_count": 0,
+        "last_stoppoint_code": "",
+        "last_reason": "",
+        "last_seen": "",
+        "latest_stop_code": "",
+    }
+
+
+def _apply_signature_invalidation(
+    prior_loop_state: dict[str, Any],
+    *,
+    jira_source_stable: bool,
+    investigation_stable: bool,
+    step4_stable: bool,
+    metadata_stable: bool,
+    test_report_stable: bool,
+) -> dict[str, Any]:
+    """Reset narrow loop counters when source and contract inputs change."""
+    loop_state = dict(_default_loop_state(), **prior_loop_state)
+    if not jira_source_stable:
+        return _default_loop_state()
+    if not investigation_stable or not step4_stable:
+        loop_state["metadata_rounds"] = 0
+        loop_state["deploy_rounds"] = 0
+        loop_state["no_candidate_delta_count"] = 0
+        return loop_state
+    if not metadata_stable and test_report_stable:
+        # Candidate workspace changed; allow another deploy/test pass.
+        loop_state["deploy_rounds"] = 0
+    return loop_state
+
+
+def _loop_state_for_resume(
+    prior_loop_state: dict[str, Any],
+    *,
+    has_schema: bool,
+    has_stored_signatures: bool,
+    jira_signature_stable: bool,
+    inv_signature_stable: bool,
+    step4_signature_stable: bool,
+    metadata_signature_stable: bool,
+    test_signature_stable: bool,
+) -> dict[str, Any]:
+    if not has_schema or not has_stored_signatures:
+        return _default_loop_state()
+    loop_state = _load_loop_state(prior_loop_state)
+    return _apply_signature_invalidation(
+        loop_state,
+        jira_source_stable=jira_signature_stable,
+        investigation_stable=inv_signature_stable,
+        step4_stable=step4_signature_stable,
+        metadata_stable=metadata_signature_stable,
+        test_report_stable=test_signature_stable,
+    )
+
+
+def _loop_stop_reason(loop_state: dict[str, Any]) -> str:
+    metadata_limit_hit = loop_state.get("metadata_rounds", 0) >= PIPELINE_LOOP_LIMITS["metadata_rounds"]
+    deploy_limit_hit = loop_state.get("deploy_rounds", 0) >= PIPELINE_LOOP_LIMITS["deploy_rounds"]
+    if metadata_limit_hit:
+        return STEP_LOOP_MARKER_REASONS["metadata"]
+    if deploy_limit_hit:
+        return STEP_LOOP_MARKER_REASONS["deploy"]
+    if loop_state.get("no_candidate_delta_count", 0) > 0:
+        return STEP_LOOP_MARKER_REASONS["candidate"]
+    if loop_state.get("latest_stop_code") in {"safe_stoppoint", "safe_stoppoint_hit"}:
+        return STEP_LOOP_MARKER_REASONS["stoppoint"]
+    return ""
+
+
 def _directory_has_files(path: Path) -> bool:
     if not path.is_dir():
         return False
@@ -1765,6 +2668,26 @@ def _issue_source_mtime(key: str, jira_updated: str | None = None) -> float | No
     return max(mtimes) if mtimes else None
 
 
+def _normalized_signature(value: Any) -> str:
+    if not value:
+        return ""
+    return str(value).strip()
+
+
+def _signatures_match(current: str, prior: Any) -> bool:
+    """Return True only when both signatures are non-empty and equal."""
+    prior_sig = _normalized_signature(prior)
+    return bool(current and prior_sig and current == prior_sig)
+
+
+def _state_has_schema(state: dict[str, Any]) -> bool:
+    try:
+        version = int(_normalized_signature(state.get("schema_version")) or "0")
+    except (TypeError, ValueError):
+        return False
+    return version == PIPELINE_STATE_SCHEMA_VERSION
+
+
 def _resume_step(step: int, name: str, status: str, reason: str, action: str, artifacts: list[str] | None = None) -> dict[str, Any]:
     return {
         "step": step,
@@ -1783,12 +2706,12 @@ def _build_pipeline_resume_plan(
     *,
     force_active: bool = False,
 ) -> dict[str, Any]:
-    """Build a conservative file-based resume plan for a single issue run."""
+    """Build a resume plan based on persisted state signatures and fallback signals."""
     source_mtime = _issue_source_mtime(key, jira_updated)
     paths = {
         "jira_summary": OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key),
         "investigation": OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key),
-        "step4_hypothesis": OUTPUTS / FILE_LOCATIONS["step4_hypothesis"].format(key=key),
+        "hypothesis": OUTPUTS / FILE_LOCATIONS["hypothesis"].format(key=key),
         "test_report": OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key),
         "internal_notes": OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key),
         "jira_message": OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key),
@@ -1798,7 +2721,7 @@ def _build_pipeline_resume_plan(
     artifacts = {name: _artifact_snapshot(path, source_mtime) for name, path in paths.items()}
 
     investigation = _read_text_for_resume(paths["investigation"])
-    hypothesis = _read_text_for_resume(paths["step4_hypothesis"])
+    hypothesis = _read_text_for_resume(paths["hypothesis"])
     test_report = _read_text_for_resume(paths["test_report"])
     internal_notes = _read_text_for_resume(paths["internal_notes"])
     jira_message = _read_text_for_resume(paths["jira_message"])
@@ -1820,6 +2743,129 @@ def _build_pipeline_resume_plan(
         "workspace_manifest": _artifact_snapshot(metadata_manifest, None),
     }
 
+    state = _read_pipeline_state(key)
+    has_schema = _state_has_schema(state)
+    evidence_prechecks = state.get("evidence_prechecks") if isinstance(state.get("evidence_prechecks"), dict) else None
+    stored_signatures = state.get("signatures", {}) if isinstance(state.get("signatures", {}), dict) else {}
+    has_stored_signatures = has_schema and bool(stored_signatures)
+    signatures = {
+        "jira_source": _build_jira_signature(key, source_mtime),
+        "investigation": _file_signature(paths["investigation"]),
+        "hypothesis": _file_signature(paths["hypothesis"]),
+        "test_report": _file_signature(paths["test_report"]),
+        "metadata_workspace": _file_signature(metadata_manifest),
+    }
+    has_data_only_legacy = _test_report_is_data_only(key)
+    routing = _infer_routing_state(
+        state,
+        has_eng_handoff=artifacts["eng_handoff"]["exists"] and artifacts["eng_handoff"]["size"] > 0,
+        has_test_report=artifacts["test_report"]["exists"] and artifacts["test_report"]["size"] > 0,
+    )
+    deliverable = _infer_deliverable_state(state, is_data_only_legacy=has_data_only_legacy)
+    has_no_deploy = deliverable["production_deploy_required"] in {"no", "n/a"} or (
+        not has_schema and has_data_only_legacy
+    )
+
+    def sig_complete(field: str) -> bool:
+        return _signatures_match(signatures.get(field, ""), stored_signatures.get(field))
+
+    # Signature drift for each step.
+    jira_signature_stable = not has_schema or sig_complete("jira_source")
+    inv_signature_stable = sig_complete("investigation")
+    hypothesis_signature_stable = sig_complete("hypothesis")
+    test_signature_stable = sig_complete("test_report")
+    metadata_signature_stable = sig_complete("metadata_workspace")
+
+    routing_on_hold = routing["path"] == "on_hold"
+
+    candidate_exists = bool(
+        metadata["sandbox_work_dir"]["has_files"]
+        or metadata["confirmed_dir"]["has_files"]
+        or re.search(r"(?is)proposed solution|candidate|changed files|components changed|deploy|permission set assignment|assigning .*permission set|no-deploy", "\n".join([investigation, test_report, recent_evidence_text]))
+    )
+
+    # Problem / gate signals.
+    problem_location = bool(
+        artifacts["investigation"]["exists"]
+        and re.search(r"(?is)problem location|specific artifact|failure point|confirmed root cause|root cause", investigation)
+    )
+    route_known = routing["path"] in {"support_resolvable", "engineering_required"} or bool(
+        re.search(
+            r"(?is)support-resolvable|engineering[- ]required|engineering escalation|escalate to engineering|classification complete|no-deploy|no deploy|sandbox deploy skipped",
+            diagnosis_and_recent_text,
+        )
+    )
+
+    test_current = artifacts["test_report"]["exists"] and artifacts["test_report"]["size"] > 80
+    test_passed = _test_report_confirms_fix(key)
+    test_failed = bool(test_current and not test_passed and re.search(r"(?is)\bfail(?:ed|ing)?\b|not fixed|revert|required: yes|blocked", test_report))
+    test_needs_rerun = not test_passed and test_current
+    context_packet, context_packet_chars = _build_context_packet_for_issue(key)
+    metadata_manifest_text = _read_text_for_resume(metadata_manifest)
+
+    messages_separated = _messages_are_separated(internal_notes, jira_message)
+    step_transition_contracts = _evaluate_transition_contracts(
+        hypothesis=hypothesis,
+        investigation=investigation,
+        metadata_manifest_text=metadata_manifest_text,
+        internal_notes=internal_notes,
+        jira_message=jira_message,
+        messages_separated=messages_separated,
+    )
+    step10_artifacts_current = bool(
+        artifacts["internal_notes"]["exists"]
+        and artifacts["internal_notes"]["size"] > 80
+        and artifacts["jira_message"]["exists"]
+        and artifacts["jira_message"]["size"] > 80
+    )
+
+    if has_schema and has_stored_signatures:
+        step3_complete = bool(
+            jira_signature_stable and inv_signature_stable and artifacts["investigation"]["exists"] and artifacts["investigation"]["size"] > 80
+        )
+        step4_complete = bool(step3_complete and hypothesis_signature_stable)
+    else:
+        step3_complete = artifacts["investigation"]["exists"] and artifacts["investigation"]["size"] > 80
+        step4_complete = bool(
+            step3_complete and (
+                (artifacts["hypothesis"]["exists"] and artifacts["hypothesis"]["size"] > 80)
+                or re.search(r"(?is)root cause hypothesis|smallest viable fix|sandbox validation plan|solution plan", investigation)
+            )
+        )
+
+    if has_schema and has_stored_signatures and not jira_signature_stable:
+        step3_complete = False
+        step4_complete = False
+
+    step5_complete = bool(step4_complete and not routing_on_hold and metadata["raw_production_dir"]["has_files"])
+    step6_complete = bool(step5_complete and not routing_on_hold and problem_location)
+    step7_complete = bool(step6_complete and route_known)
+    step8_complete = bool(step7_complete and not routing_on_hold and (candidate_exists or has_no_deploy))
+    step9_required = routing["path"] in {"support_resolvable", "engineering_required"} or (route_known and not has_no_deploy)
+    if step9_required:
+        step9_complete = bool(
+            step8_complete
+            and test_current
+            and test_passed
+            and (has_no_deploy or (test_signature_stable and metadata_signature_stable) if has_schema else True)
+        )
+    else:
+        step9_complete = bool(has_no_deploy and step8_complete and test_current and test_passed)
+
+    step10_complete = bool(step9_complete and step10_artifacts_current and messages_separated)
+
+    summary_path = _latest_issue_summary_path()
+    summary_mtime = summary_path.stat().st_mtime if summary_path and summary_path.exists() else None
+    issue_mtimes = []
+    for path in paths.values():
+        try:
+            if path.exists():
+                issue_mtimes.append(path.stat().st_mtime)
+        except OSError:
+            continue
+    newest_issue_mtime = max(issue_mtimes) if issue_mtimes else None
+    summary_current = bool(summary_mtime and newest_issue_mtime and summary_mtime + 1 >= newest_issue_mtime and step10_complete)
+
     steps: list[dict[str, Any]] = []
     original_disposition = _disposition(status or "")
     disposition = "active" if force_active and original_disposition == "escalated" else original_disposition
@@ -1837,121 +2883,86 @@ def _build_pipeline_resume_plan(
         handoff_current = artifacts["eng_handoff"]["current"]
         steps.append(_resume_step(
             2,
-            "Triage pre-escalated issue",
-            "complete" if handoff_current else "pending",
-            "Jira status is already Escalated to Engineering.",
-            "Stop issue processing after engineering escalation archive is current." if handoff_current else "Create or refresh engineering escalation archive, then stop for this key.",
-            [artifacts["eng_handoff"]["path"]],
-        ))
+                "Triage pre-escalated issue",
+                "complete" if handoff_current else "pending",
+                "Jira status is already Escalated to Engineering.",
+                "Stop issue processing after engineering escalation archive is current." if handoff_current else "Create or refresh engineering escalation archive, then stop for this key.",
+                [artifacts["eng_handoff"]["path"]],
+            ))
     else:
-        inv_current = artifacts["investigation"]["current"] and artifacts["investigation"]["size"] > 80
-        step4_current = artifacts["step4_hypothesis"]["current"] and artifacts["step4_hypothesis"]["size"] > 80
-        step4_inline = bool(artifacts["investigation"]["current"] and re.search(r"(?is)root cause hypothesis|smallest viable fix|sandbox validation plan|solution plan", investigation))
-        problem_location = bool(artifacts["investigation"]["current"] and re.search(r"(?is)problem location|specific artifact|failure point|confirmed root cause|root cause", investigation))
-        route_known = bool(artifacts["eng_handoff"]["current"] or re.search(r"(?is)support-resolvable|engineering[- ]required|engineering escalation|escalate to engineering|classification complete|no-deploy|no deploy|sandbox deploy skipped", diagnosis_and_recent_text))
-        candidate_exists = bool(
-            metadata["sandbox_work_dir"]["has_files"]
-            or metadata["confirmed_dir"]["has_files"]
-            or re.search(r"(?is)proposed solution|candidate|changed files|components changed|deploy|permission set assignment|assigning .*permission set|no-deploy", "\n".join([investigation, test_report, recent_evidence_text]))
-        )
-        test_current = artifacts["test_report"]["current"] and artifacts["test_report"]["size"] > 80
-        test_passed = _test_report_confirms_fix(key)
-        test_failed = bool(test_current and not test_passed and re.search(r"(?is)\bfail(?:ed|ing)?\b|not fixed|revert|required: yes|blocked", test_report))
-        support_path = bool(re.search(r"(?is)support-resolvable|no\s+engineering\s+escalation|engineering\s+escalation:\s*(?:none|no)|no-deploy|no deploy|sandbox deploy skipped", diagnosis_and_recent_text))
-        engineering_path = bool(
-            artifacts["eng_handoff"]["current"]
-            or (
-                re.search(r"(?is)engineering escalation|escalate to engineering|engineering-required", diagnosis_and_recent_text)
-                and not support_path
-            )
-        )
-        step10_artifacts_current = bool(
-            artifacts["internal_notes"]["current"]
-            and artifacts["internal_notes"]["size"] > 80
-            and artifacts["jira_message"]["current"]
-            and artifacts["jira_message"]["size"] > 80
-            and (not engineering_path or artifacts["eng_handoff"]["current"])
-        )
-        step10_complete = bool(step10_artifacts_current and test_current and test_passed)
-
         steps.extend([
             _resume_step(
                 3,
                 "Analyze issue",
-                "complete" if inv_current else "pending",
-                "Current investigation artifact exists." if inv_current else "No current investigation artifact, or Jira source changed after it was written.",
-                "Emit STEP_3 resume-skip; do not spawn Step 3 sub-agent unless Jira changed materially." if inv_current else "Run Step 3 and write investigation record.",
+                "complete" if step3_complete else ("stale" if has_schema and not jira_signature_stable else "pending"),
+                "Current investigation artifact is current and tied to this Jira source." if step3_complete else "Run Step 3 and write investigation record." if not has_schema else "Run Step 3 if Step 3 signature/Jira source mismatch.",
+                "Emit STEP_3 resume-skip;" if step3_complete else "Run Step 3 and write investigation record.",
                 [artifacts["investigation"]["path"]],
             ),
             _resume_step(
                 4,
                 "Synthesize problem hypothesis",
-                "complete" if (step4_current or step4_inline) else ("blocked" if not inv_current else "pending"),
-                "Step 4 hypothesis artifact or required hypothesis sections are current." if (step4_current or step4_inline) else "Requires current Step 3 investigation first." if not inv_current else "No current Step 4 hypothesis found.",
-                "Emit STEP_4 resume-skip; do not rewrite hypothesis unless later evidence invalidates it." if (step4_current or step4_inline) else "Create/update Step 4 hypothesis from Step 3 summary.",
-                [artifacts["step4_hypothesis"]["path"], artifacts["investigation"]["path"]],
+                "complete" if step4_complete else ("stale" if step3_complete else "pending"),
+                "Hypothesis artifact matches persisted signature." if step4_complete else "Create/update Hypothesis from Step 3 summary." ,
+                "Emit STEP_4 resume-skip; preserve hypothesis until it becomes stale." if step4_complete else "Create/update Hypothesis from Step 3 summary.",
+                [artifacts["hypothesis"]["path"], artifacts["investigation"]["path"]],
             ),
             _resume_step(
                 5,
                 "Retrieve relevant Production metadata",
-                "complete" if (problem_location and metadata["raw_production_dir"]["has_files"]) else ("blocked" if not (step4_current or step4_inline) else "pending"),
-                "Investigation identifies problem evidence and raw Production metadata exists." if (problem_location and metadata["raw_production_dir"]["has_files"]) else "Requires Step 4 hypothesis first." if not (step4_current or step4_inline) else "Production metadata evidence is missing or not indexed.",
-                "Emit STEP_5 resume-skip; reuse raw Production metadata unless the hypothesis changed." if (problem_location and metadata["raw_production_dir"]["has_files"]) else "Run targeted Step 5 metadata retrieval using sf CLI.",
+                "blocked" if routing_on_hold else ("complete" if step5_complete else "pending"),
+                "Production metadata evidence is current." if step5_complete else "Run targeted Step 5 metadata retrieval using sf CLI." ,
+                "Emit STEP_5 resume-skip; keep current raw metadata unless Step 4 evidence changes." if step5_complete else "Run targeted Step 5 metadata retrieval using sf CLI.",
                 [metadata["raw_production_dir"]["path"], artifacts["investigation"]["path"]],
             ),
             _resume_step(
                 6,
                 "Identify exact problem location",
-                "complete" if problem_location else ("blocked" if not metadata["raw_production_dir"]["has_files"] else "pending"),
-                "Investigation contains root cause/problem location signals." if problem_location else "Requires targeted Production metadata first." if not metadata["raw_production_dir"]["has_files"] else "Problem location is not documented clearly enough.",
-                "Emit STEP_6 resume-skip; do not reread full investigation unless Step 8/9 needs exact component details." if problem_location else "Run Step 6 drilling and update investigation with exact artifact and failure point.",
+                "blocked" if routing_on_hold else ("complete" if step6_complete else "pending"),
+                "Problem location is current." if step6_complete else "Run Step 6 drilling to identify exact artifact, location, and failure point." ,
+                "Emit STEP_6 resume-skip; preserve current problem location data." if step6_complete else "Run Step 6 drilling and update investigation with exact artifact and failure point.",
                 [artifacts["investigation"]["path"]],
             ),
             _resume_step(
                 7,
                 "Engineering escalation gate",
-                "complete" if route_known else ("blocked" if not problem_location else "pending"),
-                "Routing decision is already documented." if route_known else "Requires exact problem location first." if not problem_location else "Routing decision is not explicit.",
-                "Emit STEP_7 resume-skip; preserve existing Support vs Engineering route. If the route is known only from recent evidence, write it into the investigation artifact before continuing." if route_known else "Classify Support-resolvable vs Engineering-required and document decision.",
+                "complete" if step7_complete else ("stale" if step6_complete and not route_known else "pending"),
+                "Routing state is recorded in durable state." if step7_complete else "Classify Support-resolvable vs Engineering-required and record it in state." ,
+                "Emit STEP_7 resume-skip; reuse durable routing." if step7_complete else "Classify Support-resolvable vs Engineering-required and record it in durable state.",
                 [artifacts["eng_handoff"]["path"], artifacts["investigation"]["path"]],
             ),
             _resume_step(
                 8,
                 "Prepare candidate solution",
-                "complete" if candidate_exists and not test_failed else ("blocked" if not route_known else "pending"),
-                "Candidate/proposed solution files or confirmed package evidence exist." if candidate_exists and not test_failed else "Requires routing decision first." if not route_known else "No usable candidate solution package/evidence found.",
-                "Emit STEP_8 resume-skip; reuse existing candidate unless Step 9 failed." if candidate_exists and not test_failed else "Prepare or revise candidate solution in the metadata workspace.",
+                "complete" if step8_complete else ("blocked" if routing_on_hold else ("stale" if step7_complete and not candidate_exists else "pending")),
+                "Candidate/proposed solution workspace is current." if step8_complete else "Prepare or revise candidate solution in the metadata workspace." ,
+                "Emit STEP_8 resume-skip; reuse existing workspace." if step8_complete else "Prepare or revise candidate solution in the metadata workspace.",
                 [metadata["sandbox_work_dir"]["path"], metadata["confirmed_dir"]["path"]],
             ),
             _resume_step(
                 9,
                 "Deploy and test in Sandbox",
-                "complete" if (test_current and test_passed) else ("stale" if test_failed else "blocked" if not candidate_exists else "pending"),
-                "Current test report affirmatively confirms the fix." if (test_current and test_passed) else "Existing test report is not a pass; revert/iteration is required." if test_failed else "Requires candidate solution first." if not candidate_exists else "No passing current test report found.",
-                "Emit STEP_9 resume-skip; do not redeploy unless candidate changed." if (test_current and test_passed) else "Re-enter Step 4/5/8/9 loop, reverting non-viable Sandbox attempts first." if test_failed else "Run Step 9 deploy/test against the allowlisted Sandbox.",
+                "complete" if step9_complete else (
+                    "stale" if test_needs_rerun or (step8_complete and test_signature_stable is False and has_schema) else
+                    ("blocked" if routing_on_hold else "pending")
+                ),
+                "Current test report is passing and aligned with metadata signature." if step9_complete else (
+                    "Test report indicates a failed validation; rerun Step 8/9 with updated candidate." if test_needs_rerun else
+                    "Deploy + test run needed." if step8_complete else "Step 8 completion required before testing."
+                ),
+                "Emit STEP_9 resume-skip if validation is still current." if step9_complete else "Run Step 9 deploy/test against the allowlisted Sandbox.",
                 [artifacts["test_report"]["path"], metadata["workspace_manifest"]["path"]],
             ),
             _resume_step(
                 10,
                 "Draft internal notes and Jira message",
-                "complete" if step10_complete else ("stale" if step10_artifacts_current and not (test_current and test_passed) else "blocked" if not (test_current and test_passed) else "pending"),
-                "Internal notes and Jira message are current and based on a passing current Step 9." if step10_complete else "Drafts exist, but Step 9 is not currently passing; they must be refreshed after validation." if step10_artifacts_current else "Requires passing Step 9 first." if not (test_current and test_passed) else "Draft artifacts are missing, stale, or incomplete.",
-                "Emit STEP_10 resume-skip; do not rewrite drafts unless new test evidence changed." if step10_complete else "Refresh drafts after Step 9 passes." if step10_artifacts_current else "Draft/update internal notes, Jira message, and engineering handoff if required.",
+                "complete" if step10_complete else ("stale" if step9_complete and step10_artifacts_current else ("pending" if not step9_complete else "blocked")),
+                "Draft artifacts are current and separated." if step10_complete else "Draft/update internal notes, Jira message, and engineering handoff if required.",
+                "Emit STEP_10 resume-skip; avoid rewriting drafts if Step 9 is still current." if step10_complete else "Draft/update internal notes and Jira message from latest Step 9 result." ,
                 [artifacts["internal_notes"]["path"], artifacts["jira_message"]["path"], artifacts["eng_handoff"]["path"]],
             ),
         ])
 
-        summary_path = _latest_issue_summary_path()
-        summary_mtime = summary_path.stat().st_mtime if summary_path and summary_path.exists() else None
-        issue_mtimes = []
-        for path in paths.values():
-            try:
-                if path.exists():
-                    issue_mtimes.append(path.stat().st_mtime)
-            except OSError:
-                continue
-        newest_issue_mtime = max(issue_mtimes) if issue_mtimes else None
-        summary_current = bool(summary_mtime and newest_issue_mtime and summary_mtime + 1 >= newest_issue_mtime)
         steps.append(_resume_step(
             11,
             "Update dated summary",
@@ -1969,21 +2980,180 @@ def _build_pipeline_resume_plan(
             [],
         ))
 
-    next_step = next((s for s in steps if s["status"] not in {"complete", "skipped"}), steps[-1] if steps else None)
+    plan_for_contracts = {"steps": steps}
+    _apply_transition_contracts_to_plan(plan_for_contracts, step_transition_contracts)
+    steps = plan_for_contracts["steps"]
+    next_step = next((s for s in steps if s["step"] != 12 and s["status"] not in {"complete", "skipped"}), steps[-1] if steps else None)
+    quality_gates = {
+        "step_6_problem_location": "pass" if step6_complete else "needs_rework" if step5_complete else "pending",
+        "step_9_test_report": "pass" if step9_complete else ("failed" if test_needs_rerun else "pending"),
+        "step_10_message_separation": "pass" if step10_complete else ("needs_rework" if step10_artifacts_current else "pending"),
+        "step_4_to_5_transition": step_transition_contracts.get("step4_to_step5", {}).get("status", "pending"),
+        "step_5_to_6_transition": step_transition_contracts.get("step5_to_step6", {}).get("status", "pending"),
+        "step_8_to_9_transition": step_transition_contracts.get("step8_to_step9", {}).get("status", "pending"),
+        "step_9_to_10_transition": step_transition_contracts.get("step9_to_step10", {}).get("status", "pending"),
+    }
     return {
         "key": key,
         "status": status,
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "schema_version": PIPELINE_STATE_SCHEMA_VERSION,
+        "context_packet": context_packet,
+        "context_packet_chars": context_packet_chars,
+        "context_packet_tokens": context_packet.get("estimated_tokens", 0),
         "source_mtime": datetime.fromtimestamp(source_mtime, timezone.utc).isoformat() if source_mtime else "",
+        "routing": routing,
+        "deliverable": deliverable,
+        "evidence_prechecks": evidence_prechecks,
+        "signatures": signatures,
+        "transition_contracts": step_transition_contracts,
+        "tool_permissions": _build_step_tool_permissions(next((step.get("step") for step in steps if step.get("step") != 12 and step.get("status") not in {"complete", "skipped"}), 3)),
+        "quality_gates": quality_gates,
         "mode": disposition,
         "original_mode": original_disposition,
         "force_active": force_active,
         "next_step": next_step,
+        "why_next_step": (next_step or {}).get("reason"),
         "artifacts": artifacts,
         "metadata": metadata,
         "recent_evidence": recent_evidence,
         "steps": steps,
     }
+
+
+def _build_step(plan: dict[str, Any], step_no: int) -> dict[str, Any] | None:
+    for step in plan.get("steps") or []:
+        if step.get("step") == step_no:
+            return step
+    return None
+
+
+def _apply_loop_state_to_plan(plan: dict[str, Any], key: str, status: str = "") -> dict[str, Any]:
+    state = _read_pipeline_state(key)
+    has_schema = _state_has_schema(state)
+    stored_signatures = state.get("signatures", {}) if isinstance(state.get("signatures", {}), dict) else {}
+    signatures = {
+        "jira_source": _build_jira_signature(key, _issue_source_mtime(key)),
+        "investigation": _file_signature(OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)),
+        "hypothesis": _file_signature(OUTPUTS / FILE_LOCATIONS["hypothesis"].format(key=key)),
+        "test_report": _file_signature(OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)),
+        "metadata_workspace": _file_signature(_metadata_workspace_dirs()["sandbox_work"] / key / "metadata-workspace.json"),
+    }
+
+    has_stored_signatures = has_schema and bool(stored_signatures)
+
+    def sig_complete(field: str) -> bool:
+        return _signatures_match(signatures.get(field, ""), stored_signatures.get(field))
+
+    loop_state = _loop_state_for_resume(
+        state,
+        has_schema=has_schema,
+        has_stored_signatures=has_stored_signatures,
+        jira_signature_stable=(not has_schema or sig_complete("jira_source")),
+        inv_signature_stable=sig_complete("investigation"),
+        step4_signature_stable=sig_complete("hypothesis"),
+        metadata_signature_stable=sig_complete("metadata_workspace"),
+        test_signature_stable=sig_complete("test_report"),
+    )
+    loop_reason = _loop_stop_reason(loop_state)
+
+    routing = dict(plan.get("routing") or {})
+    if loop_reason:
+        routing["path"] = "on_hold"
+        routing["confidence"] = "high"
+        routing["reason"] = f"Loop control hold: {loop_reason}"
+        plan["routing"] = routing
+
+    metadata_rounds_exceeded = loop_state["metadata_rounds"] >= PIPELINE_LOOP_LIMITS["metadata_rounds"]
+    deploy_rounds_exceeded = loop_state["deploy_rounds"] >= PIPELINE_LOOP_LIMITS["deploy_rounds"]
+    no_candidate_delta = loop_state.get("no_candidate_delta_count", 0) > 0
+    candidate_changed = has_schema and has_stored_signatures and not sig_complete("metadata_workspace")
+    candidate_step = _build_step(plan, 9)
+    note_step = _build_step(plan, 10)
+
+    if candidate_changed and candidate_step:
+        if candidate_step["status"] == "complete":
+            candidate_step["status"] = "stale"
+        candidate_step["reason"] = "Candidate workspace signature changed; rerun Step 9/10."
+        candidate_step["action"] = "Run Step 9 deploy/test against the allowlisted Sandbox after candidate updates."
+    if note_step:
+        if candidate_changed and note_step["status"] == "complete":
+            note_step["status"] = "stale"
+        if no_candidate_delta:
+            note_step["status"] = "blocked"
+        if loop_reason in {STEP_LOOP_MARKER_REASONS["deploy"], STEP_LOOP_MARKER_REASONS["candidate"], STEP_LOOP_MARKER_REASONS["stoppoint"]}:
+            note_step["status"] = "blocked"
+            note_step["reason"] = "Loop control hold pending manual review."
+
+    for step_no in (5, 6, 8):
+        step = _build_step(plan, step_no)
+        if not step:
+            continue
+        if metadata_rounds_exceeded or loop_reason in {STEP_LOOP_MARKER_REASONS["metadata"], STEP_LOOP_MARKER_REASONS["stoppoint"]}:
+            if step["status"] != "complete":
+                step["status"] = "blocked"
+                step["reason"] = "Loop metadata budget hit; manual review or source/input refresh required."
+            step["action"] = f"Resolve '{loop_reason}' before continuing."
+
+    step9 = _build_step(plan, 9)
+    if step9 and (deploy_rounds_exceeded or loop_reason in {STEP_LOOP_MARKER_REASONS["deploy"], STEP_LOOP_MARKER_REASONS["candidate"], STEP_LOOP_MARKER_REASONS["stoppoint"]} or no_candidate_delta):
+        step9["status"] = "blocked" if step9["status"] != "complete" else step9["status"]
+        if step9["status"] != "complete":
+            step9["reason"] = "Loop control hold; rerun is capped or candidate delta stalled."
+
+    step4 = _build_step(plan, 4)
+    step6 = _build_step(plan, 6)
+    step10 = _build_step(plan, 10)
+    status6 = step6.get("status") if step6 else "pending"
+    status9 = step9.get("status") if step9 else "pending"
+
+    quality_gates = {
+        "step_6_problem_location": "pass" if status6 == "complete" else ("blocked" if status6 == "blocked" else "needs_rework" if status6 in {"stale", "pending"} else "pending"),
+        "step_9_test_report": (
+            "blocked" if status9 in {"blocked"} else
+            "pass" if status9 == "complete" else
+            "needs_rework" if status9 == "stale" else "pending"
+        ),
+        "step_10_message_separation": "pass" if (step10 and step10.get("status") == "complete") else (
+            "blocked" if step10 and step10.get("status") == "blocked" else "pending"
+        ),
+        "loop_limit": "blocked" if loop_reason else ("pass" if not (metadata_rounds_exceeded or deploy_rounds_exceeded) else "needs_rework"),
+    }
+    if plan.get("quality_gates") and isinstance(plan.get("quality_gates"), dict):
+        plan["quality_gates"].update(quality_gates)
+    else:
+        plan["quality_gates"] = quality_gates
+
+    steps = plan.get("steps") or []
+    if len(steps) > 0:
+        for step in steps:
+            if step.get("status") == "complete":
+                continue
+            if step.get("step") == 12:
+                continue
+            if plan.get("next_step") and plan["next_step"].get("step") == step.get("step"):
+                break
+            plan["next_step"] = step
+            plan["why_next_step"] = step.get("reason")
+            break
+    plan["loop_state"] = loop_state
+    plan["loop_reason"] = loop_reason
+    plan["source"] = "v2-loop-aware"
+    return plan
+
+
+_build_pipeline_resume_plan_legacy = _build_pipeline_resume_plan
+
+
+def _build_pipeline_resume_plan(
+    key: str,
+    status: str = "",
+    jira_updated: str | None = None,
+    *,
+    force_active: bool = False,
+) -> dict[str, Any]:
+    plan = _build_pipeline_resume_plan_legacy(key, status, jira_updated, force_active=force_active)
+    return _apply_loop_state_to_plan(plan, key, status=status)
 
 
 def _write_pipeline_resume_plan(plan: dict[str, Any]) -> Path:
@@ -2001,6 +3171,7 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
         "## Resume State Plan (authoritative for this rerun)",
         f"- Plan file: `{_path_relative_for_prompt(plan_path)}`",
         f"- Next required step: STEP_{next_step.get('step')} — {next_step.get('name')} ({next_step.get('status')})",
+        f"- Why next step: {plan.get('why_next_step', '').strip() or 'No explicit reason recorded.'}",
         "- Rule: completed steps are not work items. Emit one concise `STEP_N <KEY> resume-skip` line if needed for progress, then continue.",
         "- Rule: do not reread or rewrite completed artifacts unless a pending/stale downstream step needs exact details.",
         "- Rule: if Jira source changed after an artifact, treat that artifact and downstream artifacts as stale.",
@@ -2029,6 +3200,123 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
     ])
     for step in plan.get("steps", []):
         lines.append(f"| {step.get('step')} {step.get('name')} | {step.get('status')} | {step.get('action')} |")
+
+    context_packet = plan.get("context_packet") or {}
+    if context_packet:
+        org_knowledge = context_packet.get("org_knowledge", {})
+        org_file_count = len(org_knowledge.get("selected_files", []))
+        artifact_count = len(context_packet.get("artifacts", []))
+        estimated_tokens = context_packet.get("estimated_tokens", 0)
+        max_context_chars = context_packet.get("max_allowed_chars", 0)
+        lines.extend([
+            "",
+            "## Context Packet",
+            f"Policy version: {context_packet.get('version', 'n/a')}, tokens: {estimated_tokens}, max context chars: {max_context_chars}, "
+            f"selected org files: {org_file_count}, selected artifact summaries: {artifact_count}.",
+        ])
+        if org_file_count:
+            lines.append("Selected org-knowledge files:")
+            for item in org_knowledge.get("selected_files", []):
+                rel = item.get("path", "")
+                sig = item.get("signature", "")
+                chars = item.get("summary_chars", 0)
+                lines.append(f"- {rel} ({chars} chars, sig={sig})")
+            if artifact_count:
+                lines.append("Selected artifact summaries:")
+                for item in context_packet.get("artifacts", [])[:8]:
+                    path = item.get("path", "")
+                    sig = item.get("signature", "")
+                    chars = item.get("signature_chars", 0)
+                    lines.append(f"- {path} ({chars} chars, sig={sig})")
+                lines.append(f"Total artifact summaries: {artifact_count}.")
+
+    evidence_prechecks = plan.get("evidence_prechecks") or {}
+    if evidence_prechecks:
+        enabled = bool(evidence_prechecks.get("enabled", False))
+        lines.extend([
+            "",
+            "## Evidence Prechecks",
+            f"- Enabled: {enabled}",
+        ])
+        if enabled:
+            lines.append(f"- Result: {'pass' if evidence_prechecks.get('all_ok') else 'blockers detected'}")
+            if evidence_prechecks.get("blocking_branches"):
+                lines.append(f"- Blocking branches: {', '.join(evidence_prechecks.get('blocking_branches', []))}")
+            if evidence_prechecks.get("failed_branches"):
+                lines.append(f"- Failed branches: {', '.join(evidence_prechecks.get('failed_branches', []))}")
+            evidence_files = evidence_prechecks.get("evidence_files", [])
+            if evidence_files:
+                lines.append("Evidence files:")
+                for item in evidence_files:
+                    lines.append(f"- {item}")
+            branches = evidence_prechecks.get("branches") or {}
+            if branches:
+                lines.extend([
+                    "",
+                    "| Branch | Status | Blocking | Summary |",
+                    "| --- | --- | --- | --- |",
+                ])
+                for name, payload in branches.items():
+                    if not isinstance(payload, dict):
+                        continue
+                    summary = payload.get("summary")
+                    if isinstance(summary, dict):
+                        summary = ", ".join(
+                            f"{k}={json.dumps(v, ensure_ascii=False) if not isinstance(v, str) else v}"
+                            for k, v in list(summary.items())[:2]
+                        ) if summary else ""
+                    else:
+                        summary = ""
+                    lines.append(f"| {name} | {payload.get('status', 'unknown')} | {payload.get('blocking', False)} | {summary} |")
+
+    transition_contracts = plan.get("transition_contracts") or {}
+    if transition_contracts:
+        lines.extend([
+            "",
+            "## Transition Contracts",
+            "| Transition | Result | Missing Fields |",
+            "| --- | --- | --- |",
+        ])
+        for contract_name, payload in transition_contracts.items():
+            if not isinstance(payload, dict):
+                continue
+            missing = ",".join(payload.get("missing", []))
+            lines.append(f"| {contract_name} | {payload.get('status', 'pending')} | {missing or 'n/a'} |")
+
+    tool_permissions = plan.get("tool_permissions") or {}
+    if tool_permissions:
+        active_step = tool_permissions.get("active_step", "unknown")
+        active_tools = tool_permissions.get("active_step_tools", [])
+        lines.extend([
+            "",
+            "## Tool Permissions",
+            f"- Active step: {active_step}",
+            f"- Allowed tools: {', '.join(active_tools) if isinstance(active_tools, list) else 'unknown'}",
+        ])
+        step_rules = tool_permissions.get("steps", {})
+        if isinstance(step_rules, dict) and step_rules:
+            lines.append("Per-step rules:")
+            for step_key in sorted(step_rules.keys(), key=lambda raw: int(raw) if str(raw).isdigit() else 10**9):
+                step_rule = step_rules[step_key]
+                if not isinstance(step_rule, dict):
+                    continue
+                role = step_rule.get("role", "unknown")
+                allowlist = step_rule.get("allowlist", [])
+                if isinstance(allowlist, list):
+                    lines.append(f"  - STEP_{step_key}: {role} -> {', '.join(allowlist)}")
+                else:
+                    lines.append(f"  - STEP_{step_key}: {role}")
+
+    quality_gates = plan.get("quality_gates", {})
+    if quality_gates:
+        lines.extend([
+            "",
+            "## Quality Gates",
+            "| Gate | Result |",
+            "| --- | --- |",
+        ])
+        for key, value in quality_gates.items():
+            lines.append(f"| {key} | {value} |")
     return "\n".join(lines)
 
 
@@ -2114,6 +3402,278 @@ def _read_pipeline_log_entries(run_key: str) -> list[dict[str, Any]]:
         rows = rows[-_PIPELINE_LOG_TAIL_LINES :]
     return rows
 
+
+def _parse_iso_ts(raw: str) -> datetime | None:
+    if not raw:
+        return None
+    try:
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        parsed = datetime.fromisoformat(raw)
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed
+    except (TypeError, ValueError):
+        return None
+
+
+def _estimate_step_timings(step_markers: list[tuple[int, datetime]], *, run_end: datetime) -> dict[str, Any]:
+    if not step_markers:
+        return {}
+    timings: dict[str, Any] = {}
+    markers = sorted(step_markers, key=lambda item: item[1])
+    for idx, (step_no, started_at) in enumerate(markers):
+        ended_at = markers[idx + 1][1] if idx + 1 < len(markers) else run_end
+        timings[str(step_no)] = {
+            "start": started_at.isoformat(),
+            "end": ended_at.isoformat(),
+            "duration_seconds": max(0.0, (ended_at - started_at).total_seconds()),
+            "status": "complete",
+        }
+    return timings
+
+
+def _parse_run_metrics_from_logs(run_key: str, run_started: datetime, run_ended: datetime, status: str = "unknown") -> dict[str, Any]:
+    entries = _read_pipeline_log_entries(run_key)
+    filtered = []
+    for row in entries:
+        try:
+            ts = _parse_iso_ts(str(row.get("ts") or ""))
+        except Exception:
+            ts = None
+        if ts is None:
+            continue
+        if ts < run_started or ts > run_ended:
+            continue
+        filtered.append((ts, str(row.get("text") or "")))
+
+    step_markers: list[tuple[int, datetime]] = []
+    step_token_usage: dict[str, dict[str, int]] = {}
+    step_subagent_calls: dict[str, int] = {}
+    step_tool_calls: dict[str, int] = {}
+    current_step: int | None = None
+    token_available = False
+    run_tokens = {field: 0 for field in _TOKEN_USAGE_FIELDS}
+    cost_usd: float | None = None
+    last_stop_code = ""
+    loop_events = {
+        "repeat_metadata": 0,
+        "deploy_fail": 0,
+        "no_candidate_delta": 0,
+        "safe_stoppoint_hit": 0,
+    }
+    for ts, text in filtered:
+        marker = _PIPELINE_STEP_MARKER_RE.search(text)
+        if marker:
+            try:
+                step_no = int(marker.group(1))
+            except ValueError:
+                step_no = None
+            if step_no is not None:
+                step_markers.append((step_no, ts))
+                current_step = step_no
+
+                if str(step_no) not in step_token_usage:
+                    step_token_usage[str(step_no)] = {field: 0 for field in _TOKEN_USAGE_FIELDS}
+                if str(step_no) not in step_subagent_calls:
+                    step_subagent_calls[str(step_no)] = 0
+                if str(step_no) not in step_tool_calls:
+                    step_tool_calls[str(step_no)] = 0
+        if _PIPELINE_LOOP_REASON_REASONS["repeat_metadata"].search(text):
+            last_stop_code = STEP_LOOP_MARKER_REASONS["metadata"]
+            loop_events["repeat_metadata"] += 1
+        elif _PIPELINE_LOOP_REASON_REASONS["deploy_fail"].search(text):
+            last_stop_code = STEP_LOOP_MARKER_REASONS["deploy"]
+            loop_events["deploy_fail"] += 1
+        elif _PIPELINE_LOOP_REASON_REASONS["no_candidate_delta"].search(text):
+            last_stop_code = STEP_LOOP_MARKER_REASONS["candidate"]
+            loop_events["no_candidate_delta"] += 1
+        elif _PIPELINE_LOOP_REASON_REASONS["safe_stoppoint_hit"].search(text):
+            last_stop_code = STEP_LOOP_MARKER_REASONS["stoppoint"]
+            loop_events["safe_stoppoint_hit"] += 1
+
+        match = _TOKEN_USAGE_LOG_RE.search(text)
+        if match:
+            token_available = True
+            step_key = str(current_step) if current_step is not None else "unassigned"
+            step_token_usage.setdefault(step_key, {field: 0 for field in _TOKEN_USAGE_FIELDS})
+            run_tokens["input_tokens"] += int((match.group(2) or "0").replace(",", ""))
+            run_tokens["output_tokens"] += int((match.group(3) or "0").replace(",", ""))
+            run_tokens["cache_creation_input_tokens"] += int((match.group(4) or "0").replace(",", ""))
+            run_tokens["cache_read_input_tokens"] += int((match.group(5) or "0").replace(",", ""))
+            step_token_usage[step_key]["input_tokens"] += int((match.group(2) or "0").replace(",", ""))
+            step_token_usage[step_key]["output_tokens"] += int((match.group(3) or "0").replace(",", ""))
+            step_token_usage[step_key]["cache_creation_input_tokens"] += int((match.group(4) or "0").replace(",", ""))
+            step_token_usage[step_key]["cache_read_input_tokens"] += int((match.group(5) or "0").replace(",", ""))
+            if "cost=" in text.lower():
+                for raw in re.findall(r"\$([0-9]+\.[0-9]+)", text):
+                    try:
+                        cost_usd = float(raw)
+                    except (TypeError, ValueError):
+                        pass
+                continue
+        if "cost=" in text.lower() and "Token usage:" not in text:
+            for raw in re.findall(r"\$([0-9]+\.[0-9]+)", text):
+                try:
+                    cost_usd = float(raw)
+                except (TypeError, ValueError):
+                    pass
+
+        if text.startswith("[") and "]" in text:
+            tool_match = _PIPELINE_TOOL_CALL_RE.match(text)
+            if tool_match:
+                step_key = str(current_step) if current_step is not None else "unassigned"
+                tool_name = tool_match.group("tool") or ""
+                step_tool_calls[step_key] = step_tool_calls.get(step_key, 0) + 1
+                if _normalize_tool_name(tool_name) == "agent":
+                    step_subagent_calls[step_key] = step_subagent_calls.get(step_key, 0) + 1
+
+    for key in set(step_token_usage) | set(step_tool_calls):
+        for field in _TOKEN_USAGE_FIELDS:
+            step_token_usage.setdefault(key, {}).setdefault(field, 0)
+
+    step_timings = _estimate_step_timings(step_markers, run_end=run_ended)
+    for step_no, timing in step_timings.items():
+        if step_no in step_token_usage:
+            timing["token_usage"] = step_token_usage[step_no]
+        if step_no in step_subagent_calls:
+            timing["subagent_calls"] = step_subagent_calls[step_no]
+            timing["subagent_calls_by_tool"] = {
+                "agent": step_subagent_calls[step_no],
+            }
+        else:
+            timing["subagent_calls"] = 0
+            timing["subagent_calls_by_tool"] = {"agent": 0}
+        timing["tool_calls"] = step_tool_calls.get(step_no, 0)
+        if timing["status"] == "failed" or timing.get("status") == "blocked":
+            continue
+        timing["status"] = "complete"
+
+    total_subagent_calls = sum(step_subagent_calls.values())
+    total_tool_calls = sum(step_tool_calls.values())
+    token_usage = run_tokens if token_available else {field: None for field in _TOKEN_USAGE_FIELDS}
+
+    duration = (run_ended - run_started).total_seconds()
+    if duration < 0:
+        duration = 0.0
+    return {
+        "start": run_started.isoformat(),
+        "end": run_ended.isoformat(),
+        "duration_seconds": duration,
+        "status": status,
+        "step_timings": step_timings,
+        "token_usage": token_usage,
+        "step_token_usage": step_token_usage,
+        "subagent_calls": total_subagent_calls,
+        "subagent_calls_by_step": step_subagent_calls,
+        "tool_calls_by_step": step_tool_calls,
+        "tool_calls": total_tool_calls,
+        "cost_usd": cost_usd,
+        "last_stop_code": last_stop_code,
+        "loop_events": loop_events,
+    }
+
+
+def _format_run_metrics_summary(issue_key: str, metrics: dict[str, Any]) -> str:
+    step_timings = metrics.get("step_timings", {})
+    step_list = ",".join(sorted(step_timings.keys(), key=lambda raw: int(raw) if str(raw).isdigit() else 10**9))
+    token_usage = metrics.get("token_usage", {})
+    input_tokens = token_usage.get("input_tokens") if isinstance(token_usage, dict) else None
+    output_tokens = token_usage.get("output_tokens") if isinstance(token_usage, dict) else None
+    cache_create = token_usage.get("cache_creation_input_tokens") if isinstance(token_usage, dict) else None
+    cache_read = token_usage.get("cache_read_input_tokens") if isinstance(token_usage, dict) else None
+    if isinstance(input_tokens, int) and isinstance(output_tokens, int):
+        total_tokens = int(input_tokens) + int(output_tokens)
+        if isinstance(cache_create, int):
+            total_tokens += int(cache_create)
+        if isinstance(cache_read, int):
+            total_tokens += int(cache_read)
+        cache_tokens = (int(cache_create) if isinstance(cache_create, int) else 0) + (int(cache_read) if isinstance(cache_read, int) else 0)
+        tokens_text = f"{total_tokens} (cache={cache_tokens})"
+    else:
+        tokens_text = "unavailable"
+    cost = metrics.get("cost_usd")
+    if cost is None and isinstance(input_tokens, int) and isinstance(output_tokens, int) and (input_tokens + output_tokens) > 0:
+        cost_text = "cost=unavailable"
+    else:
+        cost_text = f"cost=${cost:.4f}" if cost is not None else "cost=unavailable"
+
+    return (
+        f"Run summary [{issue_key}]: steps=[{step_list or 'none'}], total_time={float(metrics.get('duration_seconds', 0.0)):.1f}s, "
+        f"tokens={tokens_text}, {cost_text}, status={metrics.get('status', 'unknown')}"
+    )
+
+
+def _update_loop_state_from_run(state: dict[str, Any], metrics: dict[str, Any]) -> dict[str, Any]:
+    if not _state_has_schema(state):
+        return _default_loop_state()
+
+    loop_state = _load_loop_state(state)
+    events = metrics.get("loop_events", {})
+    loop_state["metadata_rounds"] = _coerce_non_negative_int(loop_state.get("metadata_rounds"), 0) + _coerce_non_negative_int(
+        events.get("repeat_metadata"),
+        0,
+    )
+    loop_state["deploy_rounds"] = _coerce_non_negative_int(loop_state.get("deploy_rounds"), 0) + _coerce_non_negative_int(
+        events.get("deploy_fail"),
+        0,
+    )
+    loop_state["no_candidate_delta_count"] = _coerce_non_negative_int(
+        loop_state.get("no_candidate_delta_count"),
+        0,
+    ) + _coerce_non_negative_int(events.get("no_candidate_delta"), 0)
+
+    last_stop_code = str(metrics.get("last_stop_code") or "").strip()
+    if last_stop_code:
+        loop_state["latest_stop_code"] = last_stop_code
+        loop_state["last_stoppoint_code"] = last_stop_code
+    loop_state["last_seen"] = str(metrics.get("end") or "")
+    loop_state["last_reason"] = "; ".join(
+        f"{key}:{value}" for key, value in events.items() if int(value or 0) > 0
+    )
+    return {
+        "metadata_rounds": _coerce_non_negative_int(loop_state.get("metadata_rounds")),
+        "deploy_rounds": _coerce_non_negative_int(loop_state.get("deploy_rounds")),
+        "no_candidate_delta_count": _coerce_non_negative_int(loop_state.get("no_candidate_delta_count")),
+        "last_stoppoint_code": str(loop_state.get("last_stoppoint_code") or ""),
+        "last_reason": str(loop_state.get("last_reason") or ""),
+        "last_seen": str(loop_state.get("last_seen") or ""),
+        "latest_stop_code": str(loop_state.get("latest_stop_code") or ""),
+    }
+
+
+def _update_pipeline_run_metrics(
+    key: str,
+    run_key: str,
+    run_started: datetime,
+    run_ended: datetime,
+    *,
+    status: str,
+) -> dict[str, Any]:
+    state = _read_pipeline_state(key)
+    run_metrics = state.get("run_metrics") if isinstance(state.get("run_metrics"), dict) else {}
+    if not isinstance(run_metrics, dict):
+        run_metrics = {}
+    latest = _parse_run_metrics_from_logs(run_key, run_started, run_ended, status=status)
+    history = run_metrics.get("history")
+    if not isinstance(history, list):
+        history = []
+
+    history.append(latest)
+    if len(history) > 25:
+        history = history[-25:]
+
+    state["run_metrics"] = {
+        "latest": latest,
+        "history": history,
+        "updated": datetime.now(timezone.utc).isoformat(),
+    }
+    if _state_has_schema(state):
+        state["loop_state"] = _update_loop_state_from_run(state, latest)
+    state["run_metrics_state_version"] = 1
+    _write_pipeline_resume_plan({**state, "schema_version": state.get("schema_version", PIPELINE_STATE_SCHEMA_VERSION), "key": key})
+    return latest
+
 # -- run state ---------------------------------------------------------------
 # Multiple issue-specific runs are allowed in parallel.
 # Global actions block each other and block new issue runs.
@@ -2123,6 +3683,18 @@ _state_lock = threading.Lock()
 _active_keys: set[str] = set()          # currently running run keys
 _log_q: queue.Queue[str] = queue.Queue()  # tagged messages: "key|line" or "__done__|key"
 _manifest_q: queue.Queue[str] = queue.Queue()  # manifest change notifications
+_PIPELINE_STEP_MARKER_RE = re.compile(r"\bSTEP_(\d+)(?:\s+[^\n\r]*)?", re.IGNORECASE)
+_PIPELINE_TOOL_CALL_RE = re.compile(r"^\[(?P<tool>[^]\s]+)")
+_PIPELINE_LOOP_REASON_REASONS = {
+    "repeat_metadata": re.compile(r"(?i)repeat_metadata"),
+    "deploy_fail": re.compile(r"(?i)deploy_fail"),
+    "no_candidate_delta": re.compile(r"(?i)no_candidate_delta"),
+    "safe_stoppoint_hit": re.compile(r"(?i)safe_stoppoint(_hit)?"),
+}
+_TOKEN_USAGE_LOG_RE = re.compile(
+    r"Token usage:\s*total=([\d,]+),\s*input=([\d,]+),\s*output=([\d,]+)(?:,\s*cache_create=([\d,]+))?(?:,\s*cache_read=([\d,]+))?",
+    re.IGNORECASE,
+)
 
 
 def _apply_caseops_env_aliases(env: dict[str, str]) -> None:
@@ -2471,8 +4043,9 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
     }
 
     def fail(message: str) -> None:
-        result["ok"] = False
-        result["issues"].append(message)
+        with _PREFLIGHT_ENV_LOCK:
+            result["ok"] = False
+            result["issues"].append(message)
 
     if caseops_llm_auth_uses_anthropic_api_key():
         api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
@@ -2515,6 +4088,7 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
     env_file_path = Path(app.config["ENV_FILE_PATH"]) if app.config.get("ENV_FILE_PATH") else ROOT / ".env.jira"
 
     def check_org(role: str, alias: str) -> None:
+        global _sf_orgs_cache, _sf_orgs_cache_time
         role_status = result["sf"][role]
         if not alias:
             fail(f"Missing {role} Salesforce org alias in .env.jira.")
@@ -2545,15 +4119,19 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
                 return False
 
             access_token = refreshed
-            settings[token_key] = refreshed
-            settings["SF_TOKENS_REFRESHED_AT"] = str(int(time.time()))
-            _write_env_file(
-                {
-                    token_key: refreshed,
-                    "SF_TOKENS_REFRESHED_AT": settings["SF_TOKENS_REFRESHED_AT"],
-                },
-                env_file_path,
-            )
+            with _PREFLIGHT_ENV_LOCK:
+                settings[token_key] = refreshed
+                settings["SF_TOKENS_REFRESHED_AT"] = str(int(time.time()))
+                _write_env_file(
+                    {
+                        token_key: refreshed,
+                        "SF_TOKENS_REFRESHED_AT": settings["SF_TOKENS_REFRESHED_AT"],
+                    },
+                    env_file_path,
+                )
+                _sf_orgs_cache = None
+                _sf_orgs_cache_time = 0.0
+
             auth = _sf_auth_from_access_token(
                 sf_bin=sf_bin,
                 alias=alias,
@@ -2567,9 +4145,9 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
                 role_status["auth_error"] = _command_error(auth)
                 return False
 
-            global _sf_orgs_cache, _sf_orgs_cache_time
-            _sf_orgs_cache = None
-            _sf_orgs_cache_time = 0.0
+            with _PREFLIGHT_ENV_LOCK:
+                _sf_orgs_cache = None
+                _sf_orgs_cache_time = 0.0
             return True
 
         display = _run_cli_command(
@@ -2591,7 +4169,6 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
             if auth.returncode != 0:
                 role_status["auth_error"] = _command_error(auth)
             else:
-                global _sf_orgs_cache, _sf_orgs_cache_time
                 _sf_orgs_cache = None
                 _sf_orgs_cache_time = 0.0
                 display = _run_cli_command(
@@ -2663,8 +4240,20 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
                 role_status["soql_error"] = query_error
                 fail(f"Salesforce {role} org `{alias}` failed SOQL preflight in the pipeline runtime environment.")
 
-    check_org("prod", prod_alias)
-    check_org("sandbox", sandbox_alias)
+    if _env_flag("CASEOPS_ENABLE_PARALLEL_PRECHECKS", default=False):
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [
+                executor.submit(check_org, "prod", prod_alias),
+                executor.submit(check_org, "sandbox", sandbox_alias),
+            ]
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as exc:
+                    fail(f"Salesforce preflight worker failed unexpectedly: {type(exc).__name__}: {exc}")
+    else:
+        check_org("prod", prod_alias)
+        check_org("sandbox", sandbox_alias)
     result["sf"]["ok"] = (
         result["sf"]["installed"]
         and result["sf"]["prod"]["authenticated"]
@@ -2674,11 +4263,342 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
     return result
 
 
-def _emit_runtime_preflight_or_stop(run_key: str, run_soql: bool = True) -> bool:
+def _collect_manifest_candidate_entries(metadata_manifest_text: str) -> list[str]:
+    """Extract candidate file/object entries from a metadata workspace manifest."""
+    if not metadata_manifest_text:
+        return []
+    try:
+        parsed = json.loads(metadata_manifest_text)
+    except json.JSONDecodeError:
+        return []
+
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def _add_candidate_value(raw: Any) -> None:
+        if isinstance(raw, str):
+            value = raw.strip()
+            if value and value not in seen:
+                seen.add(value)
+                candidates.append(value)
+            return
+        if isinstance(raw, dict):
+            for field in (
+                "path",
+                "file",
+                "filename",
+                "file_name",
+                "sourcePath",
+                "source_path",
+                "fullPath",
+                "full_path",
+                "apiName",
+                "api_name",
+                "fullName",
+                "full_name",
+                "name",
+                "member",
+                "componentName",
+                "component_name",
+            ):
+                if field in raw:
+                    _add_candidate_value(raw.get(field))
+            return
+        if isinstance(raw, (list, tuple)):
+            for entry in raw:
+                _add_candidate_value(entry)
+
+    if isinstance(parsed, dict):
+        manifest_values = []
+        for key in ("files", "components", "candidate_components", "changed_components", "artifacts", "file_candidates"):
+            value = parsed.get(key)
+            if value is not None:
+                manifest_values.append(value)
+        if not manifest_values and isinstance(parsed.get("attempt"), (dict, list, str)):
+            manifest_values.append(parsed.get("attempt"))
+        for value in manifest_values:
+            _add_candidate_value(value)
+    elif isinstance(parsed, list):
+        for item in parsed:
+            _add_candidate_value(item)
+
+    return candidates
+
+
+def _collect_org_access_branch_evidence(run_soql: bool = True, preflight: dict[str, Any] | None = None) -> dict[str, Any]:
+    preflight = preflight if preflight is not None else _collect_runtime_preflight(run_soql=run_soql)
+    ok = bool(preflight.get("ok"))
+    sf = preflight.get("sf", {})
+    prod = sf.get("prod", {})
+    sandbox = sf.get("sandbox", {})
+    return {
+        "branch": "org_accessibility",
+        "status": "pass" if ok else "fail",
+        "blocking": not ok,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "preflight": preflight,
+        "summary": {
+            "prod_authenticated": bool(prod.get("authenticated")),
+            "sandbox_authenticated": bool(sandbox.get("authenticated")),
+            "prod_soql_ok": bool(prod.get("soql_ok")) if run_soql else False,
+            "sandbox_soql_ok": bool(sandbox.get("soql_ok")) if run_soql else False,
+            "issues": preflight.get("issues") or [],
+            "caseops_llm_auth": preflight.get("caseops_llm_auth", ""),
+            "sf_installed": bool(sf.get("installed")),
+        },
+    }
+
+
+def _collect_org_knowledge_branch_evidence(key: str, row: dict[str, str]) -> dict[str, Any]:
+    index = _read_org_knowledge_index()
+    selected = _select_org_knowledge_files(key, row)
+    root = _org_knowledge_dir()
+    selected_payload = [str(path.relative_to(root)) for path in selected if path.is_file()]
+    missing_always_read = []
+    for rel in index.get("always_read", []):
+        if not isinstance(rel, str):
+            continue
+        if not (root / rel).is_file():
+            missing_always_read.append(rel)
+    status = "pass"
+    if not selected_payload:
+        status = "warn"
+    if missing_always_read:
+        status = "fail"
+
+    return {
+        "branch": "org_knowledge_validation",
+        "status": status,
+        "blocking": False,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary": {
+            "selected_count": len(selected_payload),
+            "selected_files": selected_payload,
+            "max_selected_limit": int(index.get("max_topic_files") or PIPELINE_CONTEXT_LIMITS["max_context_files"]),
+            "missing_always_read": missing_always_read,
+            "missing_always_read_count": len(missing_always_read),
+        },
+        "advisory": bool(missing_always_read or not selected_payload),
+    }
+
+
+def _collect_object_component_branch_evidence(key: str, metadata_workspace_manifest: str) -> dict[str, Any]:
+    metadata_dirs = _metadata_workspace_dirs()
+    workspace_dir = metadata_dirs["sandbox_work"] / key
+    if not metadata_workspace_manifest:
+        return {
+            "branch": "object_component_precheck",
+            "status": "pass",
+            "blocking": False,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "summary": {
+                "manifest_present": False,
+                "manifest_path": str(_path_relative_for_prompt(workspace_dir / "metadata-workspace.json")),
+                "candidate_count": 0,
+                "missing_file_candidates": [],
+                "non_file_candidates": 0,
+            },
+        }
+
+    candidates = _collect_manifest_candidate_entries(metadata_workspace_manifest)
+    if not candidates:
+        return {
+            "branch": "object_component_precheck",
+            "status": "pass",
+            "blocking": False,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "summary": {
+                "manifest_present": True,
+                "manifest_path": str(_path_relative_for_prompt(workspace_dir / "metadata-workspace.json")),
+                "candidate_count": 0,
+                "missing_file_candidates": [],
+                "non_file_candidates": 0,
+            },
+        }
+
+    missing_file_candidates: list[str] = []
+    non_file_candidates = 0
+    for candidate in candidates:
+        candidate = candidate.strip()
+        if not candidate:
+            continue
+        looks_like_file = bool(
+            candidate.endswith((
+                ".cls", ".trigger", ".object", ".object-meta.xml", ".field", ".field-meta.xml", ".flow", ".layout",
+                ".layout-meta.xml", ".permissionSet", ".permissionSet-meta.xml", ".permissionSetGroup",
+                ".permissionSetGroup-meta.xml", ".apex", ".queue", ".apex-meta.xml", ".xml"
+            )) or "/" in candidate or "\\" in candidate
+        )
+        if not looks_like_file:
+            non_file_candidates += 1
+            continue
+        found = False
+        direct = (workspace_dir / candidate)
+        if direct.exists():
+            found = True
+        elif candidate.endswith(".xml") and (workspace_dir / f"{candidate}.xml").exists():
+            found = True
+        if not found:
+            inferred_name = candidate
+            if "/" not in candidate and "\\" not in candidate:
+                inferred_hits = [
+                    p for p in workspace_dir.glob(f"**/{inferred_name}.*")
+                    if p.is_file()
+                ]
+                found = bool(inferred_hits)
+        if not found:
+            missing_file_candidates.append(candidate)
+
+    status = "pass"
+    if missing_file_candidates:
+        status = "fail"
+
+    return {
+        "branch": "object_component_precheck",
+        "status": status,
+        "blocking": False,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary": {
+            "manifest_present": True,
+            "manifest_path": str(_path_relative_for_prompt(workspace_dir / "metadata-workspace.json")),
+            "candidate_count": len(candidates),
+            "missing_file_candidates": missing_file_candidates,
+            "missing_file_candidate_count": len(missing_file_candidates),
+            "non_file_candidates": non_file_candidates,
+        },
+    }
+
+
+def _write_issue_evidence_branch_file(key: str, branch: str, payload: dict[str, Any]) -> Path:
+    evidence_dir = _pipeline_state_evidence_dir(key)
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    safe_branch = re.sub(r"[^A-Za-z0-9._-]", "_", branch or "branch")
+    path = evidence_dir / f"{safe_branch}.json"
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
+def _persist_issue_evidence_summary(key: str, summary: dict[str, Any]) -> None:
+    state = _read_pipeline_state(key)
+    if not isinstance(state, dict):
+        state = {}
+    state["schema_version"] = PIPELINE_STATE_SCHEMA_VERSION
+    state["evidence_prechecks"] = summary
+    path = _pipeline_state_path(key)
+    _validate_instance_path(path, "write")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _run_issue_evidence_branches(key: str, run_soql: bool = True) -> dict[str, Any]:
+    row = _find_manifest_row(key)
+    manifest_path = _metadata_workspace_dirs()["sandbox_work"] / key / "metadata-workspace.json"
+    manifest_text = _read_small_text(manifest_path, 1_000_000)
+    enabled = _env_flag("CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES", default=False)
+    if not enabled:
+        return {
+            "enabled": False,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "branches": {},
+            "all_ok": True,
+            "blocking_branches": [],
+            "failed_branches": [],
+            "evidence_files": [],
+        }
+
+    def _run(branch_fn):
+        return branch_fn()
+
+    branches: list[tuple[str, Any]] = []
+    branches.append(("org_accessibility", lambda: _collect_org_access_branch_evidence(run_soql=run_soql)))
+    branches.append(("org_knowledge_validation", lambda: _collect_org_knowledge_branch_evidence(key, row)))
+    branches.append(("object_component_precheck", lambda: _collect_object_component_branch_evidence(key, manifest_text)))
+
+    collected: dict[str, dict[str, Any]] = {}
+    evidence_files: list[str] = []
+    if len(branches) <= 1:
+        branch_results = [fn() for _name, fn in branches]
+    elif _env_flag("CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES", default=False):
+        with ThreadPoolExecutor(max_workers=min(len(branches), 3)) as executor:
+            futures = {executor.submit(_run, fn): name for name, fn in branches}
+            for future in as_completed(futures):
+                name = futures[future]
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    result = {
+                        "branch": name,
+                        "status": "fail",
+                        "blocking": False if name != "org_accessibility" else True,
+                        "generated_at": datetime.now(timezone.utc).isoformat(),
+                        "summary": {"error": f"{type(exc).__name__}: {exc}"},
+                    }
+                if not isinstance(result, dict):
+                    result = {
+                        "branch": name,
+                        "status": "fail",
+                        "blocking": False if name != "org_accessibility" else True,
+                        "generated_at": datetime.now(timezone.utc).isoformat(),
+                        "summary": {"error": "non-dict evidence result"},
+                    }
+                if result.get("branch") != name:
+                    result["branch"] = name
+                collected[name] = result
+                try:
+                    evidence_file = _write_issue_evidence_branch_file(key, name, result)
+                    evidence_files.append(_path_relative_for_prompt(evidence_file))
+                    result["evidence_file"] = _path_relative_for_prompt(evidence_file)
+                except Exception:
+                    continue
+    else:
+        for name, fn in branches:
+            try:
+                result = fn()
+            except Exception as exc:
+                result = {
+                    "branch": name,
+                    "status": "fail",
+                    "blocking": False if name != "org_accessibility" else True,
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "summary": {"error": f"{type(exc).__name__}: {exc}"},
+                }
+            if result.get("branch") != name:
+                result["branch"] = name
+            collected[name] = result
+            try:
+                evidence_file = _write_issue_evidence_branch_file(key, name, result)
+                evidence_files.append(_path_relative_for_prompt(evidence_file))
+                result["evidence_file"] = _path_relative_for_prompt(evidence_file)
+            except Exception:
+                continue
+
+    blocking_branches = [branch for branch, result in collected.items() if result.get("blocking")]
+    failed_branches = [branch for branch, result in collected.items() if result.get("status") == "fail"]
+    all_ok = collected.get("org_accessibility", {}).get("status") == "pass"
+    if all_ok:
+        all_ok = all(
+            not result.get("blocking") or result.get("status") == "pass"
+            for result in collected.values()
+        )
+
+    summary = {
+        "enabled": True,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "branches": collected,
+        "all_ok": all_ok,
+        "blocking_branches": blocking_branches,
+        "failed_branches": failed_branches,
+        "evidence_files": evidence_files,
+    }
+    _persist_issue_evidence_summary(key, summary)
+    return summary
+
+
+def _emit_runtime_preflight_or_stop(run_key: str, run_soql: bool = True, preflight: dict[str, Any] | None = None) -> bool:
     """Log and enforce runtime preflight before Claude-backed pipeline work starts."""
     _log_emit_line(run_key, "Preflight: validating Claude runtime, Salesforce CLI auth, and SOQL access")
     try:
-        preflight = _collect_runtime_preflight(run_soql=run_soql)
+        preflight = preflight or _collect_runtime_preflight(run_soql=run_soql)
     except Exception as e:
         _log_emit_line(run_key, f"ERROR: Runtime preflight failed unexpectedly: {type(e).__name__}: {e}")
         return False
@@ -2839,7 +4759,7 @@ def _retry_with_backoff(max_attempts: int = 3, backoff_factor: float = 2.0):
     return decorator
 
 
-def _do_stream_anthropic_messages_api(prompt: str, run_key: str, issue_key: str | None = None) -> None:
+def _do_stream_anthropic_messages_api(prompt: str, run_key: str, issue_key: str | None = None) -> bool:
     """Stream a single user turn via Anthropic Messages API (API key on your Anthropic account).
 
     If issue_key is provided, parse Suggested reply and [INTERNAL] output into separate files.
@@ -2850,14 +4770,14 @@ def _do_stream_anthropic_messages_api(prompt: str, run_key: str, issue_key: str 
             "ERROR: Python package `anthropic` is not installed. "
             "Install with: pip install anthropic",
         )
-        return
+        return False
     api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
     if not api_key:
         _log_emit_line(
             run_key,
             "ERROR: ANTHROPIC_API_KEY is empty. Set it in `.env.jira` when using CASEOPS_LLM_AUTH=api_key.",
         )
-        return
+        return False
     model = (os.environ.get("CASEOPS_ANTHROPIC_MODEL") or "claude-sonnet-4-6").strip()
     max_raw = (os.environ.get("CASEOPS_ANTHROPIC_MAX_TOKENS") or "16384").strip()
     try:
@@ -2949,11 +4869,13 @@ Analyze the issue. Draft both formats. If you don't have enough info for a solid
         full_output = call_api()
         if issue_key:
             _save_claude_output(full_output, issue_key)
+        return True
     except Exception as exc:
         _log_emit_line(run_key, f"ERROR: Anthropic API (after retries): {exc}")
+        return False
 
 
-def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None = None) -> None:
+def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None = None) -> bool:
     """Run Claude Code CLI non-interactively, parsing stream-json output.
 
     If issue_key is provided, parse output for Suggested reply and [INTERNAL] sections
@@ -3017,6 +4939,7 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
         token_usage = {field: 0 for field in _TOKEN_USAGE_FIELDS}
         final_token_usage = {field: 0 for field in _TOKEN_USAGE_FIELDS}
         total_cost_usd: float | None = None
+        current_tool_step: int | None = None
 
         def _read_pipe(pipe: Any, label: str) -> None:
             try:
@@ -3093,10 +5016,21 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                             assistant_text.append(text)
                         for line in text.splitlines():
                             if line.strip():
+                                marker = _PIPELINE_STEP_MARKER_RE.search(line)
+                                if marker:
+                                    try:
+                                        current_tool_step = int(marker.group(1))
+                                    except ValueError:
+                                        pass
                                 _log_emit_line(run_key, line)
                                 emitted_progress = True
                     elif btype == "tool_use":
                         tool = block.get("name", "tool")
+                        if not _is_tool_allowlisted(current_tool_step, tool):
+                            _log_emit_line(
+                                run_key,
+                                f"WARNING: tool '{tool}' used outside allowlist for STEP_{current_tool_step or 'unknown'}",
+                            )
                         inp = block.get("input", {})
                         detail = inp.get("command") or inp.get("file_path") or inp.get("path") or ""
                         detail = str(detail).replace("\r", " ").replace("\n", " ").strip()
@@ -3152,10 +5086,10 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 proc.terminate()
-            return
+            return False
 
         if killed_for_timeout:
-            return
+            return False
         effective_usage = final_token_usage if any(final_token_usage.values()) else token_usage
         if any(effective_usage.values()) or total_cost_usd is not None:
             _log_emit_line(run_key, _format_token_usage(effective_usage, total_cost_usd))
@@ -3164,13 +5098,17 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
             _save_claude_output(full_output, issue_key)
         elif returncode != 0:
             _log_emit_line(run_key, f"-- exit code {returncode} --")
+            return False
+        return True
 
     except FileNotFoundError:
         _log_emit_line(run_key, "WARNING: 'claude' CLI not found on PATH")
         _log_emit_line(run_key, "Attempting fallback: launching Claude Code in new window via PowerShell script...")
         _fallback_launch_claude_window(issue_key, prompt, run_key)
+        return False
     except Exception as exc:
         _log_emit_line(run_key, f"ERROR: {exc}")
+        return False
 
 
 def _fallback_launch_claude_window(issue_key: str | None, prompt: str, run_key: str) -> None:
@@ -3218,15 +5156,14 @@ def _fallback_launch_claude_window(issue_key: str | None, prompt: str, run_key: 
         _log_emit_line(run_key, f"ERROR: Fallback launch failed: {exc}")
 
 
-def _do_stream_claude(prompt: str, run_key: str, issue_key: str | None = None) -> None:
+def _do_stream_claude(prompt: str, run_key: str, issue_key: str | None = None) -> bool:
     """LLM entry: API Messages when ``api_key`` auth; else Claude Code CLI.
 
     If issue_key is provided, parse Suggested reply and [INTERNAL] output into separate files.
     """
     if caseops_llm_auth_uses_anthropic_api_key():
-        _do_stream_anthropic_messages_api(prompt, run_key, issue_key)
-    else:
-        _do_stream_claude_code_cli(prompt, run_key, issue_key)
+        return _do_stream_anthropic_messages_api(prompt, run_key, issue_key)
+    return _do_stream_claude_code_cli(prompt, run_key, issue_key)
 
 
 def _stream_proc(cmd: list[str], run_key: str) -> None:
@@ -3315,13 +5252,22 @@ def _stream_claude_proc(prompt: str, run_key: str, issue_key: str | None = None)
 
 def _issue_pipeline_runtime_ready(run_key: str) -> bool:
     """Validate runtime gates before an issue pipeline run starts."""
+    evidence = _run_issue_evidence_branches(run_key, run_soql=True)
+    evidence_preflight = evidence.get("branches", {}).get("org_accessibility", {}).get("preflight") if evidence.get("enabled") else None
+
     sandbox_target = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
     if not sandbox_target:
         _log_emit_line(run_key, "ERROR: CASEOPS_SANDBOX_TARGET_ORG not set in .env.jira")
         _log_emit_line(run_key, "       Step 9 (deploy+test) requires an allowlisted Sandbox org.")
         _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env.jira and retry.")
         return False
-    if not _emit_runtime_preflight_or_stop(run_key):
+    if evidence.get("enabled") and not evidence.get("all_ok"):
+        _log_emit_line(run_key, "Preflight: evidence branch blockers detected; review branch evidence files.")
+        branch_status = ", ".join(f"{name}:{result.get('status', 'unknown')}" for name, result in evidence.get("branches", {}).items())
+        if branch_status:
+            _log_emit_line(run_key, f"Evidence summary: {branch_status}")
+
+    if not _emit_runtime_preflight_or_stop(run_key, preflight=evidence_preflight):
         return False
 
     if not caseops_llm_auth_uses_anthropic_api_key():
@@ -3348,6 +5294,9 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
     This invokes Claude Code with direct file-path instructions for Steps 1-12 orchestration.
     Do NOT call deprecated run_pipeline.py — that calls removed agents.
     """
+    run_started = datetime.now(timezone.utc)
+    should_update_metrics = False
+    run_status = "failed"
     try:
         _log_emit_run_start(run_key, key)
         _log_emit_line(run_key, f"-- Processing {key} via jira-salesforce-fix-pipeline playbook --")
@@ -3365,6 +5314,7 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
         _log_resume_plan_summary(run_key, resume_plan, resume_path)
         if _resume_plan_short_circuit(run_key, resume_plan):
             return
+        should_update_metrics = True
         prompt = _build_claude_prompt(
             key,
             "Run the full CaseOps fix pipeline for this issue through completion of investigation, "
@@ -3376,8 +5326,22 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
             ),
             resume_block,
         )
-        _do_stream_claude(prompt, run_key, key)
+        if _do_stream_claude(prompt, run_key, key):
+            run_status = "completed"
     finally:
+        if should_update_metrics:
+            run_ended = datetime.now(timezone.utc)
+            try:
+                latest = _update_pipeline_run_metrics(
+                    key,
+                    run_key,
+                    run_started,
+                    run_ended,
+                    status=run_status,
+                )
+                _log_emit_line(run_key, _format_run_metrics_summary(key, latest))
+            except Exception as exc:
+                _log_emit_line(run_key, f"WARNING: failed to persist run metrics: {exc}")
         with _state_lock:
             _active_keys.discard(run_key)
         # Phase 2: invalidate caches for this issue when full-issue run completes
@@ -3392,6 +5356,9 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
 
     Useful for re-running a single issue that failed or needs investigation updates.
     """
+    run_started = datetime.now(timezone.utc)
+    should_update_metrics = False
+    run_status = "failed"
     try:
         _log_emit_run_start(run_key, f"{key} reprocess")
         _log_emit_line(run_key, f"-- Reprocessing {key} (no sync) via jira-salesforce-fix-pipeline playbook --")
@@ -3409,6 +5376,7 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
         _log_resume_plan_summary(run_key, resume_plan, resume_path)
         if _resume_plan_short_circuit(run_key, resume_plan):
             return
+        should_update_metrics = True
         prompt = _build_claude_prompt(
             key,
             "Reprocess the CaseOps fix pipeline for this issue without re-syncing from Jira. "
@@ -3419,8 +5387,22 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
             ),
             resume_block,
         )
-        _do_stream_claude(prompt, run_key, key)
+        if _do_stream_claude(prompt, run_key, key):
+            run_status = "completed"
     finally:
+        if should_update_metrics:
+            run_ended = datetime.now(timezone.utc)
+            try:
+                latest = _update_pipeline_run_metrics(
+                    key,
+                    run_key,
+                    run_started,
+                    run_ended,
+                    status=run_status,
+                )
+                _log_emit_line(run_key, _format_run_metrics_summary(key, latest))
+            except Exception as exc:
+                _log_emit_line(run_key, f"WARNING: failed to persist run metrics: {exc}")
         with _state_lock:
             _active_keys.discard(run_key)
         jira_summary_cache.pop(key, None)
@@ -3634,6 +5616,15 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"  - `CASEOPS_METADATA_CONFIRMED_DIR={str(_metadata_workspace_dirs()['confirmed'])}`\n"
         f"- Production metadata is read-only reference material. Never edit files under "
         f"`CASEOPS_METADATA_RAW_PROD_DIR`.\n"
+        f"- Do not run broad Production retrieves such as `sf project retrieve start --metadata Flow`, "
+        f"`--metadata Account`, `--metadata EmailTemplate`, or wildcard folders unless the issue explicitly "
+        f"requires every component of that type. First identify the exact component with SOQL, describe/list "
+        f"metadata, org-knowledge, or `scripts/sf_caseops_helper.py`, then retrieve only named components "
+        f"(for example `--metadata Flow:My_Flow` or `--metadata EmailTemplate:Folder/Template`).\n"
+        f"- Every external Salesforce CLI command must be bounded and produce operator-visible progress. "
+        f"If a retrieve/query gives no useful output within 90 seconds, stop that approach, print "
+        f"`STEP_LOOP {key} command_timeout`, record the command and elapsed time, and replan with a narrower "
+        f"SOQL/helper/list-metadata query. Do not repeat the same stalled command.\n"
         f"- Before each Sandbox deploy attempt, retrieve the current Sandbox baseline for every component "
         f"you will change into `attempt-N/baseline-sandbox/`, place candidate metadata in "
         f"`attempt-N/candidate/`, and keep rollback metadata in `attempt-N/revert/`.\n"
@@ -3662,7 +5653,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"**For metadata queries, field inspection, permission checks, and configuration verification:**\n"
         f"1. **Use `sf` CLI commands** (read-only, fast, no browser needed):\n"
         f"   - `sf org display --target-org <alias>` and `sf org list` to verify auth\n"
-        f"   - `sf project retrieve start --metadata [type]` (pull metadata)\n"
+        f"   - `sf project retrieve start --metadata Type:Name` or another named/narrow selector (pull targeted metadata)\n"
         f"   - `sf sobject get --sobject [type]` (inspect objects/fields)\n"
         f"2. **Use SOQL queries** via `sf data query` to inspect data, field values, record types, assignments\n"
         f"3. **Never use Playwright, browser automation, frontdoor links, or frontdoor SIDs** for metadata queries, SOQL/API access, field inspection, permission checks, retrieval, deploy, or Apex tests\n"
@@ -3758,7 +5749,7 @@ def _is_jira_escalated_any(status: str = "") -> bool:
 
 def _available_tabs(key: str) -> list[dict[str, str]]:
     tabs = []
-    internal_only = {"step4_hypothesis"}
+    internal_only = {"hypothesis"}
     for ftype, rel in FILE_LOCATIONS.items():
         if ftype == "attachments" or ftype in internal_only:
             continue
@@ -3868,16 +5859,27 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
 
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
     has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
+    has_test_report = (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists()
     is_jira_escalated = _is_jira_engineering_escalated(status)
     is_jira_escalated_any = _is_jira_escalated_any(status)
-    state = _calculate_pipeline_state(key, status)
-    is_blocked = _investigation_indicates_blocked(key)
-    is_data_only = (
-        _test_report_is_data_only(key)
-        and not is_blocked
-        and not has_eng_handoff
-        and not is_jira_escalated_any
+    state_payload = _read_pipeline_state(key)
+    has_schema = _state_has_schema(state_payload)
+    has_data_only_legacy = _test_report_is_data_only(key)
+    routing = _infer_routing_state(
+        state_payload,
+        has_eng_handoff=has_eng_handoff and (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).is_file(),
+        has_test_report=has_test_report and (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).is_file(),
     )
+    deliverable = _infer_deliverable_state(state_payload, is_data_only_legacy=has_data_only_legacy and not has_schema)
+    is_blocked = routing["path"] == "on_hold" or (not has_schema and _investigation_indicates_blocked(key))
+    is_data_only = deliverable["production_deploy_required"] in {"no", "n/a"}
+    if not has_schema and has_data_only_legacy:
+        is_data_only = True
+
+    needs_escalation = (
+        (has_schema and routing["path"] == "engineering_required")
+        or (not has_schema and has_eng_handoff)
+    ) and not is_jira_escalated_any
 
     return {
         # Legacy flags (kept for backward compatibility during transition)
@@ -3889,13 +5891,13 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
         "has_eng_handoff": has_eng_handoff,
         "has_confirmed_solution": _test_report_confirms_fix(key),
         "has_solution": has_solution,
-        "needs_escalation": has_eng_handoff and not is_jira_escalated_any,
+        "needs_escalation": needs_escalation,
         "is_jira_escalated": is_jira_escalated,
         "is_jira_escalated_any": is_jira_escalated_any,
 
-        # Pipeline state machine: all determined by file existence
-        "pipeline_state": state.value,
-        "is_escalation_path": has_eng_handoff,  # Source of truth: eng_handoff file presence
+        # Pipeline state machine (authoritative status first, file-only fallback)
+        "pipeline_state": _calculate_pipeline_state(key, status).value,
+        "is_escalation_path": routing["path"] == "engineering_required",  # Source of truth: routing state
         "is_blocked": is_blocked,
         "is_data_only": is_data_only,
     }
@@ -4061,19 +6063,38 @@ def _test_report_is_data_only(key: str) -> bool:
 
 
 def _calculate_pipeline_state(key: str, status: str = "") -> PipelineState:
-    """Calculate current pipeline state based on file existence.
+    """Calculate current pipeline state based on schema-driven routing and artifact presence.
 
     Jira status is the only source of truth for actual Jira escalation.
-    An eng_handoff file means CaseOps has prepared/recommended escalation.
-    Support-resolvable progression based on pipeline file artifacts.
+    CaseOps handoff is derived from durable routing state when available.
+    Support-resolvable progression falls back to artifact presence for compatibility.
     """
     has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
     has_test_report = (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists()
     has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
+    state_payload = _read_pipeline_state(key)
 
     if _is_jira_engineering_escalated(status):
         return PipelineState.ESCALATED_TO_ENGINEERING
+
+    if _state_has_schema(state_payload):
+        routing = _infer_routing_state(
+            state_payload,
+            has_eng_handoff=has_eng_handoff and (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).is_file(),
+            has_test_report=has_test_report and (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).is_file(),
+        )
+        if routing["path"] == "engineering_required":
+            return PipelineState.ENGINEERING_HANDOFF
+        if routing["path"] == "support_resolvable":
+            if has_test_report:
+                return PipelineState.VALIDATED
+            if has_internal_notes:
+                return PipelineState.ANALYZED
+            if has_investigation:
+                return PipelineState.INVESTIGATING
+            return PipelineState.UNTRIAGED
+
     if has_eng_handoff:
         return PipelineState.ENGINEERING_HANDOFF
 
@@ -4097,7 +6118,10 @@ def _test_report_confirms_fix(key: str) -> bool:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return False
-    if re.search(r"(?is)(resolution type:\*\*\s*no-deploy|fix type:\*\*\s*(?:data record creation|data-only|no-deploy)|##\s*No-Deploy Rationale|sandbox deploy required:\*\*\s*no|production metadata deploy required\s*\|\s*\*\*?no|production deploy required:\s*\*\*?n/?a)", text):
+    if re.search(
+        r"(?is)(resolution type:\*\*\s*no-deploy|fix type:\*\*\s*(?:data record creation|data-only|no-deploy)|##\s*No-Deploy Rationale|sandbox deploy required:\*\*\s*no|production metadata deploy required\s*[:|]\s*\*\*?no|production deploy required:\s*\*\*?n/?a)",
+        text,
+    ):
         if re.search(r"(?is)\b(blocked|not viable|not fixed|unresolved|do not proceed)\b", text):
             return False
         return bool(re.search(r"(?is)\bconfirmed\b|\[x\]|production metadata deploy required:\*\*\s*no", text))
@@ -4117,7 +6141,7 @@ def _test_report_confirms_fix(key: str) -> bool:
     if not block_lines:
         return False
     blob = " ".join(block_lines).lower()
-    if re.search(r"\b(no|not\s+fixed|false|fail(?:ed|ing)?|unfixed)\b", blob):
+    if re.search(r"\b(not\s+fixed|false|fail(?:ed|ing)?|unfixed)\b", blob):
         return False
     if re.search(r"\b(yes|pass(?:ed)?|confirmed|resolved)\b", blob):
         return True
@@ -4171,6 +6195,11 @@ def index():
         open_count=open_count,
         workspace=app.config.get("WORKSPACE", "default"),
     )
+
+
+@app.get("/favicon.ico")
+def favicon_ico():
+    return send_file(ROOT / "static" / "favicon.svg", mimetype="image/svg+xml")
 
 
 @app.get("/api/issues")
@@ -5608,7 +7637,7 @@ if __name__ == "__main__":
     # Pre-create all pipeline output subdirectories so Claude Code doesn't need write permissions to create them
     for subdir in [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
-        "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state",
+        "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
         "org-knowledge", "metadata-cache", "metadata-workspaces", "summaries"
     ]:
         _ensure_directory_writable(OUTPUTS / subdir, f"outputs/{subdir}")
@@ -5657,7 +7686,7 @@ if __name__ == "__main__":
     # Validate all required subdirectories exist
     required_subdirs = [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
-        "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state",
+        "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
         "closed-resolved", "org-knowledge", "metadata-cache", "metadata-workspaces",
         _SUMMARY_DIR
     ]

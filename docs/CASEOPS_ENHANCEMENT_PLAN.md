@@ -19,6 +19,8 @@ This is the current pilot hardening backlog. It does not describe completed runt
 
 ## Pilot Hardening
 
+See [Pipeline Framework Alignment Plan](PIPELINE_FRAMEWORK_ALIGNMENT_PLAN.md) for the current hardening plan, including deterministic resume planning, loop control, and telemetry.
+
 1. Metadata storage hybrid
    - Complete: new work uses `outputs/metadata-cache/` and `outputs/metadata-workspaces/`.
    - Remaining: add UI/API review of workspace manifests and optional cleanup/archive tools.

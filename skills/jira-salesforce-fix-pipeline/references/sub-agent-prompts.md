@@ -31,7 +31,7 @@ Return a compact summary (max 400 tokens) containing:
 You are retrieving Salesforce Production metadata for a Jira issue.
 
 Issue key: <KEY>
-Problem hypothesis: <paste from outputs/step-4-hypothesis/<KEY>.md OR inline notes from Step 4>
+Problem hypothesis: <paste from outputs/hypothesis/<KEY>.md OR inline notes from Step 4>
 Investigation record: outputs/investigations/<KEY>.md
 Selected org knowledge: <paste only the relevant bullets from the run's Org Knowledge Context; do not paste unrelated org-knowledge files>
 
@@ -70,7 +70,7 @@ Return a compact summary (max 400 tokens) containing:
 You are drilling down to identify the exact problem location in Salesforce Production.
 
 Issue key: <KEY>
-Problem hypothesis: <paste from outputs/step-4-hypothesis/<KEY>.md OR inline notes from Step 4>
+Problem hypothesis: <paste from outputs/hypothesis/<KEY>.md OR inline notes from Step 4>
 Production metadata: <paste the Summary from Step 5>
 Investigation record: outputs/investigations/<KEY>.md
 Selected org knowledge: <paste only relevant bullets from the run's Org Knowledge Context>

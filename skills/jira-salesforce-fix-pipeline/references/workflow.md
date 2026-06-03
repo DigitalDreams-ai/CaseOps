@@ -77,7 +77,7 @@ The orchestrator retains **only** the returned compact summary. Do not read the 
 
 From the Step 3 summary (Issue Understanding), synthesize a Salesforce-specific **problem hypothesis** and define the **smallest viable fix**.
 
-**Output artifact:** Inline notes or `outputs/step-4-hypothesis/<KEY>.md` using `assets/step-4-problem-hypothesis-template.md`.
+**Output artifact:** Inline notes or `outputs/hypothesis/<KEY>.md` using `assets/step-4-problem-hypothesis-template.md`.
 
 **Must include:**
 - **Confirmed facts** (from Step 3, separated from symptoms)
@@ -94,7 +94,7 @@ From the Step 3 summary (Issue Understanding), synthesize a Salesforce-specific 
 - "Permission set does not grant required field access; Fix: add field-level Read-Write permission for this field."
 - "Apex integration payload is missing required address fields in JSON structure; Fix: update CMT mappings to emit flat root-level fields instead of nested objects."
 
-**Input to Step 5:** Pass the Step 4 hypothesis (from file or inline) as the "Problem hypothesis" input to Step 5 sub-agent prompt. Steps 5 and 6 will use this to scope metadata retrieval and problem location drilling.
+**Input to Step 5:** Pass the Hypothesis (from file or inline) as the "Problem hypothesis" input to Step 5 sub-agent prompt. Steps 5 and 6 will use this to scope metadata retrieval and problem location drilling.
 
 ---
 
@@ -155,7 +155,7 @@ If a run discovers a durable, verified, reusable org fact, update the most speci
 
 ## Step 5 — Retrieve relevant Production metadata [SUB-AGENT]
 
-Spawn a sub-agent using **“Step 5 — Retrieve relevant Production metadata”** in **`references/sub-agent-prompts.md`**. Paste the Step 4 hypothesis into the prompt.
+Spawn a sub-agent using **“Step 5 — Retrieve relevant Production metadata”** in **`references/sub-agent-prompts.md`**. Paste the Hypothesis into the prompt.
 
 **Existence check — required before any creation:** Before creating new metadata (field, permission set, list view, object, layout, etc.), query Production to confirm the intended API name and label do not already exist. See **`references/safety-policy.md`** (“Check Before Creating”) for query patterns.
 
@@ -310,7 +310,7 @@ Report is generated inline during skill execution. Reference the dated summary f
 **What to report per issue:**
 
 - **Jira key and summary**
-- **Root cause** (from Step 4 hypothesis + Step 6 confirmation)
+- **Root cause** (from Hypothesis + Step 6 confirmation)
 - **Solution or escalation status** (Support-fixed / Engineering-escalated / On-hold pending customer response)
 - **Production vs Sandbox:** 
   - What exists in Production (verified read-only)

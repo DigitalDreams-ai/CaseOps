@@ -51,7 +51,7 @@ outputs/
 ├── jira/manifest.csv
 ├── closed-resolved/<KEY>.md
 ├── investigations/<KEY>.md
-├── step-4-hypothesis/<KEY>.md
+├── hypothesis/<KEY>.md
 ├── test-reports/<KEY>.md
 ├── internal-notes/<KEY>.md
 ├── jira-messages/<KEY>.md

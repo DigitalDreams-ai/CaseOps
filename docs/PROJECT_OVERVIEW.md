@@ -31,7 +31,7 @@ Issue artifacts are stored under the active outputs directory, currently `instan
 
 - `jira/` - raw Jira issue bundles, markdown summaries, manifest.
 - `investigations/` - issue understanding and diagnosis record.
-- `step-4-hypothesis/` - problem hypothesis and smallest viable fix.
+- `hypothesis/` - problem hypothesis and smallest viable fix.
 - `internal-notes/` - internal diagnosis and operational notes.
 - `jira-messages/` - customer-facing draft responses.
 - `test-reports/` - Sandbox validation results.

@@ -1201,32 +1201,43 @@
             const statusDiv = document.getElementById('restart-status');
             if (!confirm('Restart CaseOps service? Connection will be restored in about 10-30 seconds.')) return;
 
-            btn.disabled = true;
-            statusDiv.textContent = 'Restarting...';
-            try {
-                const resp = await fetch('/api/restart', { method: 'POST' });
-                if (!resp.ok) {
-                    const error = await resp.json();
-                    throw new Error(error.error || 'Restart failed');
-                }
-                statusDiv.textContent = 'Service restarting. Reconnecting...';
-
+            async function waitForRestart() {
                 let attempts = 0;
                 while (attempts < 60) {
                     try {
-                        const testResp = await fetch('/');
+                        const testResp = await fetch('/?restart_check=' + Date.now(), { cache: 'no-store' });
                         if (testResp.ok) {
                             statusDiv.textContent = 'Service restarted.';
-                            btn.disabled = false;
-                            return;
+                            return true;
                         }
                     } catch (_) {}
                     await new Promise(r => setTimeout(r, 1000));
                     attempts++;
                 }
                 statusDiv.textContent = 'Restart timed out.';
+                return false;
+            }
+
+            btn.disabled = true;
+            statusDiv.textContent = 'Restarting...';
+            try {
+                const resp = await fetch('/api/restart', { method: 'POST' });
+                if (!resp.ok) {
+                    let message = 'Restart failed';
+                    try {
+                        const error = await resp.json();
+                        message = error.error || message;
+                    } catch (_) {}
+                    statusDiv.textContent = message;
+                    return;
+                }
+                statusDiv.textContent = 'Service restarting. Reconnecting...';
+                await waitForRestart();
             } catch (e) {
-                statusDiv.textContent = e.message;
+                // The restart can terminate the HTTP request before the browser
+                // receives a response. Treat that network drop as expected.
+                statusDiv.textContent = 'Service restarting. Reconnecting...';
+                await waitForRestart();
             } finally {
                 btn.disabled = false;
             }

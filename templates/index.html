@@ -70,7 +70,7 @@
         <button type="button" class="sort-pill" data-sort="status" onclick="setSort('status')">Status<span class="sort-pill-dir" aria-hidden="true"></span></button>
         <button type="button" class="sort-pill" data-sort="priority" onclick="setSort('priority')" title="Remaining time until due date (end of due day UTC). No due date sorts last.">Priority<span class="sort-pill-dir" aria-hidden="true"></span></button>
       </div>
-      <input id="filter-input" type="search" placeholder="Filter by key or summary…" oninput="debounceFilter(this.value)">
+      <input id="filter-input" type="search" placeholder="Filter by key, summary, or tag…" oninput="debounceFilter(this.value)">
     </div>
     <div id="bulk-action-bar" style="display:none;">
       <div style="padding:12px; border-bottom:1px solid var(--color-border);">
@@ -813,9 +813,37 @@
       });
   }
 
+  function issueSearchTags(issue) {
+    const tags = [
+      issue.disposition,
+      issue.status,
+      issue.pipeline_state,
+      String(issue.pipeline_state || '').replace(/_/g, ' '),
+    ];
+    const state = issue.pipeline_state;
+    if (state === 'untriaged') tags.push('not triaged');
+    if (state === 'investigating') tags.push('investigating');
+    if (state === 'analyzed') tags.push('analyzed');
+    if (state === 'validated') tags.push('validated');
+    if (state === 'engineering_handoff') tags.push('engineering handoff');
+    if (state === 'escalated_to_engineering') tags.push('escalated to engineering', 'escalated to eng');
+    if (issue.is_blocked && !issue.is_data_only) tags.push('blocked');
+    if (issue.is_data_only && !issue.is_blocked && !issue.has_eng_handoff) tags.push('data only', 'data-only', 'no deploy', 'no-deploy');
+    if (issue.needs_escalation && !issue.is_data_only) tags.push('needs escalation');
+    if (issue.is_jira_escalated && !issue.is_data_only) tags.push('escalated to eng', 'jira escalated');
+    if (issue.hasNewComments) tags.push('new comments');
+    return tags.filter(Boolean).join(' ').toLowerCase();
+  }
+
   function matchesFilter(issue, q) {
-    q = q.toLowerCase();
-    return issue.key.toLowerCase().includes(q) || issue.summary.toLowerCase().includes(q);
+    q = q.toLowerCase().trim();
+    if (!q) return true;
+    const searchable = [
+      issue.key || '',
+      issue.summary || '',
+      issueSearchTags(issue),
+    ].join(' ').toLowerCase();
+    return q.split(/\s+/).every(term => searchable.includes(term));
   }
 
   function debounceFilter(q) {

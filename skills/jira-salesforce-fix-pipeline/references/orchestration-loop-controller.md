@@ -30,7 +30,7 @@ Create a progress log file at start: `outputs/pipeline-logs/YYYYMMDD-HHMMSS.log`
 **Log entries:**
 - `START <KEY>` — Begin processing issue
 - `STEP_3 <KEY> ✓ summary` — Step 3 complete, returned summary
-- `STEP_4 <KEY> ✓ file` — Step 4 hypothesis documented
+- `STEP_4 <KEY> ✓ file` — Hypothesis documented
 - `STEP_5 <KEY> ✓ summary` — Step 5 metadata retrieved
 - `STEP_6 <KEY> ✓ summary` — Step 6 problem location identified
 - `STEP_6_LOOP <KEY> iteration=1 REQUEST: Step 5 refinement — [specific metadata]` — Metadata loop detected
@@ -94,8 +94,8 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
             issue_key=issue_key,
             step_3_summary=step_3_summary
         )
-        write_file(f"outputs/step-4-hypothesis/{issue_key}.md", hypothesis)
-        log(f"STEP_4 {issue_key} ✓ outputs/step-4-hypothesis/{issue_key}.md")
+        write_file(f"outputs/hypothesis/{issue_key}.md", hypothesis)
+        log(f"STEP_4 {issue_key} ✓ outputs/hypothesis/{issue_key}.md")
         
         # Step 5 → 6 Metadata Loop
         step_6_metadata_loop = True
@@ -221,7 +221,7 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
                             original_hypothesis=hypothesis,
                             test_failure_details=step_9_result
                         )
-                        write_file(f"outputs/step-4-hypothesis/{issue_key}.md", hypothesis)
+                        write_file(f"outputs/hypothesis/{issue_key}.md", hypothesis)
                         # Continue loop to Step 5
                     ELSE:
                         log(f"STEP_9 {issue_key} ✗ BLOCKER: Deploy/test exceeded 3 iterations")
@@ -348,7 +348,7 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
 
 **Action:**
 1. Log: `STEP_9_LOOP {KEY} iteration=1 — Revised hypothesis, looping back to Step 5`
-2. Revise Step 4 hypothesis based on test failure details
+2. Revise Hypothesis based on test failure details
 3. Re-spawn Step 5 (if more metadata is needed)
 4. Re-spawn Step 6 if Step 5 discovered new artifacts
 5. Re-implement Step 8 with revised hypothesis

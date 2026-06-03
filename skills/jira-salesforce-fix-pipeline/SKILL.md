@@ -124,13 +124,13 @@ For each active issue:
 
 For each active issue:
 1. **Emit to stdout:** `STEP_4 <ISSUE_KEY>`
-2. From Step 3 summary, synthesize root cause (one sentence) and smallest viable fix. Document in `outputs/step-4-hypothesis/<KEY>.md` using `assets/step-4-problem-hypothesis-template.md`.
+2. From Step 3 summary, synthesize root cause (one sentence) and smallest viable fix. Document in `outputs/hypothesis/<KEY>.md` using `assets/step-4-problem-hypothesis-template.md`.
 
 **Step 5 — Retrieve metadata (Sub-agent)**
 
 For each active issue:
 1. **Emit to stdout:** `STEP_5 <ISSUE_KEY>`
-2. Spawn salesforce-production-metadata-investigation sub-agent using **Step 5 prompt** from `references/sub-agent-prompts.md`. Pass Step 4 hypothesis. Retain summary only.
+2. Spawn salesforce-production-metadata-investigation sub-agent using **Step 5 prompt** from `references/sub-agent-prompts.md`. Pass Hypothesis. Retain summary only.
 
 **Step 6 — Identify problem location (Sub-agent)**
 
@@ -166,7 +166,7 @@ For each active issue:
 4. Ensure the sub-agent captures `baseline-sandbox/`, deploys `candidate/`, tests acceptance criteria, and writes `outputs/test-reports/<KEY>.md`.
 
 - **On Pass:** Proceed to Step 10.
-- **On Fail:** Confirm the Sandbox attempt was reverted from `baseline-sandbox/`, revise Step 4 hypothesis, loop back to Step 5–6 if more metadata is needed, re-run Step 8–9. Record iterations in `outputs/investigations/<KEY>.md`.
+- **On Fail:** Confirm the Sandbox attempt was reverted from `baseline-sandbox/`, revise Hypothesis, loop back to Step 5–6 if more metadata is needed, re-run Step 8–9. Record iterations in `outputs/investigations/<KEY>.md`.
 
 **Step 10 — Draft messages (Sub-agent)**
 
@@ -329,7 +329,7 @@ Total runtime: H hours M minutes
 ## Assets
 
 - `assets/investigation-record-template.md` — working record per issue.
-- `assets/step-4-problem-hypothesis-template.md` — Step 4 hypothesis worksheet.
+- `assets/step-4-problem-hypothesis-template.md` — Hypothesis worksheet.
 - `assets/engineering-handoff-template.md` — Engineering escalations (includes Engineering Message section).
 - `assets/internal-notes-template.md` — internal notes.
 - `assets/jira-message-template.md` — Jira response draft.

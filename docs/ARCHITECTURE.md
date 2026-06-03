@@ -56,7 +56,7 @@ instance1/
   outputs/
     jira/
     investigations/
-    step-4-hypothesis/
+    hypothesis/
     internal-notes/
     jira-messages/
     test-reports/

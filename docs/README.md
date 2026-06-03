@@ -15,6 +15,7 @@ All general CaseOps documentation lives in this directory. Skill instructions st
 - [API](API.md) - Flask routes and endpoint behavior.
 - [Agents](AGENTS.md) - Claude Code skills and sub-agent model.
 - [Pipeline Architecture](PIPELINE_ARCHITECTURE.md) - pipeline-specific orchestration notes.
+- [Pipeline Framework Alignment Plan](PIPELINE_FRAMEWORK_ALIGNMENT_PLAN.md) - deterministic resume planning, loop-control, quality gates, and telemetry plan.
 - [Instance Routing](INSTANCE_ROUTING.md) - workspace and path isolation.
 - [Workspaces](WORKSPACES.md) - local multi-workspace usage.
 - [Claude Launcher Guide](CLAUDE_LAUNCHER_GUIDE.md) - Claude Code authentication notes.

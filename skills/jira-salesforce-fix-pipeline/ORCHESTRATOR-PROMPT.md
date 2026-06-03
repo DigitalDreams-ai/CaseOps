@@ -34,7 +34,7 @@ User provides:
    - **Root cause** (specific Salesforce component/setting/integration)
    - **Smallest viable fix** (exact artifact + change)
    - **Sandbox test plan** (test scenario, expected outcome)
-2. Record in `outputs/step-4-hypothesis/{key}.md` using template.
+2. Record in `outputs/hypothesis/{key}.md` using template.
 3. Pass hypothesis to Step 5 sub-agent.
 
 ### Step 5-6: Metadata Investigation (DELEGATE)
@@ -237,7 +237,7 @@ ORCHESTRATOR:
 3. Scaffold investigations/ISSUE-33753.md
 4. STEP_3 ISSUE-33753 → Invoke jira-issue-analysis
 5. Receive: "Root cause = Flow condition mismatch. Missing OR clause."
-6. STEP_4 ISSUE-33753 → Synthesize hypothesis, save to step-4-hypothesis/ISSUE-33753.md
+6. STEP_4 ISSUE-33753 → Synthesize hypothesis, save to hypothesis/ISSUE-33753.md
 7. STEP_5 ISSUE-33753 → Invoke metadata investigation (retrieval)
 8. Receive: "Flow 'Order Sync' found at Setup > Flows > Order Sync"
 9. STEP_6 ISSUE-33753 → Invoke metadata investigation (drilling)
