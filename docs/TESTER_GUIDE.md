@@ -8,6 +8,25 @@ CaseOps helps support operators review synced Jira issues, run a guided Salesfor
 
 CaseOps must not write to Salesforce Production. Production access is read-only. The only writable Salesforce org should be the explicitly configured Sandbox.
 
+## Docker Image Setup
+
+If testing from a shared image archive, load the image and use the provided compose template:
+
+```bash
+docker load -i caseops-image.tar.gz
+cp .env.jira.example .env.jira
+mkdir -p caseops-data
+docker compose -f docker-compose.example.yml up -d
+```
+
+Fill `.env.jira` with tester-owned Jira, Salesforce, and LLM credentials before running pipeline actions. Do not use the operator's credentials, internal filesystem paths, hostnames, or deployment-specific compose file.
+
+Open CaseOps at:
+
+```text
+http://localhost:5350
+```
+
 ## What To Test
 
 1. Open the CaseOps web app URL provided by the operator.

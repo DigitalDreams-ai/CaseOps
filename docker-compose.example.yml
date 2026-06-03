@@ -1,0 +1,22 @@
+services:
+  caseops:
+    image: caseops-caseops:latest
+    container_name: caseops
+    ports:
+      - "5350:5000"
+    env_file:
+      - .env.jira
+    environment:
+      CASEOPS_PORT: "5000"
+      HOME: /home/caseops
+      SF_DATA_DIR: /app/instance1/.sf
+      SFDX_DIR: /app/instance1/.sfdx
+      CASEOPS_OUTPUTS_DIR: /app/instance1/outputs
+      CASEOPS_JIRA_OUT_DIR: /app/instance1/outputs/jira
+    volumes:
+      # Persistent runtime data: Jira sync output, pipeline logs, generated files,
+      # Salesforce CLI state, metadata cache, and metadata workspaces.
+      - ./caseops-data:/app/instance1
+      # Writable env file: CaseOps Settings may update tokens in this file.
+      - ./.env.jira:/app/.env.jira
+    restart: unless-stopped
