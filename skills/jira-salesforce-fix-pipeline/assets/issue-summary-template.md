@@ -60,7 +60,7 @@ All issues escalated to Engineering, whether pre-escalated in Jira at sync time 
 Create or update this file for the current day on every pipeline run:
 
 ```text
-outputs/issue-summary-YYYY-MM-DD.md
+outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md
 ```
 
 Update whenever an issue is processed, escalated, skipped, deployed to Sandbox, tested, or closed out.

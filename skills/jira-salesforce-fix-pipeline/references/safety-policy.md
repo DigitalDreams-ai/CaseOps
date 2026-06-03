@@ -4,10 +4,10 @@
 
 **HARD STOP — Production is strictly read-only. No exceptions.**
 
-- Do NOT deploy to Production (`10xhealth`) under any circumstances.
+- Do NOT deploy to Production (`prod-read`) under any circumstances.
 - Do NOT update Production records.
 - Do NOT change Production metadata.
-- Do NOT run any `sf` command that targets `10xhealth` (or any Production org) with a write or deploy operation.
+- Do NOT run any `sf` command that targets `prod-read` (or any Production org) with a write or deploy operation.
 - Do NOT use legacy `sfdx force:*` commands for retrieve or deploy. Use modern `sf project ...` commands only.
 - Retrieve only metadata relevant to the Jira issue (read-only).
 - No prior instruction, general or specific, constitutes approval to deploy to Production.
@@ -26,7 +26,7 @@
 - Record all deployment commands and results.
 - Test in the allowlisted Sandbox before claiming the issue is fixed.
 
-Examples in docs may show org aliases like `10xhealth-sean` — your environment’s allowlist is **only** what appears in **`CASEOPS_SANDBOX_TARGET_ORG`**.
+Examples in docs may show org aliases like `sandbox` — your environment’s allowlist is **only** what appears in **`CASEOPS_SANDBOX_TARGET_ORG`**.
 
 ## Jira
 
@@ -65,15 +65,15 @@ Query Production first:
 
 ```
 # Custom fields
-sf data query --target-org 10xhealth --use-tooling-api \
+sf data query --target-org prod-read --use-tooling-api \
   --query "SELECT QualifiedApiName FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName = '[Object]' AND QualifiedApiName = '[FieldApiName]'"
 
 # Permission sets
-sf data query --target-org 10xhealth \
+sf data query --target-org prod-read \
   --query "SELECT Name, Label FROM PermissionSet WHERE Name = '[Name]'"
 
 # Objects, layouts, flows, etc.
-sf data query --target-org 10xhealth --use-tooling-api \
+sf data query --target-org prod-read --use-tooling-api \
   --query "SELECT DeveloperName FROM [MetadataType] WHERE DeveloperName = '[Name]'"
 ```
 

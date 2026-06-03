@@ -53,8 +53,8 @@ CaseOps stores Salesforce access and refresh tokens in the active env file and a
 Important env keys:
 
 ```env
-CASEOPS_PRODUCTION_READ_ORG=10xhealth
-CASEOPS_SANDBOX_TARGET_ORG=10xhealth-sean
+CASEOPS_PRODUCTION_READ_ORG=prod-read
+CASEOPS_SANDBOX_TARGET_ORG=sandbox
 CASEOPS_PRODUCTION_INSTANCE_URL=https://login.salesforce.com
 CASEOPS_SANDBOX_INSTANCE_URL=https://test.salesforce.com
 SF_PROD_ACCESS_TOKEN=...

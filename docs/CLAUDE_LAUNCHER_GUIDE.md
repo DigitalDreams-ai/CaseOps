@@ -23,7 +23,7 @@ CaseOps stores it as `CLAUDE_CODE_OAUTH_TOKEN` in the active env file.
 From the repo root:
 
 ```bash
-claude -p "Process HEAL-12345 through the full jira-salesforce-fix-pipeline skill."
+claude -p "Process ISSUE-12345 through the full jira-salesforce-fix-pipeline skill."
 ```
 
 The normal GUI path is preferred because it injects the current CaseOps prompt, output paths, org-knowledge context, and log parsing expectations.
@@ -35,7 +35,7 @@ In Claude Code:
 ```text
 /jira-salesforce-fix-pipeline
 
-Process HEAL-12345 through the full pipeline.
+Process ISSUE-12345 through the full pipeline.
 ```
 
 ## Required Context

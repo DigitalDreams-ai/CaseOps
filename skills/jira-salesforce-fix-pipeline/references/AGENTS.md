@@ -46,7 +46,7 @@ Magic links are pre-authenticated Salesforce browser URLs that allow CaseOps sub
 Used only for **read-only visual Production UI inspection** when CLI/SOQL cannot answer the question. Use `sf` CLI for Steps 5 and 6 metadata retrieval.
 
 ```
-CASEOPS_PRODUCTION_MAGIC_LINK=https://10xhealth.my.salesforce.com/secur/frontdoor.jsp?sid=00D0b000000vHFc!AQEAQBx...
+CASEOPS_PRODUCTION_MAGIC_LINK=https://prod-read.my.salesforce.com/secur/frontdoor.jsp?sid=00D0b000000vHFc!AQEAQBx...
 ```
 
 **How to get:**
@@ -62,7 +62,7 @@ CASEOPS_PRODUCTION_MAGIC_LINK=https://10xhealth.my.salesforce.com/secur/frontdoo
 Used only for **visual Sandbox UI inspection** or UI-only actions. Use `sf project deploy`, `sf data query`, and Apex test commands for Step 9 deploy/test.
 
 ```
-CASEOPS_SANDBOX_MAGIC_LINK=https://10xhealth--sean.sandbox.my.salesforce.com/secur/frontdoor.jsp?sid=00DEa00000RViur!AQEAQPx...
+CASEOPS_SANDBOX_MAGIC_LINK=https://prod-read--sean.sandbox.my.salesforce.com/secur/frontdoor.jsp?sid=00DEa00000RViur!AQEAQPx...
 ```
 
 **How to get:**

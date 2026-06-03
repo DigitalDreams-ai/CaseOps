@@ -282,7 +282,7 @@
   const selectedIssues = new Set();
   let currentSort = 'number';
   let selectMode = false;
-  const pipelineProgress = {}; // Track progress per issue: { 'HEAL-123': {step: 4, lastUpdate: timestamp, status: 'running'|'failed'|'stuck'} }
+  const pipelineProgress = {}; // Track progress per issue: { 'ISSUE-123': {step: 4, lastUpdate: timestamp, status: 'running'|'failed'|'stuck'} }
 
   let cachedMessages = null;
   let loadIssuesInProgress = false;
@@ -804,7 +804,7 @@
             '</a><span class="overview-rollup-hint"> · markdown file</span>';
         } else {
           rollupEl.innerHTML =
-            '<p class="overview-empty">No issue-summary-YYYY-MM-DD.md yet. Run sync or reprocess.</p>';
+            '<p class="overview-empty">No daily summary file yet (outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md). Run sync or reprocess.</p>';
         }
       })
       .catch(() => {
@@ -1983,7 +1983,7 @@
 
   function updateProgressFromLogLine(runKey, line) {
     const normalized = String(line || '').replace(/\*\*/g, '').replace(/[“”"]/g, ' ');
-    const stepMatch = normalized.match(/\bSTEP_(\d+)(?:_LOOP)?\b[^A-Z0-9]*(HEAL-\d+)/i);
+    const stepMatch = normalized.match(/\bSTEP_(\d+)(?:_LOOP)?\b[^A-Z0-9]*([A-Z][A-Z0-9]+-\d+)/i);
     if (stepMatch) {
       updateStepIndicator(stepMatch[2], parseInt(stepMatch[1], 10));
       return;
@@ -1994,12 +1994,33 @@
       return;
     }
     if (runKey === '__global__') return;
-    if (/^-- exit code [1-9]/.test(line) || /^ERROR:|^ERR:/.test(line)) {
+    if (isTerminalPipelineFailure(line)) {
       updateStepIndicator(runKey, 'FAILED');
       return;
     }
     const step = parsePipelineStep(line);
     if (step) updateStepIndicator(runKey, step);
+  }
+
+  function isTerminalPipelineFailure(line) {
+    const text = String(line || '').trim();
+    if (/^-- exit code [1-9]/.test(text)) return true;
+    return /^ERROR:\s*(CaseOps runtime preflight failed|Runtime preflight failed unexpectedly|Jira sync failed|Claude process|Anthropic API|Python package|ANTHROPIC_API_KEY|Cannot use fallback|Fallback launch failed|CASEOPS_SANDBOX_TARGET_ORG|`claude` CLI|Pipeline not started|.*failed unexpectedly)/i.test(text);
+  }
+
+  function formatLogTs(ts) {
+    if (!ts) return '';
+    const parsed = new Date(ts);
+    if (Number.isNaN(parsed.getTime())) return '';
+    const hh = String(parsed.getHours()).padStart(2, '0');
+    const mm = String(parsed.getMinutes()).padStart(2, '0');
+    const ss = String(parsed.getSeconds()).padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
+  }
+
+  function formatLogLineEntry(entry) {
+    const ts = formatLogTs(entry && entry.ts);
+    return ts ? `[${ts}] ${entry.text || ''}` : (entry.text || '');
   }
 
   async function loadPipelineHistory(key, expectedIssueSeq, recoverProgress = false) {
@@ -2019,7 +2040,7 @@
       for (const e of entries) {
         if (e.kind === 'done') continue;
         const text = e.text != null ? String(e.text) : '';
-        lines.push({ text, cls: inferLogCls(text) });
+        lines.push({ text, ts: e.ts || '', cls: inferLogCls(text) });
         if (recoverProgress && activeRuns.has(key)) {
           updateProgressFromLogLine(key, text);
         }
@@ -2033,11 +2054,13 @@
     } catch (_) {}
   }
 
-  function _appendLogDOM(text, cls) {
+  function _appendLogDOM(entry) {
     const el = document.getElementById('log-output');
     if (!el) return;
     const line = document.createElement('div');
+    const cls = entry && entry.cls;
     const normalizedCls = cls === 'err' ? 'error' : cls;
+    const text = formatLogLineEntry(entry || {});
     line.className = normalizedCls ? `log-line ${normalizedCls}` : 'log-line';
     line.textContent = text;
     el.appendChild(line);
@@ -2048,14 +2071,14 @@
     const key = forKey !== undefined ? forKey : (activeKey || '__global__');
     const effCls = cls !== undefined ? cls : inferLogCls(text);
     const buf = _logBuf(key);
-    buf.lines.push({text, cls: effCls});
+    buf.lines.push({text, ts: new Date().toISOString(), cls: effCls});
     // Cap buffer to prevent memory bloat; mark as truncated when capping
     if (buf.lines.length > LOG_BUFFER_CAP) {
       buf.lines.shift();
       buf.truncated = true;
     }
     const viewing = key === (activeKey || '__global__');
-    if (viewing) _appendLogDOM(text, effCls);
+    if (viewing) _appendLogDOM(buf.lines[buf.lines.length - 1]);
   }
 
   function renderLogForKey(key) {
@@ -2068,7 +2091,7 @@
       notice.textContent = '... (earlier logs truncated, scroll to see latest)';
       el.appendChild(notice);
     }
-    buf.lines.forEach(({text, cls}) => _appendLogDOM(text, cls));
+    buf.lines.forEach((entry) => _appendLogDOM(entry));
   }
 
   async function clearLog() {
@@ -2114,7 +2137,7 @@
     const key = activeKey || '__global__';
     const buf = _logBuf(key);
     const prefix = buf.truncated ? ['... (earlier logs truncated)'] : [];
-    const text = prefix.concat(buf.lines.map(({text}) => text)).join('\n');
+    const text = prefix.concat(buf.lines.map(formatLogLineEntry)).join('\n');
     try {
       await writeClipboardText(text);
       logLine('Pipeline log copied to clipboard.', 'ok', key);

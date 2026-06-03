@@ -43,7 +43,7 @@ Example:
 ```json
 {
   "action": "full_issue",
-  "key": "HEAL-12345"
+  "key": "ISSUE-12345"
 }
 ```
 
@@ -70,12 +70,11 @@ Use `?format=raw` for raw markdown/text.
 | `POST` | `/api/settings` | Save supported settings |
 | `GET` | `/api/settings/status` | Fast runtime readiness summary |
 | `POST` | `/api/setup/salesforce-auth` | Authenticate container `sf` from saved tokens |
-| `GET` | `/setup/refresh-salesforce-tokens` | Salesforce token form |
-| `POST` | `/api/setup/refresh-salesforce-tokens` | Save Salesforce access/refresh tokens |
+| `POST` | `/api/setup/refresh-salesforce-tokens` | Save Salesforce access/refresh tokens from Settings |
 | `GET` | `/setup/claude-login` | Claude Code token form |
 | `POST` | `/api/setup/claude-credentials` | Save `CLAUDE_CODE_OAUTH_TOKEN` |
 
-Salesforce refresh token input may be either a raw refresh token or the full `result.sfdxAuthUrl` from `sf org auth show-sfdx-auth-url --json`.
+Salesforce auth is entered from `/settings`. Refresh token input may be either a raw refresh token or the full `result.sfdxAuthUrl` from `sf org auth show-sfdx-auth-url --json`.
 
 ## Canned Messages
 

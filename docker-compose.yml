@@ -11,8 +11,8 @@ services:
     env_file:
       - .env.jira.nas
     volumes:
-      # Persistent output files (use ./instance1/outputs for single-instance NAS)
-      - ./instance1/outputs:/app/instance1/outputs
+      # Persistent state for single-instance NAS lives in appdata.
+      - /volume1/docker/appdata/caseops/instance1:/app/instance1
       # Mount .env.jira.nas for NAS/Linux (use .env.jira for local Windows dev).
       # Must be writable: token refresh and Settings update this file.
       - ./.env.jira.nas:/app/.env.jira
@@ -32,13 +32,18 @@ services:
     environment:
       # Flask listens internally on 5000; exposed as 5350 on host
       CASEOPS_PORT: "5000"
-      # Single-instance NAS deployment: use instance1 output directory
+      HOME: /home/caseops
+      SF_DATA_DIR: /app/instance1/.sf
+      SFDX_DIR: /app/instance1/.sfdx
+      # Single-instance NAS deployment: use appdata-backed instance1 directory
       CASEOPS_OUTPUTS_DIR: "/app/instance1/outputs"
+      CASEOPS_JIRA_OUT_DIR: "/app/instance1/outputs/jira"
       # Optional: set workspace
       # CASEOPS_WORKSPACE: "default"
       # Salesforce credentials: loaded from .env.jira.nas via env_file directive above
       # CASEOPS_PRODUCTION_READ_ORG, CASEOPS_SANDBOX_TARGET_ORG, CASEOPS_*_INSTANCE_URL, SF_PROD_*, SF_SANDBOX_* all available
     restart: unless-stopped
+    # Match NAS host ownership for bind mounts via image user mapping.
     # Synology-specific: change "bridge" to your network if using custom network
     networks:
       - caseops-net

@@ -14,7 +14,14 @@ if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && [ -f /app/.env.jira ]; then
 fi
 
 # Initialize Claude Code settings directory.
-mkdir -p ~/.claude || true
+# Use a guaranteed writable home for Claude metadata and avoid relying on inherited
+# HOME values from the host/legacy shells when running as a numeric user.
+caseops_home="${HOME:-/home/caseops}"
+if [ -z "$caseops_home" ] || [ "$caseops_home" = "/" ] || [ "$caseops_home" = "//" ] || [ "$caseops_home" = "C:Userssean" ]; then
+  caseops_home="/home/caseops"
+fi
+export HOME="$caseops_home"
+mkdir -p "$HOME/.claude" || true
 
 # Check for preferred non-interactive OAuth token.
 if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
@@ -42,7 +49,11 @@ while true; do
   fi
 
   # Reinitialize Claude Code settings directory.
-  mkdir -p ~/.claude || true
+  if [ -z "$caseops_home" ] || [ "$caseops_home" = "/" ] || [ "$caseops_home" = "//" ] || [ "$caseops_home" = "C:Userssean" ]; then
+    caseops_home="/home/caseops"
+  fi
+  export HOME="$caseops_home"
+  mkdir -p "$HOME/.claude" || true
 
   if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
     echo "Claude Code OAuth token configured"

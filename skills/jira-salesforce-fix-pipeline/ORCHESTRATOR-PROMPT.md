@@ -115,7 +115,7 @@ Before creating new metadata, confirm it does not already exist in Production (S
 
 ### Step 11: Dated Summary (You do this)
 After all active issues processed through Steps 3-10:
-1. Generate `outputs/issue-summary-YYYY-MM-DD.md` with:
+1. Generate `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` with:
    - **Executive Summary:** total issues, closed count, active count, escalations, deployments, blockers
    - **Closed/Resolved:** table of skipped issues
    - **Active Issues:** table of processed (support-fixed) issues
@@ -136,7 +136,7 @@ After all active issues processed through Steps 3-10:
    - On-hold / blockers: N
    - Closed/Resolved (skipped): N
    
-   Dated Summary: outputs/issue-summary-YYYY-MM-DD.md
+   Dated Summary: outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md
    
    NEXT STEPS (USER ACTION):
    1. Review dated summary
@@ -194,14 +194,14 @@ You emit progress lines to stdout:
 ```
 STEP_1 __sync__
 STEP_2 __triage__
-STEP_3 HEAL-33753
-STEP_4 HEAL-33753
-STEP_5 HEAL-33753
-STEP_6 HEAL-33753
-STEP_7 HEAL-33753
-STEP_8 HEAL-33753
-STEP_9 HEAL-33753
-STEP_10 HEAL-33753
+STEP_3 ISSUE-33753
+STEP_4 ISSUE-33753
+STEP_5 ISSUE-33753
+STEP_6 ISSUE-33753
+STEP_7 ISSUE-33753
+STEP_8 ISSUE-33753
+STEP_9 ISSUE-33753
+STEP_10 ISSUE-33753
 STEP_11 __summary__
 STEP_12 __complete__
 ```
@@ -229,28 +229,28 @@ UI parses these to update real-time progress indicator.
 ## Example Flow (Single Issue, Both Paths)
 
 ```
-User: "Process HEAL-33753"
+User: "Process ISSUE-33753"
 
 ORCHESTRATOR:
-1. Read manifest.csv, find HEAL-33753
+1. Read manifest.csv, find ISSUE-33753
 2. Not closed, not escalated → active
-3. Scaffold investigations/HEAL-33753.md
-4. STEP_3 HEAL-33753 → Invoke jira-issue-analysis
+3. Scaffold investigations/ISSUE-33753.md
+4. STEP_3 ISSUE-33753 → Invoke jira-issue-analysis
 5. Receive: "Root cause = Flow condition mismatch. Missing OR clause."
-6. STEP_4 HEAL-33753 → Synthesize hypothesis, save to step-4-hypothesis/HEAL-33753.md
-7. STEP_5 HEAL-33753 → Invoke metadata investigation (retrieval)
+6. STEP_4 ISSUE-33753 → Synthesize hypothesis, save to step-4-hypothesis/ISSUE-33753.md
+7. STEP_5 ISSUE-33753 → Invoke metadata investigation (retrieval)
 8. Receive: "Flow 'Order Sync' found at Setup > Flows > Order Sync"
-9. STEP_6 HEAL-33753 → Invoke metadata investigation (drilling)
+9. STEP_6 ISSUE-33753 → Invoke metadata investigation (drilling)
 10. Receive: "Failure at condition node. Missing record type 'Phone Order'."
-11. STEP_7 HEAL-33753 → Decide: Flow modification = Engineering-required. ESCALATE.
-12. STEP_8 HEAL-33753 → Implement: Document proposed change (add OR condition for record type)
-13. STEP_9 HEAL-33753 → Invoke salesforce-sandbox-deploy-test (test proposed solution)
+11. STEP_7 ISSUE-33753 → Decide: Flow modification = Engineering-required. ESCALATE.
+12. STEP_8 ISSUE-33753 → Implement: Document proposed change (add OR condition for record type)
+13. STEP_9 ISSUE-33753 → Invoke salesforce-sandbox-deploy-test (test proposed solution)
 14. Receive: Deployment test shows Flow modification would fix the condition node
-15. Save to test-reports/HEAL-33753.md
-16. STEP_10 HEAL-33753 → Invoke jira-response-drafting (with test results + escalation info)
-17. Receive: jira-messages/HEAL-33753.md and internal-notes/HEAL-33753.md
-18. Create engineering-escalations/HEAL-33753.md with problem location + root cause + proposed solution from Step 9
-19. STEP_11 → Update issue-summary-YYYY-MM-DD.md: add to Escalated section
+15. Save to test-reports/ISSUE-33753.md
+16. STEP_10 ISSUE-33753 → Invoke jira-response-drafting (with test results + escalation info)
+17. Receive: jira-messages/ISSUE-33753.md and internal-notes/ISSUE-33753.md
+18. Create engineering-escalations/ISSUE-33753.md with problem location + root cause + proposed solution from Step 9
+19. STEP_11 → Update outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md: add to Escalated section
 20. STEP_12 → Print completion report
 
 Result: Engineering handoff ready with concrete proposed solution. Customer notified. Sandbox validation confirms fix approach.

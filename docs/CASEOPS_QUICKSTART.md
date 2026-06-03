@@ -31,16 +31,16 @@ Use [User Guide](USER_GUIDE.md) for the full walkthrough.
 Salesforce:
 
 ```bash
-sf org auth show-access-token -o 10xhealth --json
-sf org auth show-access-token -o 10xhealth-sean --json
-sf org auth show-sfdx-auth-url -o 10xhealth --json
-sf org auth show-sfdx-auth-url -o 10xhealth-sean --json
+sf org auth show-access-token -o prod-read --json
+sf org auth show-access-token -o sandbox --json
+sf org auth show-sfdx-auth-url -o prod-read --json
+sf org auth show-sfdx-auth-url -o sandbox --json
 ```
 
-Paste values at:
+Paste values in Settings:
 
 ```text
-/setup/refresh-salesforce-tokens
+/settings
 ```
 
 Claude:
@@ -49,10 +49,10 @@ Claude:
 claude setup-token
 ```
 
-Paste the token at:
+Paste the token in Settings, or use the Claude token setup page:
 
 ```text
-/setup/claude-login
+/settings
 ```
 
 ## Safety

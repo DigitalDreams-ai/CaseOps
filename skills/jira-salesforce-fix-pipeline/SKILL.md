@@ -65,7 +65,7 @@ This skill orchestrates the complete pipeline from issue sync through summary ge
 
 **CRITICAL: Step Progress Tracking**
 
-Throughout Steps 1–12, you MUST emit step progress lines to stdout in the format `STEP_N identifier` (e.g., `STEP_3 HEAL-33753`). These lines are parsed by the CaseOps GUI in real-time to update the pipeline progress indicator. Without these explicit output lines, the progress indicator will not display. Do not launch background pipeline work and say you will be notified later; execute sequentially in the current Claude Code run and stream progress as each step starts and finishes. Do not use the Workflow tool, `/workflows`, detached scripts, background shell jobs, `nohup`, or any runner that returns a task ID instead of streaming current work. Sub-agents are allowed only when the playbook calls for them and their results are awaited before the next pipeline step.
+Throughout Steps 1–12, you MUST emit step progress lines to stdout in the format `STEP_N identifier` (e.g., `STEP_3 ISSUE-33753`). These lines are parsed by the CaseOps GUI in real-time to update the pipeline progress indicator. Without these explicit output lines, the progress indicator will not display. Do not launch background pipeline work and say you will be notified later; execute sequentially in the current Claude Code run and stream progress as each step starts and finishes. Do not use the Workflow tool, `/workflows`, detached scripts, background shell jobs, `nohup`, or any runner that returns a task ID instead of streaming current work. Sub-agents are allowed only when the playbook calls for them and their results are awaited before the next pipeline step.
 
 Do not `source .env.jira` in shell commands. CaseOps exports the runtime variables needed by the pipeline, and `.env.jira` may contain values with spaces that are not shell-safe. Use the exported canonical aliases directly: `CASEOPS_PRODUCTION_READ_ORG` for Production and `CASEOPS_SANDBOX_TARGET_ORG` for Sandbox.
 
@@ -79,7 +79,7 @@ For global runs that process multiple issues, emit a single timestamped line at 
 
 Before running:
 1. **Ensure `.env.jira` is configured** with Jira credentials, Salesforce orgs, and URLs.
-2. **Verify `CASEOPS_SANDBOX_TARGET_ORG`** is set in the active env file (e.g., `10xhealth-sean`). This is the **only** org that may receive Step 8–9 Sandbox deploys.
+2. **Verify `CASEOPS_SANDBOX_TARGET_ORG`** is set in the active env file (e.g., `sandbox`). This is the **only** org that may receive Step 8–9 Sandbox deploys.
 3. **Python 3** and **sf CLI** are available on the system.
 
 ### Execution Flow
@@ -117,7 +117,7 @@ Create progress tracking file: `outputs/pipeline-logs/<RUN_DATE>.log`
 **Step 3 — Analyze issue (Sub-agent)**
 
 For each active issue:
-1. **Emit to stdout:** `STEP_3 <ISSUE_KEY>` (replace <ISSUE_KEY> with the actual key, e.g., `STEP_3 HEAL-33753`)
+1. **Emit to stdout:** `STEP_3 <ISSUE_KEY>` (replace <ISSUE_KEY> with the actual key, e.g., `STEP_3 ISSUE-33753`)
 2. Spawn a sub-agent via the Agent tool using the **Step 3 prompt** from `references/sub-agent-prompts.md`. Retain only the ~300-token summary returned.
 
 **Step 4 — Synthesize hypothesis (Orchestrator)**
@@ -187,9 +187,9 @@ After messaging, create `outputs/engineering-escalations/<KEY>.md` using `assets
 
 **Emit to stdout:** `STEP_11 __summary__`
 
-After all active issues are processed through Steps 3–10, generate `outputs/issue-summary-YYYY-MM-DD.md` using `assets/issue-summary-template.md`.
+After all active issues are processed through Steps 3–10, generate `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` using `assets/issue-summary-template.md`.
 
-Before writing the dated summary, check whether today's `outputs/issue-summary-YYYY-MM-DD.md` already exists. If it exists, Read it and then Edit it. Use Write only when the dated summary file does not already exist.
+Before writing the dated summary, check whether today's `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` already exists. If it exists, Read it and then Edit it. Use Write only when the dated summary file does not already exist.
 
 **Required sections:**
 
@@ -243,15 +243,15 @@ Processing Summary:
 - On-hold / blockers: N
 - Closed/Resolved (skipped): N
 
-Dated Summary: outputs/issue-summary-YYYY-MM-DD.md
+   Dated Summary: outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md
 
 NEXT STEPS FOR USER (Step 12 — Manual):
 
 1. Review dated summary
-   File: outputs/issue-summary-YYYY-MM-DD.md
+   File: outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md
 
 2. Post Jira messages (customer-facing)
-   - HEAL-XXXXX: outputs/jira-messages/HEAL-XXXXX.md
+   - ISSUE-XXXXX: outputs/jira-messages/ISSUE-XXXXX.md
    - [Additional issues...]
 
 3. Promote confirmed Support packages via Gearset or standard change control (if needed)

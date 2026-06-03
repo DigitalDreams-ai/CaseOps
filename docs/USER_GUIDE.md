@@ -45,16 +45,16 @@ The pipeline streams real-time progress lines and issue logs. Issue cards should
 
 ## Salesforce Authentication
 
-Use Settings or `/setup/refresh-salesforce-tokens`.
+Use Settings.
 
 On an authenticated local machine:
 
 ```bash
-sf org login web --alias 10xhealth
-sf org login web --alias 10xhealth-sean --instance-url https://test.salesforce.com
+sf org login web --alias prod-read
+sf org login web --alias sandbox --instance-url https://test.salesforce.com
 
-sf org auth show-access-token -o 10xhealth --json
-sf org auth show-access-token -o 10xhealth-sean --json
+sf org auth show-access-token -o prod-read --json
+sf org auth show-access-token -o sandbox --json
 ```
 
 Paste each `result.accessToken`.
@@ -62,8 +62,8 @@ Paste each `result.accessToken`.
 For automatic refresh, also run:
 
 ```bash
-sf org auth show-sfdx-auth-url -o 10xhealth --json
-sf org auth show-sfdx-auth-url -o 10xhealth-sean --json
+sf org auth show-sfdx-auth-url -o prod-read --json
+sf org auth show-sfdx-auth-url -o sandbox --json
 ```
 
 Paste each full `result.sfdxAuthUrl`. That Salesforce auth URL contains the refresh token. CaseOps extracts and stores only the refresh-token value in the active env file.

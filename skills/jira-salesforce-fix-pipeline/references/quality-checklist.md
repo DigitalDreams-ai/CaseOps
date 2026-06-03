@@ -25,6 +25,6 @@ Verify before treating a run as complete.
 - The target Sandbox is explicit in the Step 9 sub-agent prompt and matches `.env.jira` before deployment.
 - Tests map to Jira acceptance criteria.
 - Failed iterations are recorded in `outputs/investigations/<KEY>.md` before re-spawning sub-agents.
-- The dated issue summary `outputs/issue-summary-YYYY-MM-DD.md` is created or updated after all issues are processed.
+- The dated issue summary `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` is created or updated after all issues are processed.
 - The summary includes Closed/Resolved skips, Engineering escalations, and active pipeline results.
 - Final Jira message is factual and avoids overclaiming.

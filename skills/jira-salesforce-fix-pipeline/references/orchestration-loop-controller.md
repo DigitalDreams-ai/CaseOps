@@ -9,7 +9,7 @@ This document describes the loop logic for processing active issues through Step
 **Input:** Active issue list from `outputs/jira/manifest.csv` (post-triage from Step 2)
 
 **Processing:**
-1. For each active issue (HEAL-XXXXX):
+1. For each active issue (ISSUE-XXXXX):
    - Steps 3–7: Diagnosis loop (analysis → hypothesis → metadata → location → escalation gate)
    - Step 7 decision: Branch to Support or Engineering path
    - Support path: Steps 8–10 (implement → deploy/test → draft messages)
@@ -17,7 +17,7 @@ This document describes the loop logic for processing active issues through Step
    - Step 10: Message drafting (customer-facing + internal)
    - After Step 10: Log outcome in dated summary
 
-**Output:** Dated summary file `outputs/issue-summary-YYYY-MM-DD.md` with all issues rolled up
+**Output:** Dated summary file `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` with all issues rolled up
 
 ---
 
@@ -47,7 +47,7 @@ For long runs (15+ issues), create per-issue progress file: `outputs/pipeline-lo
 
 Example content:
 ```
-Issue: HEAL-33618
+Issue: ISSUE-33618
 Received: 2026-05-20T14:30:00Z
 Current step: 9
 Last update: 2026-05-20T15:15:00Z (testing in Sandbox)
@@ -289,7 +289,7 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
         summary_data=summary_data,
         template="assets/issue-summary-template.md",
         date=TODAY,
-        output_file=f"outputs/issue-summary-{TODAY}.md"
+        output_file=f"outputs/summaries/{TODAY}/issue-summary-{TODAY}.md"
     )
     log(f"STEP_11 ✓ Summary generated: {summary_output_path}")
     
@@ -382,7 +382,7 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
 
 ## Summary Generation (Step 11)
 
-After all issues are processed, generate `outputs/issue-summary-YYYY-MM-DD.md` using `assets/issue-summary-template.md`.
+After all issues are processed, generate `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` using `assets/issue-summary-template.md`.
 
 **Sections to populate:**
 
@@ -429,20 +429,20 @@ Closed/Resolved (skipped): 2
 Engineering escalations: 2
 Support-fixed: 1
 
-✓ Dated summary: outputs/issue-summary-2026-05-20.md
-✓ Jira message drafts: outputs/jira-messages/HEAL-*.md
-✓ Internal notes: outputs/internal-notes/HEAL-*.md
+✓ Dated summary: outputs/summaries/2026-05-20/issue-summary-2026-05-20.md
+✓ Jira message drafts: outputs/jira-messages/ISSUE-*.md
+✓ Internal notes: outputs/internal-notes/ISSUE-*.md
 ✓ Run log: outputs/pipeline-logs/20260520-143000.log
 
 NEXT STEPS FOR USER (Step 12):
-1. Review dated summary: outputs/issue-summary-2026-05-20.md
+1. Review dated summary: outputs/summaries/2026-05-20/issue-summary-2026-05-20.md
 2. Post Jira messages:
-   - HEAL-33618: outputs/jira-messages/HEAL-33618.md
+   - ISSUE-33618: outputs/jira-messages/ISSUE-33618.md
 3. Promote confirmed Support packages via Gearset or standard change control (if needed):
-   - HEAL-33618 (Gearset deployment required)
+   - ISSUE-33618 (Gearset deployment required)
 4. Coordinate with Engineering:
-   - HEAL-33633: outputs/engineering-escalations/HEAL-33633.md
-   - HEAL-33369: outputs/engineering-escalations/HEAL-33369.md
+   - ISSUE-33633: outputs/engineering-escalations/ISSUE-33633.md
+   - ISSUE-33369: outputs/engineering-escalations/ISSUE-33369.md
 
 Total runtime: 2 hours 15 minutes
 ```

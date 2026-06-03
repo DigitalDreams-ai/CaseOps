@@ -1,56 +1,70 @@
-FROM python:3.11-slim
+FROM node:20-slim
 
 WORKDIR /app
 
-# Install system deps + Node.js (for sf CLI)
-RUN apt-get update && apt-get install -y \
+# Install system deps + Python runtime.
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     git \
     unzip \
     jq \
-    nodejs \
-    npm \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code CLI
-RUN npm install -g @anthropic-ai/claude-code
+RUN ln -sf /usr/bin/python3 /usr/local/bin/python && \
+    ln -sf /usr/bin/pip3 /usr/local/bin/pip
 
-# Install Salesforce CLI
-RUN npm install -g @salesforce/cli
+# Install Claude Code CLI
+RUN npm install -g @anthropic-ai/claude-code @salesforce/cli
 
 # Install CumulusCI (for CI/CD, scratch orgs, sandboxes)
-RUN pip install --no-cache-dir cumulusci
-
-# Copy project source.
-COPY . /app
+RUN python3 -m pip install --no-cache-dir --break-system-packages cumulusci
 
 # Install Python deps
-RUN pip install --no-cache-dir flask markdown anthropic
+RUN python3 -m pip install --no-cache-dir --break-system-packages flask markdown anthropic
 
-# Create non-root user for Claude Code CLI (avoids root permission restrictions)
-RUN useradd -m -s /bin/bash -d /home/caseops caseops && \
-    chown -R caseops:caseops /app
+# Create non-root user for Claude Code CLI (explicit 1027:100 to match Synology mounts).
+RUN set -eux; \
+    if ! getent group 100 >/dev/null 2>&1; then \
+      groupadd -g 100 -o -r caseops-group; \
+    fi; \
+    if getent passwd caseops >/dev/null 2>&1; then \
+      usermod -u 1027 -g 100 -d /home/caseops caseops || true; \
+    else \
+      useradd -m -s /bin/bash -u 1027 -g 100 -d /home/caseops caseops; \
+    fi && \
+    mkdir -p /home/caseops && \
+    chown -R 1027:100 /home/caseops
 
-# Create outputs volume mount point with proper permissions
-RUN mkdir -p /app/outputs && chown caseops:caseops /app/outputs
+# Copy only product files. Runtime data, credentials, local Salesforce metadata,
+# Jira outputs, screenshots, and issue logs must stay in bind-mounted appdata.
+COPY --chown=1027:100 app.py jira_sync.py run_pipeline.py skill_registry.py caseops_paths.py canned-messages.json docker-entrypoint.sh /app/
+COPY --chown=1027:100 templates/ /app/templates/
+COPY --chown=1027:100 static/ /app/static/
+COPY --chown=1027:100 skills/ /app/skills/
+COPY --chown=1027:100 scripts/ /app/scripts/
+COPY --chown=1027:100 docs/*.md /app/docs/
+
+# Create output/cache mount points with proper permissions.
+RUN mkdir -p /app/outputs /app/instance1/outputs /app/instance1/.temp && \
+    chown -R 1027:100 /app/outputs /app/instance1
 
 # Expose Flask port
 EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/ || exit 1
+    CMD curl -f http://localhost:5000/api/status || exit 1
 
 # Create Claude Code settings directory before switching to caseops user.
 RUN mkdir -p /home/caseops/.claude && \
     chmod 700 /home/caseops/.claude && \
-    chown caseops:caseops /home/caseops/.claude
+    chown 1027:100 /home/caseops/.claude
 
 # Claude Code auth is provided at runtime with CLAUDE_CODE_OAUTH_TOKEN.
 
-# Copy entrypoint script and make executable (before switching to caseops user)
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 # Run as non-root user

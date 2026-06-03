@@ -109,19 +109,19 @@ CaseOps saves `CLAUDE_CODE_OAUTH_TOKEN` in the active env file. Do not mount hos
 On an authenticated local machine:
 
 ```bash
-sf org login web --alias 10xhealth
-sf org login web --alias 10xhealth-sean --instance-url https://test.salesforce.com
+sf org login web --alias prod-read
+sf org login web --alias sandbox --instance-url https://test.salesforce.com
 
-sf org auth show-access-token -o 10xhealth --json
-sf org auth show-access-token -o 10xhealth-sean --json
-sf org auth show-sfdx-auth-url -o 10xhealth --json
-sf org auth show-sfdx-auth-url -o 10xhealth-sean --json
+sf org auth show-access-token -o prod-read --json
+sf org auth show-access-token -o sandbox --json
+sf org auth show-sfdx-auth-url -o prod-read --json
+sf org auth show-sfdx-auth-url -o sandbox --json
 ```
 
-Paste access tokens and optional full `result.sfdxAuthUrl` values at:
+Paste access tokens and optional full `result.sfdxAuthUrl` values in Settings:
 
 ```text
-http://10.0.1.10:5350/setup/refresh-salesforce-tokens
+http://10.0.1.10:5350/settings
 ```
 
 CaseOps authenticates `sf` inside the container from env tokens. Do not mount host `~/.sf` or `~/.sfdx`.

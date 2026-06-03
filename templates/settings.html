@@ -10,6 +10,7 @@
             overflow-y: auto !important;
             overflow-x: hidden;
         }
+
         body {
             background: var(--color-bg);
             color: var(--color-text);
@@ -18,294 +19,468 @@
             line-height: 1.5;
             padding: 20px;
         }
+
         #settings-container {
-            max-width: 900px;
-            margin: 0 auto;
+            max-width: 1180px;
+            margin: 0 auto 40px;
         }
+
         .settings-header {
             display: flex;
             align-items: center;
-            margin-bottom: 30px;
-            gap: 15px;
+            gap: 14px;
+            margin-bottom: 18px;
         }
+
         .settings-header img {
             width: 32px;
             height: 32px;
         }
+
         .settings-header h1 {
             margin: 0;
             font-size: 24px;
+            line-height: 1.1;
         }
+
+        .settings-header p {
+            margin: 4px 0 0;
+            color: var(--color-text-secondary);
+            font-size: 13px;
+        }
+
         .settings-header a {
             margin-left: auto;
-            padding: 6px 12px;
+            padding: 7px 12px;
             background: var(--color-surface);
             border: 1px solid var(--color-border);
             color: var(--color-text);
             text-decoration: none;
             border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.2s;
         }
+
         .settings-header a:hover {
             background: var(--color-border);
         }
-        .settings-section {
-            background: var(--color-surface);
-            border: 1px solid var(--color-border);
-            border-radius: 6px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .settings-section h2 {
-            margin: 0 0 15px 0;
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--color-primary);
-        }
-        .settings-field {
-            margin-bottom: 15px;
-            display: grid;
-            grid-template-columns: 150px 1fr;
-            gap: 10px;
-            align-items: center;
-        }
-        .settings-field label {
-            font-weight: 500;
-            color: var(--color-text);
-        }
-        .settings-field input,
-        .settings-field select {
-            background: var(--color-bg);
-            border: 1px solid var(--color-border);
-            color: var(--color-text);
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 13px;
-            font-family: monospace;
-        }
-        .settings-field input:focus,
-        .settings-field select:focus {
-            outline: none;
-            border-color: var(--color-primary);
-        }
-        .settings-field input[type="password"] {
-            letter-spacing: 2px;
-        }
-        .test-button {
-            padding: 6px 12px;
-            background: var(--color-primary);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: background 0.2s;
-        }
-        .test-button:hover {
-            background: var(--color-primary-hover, #1f6feb);
-            filter: brightness(1.1);
-        }
-        .test-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .test-result {
-            display: inline-block;
-            margin-left: 10px;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-        .test-result.success {
-            background: var(--color-success);
-            color: white;
-        }
-        .test-result.error {
-            background: var(--color-danger);
-            color: white;
-        }
-        .test-result.pending {
-            background: var(--color-warn);
-            color: white;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
-            margin-right: 5px;
-        }
-        .status-badge.ok {
-            background: var(--color-success);
-            color: white;
-        }
-        .status-badge.not-ok {
-            background: var(--color-danger);
-            color: white;
-        }
-        .status-note {
-            font-size: 12px;
-            color: var(--color-text);
-            margin-top: 5px;
-            font-style: italic;
-        }
-        .org-status {
-            margin-bottom: 10px;
-        }
-        .org-status-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-        }
-        .org-alias {
-            font-family: monospace;
-            font-weight: 500;
-        }
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .button-primary {
-            padding: 8px 16px;
-            background: var(--color-primary);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-        .button-primary:hover {
-            filter: brightness(1.1);
-        }
-        .button-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+
         .banner {
+            display: none;
             padding: 12px 15px;
             border-radius: 4px;
-            margin-bottom: 15px;
+            margin-bottom: 14px;
             font-size: 13px;
         }
+
         .banner.success {
             background: var(--color-success);
             color: white;
         }
+
         .banner.error {
             background: var(--color-danger);
             color: white;
         }
-        .lvm-option {
+
+        .settings-layout {
+            display: grid;
+            grid-template-columns: 240px minmax(0, 1fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .settings-nav {
+            position: sticky;
+            top: 16px;
+            display: grid;
+            gap: 6px;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        .settings-nav a {
+            color: var(--color-text);
+            text-decoration: none;
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .settings-nav a:hover {
+            background: var(--color-bg);
+        }
+
+        .settings-main {
+            min-width: 0;
+            display: grid;
+            gap: 16px;
+        }
+
+        .settings-section {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 18px;
+        }
+
+        .section-header {
             display: flex;
+            align-items: start;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .section-header h2 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 650;
+            color: var(--color-primary);
+        }
+
+        .section-header p {
+            margin: 4px 0 0;
+            color: var(--color-text-secondary);
+            font-size: 12px;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .settings-field {
+            display: grid;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .settings-field.full {
+            grid-column: 1 / -1;
+        }
+
+        .settings-field label {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--color-text);
+        }
+
+        .settings-field input,
+        .settings-field select,
+        .settings-field textarea {
+            width: 100%;
+            min-width: 0;
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            color: var(--color-text);
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+            box-sizing: border-box;
+        }
+
+        .settings-field textarea {
+            resize: vertical;
+        }
+
+        .settings-field input:focus,
+        .settings-field select:focus,
+        .settings-field textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        .field-note {
+            color: var(--color-text-secondary);
+            font-size: 12px;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .button-primary,
+        .button-secondary,
+        .button-danger,
+        .test-button,
+        .copy-button {
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: filter 0.15s, background 0.15s;
+        }
+
+        .button-primary,
+        .test-button,
+        .copy-button {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .button-secondary {
+            background: var(--color-bg);
+            border-color: var(--color-border);
+            color: var(--color-text);
+        }
+
+        .button-danger {
+            background: var(--color-danger);
+            color: white;
+        }
+
+        .button-primary,
+        .button-secondary,
+        .button-danger {
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+
+        .test-button {
+            padding: 7px 11px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .copy-button {
+            padding: 5px 8px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            filter: brightness(1.08);
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            filter: none;
+        }
+
+        .status-row,
+        .status-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .status-card {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            padding: 12px;
+            min-width: 0;
+        }
+
+        .status-card h3 {
+            margin: 0 0 8px;
+            font-size: 13px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 9px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 650;
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            color: var(--color-text);
+        }
+
+        .status-badge.ok {
+            background: var(--color-success);
+            border-color: var(--color-success);
+            color: white;
+        }
+
+        .status-badge.not-ok {
+            background: var(--color-danger);
+            border-color: var(--color-danger);
+            color: white;
+        }
+
+        .status-badge.warn {
+            background: var(--color-warn);
+            border-color: var(--color-warn);
+            color: white;
+        }
+
+        .test-result {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 650;
+        }
+
+        .test-result.success {
+            background: var(--color-success);
+            color: white;
+        }
+
+        .test-result.error {
+            background: var(--color-danger);
+            color: white;
+        }
+
+        .test-result.pending {
+            background: var(--color-warn);
+            color: white;
+        }
+
+        .inline-control {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .code-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .code-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .code-row code,
+        .path-list code {
+            display: block;
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .details-panel {
+            margin-top: 14px;
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            padding: 12px;
+        }
+
+        .details-panel summary {
+            cursor: pointer;
+            font-weight: 650;
+            color: var(--color-text);
+        }
+
+        .path-list {
+            display: grid;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .path-list strong {
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .org-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .org-card {
+            padding: 10px;
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-left: 3px solid var(--color-success);
+            border-radius: 4px;
+        }
+
+        .org-card-header {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
             gap: 10px;
             margin-bottom: 8px;
         }
-        .lvm-option input[type="radio"] {
-            margin: 0;
-        }
-        .section-collapsed {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s;
-        }
-        .section-collapsed.expanded {
-            max-height: 1000px;
-        }
-        .collapsible-header {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-        .collapsible-toggle {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 1px solid var(--color-border);
-            border-radius: 2px;
-            text-align: center;
-            line-height: 14px;
-            font-size: 12px;
-            user-select: none;
-        }
-        .auth-method-block {
-            margin: 15px 0;
-            padding: 10px;
-            background: var(--color-bg);
-            border-left: 3px solid var(--color-primary);
-            border-radius: 4px;
-        }
-        .auth-method-title {
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--color-primary);
-        }
-        .auth-command-group {
-            margin-bottom: 12px;
-        }
-        .auth-command-label {
-            font-size: 12px;
-            color: var(--color-text);
-            margin-bottom: 4px;
-            font-weight: 500;
-        }
-        .auth-command-box {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .auth-command-box code {
-            flex: 1;
-            background: var(--color-surface);
-            padding: 8px;
-            border: 1px solid var(--color-border);
-            border-radius: 3px;
-            font-size: 12px;
-            overflow-x: auto;
-            white-space: nowrap;
-            font-family: monospace;
-        }
-        .copy-button {
-            padding: 4px 8px;
-            background: var(--color-primary);
-            color: white;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-            white-space: nowrap;
-            transition: background 0.2s;
-        }
-        .copy-button:hover {
-            filter: brightness(1.1);
-        }
-        .copy-button:active {
-            transform: scale(0.98);
-        }
-        .hidden {
-            display: none;
-        }
-        .settings-section-grid {
+
+        .org-card-body {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 4px;
+            color: var(--color-text);
+            font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+            font-size: 12px;
         }
-        .settings-section-grid .settings-field {
-            grid-column: auto;
-            margin-bottom: 0;
+
+        #canned-messages-editor {
+            min-height: 300px;
         }
+
+        .error-box {
+            display: none;
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            background: var(--color-danger);
+            color: white;
+            font-size: 12px;
+        }
+
+        .form-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: 4;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 12px 0 0;
+            background: linear-gradient(to top, var(--color-bg) 75%, transparent);
+        }
+
         @media (max-width: 900px) {
-            .settings-section-grid {
+            body {
+                padding: 12px;
+            }
+
+            .settings-layout {
                 grid-template-columns: 1fr;
+            }
+
+            .settings-nav {
+                position: static;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .settings-grid,
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .settings-header {
+                flex-wrap: wrap;
+            }
+
+            .settings-header a {
+                margin-left: 0;
             }
         }
     </style>
@@ -313,220 +488,265 @@
 <body>
     <div id="settings-container">
         <div class="settings-header">
-            <img src="{{ url_for('static', filename='logo.svg') }}" alt="Logo">
-            <h1>Settings</h1>
-            <a href="/">← Back to CaseOps</a>
+            <img src="{{ url_for('static', filename='logo.svg') }}" alt="CaseOps">
+            <div>
+                <h1>Settings</h1>
+                <p>Runtime readiness, credentials, instance storage, and operator content.</p>
+            </div>
+            <a href="/">Back to CaseOps</a>
         </div>
 
         <div id="banner"></div>
 
-        <form id="settings-form">
-            <!-- Instance Display -->
-            <div class="settings-section">
-                <h2>Instance Display</h2>
-                <div class="settings-field">
-                    <label for="instance-display-label">Display Label:</label>
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <input type="text" id="instance-display-label" placeholder="e.g., Production, Sandbox, Dev" style="max-width: 300px;">
-                        <div style="font-size: 12px; color: var(--color-text); opacity: 0.8;">Custom label for browser tab and top bar. Leave blank to use workspace name.</div>
+        <div class="settings-layout">
+            <nav class="settings-nav" aria-label="Settings sections">
+                <a href="#runtime-section">Runtime</a>
+                <a href="#credentials-section">Credentials</a>
+                <a href="#salesforce-section">Salesforce</a>
+                <a href="#content-section">Content</a>
+                <a href="#instance-section">Instance</a>
+                <a href="#system-section">System</a>
+            </nav>
+
+            <div class="settings-main">
+                <section class="settings-section" id="runtime-section">
+                    <div class="section-header">
+                        <div>
+                            <h2>Runtime Readiness</h2>
+                            <p>These checks reflect the environment used by pipeline subprocesses.</p>
+                        </div>
+                        <button type="button" class="button-secondary" id="refresh-status-btn">Refresh status</button>
                     </div>
-                </div>
-            </div>
 
-            <!-- Jira -->
-            <div class="settings-section">
-                <h2>Jira</h2>
-                <div class="settings-field">
-                    <label for="jira-base-url">Base URL:</label>
-                    <input type="url" id="jira-base-url" name="JIRA_BASE_URL" placeholder="https://org.atlassian.net" autocomplete="off">
-                </div>
-                <div class="settings-field">
-                    <label for="jira-email">Email:</label>
-                    <input type="email" id="jira-email" name="JIRA_EMAIL" placeholder="user@example.com" autocomplete="off">
-                </div>
-                <div class="settings-field">
-                    <label for="jira-token">API Token:</label>
-                    <div style="display: flex; gap: 5px;">
-                        <input type="password" id="jira-token" name="JIRA_API_TOKEN" placeholder="••••••••" autocomplete="off">
-                        <button type="button" class="test-button" id="test-jira">Test Connection</button>
-                        <span id="jira-test-result" class="test-result"></span>
+                    <div class="status-grid">
+                        <div class="status-card">
+                            <h3>Pipeline</h3>
+                            <div id="runtime-status"><span class="status-badge">Checking</span></div>
+                        </div>
+                        <div class="status-card">
+                            <h3>Claude</h3>
+                            <div id="claude-status"><span class="status-badge">Checking</span></div>
+                        </div>
+                        <div class="status-card">
+                            <h3>Salesforce</h3>
+                            <div id="sf-auth-status"><span class="status-badge">Checking</span></div>
+                        </div>
                     </div>
-                </div>
-            </div>
+                </section>
 
-            <!-- Claude Code CLI (Subscription) -->
-            <div class="settings-section" id="claude-section">
-                <h2>Claude Code CLI Authentication</h2>
-                <div id="claude-status" style="margin-bottom: 15px; padding: 10px; border-radius: 4px; background: var(--color-bg); border: 1px solid var(--color-border);"></div>
+                <form id="settings-form">
+                    <section class="settings-section" id="credentials-section">
+                        <div class="section-header">
+                            <div>
+                                <h2>Jira And Claude</h2>
+                                <p>Jira settings are saved with the main settings form. Claude token changes save immediately.</p>
+                            </div>
+                        </div>
 
-                <div style="text-align: center; padding: 20px 0;">
-                    <p style="font-size: 14px; margin-bottom: 16px; color: var(--color-text);">
-                        Set the OAuth token CaseOps uses for non-interactive Claude Code runs:
-                    </p>
-                    <button type="button" class="button-primary" id="open-claude-wizard" style="padding: 12px 24px; font-size: 16px; cursor: pointer;">
-                        Setup Claude Token
-                    </button>
-                    <p style="font-size: 12px; color: var(--color-text-secondary); margin-top: 12px;">
-                        Run the command locally, then paste the token printed by the CLI.
-                    </p>
-                </div>
+                        <div class="settings-grid">
+                            <div class="settings-field">
+                                <label for="jira-base-url">Jira Base URL</label>
+                                <input type="url" id="jira-base-url" name="JIRA_BASE_URL" placeholder="https://your-jira-site.example" autocomplete="off">
+                            </div>
+                            <div class="settings-field">
+                                <label for="jira-email">Jira Email</label>
+                                <input type="email" id="jira-email" name="JIRA_EMAIL" placeholder="user@example.com" autocomplete="off">
+                            </div>
+                            <div class="settings-field full">
+                                <label for="jira-token">Jira API Token</label>
+                                <div class="inline-control">
+                                    <input type="password" id="jira-token" name="JIRA_API_TOKEN" placeholder="masked if already configured" autocomplete="off">
+                                    <button type="button" class="test-button" id="test-jira">Test Jira</button>
+                                    <span id="jira-test-result" class="test-result"></span>
+                                </div>
+                            </div>
+                            <div class="settings-field full">
+                                <label for="claude-token">Claude Code OAuth Token</label>
+                                <textarea id="claude-token" rows="3" placeholder="Paste the token printed by: claude setup-token"></textarea>
+                                <div class="field-note">Run <code>claude setup-token</code> locally, paste only the token value, then save it here.</div>
+                                <div class="button-row">
+                                    <button type="button" class="button-primary" id="save-claude-token">Save Claude Token</button>
+                                    <span id="claude-save-status" class="field-note"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
-                <hr style="border: none; border-top: 1px solid var(--color-border); margin: 20px 0;">
+                    <section class="settings-section" id="salesforce-section">
+                        <div class="section-header">
+                            <div>
+                                <h2>Salesforce CLI Auth</h2>
+                                <p>Paste Salesforce tokens here. CaseOps stores them in the configured env file and authenticates the container-local <code>sf</code> CLI.</p>
+                            </div>
+                        </div>
 
-                <div style="background: var(--color-bg); padding: 12px; border-radius: 4px; font-size: 12px; color: var(--color-text-secondary);">
-                    <strong>Steps:</strong><br>
-                    1. Open the Setup window above<br>
-                    2. On your local machine, run: <code style="display: inline; background: var(--color-surface); padding: 2px 4px; border-radius: 2px;">claude setup-token</code><br>
-                    3. Copy only the token printed by the command and paste it into the setup window<br>
-                    <br>
-                    <strong>Token expired or revoked?</strong><br>
-                    Run <code style="display: inline; background: var(--color-surface); padding: 2px 4px; border-radius: 2px;">claude setup-token</code> again and save the new token.
-                </div>
-            </div>
+                        <div class="settings-grid">
+                            <div class="settings-field">
+                                <label for="prod-alias">Production Alias</label>
+                                <input type="text" id="prod-alias" name="CASEOPS_PRODUCTION_READ_ORG" placeholder="prod-read" autocomplete="off">
+                            </div>
+                            <div class="settings-field">
+                                <label for="sandbox-alias">Sandbox Alias</label>
+                                <input type="text" id="sandbox-alias" name="CASEOPS_SANDBOX_TARGET_ORG" placeholder="sandbox" autocomplete="off">
+                            </div>
+                            <div class="settings-field">
+                                <label for="prod-instance-url">Production Instance URL</label>
+                                <input type="url" id="prod-instance-url" name="CASEOPS_PRODUCTION_INSTANCE_URL" placeholder="https://example.my.salesforce.com" autocomplete="off">
+                            </div>
+                            <div class="settings-field">
+                                <label for="sandbox-instance-url">Sandbox Instance URL</label>
+                                <input type="url" id="sandbox-instance-url" name="CASEOPS_SANDBOX_INSTANCE_URL" placeholder="https://example--sandbox.sandbox.my.salesforce.com" autocomplete="off">
+                            </div>
+                            <div class="settings-field full">
+                                <label for="sf-prod-token">Production Access Token</label>
+                                <textarea id="sf-prod-token" rows="3" placeholder="Paste result.accessToken from sf org auth show-access-token"></textarea>
+                            </div>
+                            <div class="settings-field full">
+                                <label for="sf-prod-refresh-token">Production Refresh Token Or SFDX Auth URL</label>
+                                <textarea id="sf-prod-refresh-token" rows="3" placeholder="Paste result.sfdxAuthUrl or raw refresh token"></textarea>
+                            </div>
+                            <div class="settings-field full">
+                                <label for="sf-sandbox-token">Sandbox Access Token</label>
+                                <textarea id="sf-sandbox-token" rows="3" placeholder="Paste result.accessToken from sf org auth show-access-token"></textarea>
+                            </div>
+                            <div class="settings-field full">
+                                <label for="sf-sandbox-refresh-token">Sandbox Refresh Token Or SFDX Auth URL</label>
+                                <textarea id="sf-sandbox-refresh-token" rows="3" placeholder="Paste result.sfdxAuthUrl or raw refresh token"></textarea>
+                            </div>
+                        </div>
 
-            <!-- Canned Messages -->
-            <div class="settings-section">
-                <h2>Canned Messages</h2>
-                <div id="canned-messages-status" style="margin-bottom: 15px; font-size: 12px;"></div>
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Messages (JSON):</label>
-                    <textarea id="canned-messages-editor" style="width: 100%; height: 300px; font-family: monospace; font-size: 12px; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg); color: var(--color-text); resize: vertical;"></textarea>
-                    <div id="canned-messages-error" style="margin-top: 8px; padding: 8px; border-radius: 4px; display: none; background: var(--color-danger); color: white; font-size: 12px;"></div>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="button" class="button-primary" id="save-canned-messages">Save Messages</button>
-                    <button type="button" class="button-primary" id="reset-canned-messages" style="background: var(--color-warn);">Reset to Defaults</button>
-                </div>
-            </div>
+                        <div class="button-row">
+                            <button type="button" class="button-primary" id="save-salesforce-tokens">Save Salesforce Tokens</button>
+                            <button type="button" class="button-secondary" id="authenticate-salesforce-btn">Authenticate Saved Tokens</button>
+                            <span id="sf-auth-message" class="field-note"></span>
+                        </div>
 
-            <!-- Salesforce -->
-            <div class="settings-section">
-                <h2>Salesforce CLI Authentication</h2>
-                <p style="font-size: 13px; color: var(--color-text); margin-bottom: 15px;">
-                    Salesforce access tokens are automatically refreshed using OAuth 2.0 refresh tokens. No manual refresh needed.
-                </p>
+                        <div id="sf-orgs-display" class="org-list" style="display: none;">
+                            <div id="sf-orgs-list"></div>
+                        </div>
 
-                <!-- Authenticated Orgs Status -->
-                <div id="sf-auth-status" style="margin-bottom: 20px;"></div>
+                        <details class="details-panel">
+                            <summary>Token commands</summary>
+                            <div class="code-list" style="margin-top: 12px;">
+                                <div class="code-row">
+                                    <code id="cmd-prod-login">sf org login web --alias prod-read</code>
+                                    <button type="button" class="copy-button" data-copy-target="cmd-prod-login">Copy</button>
+                                </div>
+                                <div class="code-row">
+                                    <code id="cmd-sandbox-login">sf org login web --alias sandbox --instance-url https://test.salesforce.com</code>
+                                    <button type="button" class="copy-button" data-copy-target="cmd-sandbox-login">Copy</button>
+                                </div>
+                                <div class="code-row">
+                                    <code id="cmd-prod-access">sf org auth show-access-token -o prod-read --json</code>
+                                    <button type="button" class="copy-button" data-copy-target="cmd-prod-access">Copy</button>
+                                </div>
+                                <div class="code-row">
+                                    <code id="cmd-prod-refresh">sf org auth show-sfdx-auth-url -o prod-read --json</code>
+                                    <button type="button" class="copy-button" data-copy-target="cmd-prod-refresh">Copy</button>
+                                </div>
+                                <div class="code-row">
+                                    <code id="cmd-sandbox-access">sf org auth show-access-token -o sandbox --json</code>
+                                    <button type="button" class="copy-button" data-copy-target="cmd-sandbox-access">Copy</button>
+                                </div>
+                                <div class="code-row">
+                                    <code id="cmd-sandbox-refresh">sf org auth show-sfdx-auth-url -o sandbox --json</code>
+                                    <button type="button" class="copy-button" data-copy-target="cmd-sandbox-refresh">Copy</button>
+                                </div>
+                            </div>
+                            <p class="field-note" style="margin-bottom: 0;">Refresh-token fields accept the full <code>force://...</code> SFDX Auth URL. CaseOps extracts the refresh token server-side.</p>
+                        </details>
+                    </section>
 
-                <!-- Authentication Button -->
-                <div style="margin-bottom: 20px;">
-                    <button type="button" class="button-primary" id="authenticate-salesforce-btn" style="padding: 10px 20px; cursor: pointer;">
-                        🔐 Authenticate Salesforce Orgs
-                    </button>
-                    <span id="sf-auth-message" style="font-size: 12px; margin-left: 10px;"></span>
-                </div>
+                    <section class="settings-section" id="content-section">
+                        <div class="section-header">
+                            <div>
+                                <h2>Operator Content</h2>
+                                <p>Canned messages are stored in the active instance appdata path.</p>
+                            </div>
+                            <div id="canned-messages-status" class="field-note"></div>
+                        </div>
 
-                <!-- Authenticated Orgs Details -->
-                <div id="sf-orgs-display" style="display: none;">
-                    <h3 style="margin-top: 20px; margin-bottom: 10px; font-size: 14px; font-weight: 600;">Authenticated Organizations:</h3>
-                    <div id="sf-orgs-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
-                </div>
+                        <div class="settings-field">
+                            <label for="canned-messages-editor">Canned Messages JSON</label>
+                            <textarea id="canned-messages-editor"></textarea>
+                            <div id="canned-messages-error" class="error-box"></div>
+                        </div>
 
-                <hr style="border: none; border-top: 1px solid var(--color-border); margin: 20px 0;">
+                        <div class="button-row">
+                            <button type="button" class="button-primary" id="save-canned-messages">Save Messages</button>
+                            <button type="button" class="button-secondary" id="reset-canned-messages">Reset to Defaults</button>
+                        </div>
+                    </section>
 
-                <div style="background: var(--color-bg); padding: 12px; border-radius: 4px; font-size: 12px; color: var(--color-text-secondary); line-height: 1.6;">
-                    <strong>📋 Initial Setup (Required Once)</strong><br><br>
-                    <strong style="color: var(--color-text);">1️⃣ Authenticate Production Org</strong><br>
-                    On your <strong>local machine</strong>, run:<br>
-                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
-                        sf org login web --alias 10xhealth
+                    <section class="settings-section" id="instance-section">
+                        <div class="section-header">
+                            <div>
+                                <h2>Instance And Storage</h2>
+                                <p>Display label is browser-local. Paths come from the running service.</p>
+                            </div>
+                        </div>
+
+                        <div class="settings-grid">
+                            <div class="settings-field">
+                                <label for="instance-display-label">Display Label</label>
+                                <input type="text" id="instance-display-label" placeholder="Production, Sandbox, Pilot" autocomplete="off">
+                                <div class="field-note">Used only for this browser tab and top bar display.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="cci-auth-enabled">CCI Auth Checks</label>
+                                <select id="cci-auth-enabled" name="CASEOPS_USE_CCI_FOR_AUTH">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                                <div class="field-note">Pipeline Salesforce auth uses <code>sf</code>. CCI is optional.</div>
+                            </div>
+                        </div>
+
+                        <div class="path-list" style="margin-top: 14px;">
+                            <div>
+                                <strong>Outputs</strong>
+                                <code id="configured-outputs-path">Loading...</code>
+                            </div>
+                            <div>
+                                <strong>Instance</strong>
+                                <code id="configured-instance-path">Loading...</code>
+                            </div>
+                            <div>
+                                <strong>Env File</strong>
+                                <code id="configured-env-path">Loading...</code>
+                            </div>
+                            <div>
+                                <strong>Canned Messages</strong>
+                                <code id="configured-canned-messages-path">Loading...</code>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="settings-section" id="system-section">
+                        <div class="section-header">
+                            <div>
+                                <h2>System</h2>
+                                <p>Use after configuration changes that require a clean runtime process.</p>
+                            </div>
+                        </div>
+                        <div class="button-row">
+                            <button type="button" class="button-danger" onclick="restartService()" id="restart-btn">Restart CaseOps</button>
+                            <span id="restart-status" class="field-note"></span>
+                        </div>
+                    </section>
+
+                    <div class="form-actions">
+                        <button type="button" class="button-secondary" onclick="location.reload()">Reload Page</button>
+                        <button type="submit" class="button-primary" id="save-button">Save Settings</button>
                     </div>
-                    Logs in to production. Close browser after authorizing.
-                    <br><br>
-                    <strong style="color: var(--color-text);">2️⃣ Authenticate Sandbox Org</strong><br>
-                    Run for sandbox (requires test.salesforce.com URL):<br>
-                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
-                        sf org login web --alias 10xhealth-sean --instance-url https://test.salesforce.com
-                    </div>
-                    Logs in to sandbox. Close browser after authorizing.
-                    <br><br>
-                    <strong style="color: var(--color-text);">3️⃣ Get Production Access Token</strong><br>
-                    Run:<br>
-                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
-                        sf org auth show-access-token -o 10xhealth --json
-                    </div>
-                    Copy <code>result.accessToken</code>. This command shows the access token only.
-                    <br><br>
-                    <strong style="color: var(--color-text);">4️⃣ Get Production Refresh Token</strong><br>
-                    Run the command below and copy <code>result.sfdxAuthUrl</code>; CaseOps accepts that full URL in the refresh-token field.
-                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
-                        sf org auth show-sfdx-auth-url -o 10xhealth --json
-                    </div>
-                    <br><br>
-                    <strong style="color: var(--color-text);">5️⃣ Get Sandbox Access Token</strong><br>
-                    Run:<br>
-                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
-                        sf org auth show-access-token -o 10xhealth-sean --json
-                    </div>
-                    Copy <code>result.accessToken</code>.
-                    <br><br>
-                    <strong style="color: var(--color-text);">6️⃣ Get Sandbox Refresh Token</strong><br>
-                    Run the command below and copy <code>result.sfdxAuthUrl</code>; CaseOps accepts that full URL in the refresh-token field.
-                    <div style="margin: 8px 0; font-family: monospace; background: var(--color-surface); padding: 8px; border-radius: 3px; overflow-x: auto; word-break: break-all;">
-                        sf org auth show-sfdx-auth-url -o 10xhealth-sean --json
-                    </div>
-                    <br><br>
-                    <strong style="color: var(--color-text);">7️⃣ Save All Tokens</strong><br>
-                    Visit <a href="/setup/refresh-salesforce-tokens" target="_blank" style="color: var(--color-primary); text-decoration: underline;">Refresh Tokens page</a> and paste all 4 tokens (Prod access, Prod refresh, Sandbox access, Sandbox refresh), then save.
-                    <br><br>
-                    <strong>✅ Automatic Refresh</strong><br>
-                    Once setup, tokens are <strong>automatically refreshed</strong> on service startup if they're older than 4 hours. Access tokens valid for 8 hours; refresh happens before expiry. No manual action needed.
-                    <br><br>
-                    <strong>🔐 Token Storage</strong><br>
-                    <strong>Production:</strong> Stored in <code style="background: var(--color-surface); padding: 1px 3px;">SF_PROD_ACCESS_TOKEN</code> with refresh token<br>
-                    <strong>Sandbox:</strong> Stored in <code style="background: var(--color-surface); padding: 1px 3px;">SF_SANDBOX_ACCESS_TOKEN</code> with refresh token<br>
-                    Both in <code style="background: var(--color-surface); padding: 1px 3px;">.env.jira</code> on the NAS.
-                </div>
+                </form>
             </div>
-
-            <!-- Advanced (collapsed) -->
-            <div class="settings-section">
-                <div class="collapsible-header" onclick="toggleAdvanced()">
-                    <span class="collapsible-toggle" id="advanced-toggle">+</span>
-                    <h2 style="display: inline; margin: 0;">Advanced</h2>
-                </div>
-                <div id="advanced-content" class="section-collapsed">
-                </div>
-            </div>
-
-            <!-- System -->
-            <div class="settings-section">
-                <h2>System</h2>
-                <div style="display: flex; gap: 12px; align-items: center;">
-                    <button type="button" class="button-primary" onclick="restartService()" id="restart-btn" style="background: #dc2626; border-color: #991b1b;">
-                        🔄 Restart CaseOps
-                    </button>
-                    <span id="restart-status" style="font-size: 13px; color: var(--color-text-secondary);"></span>
-                </div>
-                <p style="font-size: 12px; color: var(--color-text-secondary); margin-top: 12px;">
-                    Restarts the CaseOps service. May take 10-30 seconds. Connection will be restored automatically.
-                </p>
-            </div>
-
-            <!-- Buttons -->
-            <div class="button-group">
-                <button type="submit" class="button-primary" id="save-button">Save Settings</button>
-                <button type="button" class="button-primary" onclick="location.reload()">Reload Page</button>
-            </div>
-        </form>
+        </div>
     </div>
 
     <script>
-        let advancedExpanded = false;
-
-        function toggleAdvanced() {
-            advancedExpanded = !advancedExpanded;
-            const content = document.getElementById('advanced-content');
-            const toggle = document.getElementById('advanced-toggle');
-            if (advancedExpanded) {
-                content.classList.add('expanded');
-                toggle.textContent = '−';
-            } else {
-                content.classList.remove('expanded');
-                toggle.textContent = '+';
-            }
-        }
+        let settingsStatusPromise = null;
+        let statusPollTimer = null;
 
         function showBanner(message, type) {
             const banner = document.getElementById('banner');
@@ -538,6 +758,33 @@
             }, 5000);
         }
 
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        async function writeClipboardText(text) {
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function' && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+                return;
+            }
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            textarea.style.top = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            const copied = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            if (!copied) throw new Error('Clipboard unavailable');
+        }
+
         async function loadSettings() {
             try {
                 const resp = await fetch('/api/settings');
@@ -547,24 +794,14 @@
                 for (const [key, value] of Object.entries(data)) {
                     const elem = document.querySelector(`[name="${key}"]`);
                     if (!elem) continue;
-
-                    if (elem.type === 'radio') {
-                        const radio = document.querySelector(`[name="${key}"][value="${value}"]`);
-                        if (radio) radio.checked = true;
-                    } else {
-                        elem.value = value || '';
-                    }
+                    elem.value = value || '';
                 }
 
-                // Update LLM section visibility
-                updateLLMVisibility();
+                updateTokenCommands();
             } catch (e) {
                 console.error('Failed to load settings:', e);
             }
         }
-
-        let settingsStatusPromise = null;
-        let statusPollTimer = null;
 
         async function fetchSettingsStatus(options = {}) {
             const refresh = options.refresh === true;
@@ -595,437 +832,470 @@
 
         async function refreshStatusPanels(options = {}) {
             const status = await fetchSettingsStatus(options);
+            renderRuntimeStatus(status);
             renderClaudeStatus(status);
             renderSalesforceStatus(status);
+            renderConfiguredPaths(status);
             scheduleStatusPoll(status);
             return status;
         }
 
+        function renderRuntimeStatus(status) {
+            const el = document.getElementById('runtime-status');
+            if (!el) return;
+            const preflight = status && status.runtime_preflight;
+            if (!preflight || preflight.ok === null || (status.cache && status.cache.refreshing)) {
+                el.innerHTML = '<span class="status-badge warn">Checking</span>';
+                return;
+            }
+            if (preflight.ok === true) {
+                el.innerHTML = '<span class="status-badge ok">Ready</span>';
+                return;
+            }
+            const issue = (preflight.issues || [])[0] || 'Runtime preflight failed';
+            el.innerHTML = `<span class="status-badge not-ok" title="${escapeHtml(issue)}">Blocked</span><div class="field-note" style="margin-top:8px;">${escapeHtml(issue)}</div>`;
+        }
+
         function renderClaudeStatus(status) {
-            const claudeDiv = document.getElementById('claude-status');
-            if (!claudeDiv) return;
+            const el = document.getElementById('claude-status');
+            if (!el) return;
             if (status.claude && status.claude.installed && status.claude.authenticated) {
-                const runtimeText = status.runtime_preflight && status.runtime_preflight.ok ? ' - Pipeline runtime ready' : '';
-                claudeDiv.innerHTML = `<span style="color: var(--color-success);">✓ Claude CLI ${status.claude.version || ''} - Authenticated${runtimeText}</span>`;
+                el.innerHTML = `<span class="status-badge ok">Authenticated</span><div class="field-note" style="margin-top:8px;">${escapeHtml(status.claude.version || 'Claude CLI available')}</div>`;
             } else if (status.claude && status.claude.installed) {
-                const tokenText = status.cache && status.cache.refreshing
-                    ? 'checking authentication...'
-                    : (status.claude.token_configured ? 'token configured but auth check failed' : 'needs token');
-                claudeDiv.innerHTML = `<span style="color: var(--color-warn);">⚠ Claude CLI ${status.claude.version || ''} - ${tokenText}</span>`;
+                const msg = status.cache && status.cache.refreshing
+                    ? 'Checking authentication'
+                    : (status.claude.token_configured ? 'Token configured, auth check failed' : 'Token needed');
+                el.innerHTML = `<span class="status-badge warn">${escapeHtml(msg)}</span>`;
             } else {
-                claudeDiv.innerHTML = '<span style="color: var(--color-danger);">✗ Claude CLI not available</span>';
+                el.innerHTML = '<span class="status-badge not-ok">CLI unavailable</span>';
             }
         }
 
         function renderSalesforceStatus(status) {
-            const statusDiv = document.getElementById('sf-auth-status');
-            if (!statusDiv) return;
+            const el = document.getElementById('sf-auth-status');
+            if (!el) return;
+            if (!status.sf_installed) {
+                el.innerHTML = '<span class="status-badge not-ok">sf unavailable</span>';
+                hideAuthenticatedOrgs();
+                return;
+            }
 
-            if (status.sf_installed) {
-                let runtimeHtml = '';
-                if (status.runtime_preflight) {
-                    if (status.runtime_preflight.ok === true) {
-                        runtimeHtml = ` <span class="status-badge ok">✓ Pipeline runtime ready</span>`;
-                    } else if (status.runtime_preflight.ok === null || (status.cache && status.cache.refreshing)) {
-                        runtimeHtml = ` <span class="status-badge">Checking pipeline runtime...</span>`;
-                    } else {
-                        const issue = (status.runtime_preflight.issues || [])[0] || 'Pipeline runtime preflight failed';
-                        runtimeHtml = ` <span class="status-badge not-ok" title="${issue.replace(/"/g, '&quot;')}">✗ Pipeline runtime blocked</span>`;
-                    }
-                }
-                statusDiv.innerHTML = `<span class="status-badge ok">✓ Salesforce CLI installed</span>${runtimeHtml}`;
-
-                if (status.sf_prod && status.sf_prod.authenticated && status.sf_sandbox && status.sf_sandbox.authenticated) {
-                    displayAuthenticatedOrgs(status.sf_prod, status.sf_sandbox);
-                } else if (status.cache && status.cache.refreshing) {
-                    const orgsDiv = document.getElementById('sf-orgs-display');
-                    const orgsList = document.getElementById('sf-orgs-list');
-                    if (orgsDiv && orgsList) {
-                        orgsList.innerHTML = '<div style="font-size:12px;color:var(--color-text-secondary);">Checking authenticated Salesforce orgs...</div>';
-                        orgsDiv.style.display = 'block';
-                    }
-                } else {
-                    const orgsDiv = document.getElementById('sf-orgs-display');
-                    if (orgsDiv) orgsDiv.style.display = 'none';
-                }
+            const prodReady = status.sf_prod && status.sf_prod.authenticated;
+            const sandboxReady = status.sf_sandbox && status.sf_sandbox.authenticated;
+            if (prodReady && sandboxReady) {
+                el.innerHTML = '<span class="status-badge ok">Both orgs authenticated</span>';
+                displayAuthenticatedOrgs(status.sf_prod, status.sf_sandbox);
+            } else if (status.cache && status.cache.refreshing) {
+                el.innerHTML = '<span class="status-badge warn">Checking orgs</span>';
             } else {
-                statusDiv.innerHTML = `<span class="status-badge not-ok">✗ Salesforce CLI not installed</span>`;
+                el.innerHTML = '<span class="status-badge not-ok">Auth incomplete</span>';
+                hideAuthenticatedOrgs();
             }
         }
 
-        async function loadStatus() {
-            try {
-                const status = await fetchSettingsStatus();
-                renderClaudeStatus(status);
-                scheduleStatusPoll(status);
-            } catch (e) {
-                console.error('Failed to load status:', e);
+        function renderConfiguredPaths(status) {
+            const paths = status && status.paths ? status.paths : {};
+            const mapping = {
+                'configured-outputs-path': paths.outputs_dir,
+                'configured-instance-path': paths.instance_dir,
+                'configured-env-path': paths.env_file,
+                'configured-canned-messages-path': paths.canned_messages_file,
+            };
+            for (const [id, value] of Object.entries(mapping)) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = value || 'unknown';
             }
+            const instanceLabel = paths.instance_dir ? paths.instance_dir.split(/[\\/]/).pop() : '';
+            if (instanceLabel) document.title = `CaseOps (${instanceLabel})`;
         }
 
-        async function loadSalesforceStatus() {
-            try {
-                const status = await fetchSettingsStatus();
-                renderSalesforceStatus(status);
-                scheduleStatusPoll(status);
-            } catch (e) {
-                console.error('Failed to load Salesforce status:', e);
-            }
+        function hideAuthenticatedOrgs() {
+            const display = document.getElementById('sf-orgs-display');
+            if (display) display.style.display = 'none';
+        }
+
+        function orgCard(label, org) {
+            return `
+                <div class="org-card">
+                    <div class="org-card-header">
+                        <strong>${escapeHtml(label)} (${escapeHtml(org.alias || 'configured alias')})</strong>
+                        <span class="status-badge ok">Authenticated</span>
+                    </div>
+                    <div class="org-card-body">
+                        <div><strong>User:</strong> ${escapeHtml(org.username || 'Unknown')}</div>
+                        <div><strong>Org ID:</strong> ${escapeHtml(org.orgId || 'Unknown')}</div>
+                        <div><strong>Instance:</strong> ${escapeHtml(org.instanceUrl || 'Unknown')}</div>
+                    </div>
+                </div>
+            `;
         }
 
         function displayAuthenticatedOrgs(prodOrg, sandOrg) {
             const display = document.getElementById('sf-orgs-display');
             const list = document.getElementById('sf-orgs-list');
+            if (!display || !list) return;
 
-            list.innerHTML = '';
-            let hasAuth = false;
+            const cards = [];
+            if (prodOrg && prodOrg.username) cards.push(orgCard('Production', prodOrg));
+            if (sandOrg && sandOrg.username) cards.push(orgCard('Sandbox', sandOrg));
+            list.innerHTML = cards.join('');
+            display.style.display = cards.length ? 'block' : 'none';
+        }
 
-            if (prodOrg && prodOrg.username) {
-                hasAuth = true;
-                const orgDiv = document.createElement('div');
-                orgDiv.style.cssText = 'padding: 10px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; border-left: 3px solid var(--color-success);';
-                orgDiv.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <strong>Production (${prodOrg.alias || 'configured alias'})</strong>
-                        <span class="status-badge ok">✓ Authenticated</span>
-                    </div>
-                    <div style="font-size: 12px; color: var(--color-text); font-family: monospace; display: flex; flex-direction: column; gap: 4px;">
-                        <div><strong>User:</strong> ${prodOrg.username || 'Unknown'}</div>
-                        <div><strong>Org ID:</strong> ${prodOrg.orgId || 'Unknown'}</div>
-                        <div><strong>Instance:</strong> ${prodOrg.instanceUrl || 'Unknown'}</div>
-                    </div>
-                `;
-                list.appendChild(orgDiv);
-            }
-
-            if (sandOrg && sandOrg.username) {
-                hasAuth = true;
-                const orgDiv = document.createElement('div');
-                orgDiv.style.cssText = 'padding: 10px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; border-left: 3px solid var(--color-success);';
-                orgDiv.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <strong>Sandbox (${sandOrg.alias || 'configured alias'})</strong>
-                        <span class="status-badge ok">✓ Authenticated</span>
-                    </div>
-                    <div style="font-size: 12px; color: var(--color-text); font-family: monospace; display: flex; flex-direction: column; gap: 4px;">
-                        <div><strong>User:</strong> ${sandOrg.username || 'Unknown'}</div>
-                        <div><strong>Org ID:</strong> ${sandOrg.orgId || 'Unknown'}</div>
-                        <div><strong>Instance:</strong> ${sandOrg.instanceUrl || 'Unknown'}</div>
-                    </div>
-                `;
-                list.appendChild(orgDiv);
-            }
-
-            if (hasAuth) {
-                display.style.display = 'block';
+        function updateTokenCommands() {
+            const prodAlias = document.getElementById('prod-alias').value.trim() || 'prod-read';
+            const sandboxAlias = document.getElementById('sandbox-alias').value.trim() || 'sandbox';
+            const commandMap = {
+                'cmd-prod-login': `sf org login web --alias ${prodAlias}`,
+                'cmd-sandbox-login': `sf org login web --alias ${sandboxAlias} --instance-url https://test.salesforce.com`,
+                'cmd-prod-access': `sf org auth show-access-token -o ${prodAlias} --json`,
+                'cmd-prod-refresh': `sf org auth show-sfdx-auth-url -o ${prodAlias} --json`,
+                'cmd-sandbox-access': `sf org auth show-access-token -o ${sandboxAlias} --json`,
+                'cmd-sandbox-refresh': `sf org auth show-sfdx-auth-url -o ${sandboxAlias} --json`,
+            };
+            for (const [id, command] of Object.entries(commandMap)) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = command;
             }
         }
 
         async function testJira() {
-            const baseUrl = document.getElementById('jira-base-url').value;
-            const email = document.getElementById('jira-email').value;
-            const token = document.getElementById('jira-token').value;
-
             const result = document.getElementById('jira-test-result');
             const btn = document.getElementById('test-jira');
             btn.disabled = true;
-            result.textContent = '...';
+            result.textContent = 'Checking';
             result.className = 'test-result pending';
 
             try {
                 const resp = await fetch('/api/settings/test-jira', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ JIRA_BASE_URL: baseUrl, JIRA_EMAIL: email, JIRA_API_TOKEN: token }),
+                    body: JSON.stringify({
+                        JIRA_BASE_URL: document.getElementById('jira-base-url').value,
+                        JIRA_EMAIL: document.getElementById('jira-email').value,
+                        JIRA_API_TOKEN: document.getElementById('jira-token').value,
+                    }),
                 });
 
                 if (resp.ok) {
-                    result.textContent = '✓ Connected';
+                    result.textContent = 'Connected';
                     result.className = 'test-result success';
                 } else {
                     const data = await resp.json();
-                    result.textContent = '✗ ' + (data.error || 'Error');
+                    result.textContent = data.error || 'Failed';
                     result.className = 'test-result error';
                 }
             } catch (e) {
-                result.textContent = '✗ ' + e.message;
+                result.textContent = e.message;
                 result.className = 'test-result error';
             } finally {
                 btn.disabled = false;
             }
         }
 
-        // Handle display label changes (localStorage, no API)
-        const displayLabelInput = document.getElementById('instance-display-label');
-        displayLabelInput.addEventListener('change', () => {
-            const label = displayLabelInput.value.trim();
-            localStorage.setItem('caseops-display-label', label);
-            updatePageDisplay();
-        });
+        async function saveClaudeToken() {
+            const tokenInput = document.getElementById('claude-token');
+            const statusEl = document.getElementById('claude-save-status');
+            const btn = document.getElementById('save-claude-token');
+            const token = tokenInput.value.trim();
 
-        function loadDisplayLabel() {
-            const label = localStorage.getItem('caseops-display-label') || '';
-            displayLabelInput.value = label;
+            if (!token) {
+                statusEl.textContent = 'Paste a Claude Code OAuth token first.';
+                return;
+            }
+
+            btn.disabled = true;
+            statusEl.textContent = 'Saving...';
+            try {
+                const resp = await fetch('/api/setup/claude-credentials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token }),
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.error || 'Save failed');
+                tokenInput.value = '';
+                statusEl.textContent = 'Saved.';
+                showBanner('Claude token saved', 'success');
+                await refreshStatusPanels({refresh: true});
+            } catch (e) {
+                statusEl.textContent = e.message;
+                showBanner('Claude token save failed: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
         }
 
-        function updatePageDisplay() {
-            const label = localStorage.getItem('caseops-display-label') || '';
-            const workspace = new URLSearchParams(window.location.search).get('workspace') || 'CaseOps';
-            const displayName = label || workspace;
-            document.title = `CaseOps${label ? ' — ' + label : ''}`;
-        }
-
-        document.getElementById('settings-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const form = document.getElementById('settings-form');
-            const formData = new FormData(form);
+        function collectSettingsFormData() {
+            const formData = new FormData(document.getElementById('settings-form'));
             const data = {};
-
             for (const [key, value] of formData.entries()) {
                 data[key] = String(value).trim();
             }
+            return data;
+        }
 
+        async function saveMainSettings(options = {}) {
             const btn = document.getElementById('save-button');
-            btn.disabled = true;
-
+            if (!options.silent) btn.disabled = true;
             try {
                 const resp = await fetch('/api/settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data),
+                    body: JSON.stringify(collectSettingsFormData()),
                 });
-
-                if (resp.ok) {
-                    showBanner('Settings saved successfully', 'success');
+                if (!resp.ok) {
+                    const error = await resp.json();
+                    throw new Error(error.error || 'Unknown error');
+                }
+                if (!options.silent) {
+                    showBanner('Settings saved', 'success');
                     await loadSettings();
                     await refreshStatusPanels({refresh: true});
-                } else {
-                    const error = await resp.json();
-                    showBanner('Error saving settings: ' + (error.error || 'Unknown error'), 'error');
                 }
-            } catch (e) {
-                showBanner('Error: ' + String(e), 'error');
             } finally {
-                btn.disabled = false;
+                if (!options.silent) btn.disabled = false;
             }
-        });
+        }
 
-        async function authenticateSalesforce() {
-            const btn = document.getElementById('authenticate-salesforce-btn');
-            const msgDiv = document.getElementById('sf-auth-message');
+        async function saveSalesforceTokens() {
+            const btn = document.getElementById('save-salesforce-tokens');
+            const msg = document.getElementById('sf-auth-message');
+            const payload = {
+                sf_prod_access_token: document.getElementById('sf-prod-token').value.trim(),
+                sf_sandbox_access_token: document.getElementById('sf-sandbox-token').value.trim(),
+                sf_prod_refresh_token: document.getElementById('sf-prod-refresh-token').value.trim(),
+                sf_sandbox_refresh_token: document.getElementById('sf-sandbox-refresh-token').value.trim(),
+            };
+
+            if (!payload.sf_prod_access_token && !payload.sf_sandbox_access_token) {
+                msg.textContent = 'Paste at least one Salesforce access token.';
+                return;
+            }
 
             btn.disabled = true;
-            msgDiv.textContent = 'Authenticating...';
-            msgDiv.style.color = 'var(--color-warn)';
-
+            msg.textContent = 'Saving tokens...';
             try {
-                const resp = await fetch('/api/setup/salesforce-auth', { method: 'POST' });
+                await saveMainSettings({silent: true});
+                const resp = await fetch('/api/setup/refresh-salesforce-tokens', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
                 const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.error || 'Token save failed');
 
-                if (resp.ok && data.ok) {
-                    msgDiv.textContent = '✓ Authenticated successfully';
-                    msgDiv.style.color = 'var(--color-success)';
-
-                    // Display authenticated orgs
-                    const orgs = data.authenticated_orgs || {};
-                    const aliases = data.aliases || {};
-                    if (Object.keys(orgs).length > 0) {
-                        displayAuthenticatedOrgs(orgs[aliases.production], orgs[aliases.sandbox]);
-                    }
-
-                    showBanner('Salesforce orgs authenticated successfully', 'success');
-                    await refreshStatusPanels({refresh: true});
-                } else {
-                    msgDiv.textContent = '✗ ' + (data.error || 'Authentication failed');
-                    msgDiv.style.color = 'var(--color-danger)';
-                    showBanner('Error: ' + (data.error || 'Authentication failed'), 'error');
-                }
+                ['sf-prod-token', 'sf-sandbox-token', 'sf-prod-refresh-token', 'sf-sandbox-refresh-token'].forEach(id => {
+                    document.getElementById(id).value = '';
+                });
+                msg.textContent = data.auto_refresh_enabled ? 'Saved. Auto-refresh enabled.' : 'Saved. Refresh tokens not provided.';
+                showBanner('Salesforce tokens saved', 'success');
+                await authenticateSalesforce({silent: true});
+                await refreshStatusPanels({refresh: true});
             } catch (e) {
-                msgDiv.textContent = '✗ ' + e.message;
-                msgDiv.style.color = 'var(--color-danger)';
-                showBanner('Error: ' + e.message, 'error');
+                msg.textContent = e.message;
+                showBanner('Salesforce token save failed: ' + e.message, 'error');
             } finally {
                 btn.disabled = false;
             }
         }
 
-        function copyCommand(elementId) {
-            const elem = document.getElementById(elementId);
-            const text = elem.textContent;
-            navigator.clipboard.writeText(text).then(() => {
-                const btn = event.target;
-                const oldText = btn.textContent;
-                btn.textContent = '✓ Copied';
-                setTimeout(() => { btn.textContent = oldText; }, 2000);
-            }).catch(err => console.error('Failed to copy:', err));
-        }
+        async function authenticateSalesforce(options = {}) {
+            const btn = document.getElementById('authenticate-salesforce-btn');
+            const msg = document.getElementById('sf-auth-message');
+            btn.disabled = true;
+            if (!options.silent) msg.textContent = 'Authenticating saved tokens...';
 
-        function updateLLMVisibility() {
-            const claudeSection = document.getElementById('claude-section');
-            if (claudeSection) {
-                claudeSection.classList.remove('hidden');
+            try {
+                await saveMainSettings({silent: true});
+                const resp = await fetch('/api/setup/salesforce-auth', { method: 'POST' });
+                const data = await resp.json();
+                if (resp.ok && data.ok) {
+                    msg.textContent = 'Authenticated saved tokens.';
+                    const orgs = data.authenticated_orgs || {};
+                    const aliases = data.aliases || {};
+                    displayAuthenticatedOrgs(orgs[aliases.production], orgs[aliases.sandbox]);
+                    if (!options.silent) showBanner('Salesforce orgs authenticated', 'success');
+                    await refreshStatusPanels({refresh: true});
+                } else {
+                    throw new Error(data.error || 'Authentication failed');
+                }
+            } catch (e) {
+                msg.textContent = e.message;
+                if (!options.silent) showBanner('Salesforce auth failed: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
             }
         }
 
-        document.getElementById('test-jira').addEventListener('click', testJira);
-        document.getElementById('authenticate-salesforce-btn').addEventListener('click', authenticateSalesforce);
-
-        // Load canned messages
         async function loadCannedMessages() {
             try {
                 const resp = await fetch('/api/settings/canned-messages');
                 if (!resp.ok) return;
                 const data = await resp.json();
-
                 const editor = document.getElementById('canned-messages-editor');
                 const status = document.getElementById('canned-messages-status');
                 const errorDiv = document.getElementById('canned-messages-error');
-
                 editor.value = data.content;
-
-                if (data.is_custom) {
-                    status.innerHTML = `<span class="status-badge ok">✓ Custom messages</span> Editing instance-specific overrides.`;
-                } else {
-                    status.innerHTML = `<span class="status-badge">Default messages</span> No custom overrides. Save to create instance-specific version.`;
-                }
-
+                status.innerHTML = data.is_custom
+                    ? '<span class="status-badge ok">Custom</span>'
+                    : '<span class="status-badge">Default</span>';
                 errorDiv.style.display = 'none';
             } catch (e) {
                 console.error('Failed to load canned messages:', e);
             }
         }
 
-        document.getElementById('save-canned-messages').addEventListener('click', async () => {
+        async function saveCannedMessages() {
             const editor = document.getElementById('canned-messages-editor');
-            const status = document.getElementById('canned-messages-status');
             const errorDiv = document.getElementById('canned-messages-error');
             const btn = document.getElementById('save-canned-messages');
-
             errorDiv.style.display = 'none';
 
             try {
                 const content = editor.value.trim();
-                JSON.parse(content); // Validate JSON
-
+                JSON.parse(content);
                 btn.disabled = true;
-
                 const resp = await fetch('/api/settings/canned-messages', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: content }),
+                    body: JSON.stringify({ content }),
                 });
-
-                if (resp.ok) {
-                    showBanner('Canned messages saved', 'success');
-                    await loadCannedMessages();
-                } else {
+                if (!resp.ok) {
                     const error = await resp.json();
-                    errorDiv.textContent = error.error || 'Unknown error';
-                    errorDiv.style.display = 'block';
+                    throw new Error(error.error || 'Unknown error');
                 }
+                showBanner('Canned messages saved', 'success');
+                await loadCannedMessages();
+                await refreshStatusPanels();
             } catch (e) {
-                errorDiv.textContent = 'JSON validation error: ' + e.message;
+                errorDiv.textContent = e.name === 'SyntaxError' ? 'JSON validation error: ' + e.message : e.message;
                 errorDiv.style.display = 'block';
             } finally {
                 btn.disabled = false;
             }
-        });
+        }
 
-        document.getElementById('reset-canned-messages').addEventListener('click', async () => {
+        async function resetCannedMessages() {
             if (!confirm('Reset to default canned messages? Your custom messages will be deleted.')) return;
-
             const btn = document.getElementById('reset-canned-messages');
             btn.disabled = true;
 
             try {
                 const resp = await fetch('/api/settings/canned-messages/reset', { method: 'POST' });
-
-                if (resp.ok) {
-                    showBanner('Canned messages reset to defaults', 'success');
-                    await loadCannedMessages();
-                } else {
+                if (!resp.ok) {
                     const error = await resp.json();
-                    showBanner('Reset failed: ' + (error.error || 'Unknown error'), 'error');
+                    throw new Error(error.error || 'Unknown error');
                 }
+                showBanner('Canned messages reset to defaults', 'success');
+                await loadCannedMessages();
             } catch (e) {
-                showBanner('Error: ' + e.message, 'error');
+                showBanner('Reset failed: ' + e.message, 'error');
             } finally {
                 btn.disabled = false;
-            }
-        });
-
-        // Claude Code Authentication - Open Wizard
-        document.getElementById('open-claude-wizard').addEventListener('click', () => {
-            window.open('/setup/claude-login', 'claude-wizard', 'width=600,height=800');
-        });
-
-        async function loadClaudeStatus() {
-            try {
-                const status = await fetchSettingsStatus();
-                renderClaudeStatus(status);
-                scheduleStatusPoll(status);
-            } catch (e) {
-                document.getElementById('claude-status').textContent = 'Unable to check status';
             }
         }
 
         async function restartService() {
             const btn = document.getElementById('restart-btn');
             const statusDiv = document.getElementById('restart-status');
-
-            if (!confirm('Restart CaseOps service? Connection will be restored in ~10-30 seconds.')) return;
+            if (!confirm('Restart CaseOps service? Connection will be restored in about 10-30 seconds.')) return;
 
             btn.disabled = true;
             statusDiv.textContent = 'Restarting...';
-            statusDiv.style.color = 'var(--color-warn)';
-
             try {
                 const resp = await fetch('/api/restart', { method: 'POST' });
-                if (resp.ok) {
-                    statusDiv.textContent = 'Service restarting. Reconnecting...';
-
-                    // Poll for service to come back
-                    let attempts = 0;
-                    const maxAttempts = 60;
-                    while (attempts < maxAttempts) {
-                        try {
-                            const testResp = await fetch('/');
-                            if (testResp.ok) {
-                                statusDiv.textContent = '✓ Service restarted successfully';
-                                statusDiv.style.color = 'var(--color-success)';
-                                setTimeout(() => {
-                                    statusDiv.textContent = '';
-                                    btn.disabled = false;
-                                }, 3000);
-                                return;
-                            }
-                        } catch (e) {
-                            // Service not ready yet
-                        }
-                        await new Promise(r => setTimeout(r, 1000));
-                        attempts++;
-                    }
-                    statusDiv.textContent = '✗ Service restart timed out';
-                    statusDiv.style.color = 'var(--color-danger)';
-                } else {
+                if (!resp.ok) {
                     const error = await resp.json();
-                    statusDiv.textContent = '✗ Restart failed: ' + (error.error || 'Unknown error');
-                    statusDiv.style.color = 'var(--color-danger)';
+                    throw new Error(error.error || 'Restart failed');
                 }
+                statusDiv.textContent = 'Service restarting. Reconnecting...';
+
+                let attempts = 0;
+                while (attempts < 60) {
+                    try {
+                        const testResp = await fetch('/');
+                        if (testResp.ok) {
+                            statusDiv.textContent = 'Service restarted.';
+                            btn.disabled = false;
+                            return;
+                        }
+                    } catch (_) {}
+                    await new Promise(r => setTimeout(r, 1000));
+                    attempts++;
+                }
+                statusDiv.textContent = 'Restart timed out.';
             } catch (e) {
-                statusDiv.textContent = '✗ Error: ' + e.message;
-                statusDiv.style.color = 'var(--color-danger)';
+                statusDiv.textContent = e.message;
             } finally {
                 btn.disabled = false;
             }
         }
 
-        // Load on page open
+        document.getElementById('settings-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await saveMainSettings();
+            } catch (e) {
+                showBanner('Settings save failed: ' + e.message, 'error');
+            }
+        });
+
+        document.getElementById('test-jira').addEventListener('click', testJira);
+        document.getElementById('save-claude-token').addEventListener('click', saveClaudeToken);
+        document.getElementById('save-salesforce-tokens').addEventListener('click', saveSalesforceTokens);
+        document.getElementById('authenticate-salesforce-btn').addEventListener('click', () => authenticateSalesforce());
+        document.getElementById('save-canned-messages').addEventListener('click', saveCannedMessages);
+        document.getElementById('reset-canned-messages').addEventListener('click', resetCannedMessages);
+        document.getElementById('refresh-status-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('refresh-status-btn');
+            btn.disabled = true;
+            try {
+                await refreshStatusPanels({refresh: true});
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        document.querySelectorAll('[data-copy-target]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const target = document.getElementById(btn.dataset.copyTarget);
+                if (!target) return;
+                const oldText = btn.textContent;
+                try {
+                    await writeClipboardText(target.textContent);
+                    btn.textContent = 'Copied';
+                    setTimeout(() => { btn.textContent = oldText; }, 1600);
+                } catch (e) {
+                    showBanner('Copy failed: ' + e.message, 'error');
+                }
+            });
+        });
+
+        ['prod-alias', 'sandbox-alias'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateTokenCommands);
+        });
+
+        const displayLabelInput = document.getElementById('instance-display-label');
+        displayLabelInput.addEventListener('change', () => {
+            localStorage.setItem('caseops-display-label', displayLabelInput.value.trim());
+            updatePageDisplay();
+        });
+
+        function loadDisplayLabel() {
+            displayLabelInput.value = localStorage.getItem('caseops-display-label') || '';
+        }
+
+        function updatePageDisplay() {
+            const label = localStorage.getItem('caseops-display-label') || '';
+            document.title = `CaseOps${label ? ' - ' + label : ''}`;
+        }
+
         loadSettings();
         refreshStatusPanels();
         loadDisplayLabel();
         loadCannedMessages();
+        updatePageDisplay();
     </script>
 </body>
 </html>

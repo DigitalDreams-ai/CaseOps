@@ -46,8 +46,8 @@ CaseOps follows progressive disclosure:
 Agents must emit progress markers:
 
 ```text
-STEP_3 HEAL-12345
-STEP_4 HEAL-12345
+STEP_3 ISSUE-12345
+STEP_4 ISSUE-12345
 ...
 ```
 

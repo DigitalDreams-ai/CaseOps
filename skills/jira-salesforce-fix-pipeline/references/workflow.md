@@ -277,11 +277,11 @@ Do **not** conflate “fix confirmed in Sandbox” with “Production is fixed�
 
 Create or update the dated summary directly in the active Claude Code run after active issues complete Steps 3-10. Do not call deprecated Python orchestration paths.
 
-Before writing the dated summary, check whether `outputs/issue-summary-YYYY-MM-DD.md` already exists. If it exists, Read it and then Edit it. Use Write only when the dated summary file does not already exist.
+Before writing the dated summary, check whether `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` already exists. If it exists, Read it and then Edit it. Use Write only when the dated summary file does not already exist.
 
 ---
 
-**Output artifact:** `outputs/issue-summary-YYYY-MM-DD.md` using `assets/issue-summary-template.md`.
+**Output artifact:** `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` using `assets/issue-summary-template.md`.
 
 **The summary must include:**
 
@@ -303,7 +303,7 @@ Before writing the dated summary, check whether `outputs/issue-summary-YYYY-MM-D
 
 After all issues are processed and Step 11 summary is created, report back to stakeholders.
 
-Report is generated inline during skill execution. Reference the dated summary file (`outputs/issue-summary-YYYY-MM-DD.md`) and individual Jira message drafts (`outputs/jira-messages/<KEY>.md`).
+Report is generated inline during skill execution. Reference the dated summary file (`outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md`) and individual Jira message drafts (`outputs/jira-messages/<KEY>.md`).
 
 ---
 
@@ -321,7 +321,7 @@ Report is generated inline during skill execution. Reference the dated summary f
 - **Sandbox target** (if applicable; reference CASEOPS_SANDBOX_TARGET_ORG)
 - **Tests run and outcome** (from Step 9 test report)
 - **Open risks or follow-up** (known issues, test gaps, manual verification needed)
-- **Paths:** Internal notes (`outputs/internal-notes/<KEY>.md`), Jira message draft (`outputs/jira-messages/<KEY>.md`), dated summary (`outputs/issue-summary-YYYY-MM-DD.md`)
+- **Paths:** Internal notes (`outputs/internal-notes/<KEY>.md`), Jira message draft (`outputs/jira-messages/<KEY>.md`), dated summary (`outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md`)
 
 ---
 

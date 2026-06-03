@@ -44,7 +44,7 @@ from typing import Any
 from caseops_paths import default_jira_dir, default_jira_env_file
 
 
-DEFAULT_BASE_URL = os.environ.get("JIRA_BASE_URL", "https://your-company.atlassian.net")
+DEFAULT_BASE_URL = os.environ.get("JIRA_BASE_URL", "https://your-jira-site.example")
 DEFAULT_OUT_DIR = default_jira_dir(for_write=True)
 DEFAULT_ENV_FILE = default_jira_env_file()
 DEFAULT_ASSIGNEE = "user@example.com"

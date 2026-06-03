@@ -106,7 +106,42 @@ app = Flask(__name__)
 ROOT = Path(__file__).resolve().parent
 OUTPUTS = ROOT / "outputs"
 
-# Set in `.env.jira`: how CaseOps passes auth to the `claude` subprocess (see caseops_llm_auth_uses_anthropic_api_key).
+
+def _safe_runtime_home() -> Path:
+    """Return a stable, container-safe HOME path for CLI subprocesses."""
+    candidates = [
+        os.environ.get("HOME"),
+        os.environ.get("CASEOPS_HOME"),
+        "/app/instance1",
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        candidate_path = Path(candidate).expanduser()
+        posix_path = candidate_path.as_posix()
+        if not candidate_path.is_absolute():
+            continue
+        if posix_path in {"//", "/"}:
+            continue
+        # Skip accidental Windows-style HOME values that appear in Synology/NAS env.
+        if ":" in posix_path and not posix_path.startswith("/"):
+            continue
+        return candidate_path
+
+    # Last-resort writable fallback for container runtime.
+    fallback = Path("/tmp/caseops-home")
+    try:
+        fallback.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return Path("/tmp")
+    return fallback
+
+
+_RUNTIME_HOME = _safe_runtime_home()
+if os.environ.get("HOME") != _RUNTIME_HOME.as_posix():
+    os.environ["HOME"] = _RUNTIME_HOME.as_posix()
+
+    # Set in `.env.jira`: how CaseOps passes auth to the `claude` subprocess (see caseops_llm_auth_uses_anthropic_api_key).
 CASEOPS_LLM_AUTH_ENV = "CASEOPS_LLM_AUTH"
 
 # ---------------------------------------------------------------------------
@@ -133,7 +168,7 @@ skill_registry = SkillRegistry()
 SKILL_PATHS: dict[str, str] = {}
 
 # Salesforce org cache: one-time auth validation per run (prevents sf org list re-runs)
-# Stores: {"10xhealth": {...}, "10xhealth-sean": {...}}
+# Stores: {"production-read": {...}, "sandbox-target": {...}}
 _sf_orgs_cache: dict[str, dict[str, str]] | None = None
 _sf_orgs_cache_time = 0
 _SF_ORGS_CACHE_TTL = 600  # Cache for 10 minutes
@@ -363,7 +398,7 @@ These rules are always safe to include in Salesforce pipeline runs.
 - Use `sf` CLI and SOQL for Salesforce API work. Do not use frontdoor links, magic links, or browser session IDs for API, SOQL, retrieve, deploy, or tests.
 - Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands. Do not use `package.xml` or `--manifest` unless the operator explicitly approves a metadata-type exception.
 - Never print, export, or embed raw Salesforce access tokens. Do not run `SF_TEMP_SHOW_SECRETS=true sf org display`. If a REST call is unavoidable, use an internal helper that does not log the token.
-- Stay inside the current issue workspace. Do not inspect other `HEAL-*` metadata or output directories unless the operator explicitly asks for cross-issue comparison.
+- Stay inside the current issue workspace. Do not inspect other issue metadata or output directories unless the operator explicitly asks for cross-issue comparison.
 - Stop after two failed variants of the same query/deploy pattern. Replan using the selected org knowledge instead of trying many small variations.
 - Prefer `--json` output and parse concise fields. Do not read full persisted deploy/retrieve logs unless the concise status is insufficient.
 - When a run discovers a durable, verified, reusable fact, update the most relevant org-knowledge topic file with one short bullet. Do not store secrets or customer-specific narrative.
@@ -974,15 +1009,39 @@ def _persistent_canned_messages_file() -> Path:
     return OUTPUTS / "settings" / "canned-messages.json"
 
 
-def _legacy_canned_messages_file() -> Path | None:
-    """Return the old workspace-specific canned-message path, if applicable."""
+def _legacy_canned_messages_candidates() -> list[Path]:
+    """Return previous custom canned-message locations that should be migrated."""
+    legacy_files: list[Path] = [OUTPUTS.parent / "canned-messages.json"]
+
     workspace = app.config.get("WORKSPACE") or os.environ.get("CASEOPS_WORKSPACE", "default")
     if workspace and workspace != "default":
-        return ROOT / workspace / "canned-messages.json"
-    legacy_instance_file = OUTPUTS.parent / "canned-messages.json"
-    if legacy_instance_file != ROOT / "canned-messages.json":
-        return legacy_instance_file
-    return None
+        workspace_legacy = ROOT / workspace / "canned-messages.json"
+        if workspace_legacy.exists():
+            legacy_files.append(workspace_legacy)
+
+    return [path for path in legacy_files if path.exists() and path.is_file()]
+
+
+def _migrate_legacy_canned_messages_file(target: Path) -> bool:
+    """Copy the first available legacy canned-messages file into the canonical path."""
+    if target.exists():
+        return True
+    for legacy in _legacy_canned_messages_candidates():
+        if not legacy.exists() or not legacy.is_file():
+            continue
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(legacy, target)
+            return True
+        except OSError:
+            return False
+    return False
+
+
+def _legacy_canned_messages_file() -> Path | None:
+    """Return the first legacy path if available (compatibility fallback)."""
+    candidates = _legacy_canned_messages_candidates()
+    return candidates[0] if candidates else None
 
 
 def _active_canned_messages_file() -> tuple[Path, bool]:
@@ -992,7 +1051,9 @@ def _active_canned_messages_file() -> tuple[Path, bool]:
         return persistent, True
 
     legacy = _legacy_canned_messages_file()
-    if legacy and legacy.exists():
+    if legacy:
+        if _migrate_legacy_canned_messages_file(persistent):
+            return persistent, True
         return legacy, True
 
     return ROOT / "canned-messages.json", False
@@ -1436,6 +1497,13 @@ FILE_LABELS: dict[str, str] = {
     "attachments":     "Attachments",
 }
 
+# Daily summary directory structure:
+# outputs/summaries/<YYYY-MM-DD>/issue-summary-<YYYY-MM-DD>.md
+_SUMMARY_DIR = "summaries"
+
+_DAILY_SUMMARY_FILENAME_RE = re.compile(r"^issue-summary-(\d{4}-\d{2}-\d{2})\.md$")
+
+
 # Global actions (sync, triage, full) use this sentinel key.
 _GLOBAL_KEY = "__global__"
 
@@ -1458,6 +1526,41 @@ def _pipeline_log_path(run_key: str) -> Path:
     return OUTPUTS_PIPELINE_LOGS / f"{safe}.jsonl"
 
 
+def _ensure_directory_writable(path: Path, label: str) -> None:
+    """Ensure a directory exists and is writable by the running process."""
+    path.mkdir(parents=True, exist_ok=True)
+    marker = path / ".caseops-write-check"
+    try:
+        marker.write_text("ok", encoding="utf-8")
+        marker.unlink(missing_ok=True)
+        return
+    except OSError as exc:
+        backup = path.with_name(f"{path.name}.readonly-backup-{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+        print(f"[WARN] {label} is not writable: {path}\n       using backup recovery: {backup}")
+        if backup.exists():
+            try:
+                shutil.rmtree(backup, ignore_errors=True)
+            except OSError:
+                pass
+        if path.exists():
+            try:
+                shutil.move(str(path), str(backup))
+                print(f"[OK] Moved unwritable {label} directory out of the way: {path} -> {backup}")
+            except OSError as rm_exc:
+                try:
+                    shutil.rmtree(path, ignore_errors=True)
+                    print(f"[WARN] Could not move unwritable {label}; removed it for recovery: {path}")
+                except OSError as rm_second_exc:
+                    raise RuntimeError(f"{label} path is not writable and could not be repaired: {path}\nError: {rm_second_exc}") from exc
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            marker.write_text("ok", encoding="utf-8")
+            marker.unlink(missing_ok=True)
+            print(f"[OK] Recreated {label} directory with current user write access: {path}")
+        except OSError as rebuild_exc:
+            raise RuntimeError(f"{label} directory is not writable and could not be recreated: {path}\nError: {rebuild_exc}") from exc
+
+
 def _sanitize_pipeline_log_text(text: str) -> str:
     """Remove terminal redraw/color controls before logs are stored or shown."""
     cleaned = _ANSI_CONTROL_RE.sub("", str(text))
@@ -1467,6 +1570,25 @@ def _sanitize_pipeline_log_text(text: str) -> str:
     cleaned = _SFDX_AUTH_URL_RE.sub("[REDACTED_SFDX_AUTH_URL]", cleaned)
     cleaned = cleaned.replace("\r", "\n").replace("\b", "")
     return cleaned.rstrip()
+
+
+def _ensure_file_writable(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    backup = path.with_name(f".{path.name}.unwritable-backup-{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+    if path.exists():
+        try:
+            path.rename(backup)
+        except OSError as rename_exc:
+            try:
+                path.unlink()
+            except OSError:
+                raise RuntimeError(f"Pipeline log file is not writable and could not be recovered: {path}") from rename_exc
+    try:
+        path.touch(exist_ok=True)
+        with path.open("a", encoding="utf-8"):
+            pass
+    except OSError as exc:
+        raise RuntimeError(f"Pipeline log file is not writable and could not be recovered: {path}") from exc
 
 
 def _persist_pipeline_record(run_key: str, text: str, *, kind: str = "line") -> None:
@@ -1481,8 +1603,17 @@ def _persist_pipeline_record(run_key: str, text: str, *, kind: str = "line") -> 
     log_path = _pipeline_log_path(run_key)
     _validate_instance_path(log_path, "write")  # HARD RULE: instance-routed writes only
     with _PIPELINE_LOG_LOCK:
-        with log_path.open("a", encoding="utf-8") as fh:
-            fh.write(line)
+        try:
+            with log_path.open("a", encoding="utf-8") as fh:
+                fh.write(line)
+        except OSError as exc:
+            # Recover from legacy run artifacts with immutable/ro bits or stale permissions.
+            if log_path.is_file() and not os.access(log_path, os.W_OK):
+                _ensure_file_writable(log_path)
+                with log_path.open("a", encoding="utf-8") as fh:
+                    fh.write(line)
+            else:
+                raise RuntimeError(f"Unable to append pipeline log for run '{run_key}': {log_path}") from exc
 
 
 def _format_run_timestamp() -> str:
@@ -1827,7 +1958,7 @@ def _build_pipeline_resume_plan(
             "complete" if summary_current and step10_complete else ("blocked" if not step10_complete else "pending"),
             "Latest dated summary is newer than issue artifacts." if summary_current and step10_complete else "Requires Step 10 first." if not step10_complete else "Latest dated summary is missing or older than issue artifacts.",
             "Emit STEP_11 __summary__ resume-skip unless the run changed artifacts." if summary_current and step10_complete else "Update today's issue summary once issue artifacts are complete.",
-            [_path_relative_for_prompt(summary_path) if summary_path else "issue-summary-YYYY-MM-DD.md"],
+            [_path_relative_for_prompt(summary_path) if summary_path else _path_relative_for_prompt(_today_issue_summary_path())],
         ))
         steps.append(_resume_step(
             12,
@@ -2026,6 +2157,15 @@ def _claude_process_env() -> dict[str, str]:
     Instance-specific output directories so Skill writes to correct location.
     """
     env = os.environ.copy()
+    runtime_home = _safe_runtime_home()
+    env["HOME"] = runtime_home.as_posix()
+    try:
+        runtime_home.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        # Keep a deterministic fallback; command runs will fail fast only if unwritable.
+        env["HOME"] = "/tmp/caseops-home"
+    env.setdefault("SF_DATA_DIR", str(Path(env["HOME"]) / ".sf"))
+    env.setdefault("SFDX_DIR", str(Path(env["HOME"]) / ".sfdx"))
     if not caseops_llm_auth_uses_anthropic_api_key():
         # Claude Code subscription mode: prefer CLAUDE_CODE_OAUTH_TOKEN.
         # Do not pass ANTHROPIC_API_KEY; it takes precedence over subscription auth.
@@ -2156,7 +2296,7 @@ def _sf_auth_from_access_token(
     """Authenticate one Salesforce CLI alias from an env-held access token."""
     auth_env = env.copy()
     auth_env["SF_ACCESS_TOKEN"] = token
-    auth_env.setdefault("HOME", str(Path.home()))
+    auth_env.setdefault("HOME", _safe_runtime_home().as_posix())
     return _run_cli_command(
         [
             sf_bin,
@@ -2319,7 +2459,7 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
     result: dict[str, Any] = {
         "ok": True,
         "issues": [],
-        "home": env.get("HOME") or str(Path.home()),
+        "home": env.get("HOME") or _safe_runtime_home().as_posix(),
         "caseops_llm_auth": "api_key" if caseops_llm_auth_uses_anthropic_api_key() else "claude_code",
         "claude": {"ok": False},
         "sf": {
@@ -2622,6 +2762,12 @@ def _salesforce_browser_prompt_section() -> str:
 
 def _do_stream_proc(cmd: list[str], run_key: str) -> int:
     """Stream subprocess output to log queue. Returns exit code."""
+    if _is_legacy_pipeline_cmd(cmd):
+        _log_emit_line(
+            run_key,
+            "ERROR: Legacy command blocked: run_pipeline.py is deprecated and cannot be executed.",
+        )
+        return 1
     if cmd and cmd[0] == sys.executable:
         cmd = [cmd[0], "-u"] + cmd[1:]
     try:
@@ -2667,6 +2813,11 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
     except Exception as exc:
         _log_emit_line(run_key, f"ERROR: {exc}")
         return 1
+
+
+def _is_legacy_pipeline_cmd(cmd: list[str]) -> bool:
+    """Return True when the command references the removed run_pipeline.py script."""
+    return any(Path(arg).name == "run_pipeline.py" for arg in cmd if arg)
 
 
 def _retry_with_backoff(max_attempts: int = 3, backoff_factor: float = 2.0):
@@ -3092,6 +3243,12 @@ def _stream_proc(cmd: list[str], run_key: str) -> None:
         else:
             # For individual issue syncs/runs, clear that issue's cached data
             jira_summary_cache.pop(run_key, None)
+
+        if cmd and "jira_sync.py" in (arg for arg in cmd):
+            if run_key == _GLOBAL_KEY:
+                manifest_changed()
+            else:
+                manifest_changed([run_key])
         _log_emit_line(run_key, "Done: global run" if run_key == _GLOBAL_KEY else f"Done: {run_key}")
         _log_emit_done(run_key)
 
@@ -3531,7 +3688,9 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"**Update guidance:**\n"
         f"- Read existing files first (if they exist) to preserve prior work\n"
         f"- For any existing output file, use Read followed by Edit. Use Write only when the file does not already exist.\n"
-        f"- For `issue-summary-YYYY-MM-DD.md`, check whether today's file exists before writing; if it exists, Read it and Edit it.\n"
+        f"- For daily summaries, write/read `summaries/<YYYY-MM-DD>/issue-summary-<YYYY-MM-DD>.md`; "
+        f"for today it is `{_path_relative_for_prompt(_today_issue_summary_path())}`.\n"
+        f"- Check if today's summary file exists before writing; if it exists, Read it and Edit it.\n"
         f"- Update them directly (do not ask operator or wait for confirmation)\n"
         f"- Commit your changes with `git add` + `git commit` if substantial updates\n"
         f"- If you cannot complete a task, update the relevant file to document progress and blockers\n"
@@ -3623,7 +3782,74 @@ def _attachment_count(key: str) -> int:
     return len(_raw_json(key).get("attachments", []))
 
 
-_ROLLUP_FILENAME = re.compile(r"^issue-summary-\d{4}-\d{2}-\d{2}\.md$")
+def _summary_root_dir() -> Path:
+    return OUTPUTS / _SUMMARY_DIR
+
+
+def _summary_date_from_filename(name: str) -> str | None:
+    match = _DAILY_SUMMARY_FILENAME_RE.match(name)
+    if not match:
+        return None
+    return match.group(1)
+
+
+def _issue_summary_path_for_date(summary_date: str) -> Path:
+    return _summary_root_dir() / summary_date / f"issue-summary-{summary_date}.md"
+
+
+def _today_issue_summary_path() -> Path:
+    return _issue_summary_path_for_date(datetime.now().strftime("%Y-%m-%d"))
+
+
+def _iter_daily_issue_summary_paths() -> list[Path]:
+    root = _summary_root_dir()
+    if not root.is_dir():
+        return []
+    paths: list[Path] = []
+    for date_dir in sorted(root.iterdir()):
+        if not date_dir.is_dir():
+            continue
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_dir.name):
+            continue
+        candidate = date_dir / f"issue-summary-{date_dir.name}.md"
+        if candidate.is_file():
+            paths.append(candidate)
+    return paths
+
+
+def _iter_legacy_issue_summary_paths() -> list[Path]:
+    return sorted(
+        (p for p in OUTPUTS.glob("issue-summary-*.md") if _summary_date_from_filename(p.name)),
+        key=lambda p: p.name,
+    )
+
+
+def _latest_issue_summary_path() -> Path | None:
+    """Return the most recently modified issue summary across legacy and daily locations."""
+    candidates = _iter_daily_issue_summary_paths() + _iter_legacy_issue_summary_paths()
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def _migrate_legacy_issue_summaries() -> None:
+    """Move legacy root-level summaries into the daily summaries directory when possible."""
+    for legacy in _iter_legacy_issue_summary_paths():
+        summary_date = _summary_date_from_filename(legacy.name)
+        if not summary_date:
+            continue
+        target = _issue_summary_path_for_date(summary_date)
+        if target.exists():
+            continue
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            legacy.replace(target)
+            print(f"[OK] Migrated legacy summary: {legacy.name} -> {target.relative_to(ROOT)}")
+        except OSError as exc:
+            print(f"[WARN] Could not migrate legacy summary {legacy}: {exc}")
+
+
+_ROLLUP_FILENAME = re.compile(r"^(?:summaries/\d{4}-\d{2}-\d{2}/issue-summary-\d{4}-\d{2}-\d{2}\.md|issue-summary-\d{4}-\d{2}-\d{2}\.md)$")
 
 
 def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
@@ -3899,13 +4125,6 @@ def _test_report_confirms_fix(key: str) -> bool:
     return first in ("yes", "y", "true", "✓", "ok")
 
 
-def _latest_issue_summary_path() -> Path | None:
-    candidates = list(OUTPUTS.glob("issue-summary-*.md"))
-    if not candidates:
-        return None
-    return max(candidates, key=lambda p: p.stat().st_mtime)
-
-
 def _claude_prompt(key: str, summary: str) -> str:
     return (
         f'Process {key} through the mounted jira-salesforce-fix-pipeline playbook files. Do not invoke a slash-skill.\n\n'
@@ -3986,7 +4205,10 @@ def api_latest_issue_summary():
     path = _latest_issue_summary_path()
     if not path:
         return jsonify({"label": None, "url": None})
-    name = path.name
+    try:
+        name = path.relative_to(OUTPUTS).as_posix()
+    except ValueError:
+        name = path.name
     return jsonify({"label": name, "url": f"/files/rollup/{name}"})
 
 
@@ -4077,6 +4299,7 @@ def api_run():
     use_reprocess_issue = False
     use_force_reprocess_issue = False
     use_global_skill = False
+    cmd: list[str] | None = None
 
     if action == "sync":
         cmd = [sys.executable, "jira_sync.py", "--env-file", env_file, "--out-dir", str(OUTPUTS / "jira")]
@@ -4085,16 +4308,13 @@ def api_run():
     elif action == "sync_issue" and key:
         cmd = [
             sys.executable,
-            "run_pipeline.py",
+            "jira_sync.py",
             "--env-file",
             env_file,
-            "--jira-dir",
-            str(OUTPUTS / "jira"),
-            "--outputs-dir",
-            str(OUTPUTS),
             "--issue",
             key,
-            "--no-agents",
+            "--out-dir",
+            str(OUTPUTS / "jira"),
         ]
     elif action == "reprocess":
         use_global_skill = True
@@ -4116,6 +4336,18 @@ def api_run():
         prompt = _build_claude_prompt(key, instruction)
     else:
         return jsonify({"error": "unknown action"}), 400
+
+    # Guard against stale callers still trying to run deprecated scripts.
+    if cmd is not None:
+        if _is_legacy_pipeline_cmd(cmd):
+            _log_emit_line(run_key, "ERROR: '/app/run_pipeline.py' is no longer supported. "
+                                    "Use the updated sync/pipeline actions.")
+            with _state_lock:
+                _active_keys.discard(run_key)
+            return jsonify({
+                "error": "Legacy run_pipeline workflow removed. Use sync/reprocess/full actions from UI.",
+            }), 400
+        _log_emit_line(run_key, f"Resolved run request: action={action} key={key or '<none>'}")
 
     with _state_lock:
         if run_key in _active_keys:
@@ -4220,7 +4452,7 @@ def api_pipeline_log(key: str):
 
 @app.post("/api/pipeline-log/clear")
 def api_pipeline_log_clear():
-    """Remove one pipeline log file (JSON body: {\"key\": \"HEAL-1\"} or __global__)."""
+    """Remove one pipeline log file (JSON body: {\"key\": \"ISSUE-1\"} or __global__)."""
     data = request.get_json(silent=True) or {}
     run_key = (data.get("key") or data.get("run_key") or "").strip()
     if not run_key:
@@ -4811,10 +5043,7 @@ def api_settings_get_canned_messages():
     try:
         content = messages_file.read_text(encoding="utf-8")
         json.loads(content)  # Validate JSON
-        try:
-            path = str(messages_file.relative_to(ROOT))
-        except ValueError:
-            path = str(messages_file)
+        path = str(messages_file.resolve())
         return jsonify({
             "content": content,
             "is_custom": is_custom,
@@ -4887,6 +5116,12 @@ def _settings_status_skeleton() -> dict[str, Any]:
     sand_alias = _env_first("CASEOPS_SANDBOX_TARGET_ORG", settings=settings)
 
     return {
+        "paths": {
+            "outputs_dir": str(OUTPUTS),
+            "instance_dir": str(OUTPUTS.parent),
+            "env_file": str(env_file_path) if env_file_path else "",
+            "canned_messages_file": str(_persistent_canned_messages_file()),
+        },
         "claude": {
             "installed": bool(shutil.which("claude")),
             "authenticated": False,
@@ -4906,97 +5141,60 @@ def _build_settings_status() -> dict[str, Any]:
     status = _settings_status_skeleton()
     env_file_path = app.config.get("ENV_FILE_PATH")
     settings = _read_env_file(Path(env_file_path) if env_file_path else None)
+    use_cci = os.environ.get("CASEOPS_USE_CCI_FOR_AUTH", "false").lower() == "true"
     prod_alias = _env_first("CASEOPS_PRODUCTION_READ_ORG", settings=settings)
     sand_alias = _env_first("CASEOPS_SANDBOX_TARGET_ORG", settings=settings)
 
-    use_cci = os.environ.get("CASEOPS_USE_CCI_FOR_AUTH", "false").lower() == "true"
-
-    # Check Claude
+    # Ground truth check for auth/runtime: same path used by pipeline preflight.
     try:
-        result = subprocess.run(["claude", "--version"], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            status["claude"]["installed"] = True
-            status["claude"]["version"] = result.stdout.strip()
-            status["claude"]["token_configured"] = bool(
-                (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or "").strip()
-            )
-            auth_result = subprocess.run(
-                ["claude", "auth", "status"],
-                env=_claude_process_env(),
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            status["claude"]["authenticated"] = auth_result.returncode == 0
-            if auth_result.stdout.strip().startswith("{"):
-                try:
-                    status["claude"]["auth_status"] = json.loads(auth_result.stdout)
-                except json.JSONDecodeError:
-                    pass
-            if not status["claude"]["authenticated"]:
-                status["claude"]["auth_error"] = (auth_result.stderr or auth_result.stdout).strip()[:500]
-    except Exception:
-        pass
-
-    # Check sf CLI
-    if shutil.which("sf"):
-        status["sf_installed"] = True
-
-        # Check prod org
-        if prod_alias:
-            try:
-                result = subprocess.run(
-                    ["sf", "org", "display", "--target-org", prod_alias, "--json"],
-                    capture_output=True, text=True, timeout=20
-                )
-                if result.returncode == 0:
-                    # Skip warning lines, find JSON start
-                    json_str = result.stdout.strip()
-                    if json_str.startswith('{'):
-                        data = json.loads(json_str)
-                        status["sf_prod"]["authenticated"] = True
-                        status["sf_prod"]["username"] = data.get("result", {}).get("username", "")
-                        status["sf_prod"]["orgId"] = data.get("result", {}).get("id", "")
-                        status["sf_prod"]["instanceUrl"] = data.get("result", {}).get("instanceUrl", "")
-                    else:
-                        # Find first { and parse from there
-                        idx = json_str.find('{')
-                        if idx >= 0:
-                            data = json.loads(json_str[idx:])
-                            status["sf_prod"]["authenticated"] = True
-                            status["sf_prod"]["username"] = data.get("result", {}).get("username", "")
-                            status["sf_prod"]["orgId"] = data.get("result", {}).get("id", "")
-                            status["sf_prod"]["instanceUrl"] = data.get("result", {}).get("instanceUrl", "")
-            except Exception:
-                pass
-
-        # Check sandbox org
-        if sand_alias:
-            try:
-                result = subprocess.run(
-                    ["sf", "org", "display", "--target-org", sand_alias, "--json"],
-                    capture_output=True, text=True, timeout=20
-                )
-                if result.returncode == 0:
-                    # Skip warning lines, find JSON start
-                    json_str = result.stdout.strip()
-                    if json_str.startswith('{'):
-                        data = json.loads(json_str)
-                        status["sf_sandbox"]["authenticated"] = True
-                        status["sf_sandbox"]["username"] = data.get("result", {}).get("username", "")
-                        status["sf_sandbox"]["orgId"] = data.get("result", {}).get("id", "")
-                        status["sf_sandbox"]["instanceUrl"] = data.get("result", {}).get("instanceUrl", "")
-                    else:
-                        # Find first { and parse from there
-                        idx = json_str.find('{')
-                        if idx >= 0:
-                            data = json.loads(json_str[idx:])
-                            status["sf_sandbox"]["authenticated"] = True
-                            status["sf_sandbox"]["username"] = data.get("result", {}).get("username", "")
-                            status["sf_sandbox"]["orgId"] = data.get("result", {}).get("id", "")
-                            status["sf_sandbox"]["instanceUrl"] = data.get("result", {}).get("instanceUrl", "")
-            except Exception as e:
-                print(f"DEBUG: sandbox auth check failed: {type(e).__name__}: {str(e)}", flush=True)
+        runtime_preflight = _collect_runtime_preflight(run_soql=False)
+        status["runtime_preflight"] = runtime_preflight
+        status["sf_installed"] = bool(runtime_preflight.get("sf", {}).get("installed", False))
+        status["sf_prod"].update({
+            "alias": (runtime_preflight.get("sf", {}).get("prod", {}) or {}).get("alias", prod_alias),
+            "authenticated": bool((runtime_preflight.get("sf", {}).get("prod", {}) or {}).get("authenticated", False)),
+            "username": (runtime_preflight.get("sf", {}).get("prod", {}) or {}).get("username", ""),
+            "orgId": (runtime_preflight.get("sf", {}).get("prod", {}) or {}).get("orgId", ""),
+            "instanceUrl": (runtime_preflight.get("sf", {}).get("prod", {}) or {}).get("instanceUrl", ""),
+            "connectedStatus": (runtime_preflight.get("sf", {}).get("prod", {}) or {}).get("connectedStatus", ""),
+            "soql_ok": bool((runtime_preflight.get("sf", {}).get("prod", {}) or {}).get("soql_ok", False)),
+        })
+        status["sf_sandbox"].update({
+            "alias": (runtime_preflight.get("sf", {}).get("sandbox", {}) or {}).get("alias", sand_alias),
+            "authenticated": bool((runtime_preflight.get("sf", {}).get("sandbox", {}) or {}).get("authenticated", False)),
+            "username": (runtime_preflight.get("sf", {}).get("sandbox", {}) or {}).get("username", ""),
+            "orgId": (runtime_preflight.get("sf", {}).get("sandbox", {}) or {}).get("orgId", ""),
+            "instanceUrl": (runtime_preflight.get("sf", {}).get("sandbox", {}) or {}).get("instanceUrl", ""),
+            "connectedStatus": (runtime_preflight.get("sf", {}).get("sandbox", {}) or {}).get("connectedStatus", ""),
+            "soql_ok": bool((runtime_preflight.get("sf", {}).get("sandbox", {}) or {}).get("soql_ok", False)),
+        })
+        if caseops_llm_auth_uses_anthropic_api_key():
+            status["claude"] = {
+                "installed": bool(runtime_preflight.get("caseops_llm_auth") == "api_key"),
+                "authenticated": bool((os.environ.get("ANTHROPIC_API_KEY") or "").strip()),
+                "token_configured": bool((os.environ.get("ANTHROPIC_API_KEY") or "").strip()),
+            }
+        else:
+            claude_preflight = runtime_preflight.get("claude", {})
+            status["claude"].update({
+                "installed": bool(claude_preflight.get("installed", False)),
+                "authenticated": bool(claude_preflight.get("authenticated", False)),
+                "token_configured": bool(claude_preflight.get("token_configured", False)),
+                "version": str(claude_preflight.get("version", "") or "").strip(),
+                "auth_status": claude_preflight.get("auth_status"),
+                "ok": bool(claude_preflight.get("ok", False)),
+            })
+            if claude_preflight.get("auth_status"):
+                status["claude"]["auth_status"] = claude_preflight.get("auth_status")
+            if claude_preflight.get("version_warning"):
+                status["claude"]["version_warning"] = claude_preflight["version_warning"]
+            if claude_preflight.get("auth_error"):
+                status["claude"]["auth_error"] = claude_preflight["auth_error"]
+    except Exception as e:
+        status["runtime_preflight"] = {
+            "ok": False,
+            "issues": [f"Runtime preflight status failed: {type(e).__name__}: {e}"],
+        }
 
     # Check CCI
     if shutil.which("cumulusci") or shutil.which("cci"):
@@ -5025,14 +5223,6 @@ def _build_settings_status() -> dict[str, Any]:
                     status["cci_sandbox"]["authenticated"] = True
             except Exception:
                 pass
-
-    try:
-        status["runtime_preflight"] = _collect_runtime_preflight(run_soql=False)
-    except Exception as e:
-        status["runtime_preflight"] = {
-            "ok": False,
-            "issues": [f"Runtime preflight status failed: {type(e).__name__}: {e}"],
-        }
 
     status["cache"] = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -5210,7 +5400,7 @@ def api_setup_salesforce_auth():
             try:
                 env = os.environ.copy()
                 env["SF_ACCESS_TOKEN"] = token
-                env["HOME"] = str(Path.home())
+                env["HOME"] = _safe_runtime_home().as_posix()
                 proc = subprocess.run(
                     ["sf", "org", "login", "access-token", "--alias", alias, "--instance-url", url, "--no-prompt"],
                     capture_output=True,
@@ -5250,7 +5440,7 @@ def api_setup_salesforce_auth():
                     timeout=15,
                     check=False,
                     text=True,
-                    env={**os.environ, "HOME": str(Path.home())},
+                    env={**os.environ, "HOME": _safe_runtime_home().as_posix()},
                 )
                 if proc.returncode == 0:
                     data = json.loads(proc.stdout)
@@ -5295,12 +5485,6 @@ def api_setup_salesforce_auth():
 
     except Exception as e:
         return jsonify({"error": f"SF auth failed: {str(e)}"}), 500
-
-
-@app.get("/setup/refresh-salesforce-tokens")
-def setup_refresh_sf_tokens():
-    """Show instructions for refreshing Salesforce access tokens (8h TTL)."""
-    return render_template("refresh-sf-tokens.html")
 
 
 @app.post("/api/setup/refresh-salesforce-tokens")
@@ -5403,7 +5587,7 @@ if __name__ == "__main__":
         OUTPUTS = Path(os.environ["CASEOPS_OUTPUTS_DIR"])
     else:
         OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
-    OUTPUTS.mkdir(parents=True, exist_ok=True)
+    _ensure_directory_writable(OUTPUTS, "outputs")
 
     if _args.env_file:
         env_file_path = Path(_args.env_file)
@@ -5414,8 +5598,8 @@ if __name__ == "__main__":
 
     # Initialize instance-specific runtime and metadata workspaces.
     globals()["TEMP_ROOT"] = OUTPUTS.parent / ".temp"
-    TEMP_ROOT.mkdir(parents=True, exist_ok=True)
-    (TEMP_ROOT / "claude-code").mkdir(parents=True, exist_ok=True)
+    _ensure_directory_writable(TEMP_ROOT, ".temp root")
+    _ensure_directory_writable(TEMP_ROOT / "claude-code", "Claude Code temp")
     _ensure_metadata_workspace_dirs()
 
     # Initialize instance-specific pipeline logs directory
@@ -5425,10 +5609,11 @@ if __name__ == "__main__":
     for subdir in [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
         "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state",
-        "org-knowledge", "metadata-cache", "metadata-workspaces"
+        "org-knowledge", "metadata-cache", "metadata-workspaces", "summaries"
     ]:
-        (OUTPUTS / subdir).mkdir(parents=True, exist_ok=True)
+        _ensure_directory_writable(OUTPUTS / subdir, f"outputs/{subdir}")
     _ensure_org_knowledge_defaults()
+    _migrate_legacy_issue_summaries()
 
     JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "").rstrip("/")
     app.config["WORKSPACE"] = WORKSPACE
@@ -5473,7 +5658,8 @@ if __name__ == "__main__":
     required_subdirs = [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
         "engineering-escalations", "step-4-hypothesis", "pipeline-logs", "pipeline-state",
-        "closed-resolved", "org-knowledge", "metadata-cache", "metadata-workspaces"
+        "closed-resolved", "org-knowledge", "metadata-cache", "metadata-workspaces",
+        _SUMMARY_DIR
     ]
     for subdir in required_subdirs:
         subdir_path = OUTPUTS / subdir

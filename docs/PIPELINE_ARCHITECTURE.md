@@ -56,7 +56,9 @@ outputs/
 ├── internal-notes/<KEY>.md
 ├── jira-messages/<KEY>.md
 ├── engineering-escalations/<KEY>.md
-└── issue-summary-YYYY-MM-DD.md
+└── summaries/
+    └── YYYY-MM-DD/
+        └── issue-summary-YYYY-MM-DD.md
 ```
 
 The orchestrator reads compact sub-agent summaries and output file presence. It does not load entire investigation records into context unless a step explicitly requires a narrow excerpt.
