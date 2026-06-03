@@ -20,6 +20,9 @@ account_triggers.json
 *.bak
 *.tmp
 *.md.tmp
+docs/*PLAN*.md
+docs/CODEX_*_PROMPT.md
+docs/CASEOPS_ENHANCEMENT_PLAN.md
 *.png
 *.jpg
 *.jpeg

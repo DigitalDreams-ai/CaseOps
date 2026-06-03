@@ -45,7 +45,24 @@ COPY --chown=1027:100 templates/ /app/templates/
 COPY --chown=1027:100 static/ /app/static/
 COPY --chown=1027:100 skills/ /app/skills/
 COPY --chown=1027:100 scripts/ /app/scripts/
-COPY --chown=1027:100 docs/*.md /app/docs/
+COPY --chown=1027:100 \
+    docs/AGENTS.md \
+    docs/API.md \
+    docs/ARCHITECTURE.md \
+    docs/CASEOPS_QUICKSTART.md \
+    docs/CLAUDE_LAUNCHER_GUIDE.md \
+    docs/DEPRECATED.md \
+    docs/DOCKER_SETUP.md \
+    docs/INSTANCE_ROUTING.md \
+    docs/INSTANCES.md \
+    docs/NIGHTLY_SETUP.md \
+    docs/PIPELINE_ARCHITECTURE.md \
+    docs/PROJECT_OVERVIEW.md \
+    docs/README.md \
+    docs/TECHNICAL_OVERVIEW.md \
+    docs/USER_GUIDE.md \
+    docs/WORKSPACES.md \
+    /app/docs/
 
 # Create output/cache mount points with proper permissions.
 RUN mkdir -p /app/outputs /app/instance1/outputs /app/instance1/.temp && \
