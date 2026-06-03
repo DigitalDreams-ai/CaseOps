@@ -63,6 +63,7 @@ caseops/data/jira/*.json
 caseops/data/jira/*.csv
 
 # Generated artifacts
+CaseOps_Image/
 caseops/output/
 outputs/jira/
 outputs/production-metadata/
