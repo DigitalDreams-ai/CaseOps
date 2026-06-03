@@ -1396,6 +1396,11 @@
     issueBody.innerHTML =
       '<p style="color:#6e7681;padding:20px;">Loading...</p>';
 
+    if (ftype === 'generated_files') {
+      await loadGeneratedFilesTab(key, issueBody, seq);
+      return;
+    }
+
     const res = await fetch(`/api/issue/${key}/file/${ftype}`);
     if (seq !== selectTabSeq || activeKey !== key) return;
     const data = await res.json();
@@ -1425,6 +1430,41 @@
     if ((ftype === 'jira_message' || ftype === 'internal_notes') && data.raw) {
       appendPostPanel(key, ftype, data.raw, area);
     }
+  }
+
+  async function loadGeneratedFilesTab(key, area, tabSeq) {
+    let files;
+    try {
+      const res = await fetch(`/api/issue/${key}/generated-files`);
+      files = await res.json();
+    } catch (_) {
+      if (tabSeq === selectTabSeq && activeKey === key) {
+        area.innerHTML = '<p class="empty">Could not load generated files.</p>';
+      }
+      return;
+    }
+    if (tabSeq !== selectTabSeq || activeKey !== key) return;
+    if (!Array.isArray(files) || files.length === 0) {
+      area.innerHTML = '<p class="empty">No generated files for this issue.</p>';
+      return;
+    }
+
+    let html = '<h2>Generated Files</h2><div class="att-grid">';
+    for (const file of files) {
+      const name = file.filename || file.path || 'Generated file';
+      const meta = [file.size_label || '', file.modified ? file.modified.slice(0, 10) : '']
+        .filter(Boolean).join(' · ');
+      html += `
+        <div class="att-card att-file">
+          <a class="att-dl" href="${escHtml(file.url)}" target="_blank" rel="noopener" download="${escHtml(name)}">
+            <span class="att-icon">📄</span>
+            <span class="att-name">${escHtml(name)}</span>
+          </a>
+          <div class="att-meta">${escHtml(meta)}</div>
+        </div>`;
+    }
+    html += '</div>';
+    area.innerHTML = html;
   }
 
   function appendPostPanel(key, ftype, rawText, area) {

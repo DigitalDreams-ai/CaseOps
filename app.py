@@ -11,8 +11,10 @@ from __future__ import annotations
 import base64
 import copy
 import csv
+import html
 import json
 import hashlib
+import mimetypes
 import os
 import queue
 import re
@@ -1804,6 +1806,7 @@ FILE_LABELS: dict[str, str] = {
     "eng_handoff":     "Eng Handoff",
     "closed_resolved": "Closed / Resolved / Canceled",
     "attachments":     "Attachments",
+    "generated_files": "Generated Files",
 }
 
 # Daily summary directory structure:
@@ -5675,6 +5678,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"| `{outputs_dir_relative}/jira-messages/{key}.md` | Customer-facing Jira message (confirmed fix OR engineering escalation) | When ready to respond to customer |\n"
         f"| `{outputs_dir_relative}/test-reports/{key}.md` | Test cases, results, and fix validation | After testing the fix in Sandbox |\n"
         f"| `{outputs_dir_relative}/engineering-escalations/{key}.md` | Engineering handoff (if escalating) | When escalating to Engineering team |\n"
+        f"| `{outputs_dir_relative}/generated-files/{key}/` | Issue-specific generated files such as spreadsheets, exports, CSVs, or supporting documents | Whenever a run creates non-markdown files |\n"
         f"\n"
         f"**Update guidance:**\n"
         f"- Read existing files first (if they exist) to preserve prior work\n"
@@ -5691,6 +5695,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"- Proceed with the next pipeline steps implied by the playbook and by which files "
         f"already exist for {key} in `{outputs_dir_relative}/`.\n"
         f"- Create or update artifacts in `{outputs_dir_relative}/` that this issue needs (paths as shown above).\n"
+        f"- Never save issue-generated spreadsheets, CSVs, PDFs, images, or other supporting files directly in `{outputs_dir_relative}/`; save them under `{outputs_dir_relative}/generated-files/{key}/`.\n"
         f"- If direct evidence confirms a no-deploy Support action such as assigning an existing permission set or making a data/config correction, stop deep investigation, skip Sandbox deploy, write a no-deploy test report, and proceed to internal notes/Jira message. Do **not** execute the Production action; leave it as an operator/admin action unless the operator explicitly starts an approved Production-write workflow.\n"
         f"- Hard stop for permission-set assignment fixes: once an existing permission set is identified as the missing access package, do not run further Apex/class/Flow-access checks unless the issue text or Salesforce error explicitly names Apex/class access as the failure.\n"
         f"- In every confirmed solution, state **Production vs Sandbox** clearly: what Production has (read-only verification), "
@@ -5756,7 +5761,27 @@ def _available_tabs(key: str) -> list[dict[str, str]]:
         path = OUTPUTS / rel.format(key=key)
         if path.exists():
             tabs.append({"id": ftype, "label": FILE_LABELS[ftype]})
+    if _generated_files_for_issue(key):
+        tabs.append({"id": "generated_files", "label": FILE_LABELS["generated_files"]})
     return tabs
+
+
+def _generated_files_dir(key: str) -> Path:
+    return OUTPUTS / "generated-files" / key
+
+
+def _generated_files_for_issue(key: str) -> list[Path]:
+    root = _generated_files_dir(key)
+    if not root.is_dir():
+        return []
+    files = []
+    try:
+        for path in root.rglob("*"):
+            if path.is_file():
+                files.append(path)
+    except OSError:
+        return []
+    return sorted(files, key=lambda p: p.relative_to(root).as_posix().lower())
 
 
 def _raw_json(key: str) -> dict:
@@ -6284,6 +6309,23 @@ def api_issue(key: str):
 
 @app.get("/api/issue/<key>/file/<ftype>")
 def api_file(key: str, ftype: str):
+    if ftype == "generated_files":
+        files = _generated_files_payload(key)
+        if not files:
+            return jsonify({"html": "<p class='empty'>No generated files for this issue.</p>", "files": []})
+        rows = []
+        for item in files:
+            rows.append(
+                "<li>"
+                f"<a href=\"{item['url']}\" target=\"_blank\" rel=\"noopener\">{html.escape(item['filename'])}</a>"
+                f" <span class=\"muted\">{html.escape(item['size_label'])}</span>"
+                "</li>"
+            )
+        return jsonify({
+            "html": "<h2>Generated Files</h2><ul>" + "".join(rows) + "</ul>",
+            "files": files,
+        })
+
     rel = FILE_LOCATIONS.get(ftype)
     if not rel:
         return jsonify({"error": "unknown file type"}), 400
@@ -6515,6 +6557,41 @@ def api_attachments(key: str):
             "url":      f"/files/attachments/{key}/{disk_name}",
         })
     return jsonify(result)
+
+
+def _format_file_size(size: int) -> str:
+    if size < 1024:
+        return f"{size} B"
+    if size < 1024 * 1024:
+        return f"{size / 1024:.1f} KB"
+    return f"{size / (1024 * 1024):.1f} MB"
+
+
+def _generated_files_payload(key: str) -> list[dict[str, Any]]:
+    root = _generated_files_dir(key)
+    result = []
+    for path in _generated_files_for_issue(key):
+        try:
+            stat = path.stat()
+            rel = path.relative_to(root).as_posix()
+        except OSError:
+            continue
+        mime_type, _encoding = mimetypes.guess_type(path.name)
+        result.append({
+            "filename": path.name,
+            "path": rel,
+            "mimeType": mime_type or "application/octet-stream",
+            "size": stat.st_size,
+            "size_label": _format_file_size(stat.st_size),
+            "modified": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
+            "url": f"/files/generated/{key}/{urllib.parse.quote(rel)}",
+        })
+    return result
+
+
+@app.get("/api/issue/<key>/generated-files")
+def api_generated_files(key: str):
+    return jsonify(_generated_files_payload(key))
 
 
 @app.post("/api/issue/<key>/comment")
@@ -6805,6 +6882,19 @@ def serve_attachment(key: str, filename: str):
     if not path.exists():
         return jsonify({"error": "not found"}), 404
     return send_file(path)
+
+
+@app.get("/files/generated/<key>/<path:filename>")
+def serve_generated_file(key: str, filename: str):
+    root = _generated_files_dir(key).resolve()
+    path = (root / filename).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return jsonify({"error": "forbidden"}), 403
+    if not path.is_file():
+        return jsonify({"error": "not found"}), 404
+    return send_file(path, as_attachment=True)
 
 
 @app.get("/files/rollup/<path:filename>")
@@ -7638,7 +7728,7 @@ if __name__ == "__main__":
     for subdir in [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
         "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
-        "org-knowledge", "metadata-cache", "metadata-workspaces", "summaries"
+        "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces", "summaries"
     ]:
         _ensure_directory_writable(OUTPUTS / subdir, f"outputs/{subdir}")
     _ensure_org_knowledge_defaults()
@@ -7687,7 +7777,7 @@ if __name__ == "__main__":
     required_subdirs = [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
         "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
-        "closed-resolved", "org-knowledge", "metadata-cache", "metadata-workspaces",
+        "closed-resolved", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces",
         _SUMMARY_DIR
     ]
     for subdir in required_subdirs:

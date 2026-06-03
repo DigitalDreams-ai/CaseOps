@@ -49,6 +49,7 @@ This pipeline is an **orchestrator**. Steps **1, 2, 4, 7, 8, 11, and 12** run in
 - Spawn **one** sub-agent per step per issue. Do not batch multiple issues into one Agent call.
 - Every sub-agent prompt must be fully self-contained (issue key, paths, task, return format).
 - Sub-agents write artifacts under `outputs/`. The orchestrator does **not** load full output files into its own context — only the returned summary.
+- Generated non-markdown files such as spreadsheets, CSV exports, PDFs, or screenshots must be saved under `outputs/generated-files/<KEY>/`, never directly under `outputs/`.
 - Before Steps **5, 6, 8, and 9**, use the CaseOps-selected **Org Knowledge Context** for the issue. Pass only the relevant selected bullets into sub-agent prompts so they do not relearn known Salesforce CLI/query/deploy behavior.
 - Use `python scripts/sf_caseops_helper.py ...` for known Salesforce mechanics before repeated ad hoc commands. This covers custom field/picklist summaries, layout placement, FLS checks, and deterministic MDAPI deploys.
 - Retrieve and deploy with modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands, and do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy.

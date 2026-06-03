@@ -24,6 +24,7 @@ class PipelineStateTagTests(unittest.TestCase):
         app.investigation_cache.clear()
         for rel in app.FILE_LOCATIONS.values():
             (app.OUTPUTS / rel.format(key="HEAL-1")).parent.mkdir(parents=True, exist_ok=True)
+        (app.OUTPUTS / "generated-files").mkdir(parents=True, exist_ok=True)
         (app.OUTPUTS / "pipeline-state").mkdir(parents=True, exist_ok=True)
         app.OUTPUTS_PIPELINE_LOGS.mkdir(parents=True, exist_ok=True)
 
@@ -58,6 +59,39 @@ class PipelineStateTagTests(unittest.TestCase):
         raw_metadata_dir = metadata_dirs["raw_prod"] / key
         raw_metadata_dir.mkdir(parents=True, exist_ok=True)
         (raw_metadata_dir / "sample.md").write_text(raw_dir_text, encoding="utf-8")
+
+    def test_generated_files_add_issue_tab_and_payload(self):
+        key = "HEAL-1"
+        generated_dir = app.OUTPUTS / "generated-files" / key
+        generated_dir.mkdir(parents=True, exist_ok=True)
+        generated_file = generated_dir / "SF_Users_Frozen_Inactive.xlsx"
+        generated_file.write_bytes(b"fake workbook")
+
+        tabs = app._available_tabs(key)
+        self.assertIn({"id": "generated_files", "label": "Generated Files"}, tabs)
+
+        payload = app._generated_files_payload(key)
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["filename"], "SF_Users_Frozen_Inactive.xlsx")
+        self.assertEqual(payload[0]["path"], "SF_Users_Frozen_Inactive.xlsx")
+        self.assertIn(f"/files/generated/{key}/SF_Users_Frozen_Inactive.xlsx", payload[0]["url"])
+
+    def test_generated_file_route_is_issue_scoped(self):
+        key = "HEAL-1"
+        generated_dir = app.OUTPUTS / "generated-files" / key
+        generated_dir.mkdir(parents=True, exist_ok=True)
+        generated_file = generated_dir / "report.csv"
+        generated_file.write_bytes(b"a,b\n1,2\n")
+
+        with app.app.test_client() as client:
+            response = client.get(f"/files/generated/{key}/report.csv")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, b"a,b\n1,2\n")
+            response.close()
+
+            escaped = client.get(f"/files/generated/{key}/../other/report.csv")
+            self.assertIn(escaped.status_code, {403, 404})
+            escaped.close()
 
     def test_data_only_false_when_schema_says_production_deploy_required(self):
         key = "HEAL-1"

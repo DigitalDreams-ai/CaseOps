@@ -79,6 +79,8 @@ From the Step 3 summary (Issue Understanding), synthesize a Salesforce-specific 
 
 **Output artifact:** Inline notes or `outputs/hypothesis/<KEY>.md` using `assets/step-4-problem-hypothesis-template.md`.
 
+Generated supporting files such as spreadsheets, CSV exports, PDFs, or screenshots must be saved under `outputs/generated-files/<KEY>/`, never directly under `outputs/`.
+
 **Must include:**
 - **Confirmed facts** (from Step 3, separated from symptoms)
 - **Root cause hypothesis** (one sentence: what is broken and why)
