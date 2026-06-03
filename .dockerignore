@@ -45,6 +45,7 @@ outputs.OLD/
 instance1/
 instance2/
 logs/
+junk/
 temp/
 temp-*/
 temp_*/
