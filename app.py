@@ -7729,7 +7729,7 @@ if __name__ == "__main__":
     for subdir in [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
         "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
-        "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces", "summaries"
+        "closed-resolved", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces", "summaries"
     ]:
         _ensure_directory_writable(OUTPUTS / subdir, f"outputs/{subdir}")
     _ensure_org_knowledge_defaults()
