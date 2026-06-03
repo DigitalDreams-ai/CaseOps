@@ -23,6 +23,7 @@ account_triggers.json
 docs/*PLAN*.md
 docs/CODEX_*_PROMPT.md
 docs/CASEOPS_ENHANCEMENT_PLAN.md
+docs/TESTER_GUIDE.md
 *.png
 *.jpg
 *.jpeg
