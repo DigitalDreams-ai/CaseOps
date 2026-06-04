@@ -91,6 +91,9 @@
         .settings-nav {
             position: sticky;
             top: 16px;
+            align-self: start;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
             display: grid;
             gap: 6px;
             background: var(--color-surface);
@@ -376,6 +379,110 @@
             white-space: nowrap;
         }
 
+        .setup-steps {
+            display: grid;
+            gap: 10px;
+            margin: 10px 0 14px;
+        }
+
+        .setup-step {
+            display: grid;
+            grid-template-columns: 28px minmax(0, 1fr);
+            gap: 10px;
+            align-items: start;
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            padding: 10px;
+        }
+
+        .setup-step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--color-primary);
+            color: white;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .setup-step-title {
+            display: block;
+            margin-bottom: 3px;
+            font-weight: 650;
+            font-size: 13px;
+        }
+
+        .token-command-grid {
+            display: grid;
+            gap: 14px;
+            margin-top: 14px;
+        }
+
+        .auth-panel {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            padding: 12px;
+        }
+
+        .auth-panel h3 {
+            margin: 0 0 10px;
+            font-size: 13px;
+            color: var(--color-text);
+        }
+
+        .auth-token-row label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--color-text);
+        }
+
+        .auth-token-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(260px, 0.9fr);
+            gap: 10px;
+            align-items: stretch;
+            margin-top: 10px;
+        }
+
+        .auth-command {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .auth-command code {
+            display: block;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .auth-token-row textarea {
+            min-height: 74px;
+        }
+
+        .warning-note {
+            border-left: 3px solid var(--color-warn);
+            padding: 8px 10px;
+            background: var(--color-bg);
+            color: var(--color-text);
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
         .details-panel {
             margin-top: 14px;
             background: var(--color-bg);
@@ -467,11 +574,17 @@
 
             .settings-nav {
                 position: static;
+                max-height: none;
+                overflow-y: visible;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .settings-grid,
             .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .auth-token-row {
                 grid-template-columns: 1fr;
             }
 
@@ -562,8 +675,34 @@
                             </div>
                             <div class="settings-field full">
                                 <label for="claude-token">Claude Code OAuth Token</label>
-                                <textarea id="claude-token" rows="3" placeholder="Paste the token printed by: claude setup-token"></textarea>
-                                <div class="field-note">Run <code>claude setup-token</code> locally, paste only the token value, then save it here.</div>
+                                <div class="setup-steps">
+                                    <div class="setup-step">
+                                        <span class="setup-step-number">1</span>
+                                        <div>
+                                            <span class="setup-step-title">Open a terminal where Claude Code is installed</span>
+                                            <div class="field-note">Use the same GitHub, Anthropic, or Claude account that should run CaseOps pipeline work.</div>
+                                        </div>
+                                    </div>
+                                    <div class="setup-step">
+                                        <span class="setup-step-number">2</span>
+                                        <div>
+                                            <span class="setup-step-title">Run the setup-token command</span>
+                                            <div class="code-row">
+                                                <code id="cmd-claude-setup">claude setup-token</code>
+                                                <button type="button" class="copy-button" data-copy-target="cmd-claude-setup">Copy</button>
+                                            </div>
+                                            <div class="field-note" style="margin-top: 6px;">Complete the browser authorization if Claude opens one. The command prints the OAuth token in the terminal.</div>
+                                        </div>
+                                    </div>
+                                    <div class="setup-step">
+                                        <span class="setup-step-number">3</span>
+                                        <div>
+                                            <span class="setup-step-title">Paste the printed token here</span>
+                                            <textarea id="claude-token" rows="3" placeholder="Paste only the token printed by claude setup-token"></textarea>
+                                            <div class="field-note">Do not paste shell prompts, logs, or <code>~/.claude/.credentials.json</code>. If you paste <code>CLAUDE_CODE_OAUTH_TOKEN=...</code>, CaseOps saves only the value.</div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="button-row">
                                     <button type="button" class="button-primary" id="save-claude-token">Save Claude Token</button>
                                     <span id="claude-save-status" class="field-note"></span>
@@ -576,7 +715,7 @@
                         <div class="section-header">
                             <div>
                                 <h2>Salesforce CLI Auth</h2>
-                                <p>Paste Salesforce tokens here. CaseOps stores them in the configured env file and authenticates the container-local <code>sf</code> CLI.</p>
+                                <p>Use local <code>sf</code> commands to retrieve tokens, then paste each output beside the command that produced it.</p>
                             </div>
                         </div>
 
@@ -592,26 +731,112 @@
                             <div class="settings-field">
                                 <label for="prod-instance-url">Production Instance URL</label>
                                 <input type="url" id="prod-instance-url" name="CASEOPS_PRODUCTION_INSTANCE_URL" placeholder="https://example.my.salesforce.com" autocomplete="off">
+                                <div class="field-note">Use the Salesforce instance URL, not a Lightning URL.</div>
                             </div>
                             <div class="settings-field">
                                 <label for="sandbox-instance-url">Sandbox Instance URL</label>
                                 <input type="url" id="sandbox-instance-url" name="CASEOPS_SANDBOX_INSTANCE_URL" placeholder="https://example--sandbox.sandbox.my.salesforce.com" autocomplete="off">
+                                <div class="field-note">Use the Salesforce instance URL, not a Lightning URL.</div>
                             </div>
-                            <div class="settings-field full">
-                                <label for="sf-prod-token">Production Access Token</label>
-                                <textarea id="sf-prod-token" rows="3" placeholder="Paste result.accessToken from sf org auth show-access-token"></textarea>
+                        </div>
+
+                        <div class="warning-note" style="margin-top: 14px;">
+                            Instance URL examples: <code>https://your-domain.my.salesforce.com</code> for production and <code>https://your-domain--dev.sandbox.my.salesforce.com</code> for sandbox. Do not use <code>https://your-domain.lightning.force.com</code> or <code>https://your-domain--dev.sandbox.lightning.force.com</code>.
+                        </div>
+
+                        <div class="setup-steps">
+                            <div class="setup-step">
+                                <span class="setup-step-number">1</span>
+                                <div>
+                                    <span class="setup-step-title">Log in to each Salesforce org from your local terminal</span>
+                                    <div class="field-note">These commands open a browser and create the local aliases used by the token commands below.</div>
+                                </div>
                             </div>
-                            <div class="settings-field full">
-                                <label for="sf-prod-refresh-token">Production Refresh Token Or SFDX Auth URL</label>
-                                <textarea id="sf-prod-refresh-token" rows="3" placeholder="Paste result.sfdxAuthUrl or raw refresh token"></textarea>
+                            <div class="setup-step">
+                                <span class="setup-step-number">2</span>
+                                <div>
+                                    <span class="setup-step-title">Copy each JSON value into the matching box</span>
+                                    <div class="field-note">For access tokens, paste <code>result.accessToken</code>. For refresh tokens, paste <code>result.sfdxAuthUrl</code> or a raw refresh token.</div>
+                                </div>
                             </div>
-                            <div class="settings-field full">
-                                <label for="sf-sandbox-token">Sandbox Access Token</label>
-                                <textarea id="sf-sandbox-token" rows="3" placeholder="Paste result.accessToken from sf org auth show-access-token"></textarea>
+                            <div class="setup-step">
+                                <span class="setup-step-number">3</span>
+                                <div>
+                                    <span class="setup-step-title">Save, then authenticate saved tokens</span>
+                                    <div class="field-note">CaseOps writes the values to the configured env file and authenticates the container-local <code>sf</code> CLI.</div>
+                                </div>
                             </div>
-                            <div class="settings-field full">
-                                <label for="sf-sandbox-refresh-token">Sandbox Refresh Token Or SFDX Auth URL</label>
-                                <textarea id="sf-sandbox-refresh-token" rows="3" placeholder="Paste result.sfdxAuthUrl or raw refresh token"></textarea>
+                        </div>
+
+                        <div class="token-command-grid">
+                            <div class="auth-panel">
+                                <h3>Production</h3>
+                                <div class="auth-command">
+                                    <code id="cmd-prod-login">sf org login web --alias prod-read --instance-url https://login.salesforce.com</code>
+                                    <button type="button" class="copy-button" data-copy-target="cmd-prod-login">Copy</button>
+                                </div>
+                                <div class="field-note" style="margin-top: 6px;">Run this first if the production alias is not already logged in locally.</div>
+
+                                <div class="auth-token-row">
+                                    <div>
+                                        <label for="sf-prod-token">Production Access Token</label>
+                                        <div class="auth-command">
+                                            <code id="cmd-prod-access">sf org auth show-access-token -o prod-read --json</code>
+                                            <button type="button" class="copy-button" data-copy-target="cmd-prod-access">Copy</button>
+                                        </div>
+                                    </div>
+                                    <div class="settings-field">
+                                        <textarea id="sf-prod-token" rows="3" placeholder="Paste result.accessToken"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="auth-token-row">
+                                    <div>
+                                        <label for="sf-prod-refresh-token">Production Refresh Token Or SFDX Auth URL</label>
+                                        <div class="auth-command">
+                                            <code id="cmd-prod-refresh">sf org auth show-sfdx-auth-url -o prod-read --json</code>
+                                            <button type="button" class="copy-button" data-copy-target="cmd-prod-refresh">Copy</button>
+                                        </div>
+                                    </div>
+                                    <div class="settings-field">
+                                        <textarea id="sf-prod-refresh-token" rows="3" placeholder="Paste result.sfdxAuthUrl or raw refresh token"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="auth-panel">
+                                <h3>Sandbox</h3>
+                                <div class="auth-command">
+                                    <code id="cmd-sandbox-login">sf org login web --alias sandbox --instance-url https://test.salesforce.com</code>
+                                    <button type="button" class="copy-button" data-copy-target="cmd-sandbox-login">Copy</button>
+                                </div>
+                                <div class="field-note" style="margin-top: 6px;">Run this first if the sandbox alias is not already logged in locally.</div>
+
+                                <div class="auth-token-row">
+                                    <div>
+                                        <label for="sf-sandbox-token">Sandbox Access Token</label>
+                                        <div class="auth-command">
+                                            <code id="cmd-sandbox-access">sf org auth show-access-token -o sandbox --json</code>
+                                            <button type="button" class="copy-button" data-copy-target="cmd-sandbox-access">Copy</button>
+                                        </div>
+                                    </div>
+                                    <div class="settings-field">
+                                        <textarea id="sf-sandbox-token" rows="3" placeholder="Paste result.accessToken"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="auth-token-row">
+                                    <div>
+                                        <label for="sf-sandbox-refresh-token">Sandbox Refresh Token Or SFDX Auth URL</label>
+                                        <div class="auth-command">
+                                            <code id="cmd-sandbox-refresh">sf org auth show-sfdx-auth-url -o sandbox --json</code>
+                                            <button type="button" class="copy-button" data-copy-target="cmd-sandbox-refresh">Copy</button>
+                                        </div>
+                                    </div>
+                                    <div class="settings-field">
+                                        <textarea id="sf-sandbox-refresh-token" rows="3" placeholder="Paste result.sfdxAuthUrl or raw refresh token"></textarea>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -624,37 +849,6 @@
                         <div id="sf-orgs-display" class="org-list" style="display: none;">
                             <div id="sf-orgs-list"></div>
                         </div>
-
-                        <details class="details-panel">
-                            <summary>Token commands</summary>
-                            <div class="code-list" style="margin-top: 12px;">
-                                <div class="code-row">
-                                    <code id="cmd-prod-login">sf org login web --alias prod-read</code>
-                                    <button type="button" class="copy-button" data-copy-target="cmd-prod-login">Copy</button>
-                                </div>
-                                <div class="code-row">
-                                    <code id="cmd-sandbox-login">sf org login web --alias sandbox --instance-url https://test.salesforce.com</code>
-                                    <button type="button" class="copy-button" data-copy-target="cmd-sandbox-login">Copy</button>
-                                </div>
-                                <div class="code-row">
-                                    <code id="cmd-prod-access">sf org auth show-access-token -o prod-read --json</code>
-                                    <button type="button" class="copy-button" data-copy-target="cmd-prod-access">Copy</button>
-                                </div>
-                                <div class="code-row">
-                                    <code id="cmd-prod-refresh">sf org auth show-sfdx-auth-url -o prod-read --json</code>
-                                    <button type="button" class="copy-button" data-copy-target="cmd-prod-refresh">Copy</button>
-                                </div>
-                                <div class="code-row">
-                                    <code id="cmd-sandbox-access">sf org auth show-access-token -o sandbox --json</code>
-                                    <button type="button" class="copy-button" data-copy-target="cmd-sandbox-access">Copy</button>
-                                </div>
-                                <div class="code-row">
-                                    <code id="cmd-sandbox-refresh">sf org auth show-sfdx-auth-url -o sandbox --json</code>
-                                    <button type="button" class="copy-button" data-copy-target="cmd-sandbox-refresh">Copy</button>
-                                </div>
-                            </div>
-                            <p class="field-note" style="margin-bottom: 0;">Refresh-token fields accept the full <code>force://...</code> SFDX Auth URL. CaseOps extracts the refresh token server-side.</p>
-                        </details>
                     </section>
 
                     <section class="settings-section" id="content-section">
@@ -945,9 +1139,11 @@
         function updateTokenCommands() {
             const prodAlias = document.getElementById('prod-alias').value.trim() || 'prod-read';
             const sandboxAlias = document.getElementById('sandbox-alias').value.trim() || 'sandbox';
+            const prodInstanceUrl = document.getElementById('prod-instance-url').value.trim() || 'https://login.salesforce.com';
+            const sandboxInstanceUrl = document.getElementById('sandbox-instance-url').value.trim() || 'https://test.salesforce.com';
             const commandMap = {
-                'cmd-prod-login': `sf org login web --alias ${prodAlias}`,
-                'cmd-sandbox-login': `sf org login web --alias ${sandboxAlias} --instance-url https://test.salesforce.com`,
+                'cmd-prod-login': `sf org login web --alias ${prodAlias} --instance-url ${prodInstanceUrl}`,
+                'cmd-sandbox-login': `sf org login web --alias ${sandboxAlias} --instance-url ${sandboxInstanceUrl}`,
                 'cmd-prod-access': `sf org auth show-access-token -o ${prodAlias} --json`,
                 'cmd-prod-refresh': `sf org auth show-sfdx-auth-url -o ${prodAlias} --json`,
                 'cmd-sandbox-access': `sf org auth show-access-token -o ${sandboxAlias} --json`,
@@ -1283,7 +1479,7 @@
             });
         });
 
-        ['prod-alias', 'sandbox-alias'].forEach(id => {
+        ['prod-alias', 'sandbox-alias', 'prod-instance-url', 'sandbox-instance-url'].forEach(id => {
             document.getElementById(id).addEventListener('input', updateTokenCommands);
         });
 
