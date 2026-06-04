@@ -44,6 +44,20 @@
             line-height: 1.1;
         }
 
+        .settings-title-row {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .settings-version {
+            color: var(--color-text-secondary);
+            font-size: 12px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
         .settings-header p {
             margin: 4px 0 0;
             color: var(--color-text-secondary);
@@ -628,7 +642,10 @@
         <div class="settings-header">
             <img src="{{ url_for('static', filename='logo.svg') }}" alt="CaseOps">
             <div>
-                <h1>Settings</h1>
+                <div class="settings-title-row">
+                    <h1>Settings</h1>
+                    <span id="caseops-version-status" class="settings-version">version checking</span>
+                </div>
                 <p>Runtime readiness, credentials, instance storage, and operator content.</p>
             </div>
             <a href="/">Back to CaseOps</a>
@@ -639,7 +656,8 @@
         <div class="settings-layout">
             <nav class="settings-nav" aria-label="Settings sections">
                 <a href="#runtime-section">Runtime</a>
-                <a href="#credentials-section">Credentials</a>
+                <a href="#jira-section">Jira</a>
+                <a href="#claude-section">Claude</a>
                 <a href="#salesforce-section">Salesforce</a>
                 <a href="#runtime-tuning-section">Runtime Tuning</a>
                 <a href="#content-section">Content</a>
@@ -659,10 +677,6 @@
 
                     <div class="status-grid">
                         <div class="status-card">
-                            <h3>CaseOps</h3>
-                            <div id="caseops-version-status"><span class="status-badge">Checking</span></div>
-                        </div>
-                        <div class="status-card">
                             <h3>Pipeline</h3>
                             <div id="runtime-status"><span class="status-badge">Checking</span></div>
                         </div>
@@ -678,11 +692,11 @@
                 </section>
 
                 <form id="settings-form">
-                    <section class="settings-section" id="credentials-section">
+                    <section class="settings-section" id="jira-section">
                         <div class="section-header">
                             <div>
-                                <h2>Jira And Claude</h2>
-                                <p>Jira settings are saved with the main settings form. Claude token changes save immediately.</p>
+                                <h2>Jira</h2>
+                                <p>Jira settings are saved with the main settings form.</p>
                             </div>
                         </div>
 
@@ -703,41 +717,46 @@
                                     <span id="jira-test-result" class="test-result"></span>
                                 </div>
                             </div>
-                            <div class="settings-field full">
-                                <label for="claude-token">Claude Code OAuth Token</label>
-                                <div class="setup-steps">
-                                    <div class="setup-step">
-                                        <span class="setup-step-number">1</span>
-                                        <div>
-                                            <span class="setup-step-title">Open a terminal where Claude Code is installed</span>
-                                            <div class="field-note">Use the same GitHub, Anthropic, or Claude account that should run CaseOps pipeline work.</div>
-                                        </div>
-                                    </div>
-                                    <div class="setup-step">
-                                        <span class="setup-step-number">2</span>
-                                        <div>
-                                            <span class="setup-step-title">Run the setup-token command</span>
-                                            <div class="code-row">
-                                                <code id="cmd-claude-setup">claude setup-token</code>
-                                                <button type="button" class="copy-button" data-copy-target="cmd-claude-setup">Copy</button>
-                                            </div>
-                                            <div class="field-note" style="margin-top: 6px;">Complete the browser authorization if Claude opens one. The command prints the OAuth token in the terminal.</div>
-                                        </div>
-                                    </div>
-                                    <div class="setup-step">
-                                        <span class="setup-step-number">3</span>
-                                        <div>
-                                            <span class="setup-step-title">Paste the printed token here</span>
-                                            <textarea id="claude-token" rows="3" placeholder="Paste only the token printed by claude setup-token"></textarea>
-                                            <div class="field-note">Do not paste shell prompts, logs, or <code>~/.claude/.credentials.json</code>. If you paste <code>CLAUDE_CODE_OAUTH_TOKEN=...</code>, CaseOps saves only the value.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="button-row">
-                                    <button type="button" class="button-primary" id="save-claude-token">Save Claude Token</button>
-                                    <span id="claude-save-status" class="field-note"></span>
+                        </div>
+                    </section>
+
+                    <section class="settings-section" id="claude-section">
+                        <div class="section-header">
+                            <div>
+                                <h2>Claude</h2>
+                                <p>Claude token changes save immediately.</p>
+                            </div>
+                        </div>
+
+                        <div class="setup-steps">
+                            <div class="setup-step">
+                                <span class="setup-step-number">1</span>
+                                <div>
+                                    <span class="setup-step-title">Open a terminal where Claude Code is installed</span>
+                                    <div class="field-note">Use the same GitHub, Anthropic, or Claude account that should run CaseOps pipeline work.</div>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="auth-token-row">
+                            <div>
+                                <label for="cmd-claude-setup">Run the setup-token command</label>
+                                <div class="auth-command">
+                                    <code id="cmd-claude-setup">claude setup-token</code>
+                                    <button type="button" class="copy-button" data-copy-target="cmd-claude-setup">Copy</button>
+                                </div>
+                                <div class="field-note" style="margin-top: 6px;">Complete the browser authorization if Claude opens one. The command prints the OAuth token in the terminal.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="claude-token">Paste the printed token here</label>
+                                <textarea id="claude-token" rows="3" placeholder="Paste only the token printed by claude setup-token"></textarea>
+                                <div class="field-note">Do not paste shell prompts, logs, or <code>~/.claude/.credentials.json</code>. If you paste <code>CLAUDE_CODE_OAUTH_TOKEN=...</code>, CaseOps saves only the value.</div>
+                            </div>
+                        </div>
+
+                        <div class="button-row">
+                            <button type="button" class="button-primary" id="save-claude-token">Save Claude Token</button>
+                            <span id="claude-save-status" class="field-note"></span>
                         </div>
                     </section>
 
@@ -1140,7 +1159,7 @@
             const el = document.getElementById('caseops-version-status');
             if (!el) return;
             const version = status && status.caseops && status.caseops.version ? status.caseops.version : 'unknown';
-            el.innerHTML = `<span class="status-badge ok">${escapeHtml(version)}</span>`;
+            el.textContent = `version ${version}`;
         }
 
         function renderRuntimeStatus(status) {
