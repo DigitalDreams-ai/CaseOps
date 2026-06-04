@@ -1,1 +1,27 @@
-[{"id":"default","label":"Default","template":"D"}]
+[
+  {
+    "id": "initial-response",
+    "name": "Initial Response",
+    "template": "Hi {{issueReporter}},\n\nThanks for reaching out. I am reviewing this request and will follow up here when I have more information.\n\n[insert signature]"
+  },
+  {
+    "id": "investigating",
+    "name": "Investigating",
+    "template": "Hi {{issueReporter}},\n\nI am still investigating this issue. I will update this ticket as soon as I have a confirmed next step or resolution.\n\n[insert signature]"
+  },
+  {
+    "id": "need-more-info",
+    "name": "Need More Information",
+    "template": "Hi {{issueReporter}},\n\nCould you please provide a little more detail so I can continue troubleshooting?\n\nHelpful details include the steps you took, what you expected to happen, what happened instead, and any screenshots or examples related to this request.\n\n[insert signature]"
+  },
+  {
+    "id": "resolved-response",
+    "name": "Resolved",
+    "template": "Hi {{issueReporter}},\n\nThis should now be resolved. Please review when you have a chance and let us know if you still see the issue.\n\n[insert signature]"
+  },
+  {
+    "id": "closing-response",
+    "name": "Closing",
+    "template": "Hi {{issueReporter}},\n\nI am closing this request for now. If you need anything else or the issue comes back, please reply here and we can reopen or continue from this ticket.\n\n[insert signature]"
+  }
+]

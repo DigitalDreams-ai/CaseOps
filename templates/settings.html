@@ -23,6 +23,7 @@
         #settings-container {
             max-width: 1180px;
             margin: 0 auto 40px;
+            min-width: 0;
         }
 
         .settings-header {
@@ -86,6 +87,7 @@
             grid-template-columns: 240px minmax(0, 1fr);
             gap: 18px;
             align-items: start;
+            min-width: 0;
         }
 
         .settings-nav {
@@ -117,6 +119,7 @@
         .settings-main {
             min-width: 0;
             display: grid;
+            grid-template-columns: minmax(0, 1fr);
             gap: 16px;
         }
 
@@ -125,6 +128,7 @@
             border: 1px solid var(--color-border);
             border-radius: 6px;
             padding: 18px;
+            min-width: 0;
         }
 
         .section-header {
@@ -152,6 +156,7 @@
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 14px;
+            min-width: 0;
         }
 
         .settings-field {
@@ -365,6 +370,7 @@
             grid-template-columns: minmax(0, 1fr) auto;
             gap: 8px;
             align-items: center;
+            min-width: 0;
         }
 
         .code-row code,
@@ -377,6 +383,9 @@
             font-size: 12px;
             overflow-x: auto;
             white-space: nowrap;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .setup-steps {
@@ -394,6 +403,7 @@
             border: 1px solid var(--color-border);
             border-radius: 4px;
             padding: 10px;
+            min-width: 0;
         }
 
         .setup-step-number {
@@ -427,6 +437,7 @@
             border: 1px solid var(--color-border);
             border-radius: 4px;
             padding: 12px;
+            min-width: 0;
         }
 
         .auth-panel h3 {
@@ -501,6 +512,11 @@
             display: grid;
             gap: 8px;
             font-size: 12px;
+            min-width: 0;
+        }
+
+        .path-list > div {
+            min-width: 0;
         }
 
         .path-list strong {
@@ -588,6 +604,15 @@
                 grid-template-columns: 1fr;
             }
 
+            .code-row,
+            .auth-command {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .copy-button {
+                justify-self: start;
+            }
+
             .settings-header {
                 flex-wrap: wrap;
             }
@@ -616,6 +641,7 @@
                 <a href="#runtime-section">Runtime</a>
                 <a href="#credentials-section">Credentials</a>
                 <a href="#salesforce-section">Salesforce</a>
+                <a href="#runtime-tuning-section">Runtime Tuning</a>
                 <a href="#content-section">Content</a>
                 <a href="#instance-section">Instance</a>
                 <a href="#system-section">System</a>
@@ -722,11 +748,11 @@
                         <div class="settings-grid">
                             <div class="settings-field">
                                 <label for="prod-alias">Production Alias</label>
-                                <input type="text" id="prod-alias" name="CASEOPS_PRODUCTION_READ_ORG" placeholder="prod-read" autocomplete="off">
+                                <input type="text" id="prod-alias" name="CASEOPS_PRODUCTION_READ_ORG" placeholder="Production sf alias" autocomplete="off">
                             </div>
                             <div class="settings-field">
                                 <label for="sandbox-alias">Sandbox Alias</label>
-                                <input type="text" id="sandbox-alias" name="CASEOPS_SANDBOX_TARGET_ORG" placeholder="sandbox" autocomplete="off">
+                                <input type="text" id="sandbox-alias" name="CASEOPS_SANDBOX_TARGET_ORG" placeholder="Sandbox sf alias" autocomplete="off">
                             </div>
                             <div class="settings-field">
                                 <label for="prod-instance-url">Production Instance URL</label>
@@ -772,7 +798,7 @@
                             <div class="auth-panel">
                                 <h3>Production</h3>
                                 <div class="auth-command">
-                                    <code id="cmd-prod-login">sf org login web --alias prod-read --instance-url https://login.salesforce.com</code>
+                                    <code id="cmd-prod-login">Enter Production Alias to generate command</code>
                                     <button type="button" class="copy-button" data-copy-target="cmd-prod-login">Copy</button>
                                 </div>
                                 <div class="field-note" style="margin-top: 6px;">Run this first if the production alias is not already logged in locally.</div>
@@ -781,7 +807,7 @@
                                     <div>
                                         <label for="sf-prod-token">Production Access Token</label>
                                         <div class="auth-command">
-                                            <code id="cmd-prod-access">sf org auth show-access-token -o prod-read --json</code>
+                                            <code id="cmd-prod-access">Enter Production Alias to generate command</code>
                                             <button type="button" class="copy-button" data-copy-target="cmd-prod-access">Copy</button>
                                         </div>
                                     </div>
@@ -794,7 +820,7 @@
                                     <div>
                                         <label for="sf-prod-refresh-token">Production Refresh Token Or SFDX Auth URL</label>
                                         <div class="auth-command">
-                                            <code id="cmd-prod-refresh">sf org auth show-sfdx-auth-url -o prod-read --json</code>
+                                            <code id="cmd-prod-refresh">Enter Production Alias to generate command</code>
                                             <button type="button" class="copy-button" data-copy-target="cmd-prod-refresh">Copy</button>
                                         </div>
                                     </div>
@@ -807,7 +833,7 @@
                             <div class="auth-panel">
                                 <h3>Sandbox</h3>
                                 <div class="auth-command">
-                                    <code id="cmd-sandbox-login">sf org login web --alias sandbox --instance-url https://test.salesforce.com</code>
+                                    <code id="cmd-sandbox-login">Enter Sandbox Alias to generate command</code>
                                     <button type="button" class="copy-button" data-copy-target="cmd-sandbox-login">Copy</button>
                                 </div>
                                 <div class="field-note" style="margin-top: 6px;">Run this first if the sandbox alias is not already logged in locally.</div>
@@ -816,7 +842,7 @@
                                     <div>
                                         <label for="sf-sandbox-token">Sandbox Access Token</label>
                                         <div class="auth-command">
-                                            <code id="cmd-sandbox-access">sf org auth show-access-token -o sandbox --json</code>
+                                            <code id="cmd-sandbox-access">Enter Sandbox Alias to generate command</code>
                                             <button type="button" class="copy-button" data-copy-target="cmd-sandbox-access">Copy</button>
                                         </div>
                                     </div>
@@ -829,7 +855,7 @@
                                     <div>
                                         <label for="sf-sandbox-refresh-token">Sandbox Refresh Token Or SFDX Auth URL</label>
                                         <div class="auth-command">
-                                            <code id="cmd-sandbox-refresh">sf org auth show-sfdx-auth-url -o sandbox --json</code>
+                                            <code id="cmd-sandbox-refresh">Enter Sandbox Alias to generate command</code>
                                             <button type="button" class="copy-button" data-copy-target="cmd-sandbox-refresh">Copy</button>
                                         </div>
                                     </div>
@@ -848,6 +874,64 @@
 
                         <div id="sf-orgs-display" class="org-list" style="display: none;">
                             <div id="sf-orgs-list"></div>
+                        </div>
+                    </section>
+
+                    <section class="settings-section" id="runtime-tuning-section">
+                        <div class="section-header">
+                            <div>
+                                <h2>Runtime Tuning</h2>
+                                <p>Controls for queue parallelism and long-running Claude pipeline steps.</p>
+                            </div>
+                        </div>
+
+                        <div class="settings-grid">
+                            <div class="settings-field">
+                                <label for="global-max-parallel">Global Issue Workers</label>
+                                <select id="global-max-parallel" name="CASEOPS_GLOBAL_MAX_PARALLEL">
+                                    <option value="1">1 - Sequential</option>
+                                    <option value="2">2 - Conservative parallel</option>
+                                    <option value="3">3 - Higher load</option>
+                                    <option value="4">4 - Maximum</option>
+                                </select>
+                                <div class="field-note">Used by Auto-Process All and Reprocess All. Single-issue runs still use one orchestrator.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="claude-total-timeout">Claude Total Timeout</label>
+                                <select id="claude-total-timeout" name="CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS">
+                                    <option value="1200">20 minutes</option>
+                                    <option value="1800">30 minutes</option>
+                                    <option value="2400">40 minutes</option>
+                                    <option value="3600">60 minutes</option>
+                                </select>
+                                <div class="field-note">Maximum wall-clock time for one Claude pipeline subprocess before CaseOps stops it.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="claude-idle-timeout">Claude Idle Timeout</label>
+                                <select id="claude-idle-timeout" name="CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS">
+                                    <option value="240">4 minutes</option>
+                                    <option value="360">6 minutes</option>
+                                    <option value="600">10 minutes</option>
+                                    <option value="900">15 minutes</option>
+                                </select>
+                                <div class="field-note">Stops a Claude subprocess if it produces no stream output for this long.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="parallel-prechecks">Parallel Runtime Prechecks</label>
+                                <select id="parallel-prechecks" name="CASEOPS_ENABLE_PARALLEL_PRECHECKS">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                                <div class="field-note">Runs production and sandbox Salesforce preflight checks at the same time.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="parallel-evidence">Parallel Evidence Branches</label>
+                                <select id="parallel-evidence" name="CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                                <div class="field-note">Allows independent read-only evidence checks to run in parallel. Deploy and test steps remain serialized.</div>
+                            </div>
                         </div>
                     </section>
 
@@ -920,8 +1004,20 @@
                         <div class="section-header">
                             <div>
                                 <h2>System</h2>
-                                <p>Use after configuration changes that require a clean runtime process.</p>
+                                <p>Use these controls to manage the running service and recover pipeline state.</p>
                             </div>
+                        </div>
+                        <div class="settings-grid">
+                            <div class="settings-field full">
+                                <label for="run-control-key">Pipeline Run Key</label>
+                                <input id="run-control-key" type="text" placeholder="SUP-44">
+                                <div id="run-control-active" class="field-note">Checking active runs...</div>
+                            </div>
+                        </div>
+                        <div class="button-row">
+                            <button type="button" class="button-danger" id="stop-run-btn">Stop Current Run</button>
+                            <button type="button" class="button-secondary" id="repair-state-btn">Repair / Rebuild Pipeline State</button>
+                            <span id="run-control-status" class="field-note"></span>
                         </div>
                         <div class="button-row">
                             <button type="button" class="button-danger" onclick="restartService()" id="restart-btn">Restart CaseOps</button>
@@ -1030,6 +1126,7 @@
             renderClaudeStatus(status);
             renderSalesforceStatus(status);
             renderConfiguredPaths(status);
+            await refreshRunControlStatus();
             scheduleStatusPoll(status);
             return status;
         }
@@ -1137,17 +1234,29 @@
         }
 
         function updateTokenCommands() {
-            const prodAlias = document.getElementById('prod-alias').value.trim() || 'prod-read';
-            const sandboxAlias = document.getElementById('sandbox-alias').value.trim() || 'sandbox';
+            const prodAlias = document.getElementById('prod-alias').value.trim();
+            const sandboxAlias = document.getElementById('sandbox-alias').value.trim();
             const prodInstanceUrl = document.getElementById('prod-instance-url').value.trim() || 'https://login.salesforce.com';
             const sandboxInstanceUrl = document.getElementById('sandbox-instance-url').value.trim() || 'https://test.salesforce.com';
             const commandMap = {
-                'cmd-prod-login': `sf org login web --alias ${prodAlias} --instance-url ${prodInstanceUrl}`,
-                'cmd-sandbox-login': `sf org login web --alias ${sandboxAlias} --instance-url ${sandboxInstanceUrl}`,
-                'cmd-prod-access': `sf org auth show-access-token -o ${prodAlias} --json`,
-                'cmd-prod-refresh': `sf org auth show-sfdx-auth-url -o ${prodAlias} --json`,
-                'cmd-sandbox-access': `sf org auth show-access-token -o ${sandboxAlias} --json`,
-                'cmd-sandbox-refresh': `sf org auth show-sfdx-auth-url -o ${sandboxAlias} --json`,
+                'cmd-prod-login': prodAlias
+                    ? `sf org login web --alias ${prodAlias} --instance-url ${prodInstanceUrl}`
+                    : 'Enter Production Alias to generate command',
+                'cmd-sandbox-login': sandboxAlias
+                    ? `sf org login web --alias ${sandboxAlias} --instance-url ${sandboxInstanceUrl}`
+                    : 'Enter Sandbox Alias to generate command',
+                'cmd-prod-access': prodAlias
+                    ? `sf org auth show-access-token -o ${prodAlias} --json`
+                    : 'Enter Production Alias to generate command',
+                'cmd-prod-refresh': prodAlias
+                    ? `sf org auth show-sfdx-auth-url -o ${prodAlias} --json`
+                    : 'Enter Production Alias to generate command',
+                'cmd-sandbox-access': sandboxAlias
+                    ? `sf org auth show-access-token -o ${sandboxAlias} --json`
+                    : 'Enter Sandbox Alias to generate command',
+                'cmd-sandbox-refresh': sandboxAlias
+                    ? `sf org auth show-sfdx-auth-url -o ${sandboxAlias} --json`
+                    : 'Enter Sandbox Alias to generate command',
             };
             for (const [id, command] of Object.entries(commandMap)) {
                 const el = document.getElementById(id);
@@ -1392,6 +1501,95 @@
             }
         }
 
+        async function refreshRunControlStatus() {
+            const activeEl = document.getElementById('run-control-active');
+            if (!activeEl) return null;
+            try {
+                const resp = await fetch('/api/status', { cache: 'no-store' });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                const activeKeys = data.active_keys || [];
+                if (activeKeys.length === 0) {
+                    activeEl.textContent = 'No active pipeline runs.';
+                } else {
+                    activeEl.textContent = `Active: ${activeKeys.join(', ')}`;
+                    const input = document.getElementById('run-control-key');
+                    if (input && !input.value.trim() && activeKeys.length === 1) {
+                        input.placeholder = activeKeys[0];
+                    }
+                }
+                return data;
+            } catch (e) {
+                activeEl.textContent = 'Unable to read active run status.';
+                return null;
+            }
+        }
+
+        async function stopCurrentRun() {
+            const btn = document.getElementById('stop-run-btn');
+            const statusEl = document.getElementById('run-control-status');
+            const key = document.getElementById('run-control-key').value.trim();
+            if (!confirm(key ? `Stop active run ${key}?` : 'Stop the active pipeline run?')) return;
+
+            btn.disabled = true;
+            statusEl.textContent = 'Stopping...';
+            try {
+                const resp = await fetch('/api/run/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(key ? { key } : {}),
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.error || 'Stop failed');
+                const stopped = data.stopped || [];
+                if (!stopped.length) {
+                    statusEl.textContent = 'No active run to stop.';
+                } else {
+                    const labels = stopped.map(item => item.run_key).join(', ');
+                    statusEl.textContent = `Stop requested for ${labels}.`;
+                }
+                await refreshRunControlStatus();
+            } catch (e) {
+                statusEl.textContent = e.message;
+                showBanner('Stop failed: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function repairPipelineState() {
+            const btn = document.getElementById('repair-state-btn');
+            const statusEl = document.getElementById('run-control-status');
+            const key = document.getElementById('run-control-key').value.trim();
+            if (!key) {
+                statusEl.textContent = 'Enter an issue key before repairing pipeline state.';
+                return;
+            }
+            if (!confirm(`Rebuild pipeline state for ${key} from current artifacts?`)) return;
+
+            btn.disabled = true;
+            statusEl.textContent = 'Repairing...';
+            try {
+                const resp = await fetch('/api/pipeline-state/repair', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key }),
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.error || 'Repair failed');
+                const next = data.next_step || {};
+                const stepLabel = next.step ? `Next STEP_${next.step}: ${next.name || 'pending'}` : 'No next step found';
+                statusEl.textContent = `State repaired. ${stepLabel}.`;
+                showBanner(`Pipeline state repaired for ${key}`, 'success');
+                await refreshRunControlStatus();
+            } catch (e) {
+                statusEl.textContent = e.message;
+                showBanner('Pipeline state repair failed: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         async function restartService() {
             const btn = document.getElementById('restart-btn');
             const statusDiv = document.getElementById('restart-status');
@@ -1454,6 +1652,8 @@
         document.getElementById('authenticate-salesforce-btn').addEventListener('click', () => authenticateSalesforce());
         document.getElementById('save-canned-messages').addEventListener('click', saveCannedMessages);
         document.getElementById('reset-canned-messages').addEventListener('click', resetCannedMessages);
+        document.getElementById('stop-run-btn').addEventListener('click', stopCurrentRun);
+        document.getElementById('repair-state-btn').addEventListener('click', repairPipelineState);
         document.getElementById('refresh-status-btn').addEventListener('click', async () => {
             const btn = document.getElementById('refresh-status-btn');
             btn.disabled = true;
@@ -1500,6 +1700,7 @@
 
         loadSettings();
         refreshStatusPanels();
+        refreshRunControlStatus();
         loadDisplayLabel();
         loadCannedMessages();
         updatePageDisplay();

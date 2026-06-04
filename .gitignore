@@ -70,6 +70,7 @@ outputs/production-metadata/
 outputs/sandbox-metadata/
 outputs/confidence-flags/
 outputs/deployment-validation/
+outputs/settings/
 
 # Case work tracked on the work branch only
 outputs/investigations/

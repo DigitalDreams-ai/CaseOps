@@ -18,6 +18,7 @@ import mimetypes
 import os
 import queue
 import re
+import signal
 import shlex
 import shutil
 import subprocess
@@ -377,6 +378,8 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
     "CASEOPS_GLOBAL_MAX_PARALLEL",
     "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
     "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
+    "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
+    "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
     "CASEOPS_USE_CCI_FOR_AUTH",
     "CASEOPS_PRODUCTION_READ_ORG",
     "CASEOPS_SANDBOX_TARGET_ORG",
@@ -1655,6 +1658,19 @@ def _env_flag(key: str, default: bool = False) -> bool:
     return value in {"1", "true", "yes", "on", "enabled"}
 
 
+def _env_int(key: str, default: int, *, min_value: int | None = None, max_value: int | None = None) -> int:
+    raw = (os.environ.get(key) or "").strip()
+    try:
+        value = int(raw) if raw else default
+    except ValueError:
+        value = default
+    if min_value is not None:
+        value = max(min_value, value)
+    if max_value is not None:
+        value = min(max_value, value)
+    return value
+
+
 def caseops_llm_auth_uses_anthropic_api_key() -> bool:
     """If True, CaseOps LLM calls use the **Anthropic Messages API** (API key billing).
 
@@ -2708,6 +2724,7 @@ def _build_pipeline_resume_plan(
     jira_updated: str | None = None,
     *,
     force_active: bool = False,
+    rebuild_from_artifacts: bool = False,
 ) -> dict[str, Any]:
     """Build a resume plan based on persisted state signatures and fallback signals."""
     source_mtime = _issue_source_mtime(key, jira_updated)
@@ -2746,7 +2763,7 @@ def _build_pipeline_resume_plan(
         "workspace_manifest": _artifact_snapshot(metadata_manifest, None),
     }
 
-    state = _read_pipeline_state(key)
+    state = {} if rebuild_from_artifacts else _read_pipeline_state(key)
     has_schema = _state_has_schema(state)
     evidence_prechecks = state.get("evidence_prechecks") if isinstance(state.get("evidence_prechecks"), dict) else None
     stored_signatures = state.get("signatures", {}) if isinstance(state.get("signatures", {}), dict) else {}
@@ -3031,8 +3048,14 @@ def _build_step(plan: dict[str, Any], step_no: int) -> dict[str, Any] | None:
     return None
 
 
-def _apply_loop_state_to_plan(plan: dict[str, Any], key: str, status: str = "") -> dict[str, Any]:
-    state = _read_pipeline_state(key)
+def _apply_loop_state_to_plan(
+    plan: dict[str, Any],
+    key: str,
+    status: str = "",
+    *,
+    rebuild_from_artifacts: bool = False,
+) -> dict[str, Any]:
+    state = {} if rebuild_from_artifacts else _read_pipeline_state(key)
     has_schema = _state_has_schema(state)
     stored_signatures = state.get("signatures", {}) if isinstance(state.get("signatures", {}), dict) else {}
     signatures = {
@@ -3154,9 +3177,21 @@ def _build_pipeline_resume_plan(
     jira_updated: str | None = None,
     *,
     force_active: bool = False,
+    rebuild_from_artifacts: bool = False,
 ) -> dict[str, Any]:
-    plan = _build_pipeline_resume_plan_legacy(key, status, jira_updated, force_active=force_active)
-    return _apply_loop_state_to_plan(plan, key, status=status)
+    plan = _build_pipeline_resume_plan_legacy(
+        key,
+        status,
+        jira_updated,
+        force_active=force_active,
+        rebuild_from_artifacts=rebuild_from_artifacts,
+    )
+    return _apply_loop_state_to_plan(
+        plan,
+        key,
+        status=status,
+        rebuild_from_artifacts=rebuild_from_artifacts,
+    )
 
 
 def _write_pipeline_resume_plan(plan: dict[str, Any]) -> Path:
@@ -3333,6 +3368,47 @@ def _prepare_resume_plan(
     plan = _build_pipeline_resume_plan(key, status, jira_updated, force_active=force_active)
     plan_path = _write_pipeline_resume_plan(plan)
     return plan, plan_path, _format_resume_plan_for_prompt(plan, plan_path)
+
+
+def _repair_pipeline_state_from_artifacts_after_run(
+    key: str,
+    run_key: str,
+    *,
+    reason: str,
+    status: str = "",
+    jira_updated: str | None = None,
+    force_active: bool = False,
+) -> None:
+    """Rebuild durable resume state after an interrupted run so the next run does not trust stale state."""
+    try:
+        plan = _build_pipeline_resume_plan(
+            key,
+            status,
+            jira_updated,
+            force_active=force_active,
+            rebuild_from_artifacts=True,
+        )
+        plan["repair"] = {
+            "rebuilt_from_artifacts": True,
+            "rebuilt_at": datetime.now(timezone.utc).isoformat(),
+            "previous_state_ignored": True,
+            "reason": reason,
+        }
+        plan_path = _write_pipeline_resume_plan(plan)
+        next_step = plan.get("next_step") or {}
+        if next_step:
+            _log_emit_line(
+                run_key,
+                f"Pipeline state rebuilt from current artifacts after {reason}; next STEP_{next_step.get('step')} ({next_step.get('name')}, {next_step.get('status')}). Plan: {_path_relative_for_prompt(plan_path)}",
+            )
+        else:
+            _log_emit_line(
+                run_key,
+                f"Pipeline state rebuilt from current artifacts after {reason}. Plan: {_path_relative_for_prompt(plan_path)}",
+            )
+        manifest_changed([key])
+    except Exception as exc:
+        _log_emit_line(run_key, f"WARNING: failed to rebuild pipeline state after {reason}: {exc}")
 
 
 def _log_resume_plan_summary(run_key: str, plan: dict[str, Any], plan_path: Path) -> None:
@@ -3684,6 +3760,7 @@ def _update_pipeline_run_metrics(
 
 _state_lock = threading.Lock()
 _active_keys: set[str] = set()          # currently running run keys
+_active_run_controls: dict[str, dict[str, Any]] = {}
 _log_q: queue.Queue[str] = queue.Queue()  # tagged messages: "key|line" or "__done__|key"
 _manifest_q: queue.Queue[str] = queue.Queue()  # manifest change notifications
 _PIPELINE_STEP_MARKER_RE = re.compile(r"\bSTEP_(\d+)(?:\s+[^\n\r]*)?", re.IGNORECASE)
@@ -3698,6 +3775,95 @@ _TOKEN_USAGE_LOG_RE = re.compile(
     r"Token usage:\s*total=([\d,]+),\s*input=([\d,]+),\s*output=([\d,]+)(?:,\s*cache_create=([\d,]+))?(?:,\s*cache_read=([\d,]+))?",
     re.IGNORECASE,
 )
+
+
+def _popen_process_group_kwargs() -> dict[str, Any]:
+    if os.name == "posix":
+        return {"start_new_session": True}
+    creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    return {"creationflags": creationflags} if creationflags else {}
+
+
+def _register_run_process(run_key: str, proc: subprocess.Popen[Any], label: str) -> None:
+    with _state_lock:
+        control = _active_run_controls.setdefault(run_key, {"processes": [], "stop_requested": False})
+        control.setdefault("processes", []).append({"pid": proc.pid, "process": proc, "label": label})
+
+
+def _unregister_run_process(run_key: str, proc: subprocess.Popen[Any]) -> None:
+    with _state_lock:
+        control = _active_run_controls.get(run_key)
+        if not control:
+            return
+        processes = control.get("processes")
+        if isinstance(processes, list):
+            control["processes"] = [item for item in processes if item.get("process") is not proc]
+        if not control.get("processes") and not control.get("stop_requested"):
+            _active_run_controls.pop(run_key, None)
+
+
+def _run_stop_requested(run_key: str) -> bool:
+    with _state_lock:
+        return bool((_active_run_controls.get(run_key) or {}).get("stop_requested"))
+
+
+def _terminate_process_group(proc: subprocess.Popen[Any], *, grace_seconds: float = 5.0) -> bool:
+    if proc.poll() is not None:
+        return False
+    try:
+        if os.name == "posix":
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        else:
+            proc.terminate()
+        try:
+            proc.wait(timeout=grace_seconds)
+        except subprocess.TimeoutExpired:
+            if os.name == "posix":
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            else:
+                proc.kill()
+            proc.wait(timeout=grace_seconds)
+        return True
+    except (LookupError, ProcessLookupError):
+        return False
+    except Exception:
+        try:
+            proc.kill()
+            return True
+        except Exception:
+            return False
+
+
+def _request_stop_for_run(run_key: str) -> dict[str, Any]:
+    with _state_lock:
+        control = _active_run_controls.setdefault(run_key, {"processes": [], "stop_requested": False})
+        control["stop_requested"] = True
+        process_items = list(control.get("processes") or [])
+        was_active = run_key in _active_keys
+
+    stopped: list[dict[str, Any]] = []
+    for item in process_items:
+        proc = item.get("process")
+        if not isinstance(proc, subprocess.Popen):
+            continue
+        stopped.append({
+            "pid": proc.pid,
+            "label": item.get("label") or "process",
+            "terminated": _terminate_process_group(proc),
+        })
+
+    if was_active:
+        _log_emit_line(run_key, "Operator requested stop; terminating active subprocesses.")
+        if not stopped:
+            _log_emit_line(run_key, "Stop requested; no active subprocess was registered.")
+    elif not stopped:
+        _finish_run_control(run_key)
+    return {"run_key": run_key, "was_active": was_active, "processes": stopped}
+
+
+def _finish_run_control(run_key: str) -> None:
+    with _state_lock:
+        _active_run_controls.pop(run_key, None)
 
 
 def _apply_caseops_env_aliases(env: dict[str, str]) -> None:
@@ -4010,11 +4176,46 @@ def _emit_tool_result_text(run_key: str, text: str, *, suppress: bool, max_lines
     if suppress:
         return
     noisy_json_keys = ('"stack":', '"cause":')
-    lines = [
-        line
-        for line in text.splitlines()
-        if line.strip() and not any(key in line for key in noisy_json_keys)
-    ]
+    raw_lines = [line for line in text.splitlines() if line.strip()]
+    lines: list[str] = []
+    skipped_traceback = False
+    emitted_tool_warning = False
+
+    for line in raw_lines:
+        if any(key in line for key in noisy_json_keys):
+            continue
+        stripped = line.strip()
+        exit_match = re.match(r"^Exit code\s+([1-9]\d*)\b", stripped, re.IGNORECASE)
+        if exit_match:
+            exception_line = next(
+                (
+                    candidate.strip()
+                    for candidate in reversed(raw_lines)
+                    if re.match(r"^[A-Za-z_][A-Za-z0-9_.]*(?:Error|Exception):\s+", candidate.strip())
+                ),
+                "",
+            )
+            suffix = f" ({exception_line})" if exception_line else ""
+            lines.append(
+                f"Tool warning: command returned exit code {exit_match.group(1)}{suffix}. Non-terminal; Claude may retry or adjust."
+            )
+            emitted_tool_warning = True
+            continue
+        if stripped.startswith("Traceback (most recent call last):"):
+            skipped_traceback = True
+            continue
+        if skipped_traceback:
+            if re.match(r'^\s*File "[^"]+", line \d+', line) or stripped.startswith(("^", "File ")):
+                continue
+            if re.match(r"^[A-Za-z_][A-Za-z0-9_.]*(?:Error|Exception):\s+", stripped):
+                if not emitted_tool_warning:
+                    lines.append(
+                        f"Tool warning: command raised {stripped}. Non-terminal; Claude may retry or adjust."
+                    )
+                    emitted_tool_warning = True
+                continue
+            skipped_traceback = False
+        lines.append(line)
     for line in lines[:max_lines]:
         _log_emit_line(run_key, line)
     if len(lines) > max_lines:
@@ -4726,9 +4927,15 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
             cwd=str(ROOT),
             bufsize=1,
             env=env,
+            **_popen_process_group_kwargs(),
         )
+        _register_run_process(run_key, proc, "subprocess")
         assert proc.stdout
         for line in proc.stdout:
+            if _run_stop_requested(run_key):
+                _log_emit_line(run_key, "Stop requested; terminating subprocess stream.")
+                _terminate_process_group(proc)
+                break
             _log_emit_line(run_key, line.rstrip())
         proc.wait()
         _log_emit_line(run_key, f"-- exit code {proc.returncode} --")
@@ -4736,6 +4943,9 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
     except Exception as exc:
         _log_emit_line(run_key, f"ERROR: {exc}")
         return 1
+    finally:
+        if "proc" in locals():
+            _unregister_run_process(run_key, proc)
 
 
 def _is_legacy_pipeline_cmd(cmd: list[str]) -> bool:
@@ -4929,7 +5139,9 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
             errors="replace",
             cwd=str(ROOT),
             bufsize=1,
+            **_popen_process_group_kwargs(),
         )
+        _register_run_process(run_key, proc, "claude")
         _log_emit_line(run_key, f"Process started (PID: {proc.pid})")
         assert proc.stdin
         proc.stdin.write(prompt)
@@ -4954,8 +5166,8 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
         threading.Thread(target=_read_pipe, args=(proc.stdout, "stdout"), daemon=True).start()
         threading.Thread(target=_read_pipe, args=(proc.stderr, "stderr"), daemon=True).start()
 
-        idle_timeout = int(os.environ.get("CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS", "240"))
-        total_timeout = int(os.environ.get("CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS", "1200"))
+        idle_timeout = _env_int("CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS", 240, min_value=60, max_value=3600)
+        total_timeout = _env_int("CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS", 1200, min_value=300, max_value=14400)
         started_at = time.monotonic()
         last_output_at = started_at
         open_streams = {"stdout", "stderr"}
@@ -4968,12 +5180,17 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                 now = time.monotonic()
                 if proc.poll() is not None:
                     continue
+                if _run_stop_requested(run_key):
+                    _log_emit_line(run_key, "Stop requested; killing Claude subprocess")
+                    _terminate_process_group(proc)
+                    killed_for_timeout = True
+                    break
                 if now - last_output_at > idle_timeout:
                     _log_emit_line(
                         run_key,
                         f"ERROR: Claude process produced no output for {idle_timeout}s — killing subprocess",
                     )
-                    proc.kill()
+                    _terminate_process_group(proc)
                     killed_for_timeout = True
                     break
                 if now - started_at > total_timeout:
@@ -4981,7 +5198,7 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                         run_key,
                         f"ERROR: Claude process exceeded total timeout of {total_timeout}s — killing subprocess",
                     )
-                    proc.kill()
+                    _terminate_process_group(proc)
                     killed_for_timeout = True
                     break
                 continue
@@ -5112,6 +5329,9 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
     except Exception as exc:
         _log_emit_line(run_key, f"ERROR: {exc}")
         return False
+    finally:
+        if "proc" in locals():
+            _unregister_run_process(run_key, proc)
 
 
 def _fallback_launch_claude_window(issue_key: str | None, prompt: str, run_key: str) -> None:
@@ -5175,6 +5395,7 @@ def _stream_proc(cmd: list[str], run_key: str) -> None:
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
+        _finish_run_control(run_key)
         # Invalidate jira_summary caches after operations
         # - Global operations: clear all caches so fresh data is fetched from disk
         # - Individual issue operations: clear that issue's cache entry
@@ -5245,6 +5466,7 @@ def _stream_claude_proc(prompt: str, run_key: str, issue_key: str | None = None)
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
+        _finish_run_control(run_key)
         # Phase 2: invalidate caches when pipeline completes so stale flags aren't served
         if issue_key:
             jira_summary_cache.pop(issue_key, None)
@@ -5300,6 +5522,7 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
     run_started = datetime.now(timezone.utc)
     should_update_metrics = False
     run_status = "failed"
+    row: dict[str, str] = {}
     try:
         _log_emit_run_start(run_key, key)
         _log_emit_line(run_key, f"-- Processing {key} via jira-salesforce-fix-pipeline playbook --")
@@ -5331,7 +5554,18 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
         )
         if _do_stream_claude(prompt, run_key, key):
             run_status = "completed"
+        elif _run_stop_requested(run_key):
+            run_status = "stopped"
     finally:
+        if should_update_metrics and run_status != "completed":
+            _repair_pipeline_state_from_artifacts_after_run(
+                key,
+                run_key,
+                reason=run_status,
+                status=row.get("Status", ""),
+                jira_updated=row.get("Updated", ""),
+                force_active=force_active,
+            )
         if should_update_metrics:
             run_ended = datetime.now(timezone.utc)
             try:
@@ -5347,6 +5581,7 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
                 _log_emit_line(run_key, f"WARNING: failed to persist run metrics: {exc}")
         with _state_lock:
             _active_keys.discard(run_key)
+        _finish_run_control(run_key)
         # Phase 2: invalidate caches for this issue when full-issue run completes
         jira_summary_cache.pop(key, None)
         investigation_cache.pop(key, None)
@@ -5362,6 +5597,7 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
     run_started = datetime.now(timezone.utc)
     should_update_metrics = False
     run_status = "failed"
+    row: dict[str, str] = {}
     try:
         _log_emit_run_start(run_key, f"{key} reprocess")
         _log_emit_line(run_key, f"-- Reprocessing {key} (no sync) via jira-salesforce-fix-pipeline playbook --")
@@ -5392,7 +5628,18 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
         )
         if _do_stream_claude(prompt, run_key, key):
             run_status = "completed"
+        elif _run_stop_requested(run_key):
+            run_status = "stopped"
     finally:
+        if should_update_metrics and run_status != "completed":
+            _repair_pipeline_state_from_artifacts_after_run(
+                key,
+                run_key,
+                reason=run_status,
+                status=row.get("Status", ""),
+                jira_updated=row.get("Updated", ""),
+                force_active=force_active,
+            )
         if should_update_metrics:
             run_ended = datetime.now(timezone.utc)
             try:
@@ -5408,6 +5655,7 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
                 _log_emit_line(run_key, f"WARNING: failed to persist run metrics: {exc}")
         with _state_lock:
             _active_keys.discard(run_key)
+        _finish_run_control(run_key)
         jira_summary_cache.pop(key, None)
         investigation_cache.pop(key, None)
         _log_emit_line(run_key, f"Done: {run_key}")
@@ -5415,12 +5663,7 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
 
 
 def _global_max_parallel() -> int:
-    raw = (os.environ.get("CASEOPS_GLOBAL_MAX_PARALLEL") or "1").strip()
-    try:
-        value = int(raw)
-    except ValueError:
-        value = 1
-    return max(1, min(value, 4))
+    return _env_int("CASEOPS_GLOBAL_MAX_PARALLEL", 1, min_value=1, max_value=4)
 
 
 def _plan_pending_issue_steps(plan: dict[str, Any]) -> list[dict[str, Any]]:
@@ -5519,6 +5762,9 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
         results: list[tuple[str, bool, str]] = []
         if max_parallel == 1:
             for idx, key in enumerate(queue_keys, start=1):
+                if _run_stop_requested(run_key):
+                    _log_emit_line(run_key, "Queue: stop requested; no further issues will be started.")
+                    break
                 results.append(_run_global_issue_worker(key, idx, len(queue_keys), reprocess=reprocess))
         else:
             with ThreadPoolExecutor(max_workers=max_parallel) as executor:
@@ -5528,6 +5774,11 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                 }
                 for future in as_completed(futures):
                     results.append(future.result())
+                    if _run_stop_requested(run_key):
+                        for pending in futures:
+                            pending.cancel()
+                        _log_emit_line(run_key, "Queue: stop requested; pending issue starts were canceled where possible.")
+                        break
 
         complete = sum(1 for _key, ok, _detail in results if ok)
         incomplete = len(results) - complete
@@ -5540,6 +5791,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
+        _finish_run_control(run_key)
         _log_emit_line(run_key, f"Done: {run_key}")
         _log_emit_done(run_key)
 
@@ -6415,6 +6667,7 @@ def api_run():
                                     "Use the updated sync/pipeline actions.")
             with _state_lock:
                 _active_keys.discard(run_key)
+            _finish_run_control(run_key)
             return jsonify({
                 "error": "Legacy run_pipeline workflow removed. Use sync/reprocess/full actions from UI.",
             }), 400
@@ -6493,9 +6746,24 @@ def api_issues_sse():
 @app.get("/api/status")
 def api_status():
     with _state_lock:
+        run_controls: dict[str, Any] = {}
+        for key, control in _active_run_controls.items():
+            processes = []
+            for item in control.get("processes") or []:
+                proc = item.get("process")
+                processes.append({
+                    "pid": item.get("pid"),
+                    "label": item.get("label") or "process",
+                    "running": bool(isinstance(proc, subprocess.Popen) and proc.poll() is None),
+                })
+            run_controls[key] = {
+                "stop_requested": bool(control.get("stop_requested")),
+                "processes": processes,
+            }
         return jsonify({
             "active_keys": list(_active_keys),
             "count": len(_active_keys),
+            "run_controls": run_controls,
             "caseops_llm_auth": (
                 "api_key" if caseops_llm_auth_uses_anthropic_api_key() else "claude_code"
             ),
@@ -6505,6 +6773,78 @@ def api_status():
                 else "claude_code_cli"
             ),
         })
+
+
+@app.post("/api/run/stop")
+def api_run_stop():
+    data = request.get_json(silent=True) or {}
+    requested_key = (data.get("key") or data.get("run_key") or "").strip()
+    stop_all = bool(data.get("all"))
+
+    with _state_lock:
+        active_keys = list(_active_keys)
+
+    if requested_key and requested_key != "*":
+        targets = [requested_key]
+    elif stop_all or requested_key == "*" or not requested_key:
+        targets = active_keys
+    else:
+        return jsonify({
+            "error": "key required when zero or multiple runs are active",
+            "active_keys": active_keys,
+        }), 400
+
+    if not targets:
+        return jsonify({"ok": True, "stopped": [], "active_keys": active_keys})
+
+    stopped = [_request_stop_for_run(key) for key in targets]
+    return jsonify({"ok": True, "stopped": stopped, "active_keys": active_keys})
+
+
+@app.post("/api/pipeline-state/repair")
+def api_pipeline_state_repair():
+    data = request.get_json(silent=True) or {}
+    key = (data.get("key") or data.get("run_key") or "").strip()
+    if not key:
+        return jsonify({"error": "key required"}), 400
+
+    with _state_lock:
+        if key in _active_keys:
+            return jsonify({"error": f"{key} is currently running; stop it before repairing state."}), 409
+
+    row = _find_manifest_row(key)
+    plan = _build_pipeline_resume_plan(
+        key,
+        row.get("Status", ""),
+        row.get("Updated", ""),
+        rebuild_from_artifacts=True,
+    )
+    plan["repair"] = {
+        "rebuilt_from_artifacts": True,
+        "rebuilt_at": datetime.now(timezone.utc).isoformat(),
+        "previous_state_ignored": True,
+    }
+    plan_path = _write_pipeline_resume_plan(plan)
+    jira_summary_cache.pop(key, None)
+    investigation_cache.pop(key, None)
+    manifest_changed([key])
+    next_step = plan.get("next_step") or {}
+    return jsonify({
+        "ok": True,
+        "key": key,
+        "plan_path": _path_relative_for_prompt(plan_path),
+        "next_step": next_step,
+        "quality_gates": plan.get("quality_gates") or {},
+        "steps": [
+            {
+                "step": step.get("step"),
+                "name": step.get("name"),
+                "status": step.get("status"),
+                "reason": step.get("reason"),
+            }
+            for step in (plan.get("steps") or [])
+        ],
+    })
 
 
 @app.get("/health")
@@ -7088,13 +7428,26 @@ def api_get_settings():
         "JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
         "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
         "CASEOPS_USE_CCI_FOR_AUTH",
+        "CASEOPS_GLOBAL_MAX_PARALLEL",
+        "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
+        "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
+        "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
+        "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
         "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
         "CASEOPS_PRODUCTION_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL",
+    }
+    defaults = {
+        "CASEOPS_USE_CCI_FOR_AUTH": "false",
+        "CASEOPS_GLOBAL_MAX_PARALLEL": "1",
+        "CASEOPS_ENABLE_PARALLEL_PRECHECKS": "false",
+        "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES": "false",
+        "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS": "240",
+        "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS": "1200",
     }
 
     response = {}
     for key in exposed_keys:
-        value = settings.get(key, "")
+        value = settings.get(key, defaults.get(key, ""))
         # Mask secrets (but not URLs, aliases, or boolean flags)
         if key in ("JIRA_API_TOKEN",):
             response[key] = _mask_secret(value)
@@ -7114,6 +7467,11 @@ def api_post_settings():
     for key in ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
                 "CASEOPS_ANTHROPIC_MODEL",
                 "CASEOPS_USE_CCI_FOR_AUTH",
+                "CASEOPS_GLOBAL_MAX_PARALLEL",
+                "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
+                "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
+                "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
+                "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
                 "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
                 "CASEOPS_PRODUCTION_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL"]:
         value = body.get(key, "").strip()
