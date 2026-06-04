@@ -23,6 +23,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
@@ -56,6 +57,7 @@ class PipelineState(Enum):
 PIPELINE_STATE_SCHEMA_VERSION = 2
 PIPELINE_LOOP_LIMITS = {"metadata_rounds": 3, "deploy_rounds": 3}
 PIPELINE_TOOL_PERMISSION_VERSION = 1
+CASEOPS_VERSION = (os.environ.get("CASEOPS_VERSION") or "dev").strip() or "dev"
 STEP_LOOP_MARKER_REASONS = {
     "metadata": "repeat_metadata",
     "deploy": "deploy_fail",
@@ -1411,7 +1413,7 @@ def _refresh_salesforce_token_from_refresh_token(instance_url: str, refresh_toke
         return False, str(e)
 
 
-def _salesforce_json_result(value: str | None) -> dict[str, Any]:
+def _salesforce_json_payload(value: str | None) -> dict[str, Any]:
     raw = (value or "").strip()
     if not raw.startswith("{"):
         return {}
@@ -1421,8 +1423,23 @@ def _salesforce_json_result(value: str | None) -> dict[str, Any]:
         return {}
     if not isinstance(parsed, dict):
         return {}
+    return parsed
+
+
+def _salesforce_json_result(value: str | None) -> dict[str, Any]:
+    parsed = _salesforce_json_payload(value)
+    if not parsed:
+        return {}
     result = parsed.get("result")
     return result if isinstance(result, dict) else parsed
+
+
+def _salesforce_json_result_string(value: str | None) -> str:
+    parsed = _salesforce_json_payload(value)
+    if not parsed:
+        return ""
+    result = parsed.get("result")
+    return result.strip() if isinstance(result, str) else ""
 
 
 def _normalize_salesforce_access_token(value: str | None) -> str:
@@ -1438,9 +1455,18 @@ def _normalize_salesforce_access_token(value: str | None) -> str:
     if raw.startswith("SF_ACCESS_TOKEN="):
         raw = raw.split("=", 1)[1].strip()
 
+    result_string = _salesforce_json_result_string(raw)
+    if result_string:
+        return result_string
+
     payload = _salesforce_json_result(raw)
     if payload:
-        token = str(payload.get("accessToken") or payload.get("access_token") or "").strip()
+        token = str(
+            payload.get("accessToken")
+            or payload.get("access_token")
+            or payload.get("token")
+            or ""
+        ).strip()
         org_id = str(
             payload.get("orgId")
             or payload.get("organizationId")
@@ -1454,11 +1480,45 @@ def _normalize_salesforce_access_token(value: str | None) -> str:
     return raw
 
 
+def _extract_salesforce_sfdx_auth_url(value: str | None) -> str:
+    """Accept a raw force:// URL or `sf org auth show-sfdx-auth-url --json` output."""
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    if raw.startswith("SF_SFDX_AUTH_URL="):
+        raw = raw.split("=", 1)[1].strip()
+    if raw.startswith("force://"):
+        return raw
+
+    result_string = _salesforce_json_result_string(raw)
+    if result_string.startswith("force://"):
+        return result_string
+
+    payload = _salesforce_json_result(raw)
+    if payload:
+        auth_url = str(
+            payload.get("sfdxAuthUrl")
+            or payload.get("sfdxAuthURL")
+            or payload.get("authUrl")
+            or payload.get("sfdx_auth_url")
+            or ""
+        ).strip()
+        return auth_url if auth_url.startswith("force://") else ""
+    return ""
+
+
 def _extract_salesforce_refresh_token(value: str | None) -> str:
     """Accept a raw refresh token, SFDX auth URL, or CLI JSON output."""
     raw = (value or "").strip()
     if not raw:
         return ""
+    sfdx_auth_url = _extract_salesforce_sfdx_auth_url(raw)
+    if sfdx_auth_url:
+        raw = sfdx_auth_url
+    else:
+        result_string = _salesforce_json_result_string(raw)
+        if result_string:
+            raw = result_string
     payload = _salesforce_json_result(raw)
     if payload:
         raw = str(
@@ -4135,6 +4195,59 @@ def _sf_auth_from_access_token(
     )
 
 
+def _sf_auth_from_sfdx_auth_url(
+    *,
+    sf_bin: str,
+    alias: str,
+    sfdx_auth_url: str,
+    env: dict[str, str],
+    timeout: int = 35,
+) -> subprocess.CompletedProcess[str]:
+    """Authenticate one Salesforce CLI alias from an SFDX auth URL."""
+    auth_env = env.copy()
+    auth_env.setdefault("HOME", _safe_runtime_home().as_posix())
+    tmp_dir = Path(auth_env.get("CASEOPS_TEMP_DIR") or tempfile.gettempdir())
+    try:
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        tmp_dir = Path(tempfile.gettempdir())
+
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            suffix=".json",
+            prefix="caseops-sfdx-auth-",
+            dir=str(tmp_dir),
+            delete=False,
+        ) as handle:
+            tmp_path = Path(handle.name)
+            json.dump({"sfdxAuthUrl": sfdx_auth_url}, handle)
+        return _run_cli_command(
+            [
+                sf_bin,
+                "org",
+                "login",
+                "sfdx-url",
+                "--sfdx-url-file",
+                str(tmp_path),
+                "--alias",
+                alias,
+                "--json",
+            ],
+            env=auth_env,
+            timeout=timeout,
+            retries=1,
+        )
+    finally:
+        if tmp_path:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
 def _content_text_fragments(value: Any) -> list[str]:
     """Extract readable text fragments from Claude stream-json content blocks."""
     fragments: list[str] = []
@@ -4379,12 +4492,18 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
             return
 
         token_key = "SF_PROD_ACCESS_TOKEN" if role == "prod" else "SF_SANDBOX_ACCESS_TOKEN"
+        sfdx_auth_url_keys = (
+            ("SF_PROD_SFDX_AUTH_URL", "CASEOPS_PRODUCTION_SFDX_AUTH_URL")
+            if role == "prod"
+            else ("SF_SANDBOX_SFDX_AUTH_URL", "CASEOPS_SANDBOX_SFDX_AUTH_URL")
+        )
         url_keys = (
             ("SF_PROD_INSTANCE_URL", "CASEOPS_PRODUCTION_INSTANCE_URL")
             if role == "prod"
             else ("SF_SANDBOX_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL")
         )
         access_token = _normalize_salesforce_access_token(_env_first(token_key, settings=settings))
+        sfdx_auth_url = _extract_salesforce_sfdx_auth_url(_env_first(*sfdx_auth_url_keys, settings=settings))
         instance_url = _env_first(*url_keys, settings=settings)
 
         def refresh_and_auth(reason: str) -> bool:
@@ -4440,6 +4559,27 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
             timeout=25,
             retries=1,
         )
+        if display.returncode != 0 and sfdx_auth_url:
+            role_status["auth_attempted_from_sfdx_auth_url"] = True
+            auth = _sf_auth_from_sfdx_auth_url(
+                sf_bin=sf_bin,
+                alias=alias,
+                sfdx_auth_url=sfdx_auth_url,
+                env=env,
+            )
+            role_status["auth_returncode"] = auth.returncode
+            if auth.returncode != 0:
+                role_status["auth_error"] = _command_error(auth)
+            else:
+                _sf_orgs_cache = None
+                _sf_orgs_cache_time = 0.0
+                display = _run_cli_command(
+                    [sf_bin, "org", "display", "--target-org", alias, "--json"],
+                    env=env,
+                    timeout=25,
+                    retries=1,
+                )
+
         if display.returncode != 0 and access_token and instance_url:
             role_status["auth_attempted_from_env_token"] = True
             auth = _sf_auth_from_access_token(
@@ -4465,10 +4605,10 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
         role_status["display_returncode"] = display.returncode
         if display.returncode != 0:
             role_status["error"] = _command_error(display)
-            if access_token and instance_url:
-                fail(f"Salesforce {role} org `{alias}` could not be authenticated from the saved CaseOps token.")
+            if sfdx_auth_url or (access_token and instance_url):
+                fail(f"Salesforce {role} org `{alias}` could not be authenticated from the saved CaseOps token/auth URL.")
             else:
-                fail(f"Salesforce {role} org `{alias}` is not authenticated in the pipeline runtime environment and the saved token/url is missing.")
+                fail(f"Salesforce {role} org `{alias}` is not authenticated in the pipeline runtime environment and the saved token/auth URL is missing.")
             return
 
         data = _json_from_stdout(display.stdout)
@@ -7683,6 +7823,9 @@ def _settings_status_skeleton() -> dict[str, Any]:
     sand_alias = _env_first("CASEOPS_SANDBOX_TARGET_ORG", settings=settings)
 
     return {
+        "caseops": {
+            "version": CASEOPS_VERSION,
+        },
         "paths": {
             "outputs_dir": str(OUTPUTS),
             "instance_dir": str(OUTPUTS.parent),
@@ -7951,23 +8094,41 @@ def api_setup_salesforce_auth():
         sandbox_alias = _env_first("CASEOPS_SANDBOX_TARGET_ORG", settings=settings)
         prod_token = _normalize_salesforce_access_token(_env_first("SF_PROD_ACCESS_TOKEN", settings=settings))
         prod_url = _env_first("SF_PROD_INSTANCE_URL", "CASEOPS_PRODUCTION_INSTANCE_URL", settings=settings)
+        prod_sfdx_auth_url = _extract_salesforce_sfdx_auth_url(
+            _env_first("SF_PROD_SFDX_AUTH_URL", "CASEOPS_PRODUCTION_SFDX_AUTH_URL", settings=settings)
+        )
         sandbox_token = _normalize_salesforce_access_token(_env_first("SF_SANDBOX_ACCESS_TOKEN", settings=settings))
         sandbox_url = _env_first("SF_SANDBOX_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL", settings=settings)
+        sandbox_sfdx_auth_url = _extract_salesforce_sfdx_auth_url(
+            _env_first("SF_SANDBOX_SFDX_AUTH_URL", "CASEOPS_SANDBOX_SFDX_AUTH_URL", settings=settings)
+        )
 
-        if not any([prod_token, sandbox_token]):
-            return jsonify({"error": "No SF tokens in environment (SF_PROD_ACCESS_TOKEN or SF_SANDBOX_ACCESS_TOKEN)"}), 400
+        if not any([prod_token, sandbox_token, prod_sfdx_auth_url, sandbox_sfdx_auth_url]):
+            return jsonify({"error": "No SF auth values in environment (paste access token JSON or SFDX auth URL JSON first)"}), 400
 
         # Auth both orgs
-        def auth_org(alias: str, token: str, url: str) -> tuple[bool, str]:
+        def auth_org(alias: str, token: str, url: str, sfdx_auth_url: str) -> tuple[bool, str]:
             """Authenticate one org. Returns (success, message)."""
             if not alias:
                 return False, "missing org alias (CASEOPS_PRODUCTION_READ_ORG or CASEOPS_SANDBOX_TARGET_ORG)"
+            env = os.environ.copy()
+            env["HOME"] = _safe_runtime_home().as_posix()
+            if sfdx_auth_url:
+                proc = _sf_auth_from_sfdx_auth_url(
+                    sf_bin=shutil.which("sf") or "sf",
+                    alias=alias,
+                    sfdx_auth_url=sfdx_auth_url,
+                    env=env,
+                )
+                if proc.returncode == 0:
+                    return True, "authenticated from SFDX auth URL"
+                if not token:
+                    return False, _command_error(proc)
+
             if not token or not url:
-                return False, "missing token or url"
+                return False, "missing token/url or SFDX auth URL"
             try:
-                env = os.environ.copy()
                 env["SF_ACCESS_TOKEN"] = token
-                env["HOME"] = _safe_runtime_home().as_posix()
                 proc = subprocess.run(
                     ["sf", "org", "login", "access-token", "--alias", alias, "--instance-url", url, "--no-prompt"],
                     capture_output=True,
@@ -7985,8 +8146,8 @@ def api_setup_salesforce_auth():
                 return False, str(e)
 
         # Authenticate orgs
-        prod_ok, prod_msg = auth_org(prod_alias, prod_token, prod_url) if prod_token else (None, "skipped")
-        sandbox_ok, sandbox_msg = auth_org(sandbox_alias, sandbox_token, sandbox_url) if sandbox_token else (None, "skipped")
+        prod_ok, prod_msg = auth_org(prod_alias, prod_token, prod_url, prod_sfdx_auth_url) if (prod_token or prod_sfdx_auth_url) else (None, "skipped")
+        sandbox_ok, sandbox_msg = auth_org(sandbox_alias, sandbox_token, sandbox_url, sandbox_sfdx_auth_url) if (sandbox_token or sandbox_sfdx_auth_url) else (None, "skipped")
 
         # Validate: run sf org list to verify orgs actually exist (cached for 10 min)
         def verify_orgs() -> dict:
@@ -8061,11 +8222,13 @@ def api_refresh_salesforce_tokens():
         body = request.get_json(silent=True) or {}
         prod_token = _normalize_salesforce_access_token(body.get("sf_prod_access_token"))
         sandbox_token = _normalize_salesforce_access_token(body.get("sf_sandbox_access_token"))
+        prod_sfdx_auth_url = _extract_salesforce_sfdx_auth_url(body.get("sf_prod_refresh_token"))
+        sandbox_sfdx_auth_url = _extract_salesforce_sfdx_auth_url(body.get("sf_sandbox_refresh_token"))
         prod_refresh_token = _extract_salesforce_refresh_token(body.get("sf_prod_refresh_token"))
         sandbox_refresh_token = _extract_salesforce_refresh_token(body.get("sf_sandbox_refresh_token"))
 
-        if not any([prod_token, sandbox_token]):
-            return jsonify({"error": "Missing sf_prod_access_token or sf_sandbox_access_token"}), 400
+        if not any([prod_token, sandbox_token, prod_sfdx_auth_url, sandbox_sfdx_auth_url]):
+            return jsonify({"error": "Paste at least one Salesforce access-token JSON value or SFDX auth URL JSON value"}), 400
 
         env_file = os.environ.get("CASEOPS_JIRA_ENV_FILE") or app.config.get("ENV_FILE_PATH")
         if not env_file:
@@ -8078,7 +8241,8 @@ def api_refresh_salesforce_tokens():
         lines = env_content.split("\n")
         new_lines = [l for l in lines if not l.startswith((
             "SF_PROD_ACCESS_TOKEN=", "SF_SANDBOX_ACCESS_TOKEN=", "SF_TOKENS_REFRESHED_AT=",
-            "SF_PROD_REFRESH_TOKEN=", "SF_SANDBOX_REFRESH_TOKEN="
+            "SF_PROD_REFRESH_TOKEN=", "SF_SANDBOX_REFRESH_TOKEN=",
+            "SF_PROD_SFDX_AUTH_URL=", "SF_SANDBOX_SFDX_AUTH_URL="
         ))]
 
         # Add new tokens and timestamp
@@ -8086,6 +8250,10 @@ def api_refresh_salesforce_tokens():
             new_lines.append(f"SF_PROD_ACCESS_TOKEN={prod_token}")
         if sandbox_token:
             new_lines.append(f"SF_SANDBOX_ACCESS_TOKEN={sandbox_token}")
+        if prod_sfdx_auth_url:
+            new_lines.append(f"SF_PROD_SFDX_AUTH_URL={prod_sfdx_auth_url}")
+        if sandbox_sfdx_auth_url:
+            new_lines.append(f"SF_SANDBOX_SFDX_AUTH_URL={sandbox_sfdx_auth_url}")
         if prod_refresh_token:
             new_lines.append(f"SF_PROD_REFRESH_TOKEN={prod_refresh_token}")
         if sandbox_refresh_token:

@@ -659,6 +659,10 @@
 
                     <div class="status-grid">
                         <div class="status-card">
+                            <h3>CaseOps</h3>
+                            <div id="caseops-version-status"><span class="status-badge">Checking</span></div>
+                        </div>
+                        <div class="status-card">
                             <h3>Pipeline</h3>
                             <div id="runtime-status"><span class="status-badge">Checking</span></div>
                         </div>
@@ -1122,6 +1126,7 @@
 
         async function refreshStatusPanels(options = {}) {
             const status = await fetchSettingsStatus(options);
+            renderCaseOpsVersion(status);
             renderRuntimeStatus(status);
             renderClaudeStatus(status);
             renderSalesforceStatus(status);
@@ -1129,6 +1134,13 @@
             await refreshRunControlStatus();
             scheduleStatusPoll(status);
             return status;
+        }
+
+        function renderCaseOpsVersion(status) {
+            const el = document.getElementById('caseops-version-status');
+            if (!el) return;
+            const version = status && status.caseops && status.caseops.version ? status.caseops.version : 'unknown';
+            el.innerHTML = `<span class="status-badge ok">${escapeHtml(version)}</span>`;
         }
 
         function renderRuntimeStatus(status) {
@@ -1373,8 +1385,8 @@
                 sf_sandbox_refresh_token: document.getElementById('sf-sandbox-refresh-token').value.trim(),
             };
 
-            if (!payload.sf_prod_access_token && !payload.sf_sandbox_access_token) {
-                msg.textContent = 'Paste at least one Salesforce access token.';
+            if (!payload.sf_prod_access_token && !payload.sf_sandbox_access_token && !payload.sf_prod_refresh_token && !payload.sf_sandbox_refresh_token) {
+                msg.textContent = 'Paste at least one Salesforce access-token JSON value or SFDX auth URL JSON value.';
                 return;
             }
 

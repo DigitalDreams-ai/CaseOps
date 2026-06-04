@@ -857,6 +857,10 @@ class PipelineStateTagTests(unittest.TestCase):
             app._normalize_salesforce_access_token("00D000000000001AAA!already-formatted"),
             "00D000000000001AAA!already-formatted",
         )
+        self.assertEqual(
+            app._normalize_salesforce_access_token(json.dumps({"status": 0, "result": "00D000000000001AAA!result-string-token"})),
+            "00D000000000001AAA!result-string-token",
+        )
 
     def test_salesforce_refresh_token_json_accepts_sfdx_auth_url(self):
         payload = {
@@ -869,6 +873,14 @@ class PipelineStateTagTests(unittest.TestCase):
             app._extract_salesforce_refresh_token(json.dumps(payload)),
             "refresh-token-value",
         )
+        self.assertEqual(
+            app._extract_salesforce_sfdx_auth_url(json.dumps(payload)),
+            "force://PlatformCLI::refresh-token-value@example.my.salesforce.com",
+        )
+
+    def test_settings_status_exposes_caseops_version(self):
+        status = app._settings_status_skeleton()
+        self.assertEqual(status["caseops"]["version"], app.CASEOPS_VERSION)
 
     def test_docker_image_includes_minimal_sfdx_project_workspace(self):
         dockerfile = (app.ROOT / "Dockerfile").read_text(encoding="utf-8")
@@ -876,6 +888,7 @@ class PipelineStateTagTests(unittest.TestCase):
         self.assertTrue(sfdx_project.is_file())
         self.assertIn("COPY --chown=1027:100 docker/sfdx-project.json /app/sfdx-project.json", dockerfile)
         self.assertIn("/app/force-app/main/default", dockerfile)
+        self.assertIn("ENV CASEOPS_VERSION=0.1.4", dockerfile)
 
         payload = json.loads(sfdx_project.read_text(encoding="utf-8"))
         self.assertEqual(payload["packageDirectories"][0]["path"], "force-app")
