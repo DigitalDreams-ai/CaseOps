@@ -2061,7 +2061,7 @@ def _path_relative_for_prompt(path: Path | None) -> str:
     try:
         return path.relative_to(ROOT).as_posix()
     except ValueError:
-        return str(path)
+        return path.as_posix()
 
 
 def _read_text_for_resume(path: Path, max_chars: int = 80_000) -> str:
@@ -5559,7 +5559,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
             continue
         path = OUTPUTS / rel.format(key=key)
         if path.exists():
-            existing.append(f"  - {FILE_LABELS[ftype]}: {path.relative_to(ROOT).as_posix()}")
+            existing.append(f"  - {FILE_LABELS[ftype]}: {_path_relative_for_prompt(path)}")
 
     files_block = "\n".join(existing) if existing else "  - None yet"
     org_knowledge_block = _build_org_knowledge_context_block(key, row)
@@ -5860,7 +5860,7 @@ def _migrate_legacy_issue_summaries() -> None:
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
             legacy.replace(target)
-            print(f"[OK] Migrated legacy summary: {legacy.name} -> {target.relative_to(ROOT)}")
+            print(f"[OK] Migrated legacy summary: {legacy.name} -> {_path_relative_for_prompt(target)}")
         except OSError as exc:
             print(f"[WARN] Could not migrate legacy summary {legacy}: {exc}")
 

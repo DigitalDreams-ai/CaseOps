@@ -752,6 +752,25 @@ class PipelineStateTagTests(unittest.TestCase):
 
         self.assertEqual(seen_statuses, ["failed"])
 
+    def test_build_claude_prompt_handles_outputs_outside_root(self):
+        key = "HEAL-1"
+        self._write_artifact(key, "jira_summary", "Jira summary")
+        plan_path = app.OUTPUTS / "pipeline-state" / f"{key}.json"
+
+        with patch.object(
+            app,
+            "_read_manifest",
+            return_value=[{"Key": key, "Summary": "SUP issue", "Status": "In Progress", "Updated": ""}],
+        ), patch.object(
+            app,
+            "_prepare_resume_plan",
+            return_value=({}, plan_path, "resume"),
+        ), patch.object(app, "_build_org_knowledge_context_block", return_value=""):
+            prompt = app._build_claude_prompt(key, "Continue the pipeline.")
+
+        summary_path = app.OUTPUTS / app.FILE_LOCATIONS["jira_summary"].format(key=key)
+        self.assertIn(summary_path.as_posix(), prompt)
+
     def test_transition_contract_failures_mark_contract_step_for_rework(self):
         key = "HEAL-1"
         self._plan_for_complete_issue(key)
