@@ -41,14 +41,15 @@ RUN set -eux; \
 # Copy only product files. Runtime data, credentials, local Salesforce metadata,
 # Jira outputs, screenshots, and issue logs must stay in bind-mounted appdata.
 COPY --chown=1027:100 app.py jira_sync.py run_pipeline.py skill_registry.py caseops_paths.py canned-messages.json docker-entrypoint.sh /app/
+COPY --chown=1027:100 docker/sfdx-project.json /app/sfdx-project.json
 COPY --chown=1027:100 templates/ /app/templates/
 COPY --chown=1027:100 static/ /app/static/
 COPY --chown=1027:100 skills/ /app/skills/
 COPY --chown=1027:100 scripts/ /app/scripts/
 
 # Create output/cache mount points with proper permissions.
-RUN mkdir -p /app/outputs /app/.temp /app/instance1/outputs /app/instance1/.temp && \
-    chown -R 1027:100 /app/outputs /app/.temp /app/instance1
+RUN mkdir -p /app/outputs /app/.temp /app/instance1/outputs /app/instance1/.temp /app/force-app/main/default && \
+    chown -R 1027:100 /app/outputs /app/.temp /app/instance1 /app/force-app /app/sfdx-project.json
 
 # Expose Flask port
 EXPOSE 8080

@@ -816,6 +816,37 @@ class PipelineStateTagTests(unittest.TestCase):
         self.assertIn("active_step_tools", permissions)
         self.assertIn("## Tool Permissions", prompt)
 
+    def test_pipeline_allowlist_includes_artifact_write_tools(self):
+        expected = {
+            3: {"write", "edit"},
+            5: {"write", "edit"},
+            6: {"write", "edit"},
+            8: {"write", "edit"},
+            9: {"write", "edit"},
+            10: {"write", "edit"},
+            11: {"write", "edit"},
+        }
+        for step_no, tools in expected.items():
+            with self.subTest(step=step_no):
+                allowed = {
+                    app._normalize_tool_name(tool)
+                    for tool in app.PIPELINE_STEP_TOOL_ALLOWLIST[step_no]["tools"]
+                }
+                self.assertTrue(tools.issubset(allowed))
+                for tool in tools:
+                    self.assertTrue(app._is_tool_allowlisted(step_no, tool))
+
+    def test_docker_image_includes_minimal_sfdx_project_workspace(self):
+        dockerfile = (app.ROOT / "Dockerfile").read_text(encoding="utf-8")
+        sfdx_project = app.ROOT / "docker" / "sfdx-project.json"
+        self.assertTrue(sfdx_project.is_file())
+        self.assertIn("COPY --chown=1027:100 docker/sfdx-project.json /app/sfdx-project.json", dockerfile)
+        self.assertIn("/app/force-app/main/default", dockerfile)
+
+        payload = json.loads(sfdx_project.read_text(encoding="utf-8"))
+        self.assertEqual(payload["packageDirectories"][0]["path"], "force-app")
+        self.assertTrue(payload["packageDirectories"][0]["default"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,12 @@
+{
+  "packageDirectories": [
+    {
+      "path": "force-app",
+      "default": true
+    }
+  ],
+  "name": "CaseOps Runtime Workspace",
+  "namespace": null,
+  "sourceApiVersion": "66.0",
+  "packageAliases": {}
+}
