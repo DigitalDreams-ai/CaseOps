@@ -836,6 +836,40 @@ class PipelineStateTagTests(unittest.TestCase):
                 for tool in tools:
                     self.assertTrue(app._is_tool_allowlisted(step_no, tool))
 
+    def test_pipeline_suppresses_unavailable_internal_tool_output(self):
+        self.assertTrue(app._is_pipeline_internal_unavailable_tool("ToolSearch"))
+        self.assertFalse(app._is_tool_allowlisted(6, "ToolSearch"))
+        self.assertTrue(app._is_suppressed_tool_result("ToolSearch", ""))
+
+    def test_salesforce_auth_token_json_is_normalized_for_cli_login(self):
+        payload = {
+            "status": 0,
+            "result": {
+                "orgId": "00D000000000001AAA",
+                "accessToken": "access-token-value",
+            },
+        }
+        self.assertEqual(
+            app._normalize_salesforce_access_token(json.dumps(payload)),
+            "00D000000000001AAA!access-token-value",
+        )
+        self.assertEqual(
+            app._normalize_salesforce_access_token("00D000000000001AAA!already-formatted"),
+            "00D000000000001AAA!already-formatted",
+        )
+
+    def test_salesforce_refresh_token_json_accepts_sfdx_auth_url(self):
+        payload = {
+            "status": 0,
+            "result": {
+                "sfdxAuthUrl": "force://PlatformCLI::refresh-token-value@example.my.salesforce.com",
+            },
+        }
+        self.assertEqual(
+            app._extract_salesforce_refresh_token(json.dumps(payload)),
+            "refresh-token-value",
+        )
+
     def test_docker_image_includes_minimal_sfdx_project_workspace(self):
         dockerfile = (app.ROOT / "Dockerfile").read_text(encoding="utf-8")
         sfdx_project = app.ROOT / "docker" / "sfdx-project.json"

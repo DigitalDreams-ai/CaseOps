@@ -782,7 +782,7 @@
                                 <span class="setup-step-number">2</span>
                                 <div>
                                     <span class="setup-step-title">Copy each JSON value into the matching box</span>
-                                    <div class="field-note">For access tokens, paste <code>result.accessToken</code>. For refresh tokens, paste <code>result.sfdxAuthUrl</code> or a raw refresh token.</div>
+                                    <div class="field-note">Paste the full JSON output from each command. CaseOps extracts the token fields and stores the container-ready values.</div>
                                 </div>
                             </div>
                             <div class="setup-step">
@@ -812,7 +812,7 @@
                                         </div>
                                     </div>
                                     <div class="settings-field">
-                                        <textarea id="sf-prod-token" rows="3" placeholder="Paste result.accessToken"></textarea>
+                                        <textarea id="sf-prod-token" rows="3" placeholder="Paste full show-access-token JSON or a formatted orgId!token value"></textarea>
                                     </div>
                                 </div>
 
@@ -825,7 +825,7 @@
                                         </div>
                                     </div>
                                     <div class="settings-field">
-                                        <textarea id="sf-prod-refresh-token" rows="3" placeholder="Paste result.sfdxAuthUrl or raw refresh token"></textarea>
+                                        <textarea id="sf-prod-refresh-token" rows="3" placeholder="Paste full show-sfdx-auth-url JSON, force:// URL, or raw refresh token"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -847,7 +847,7 @@
                                         </div>
                                     </div>
                                     <div class="settings-field">
-                                        <textarea id="sf-sandbox-token" rows="3" placeholder="Paste result.accessToken"></textarea>
+                                        <textarea id="sf-sandbox-token" rows="3" placeholder="Paste full show-access-token JSON or a formatted orgId!token value"></textarea>
                                     </div>
                                 </div>
 
@@ -860,7 +860,7 @@
                                         </div>
                                     </div>
                                     <div class="settings-field">
-                                        <textarea id="sf-sandbox-refresh-token" rows="3" placeholder="Paste result.sfdxAuthUrl or raw refresh token"></textarea>
+                                        <textarea id="sf-sandbox-refresh-token" rows="3" placeholder="Paste full show-sfdx-auth-url JSON, force:// URL, or raw refresh token"></textarea>
                                     </div>
                                 </div>
                             </div>

@@ -193,6 +193,11 @@ PIPELINE_STEP_TOOL_ALLOWLIST = {
         ],
     },
 }
+PIPELINE_INTERNAL_UNAVAILABLE_TOOLS = {
+    "toolsearch",
+    "tool-search",
+    "tool-search-tool",
+}
 PIPELINE_TRANSITION_CONTRACTS = {
     "step4_to_step5": {
         "transition_from": 4,
@@ -1406,11 +1411,66 @@ def _refresh_salesforce_token_from_refresh_token(instance_url: str, refresh_toke
         return False, str(e)
 
 
-def _extract_salesforce_refresh_token(value: str | None) -> str:
-    """Accept a raw refresh token or an SFDX auth URL and return the refresh token."""
+def _salesforce_json_result(value: str | None) -> dict[str, Any]:
+    raw = (value or "").strip()
+    if not raw.startswith("{"):
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    result = parsed.get("result")
+    return result if isinstance(result, dict) else parsed
+
+
+def _normalize_salesforce_access_token(value: str | None) -> str:
+    """Accept raw or `sf org auth show-access-token --json` output.
+
+    `sf org login access-token` requires `<org id>!<access token>`. Some
+    Salesforce CLI JSON outputs expose the access token without the org id, so
+    combine both fields when needed.
+    """
     raw = (value or "").strip()
     if not raw:
         return ""
+    if raw.startswith("SF_ACCESS_TOKEN="):
+        raw = raw.split("=", 1)[1].strip()
+
+    payload = _salesforce_json_result(raw)
+    if payload:
+        token = str(payload.get("accessToken") or payload.get("access_token") or "").strip()
+        org_id = str(
+            payload.get("orgId")
+            or payload.get("organizationId")
+            or payload.get("org_id")
+            or payload.get("id")
+            or ""
+        ).strip()
+        if token and "!" not in token and org_id:
+            return f"{org_id}!{token}"
+        return token or raw
+    return raw
+
+
+def _extract_salesforce_refresh_token(value: str | None) -> str:
+    """Accept a raw refresh token, SFDX auth URL, or CLI JSON output."""
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    payload = _salesforce_json_result(raw)
+    if payload:
+        raw = str(
+            payload.get("sfdxAuthUrl")
+            or payload.get("sfdxAuthURL")
+            or payload.get("authUrl")
+            or payload.get("refreshToken")
+            or payload.get("refresh_token")
+            or ""
+        ).strip()
+        if not raw:
+            return ""
     if raw.startswith("force://"):
         match = re.match(r"^force://[^:]*:[^:]*:([^@]+)@.+$", raw)
         if match:
@@ -2287,6 +2347,10 @@ def _infer_deliverable_state(
 def _normalize_tool_name(tool_name: str) -> str:
     """Normalize a tool name for policy checks."""
     return (tool_name or "").strip().lower().replace("_", "-")
+
+
+def _is_pipeline_internal_unavailable_tool(tool_name: str) -> bool:
+    return _normalize_tool_name(tool_name) in PIPELINE_INTERNAL_UNAVAILABLE_TOOLS
 
 
 def _build_step_tool_permissions(next_step: int | None = None) -> dict[str, Any]:
@@ -4181,6 +4245,8 @@ def _is_file_read_tool(tool: str, detail: str) -> bool:
 def _is_suppressed_tool_result(tool: str, detail: str) -> bool:
     """Hide tool results that are prompts/transcripts rather than useful operator progress."""
     tool_name = (tool or "").lower()
+    if _is_pipeline_internal_unavailable_tool(tool):
+        return True
     if tool_name in {"agent", "workflow"}:
         return True
     return _is_file_read_tool(tool, detail)
@@ -4318,7 +4384,7 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
             if role == "prod"
             else ("SF_SANDBOX_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL")
         )
-        access_token = _env_first(token_key, settings=settings)
+        access_token = _normalize_salesforce_access_token(_env_first(token_key, settings=settings))
         instance_url = _env_first(*url_keys, settings=settings)
 
         def refresh_and_auth(reason: str) -> bool:
@@ -5260,7 +5326,12 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                                 emitted_progress = True
                     elif btype == "tool_use":
                         tool = block.get("name", "tool")
-                        if not _is_tool_allowlisted(current_tool_step, tool):
+                        if _is_pipeline_internal_unavailable_tool(tool):
+                            _log_emit_line(
+                                run_key,
+                                f"WARNING: tool '{tool}' is unavailable in CaseOps pipeline runs for STEP_{current_tool_step or 'unknown'}; continuing without its failed output.",
+                            )
+                        elif not _is_tool_allowlisted(current_tool_step, tool):
                             _log_emit_line(
                                 run_key,
                                 f"WARNING: tool '{tool}' used outside allowlist for STEP_{current_tool_step or 'unknown'}",
@@ -7878,9 +7949,9 @@ def api_setup_salesforce_auth():
         settings = _read_env_file(Path(env_file_path) if env_file_path else None)
         prod_alias = _env_first("CASEOPS_PRODUCTION_READ_ORG", settings=settings)
         sandbox_alias = _env_first("CASEOPS_SANDBOX_TARGET_ORG", settings=settings)
-        prod_token = _env_first("SF_PROD_ACCESS_TOKEN", settings=settings)
+        prod_token = _normalize_salesforce_access_token(_env_first("SF_PROD_ACCESS_TOKEN", settings=settings))
         prod_url = _env_first("SF_PROD_INSTANCE_URL", "CASEOPS_PRODUCTION_INSTANCE_URL", settings=settings)
-        sandbox_token = _env_first("SF_SANDBOX_ACCESS_TOKEN", settings=settings)
+        sandbox_token = _normalize_salesforce_access_token(_env_first("SF_SANDBOX_ACCESS_TOKEN", settings=settings))
         sandbox_url = _env_first("SF_SANDBOX_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL", settings=settings)
 
         if not any([prod_token, sandbox_token]):
@@ -7988,8 +8059,8 @@ def api_refresh_salesforce_tokens():
     """Update SF tokens (access + optional refresh) and set refresh timestamp in .env.jira."""
     try:
         body = request.get_json(silent=True) or {}
-        prod_token = body.get("sf_prod_access_token")
-        sandbox_token = body.get("sf_sandbox_access_token")
+        prod_token = _normalize_salesforce_access_token(body.get("sf_prod_access_token"))
+        sandbox_token = _normalize_salesforce_access_token(body.get("sf_sandbox_access_token"))
         prod_refresh_token = _extract_salesforce_refresh_token(body.get("sf_prod_refresh_token"))
         sandbox_refresh_token = _extract_salesforce_refresh_token(body.get("sf_sandbox_refresh_token"))
 
