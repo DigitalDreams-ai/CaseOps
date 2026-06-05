@@ -2,177 +2,190 @@
 
 ## Open CaseOps
 
-NAS pilot URL:
+Default Docker URL:
 
 ```text
-http://10.0.1.10:5350
+http://localhost:5350
 ```
 
-Local development URL:
-
-```text
-http://localhost:5000
-```
+If `CASEOPS_HOST_PORT` is changed in `.env`, use that port.
 
 ## Dashboard
 
-The dashboard lists synced Jira issues and their CaseOps artifacts. Select an issue to view:
+The dashboard lists synced Jira issues and their CaseOps state. Select an issue to view:
 
-- Jira summary
+- Jira Summary
 - Investigation
-- Hypothesis
-- Internal notes
-- Jira message draft
-- Test report
-- Engineering handoff, if present
-- Pipeline log
+- Internal Notes
+- Jira Message
+- Test Report
+- Generated Files
+- Engineering Handoff, when present
+- Pipeline Log
 
-The Hypothesis artifact is used internally by the pipeline and is not shown as a normal issue tab.
+The issue filter can search by issue key, summary text, status text, and tags.
 
-## Pipeline Actions
+Common tags include:
+
+- `new comments`
+- `not triaged`
+- `data only`
+- `blocked`
+- `validated`
+- `needs escalation`
+
+## Issue Actions
 
 Common actions:
 
 | Action | Purpose |
 | --- | --- |
 | Sync from Jira | Refresh Jira issue data and manifest |
-| Sync this issue | Refresh one Jira issue |
-| Prepare issues | Triage and scaffold without a full AI run |
-| Run pipeline for this issue | Run Steps 1-12 for one issue |
-| Auto-process all | Run active issues sequentially |
+| Sync This Issue | Refresh one Jira issue, including comments and forms |
+| Run Pipeline | Run the guided investigation pipeline for one issue |
+| Stop Current Run | Stop an active pipeline subprocess |
+| Repair/Rebuild Pipeline State | Rebuild resume state from existing artifacts |
+| Send Canned Message | Post a configured Jira message |
+| Transition Issue | Apply an available Jira transition |
 
-The pipeline streams real-time progress lines and issue logs. Issue cards should advance beyond `Running: Step 3/12` as Claude emits `STEP_N` markers.
+Run pipeline actions only on approved issues.
 
-## Salesforce Authentication
+## Settings
 
-Use Settings.
+Settings shows the installed CaseOps version beside the page title.
 
-On an authenticated local machine:
+Use Settings to configure and verify:
+
+- Jira credentials,
+- Salesforce Production read access,
+- Salesforce Sandbox target access,
+- Claude Code OAuth token,
+- pipeline timeout and parallelism settings,
+- canned messages,
+- restart and state repair tools.
+
+## Jira Setup
+
+Required:
+
+- Jira base URL
+- Jira email
+- Jira API token
+
+Optional:
+
+- default assignee,
+- cloud ID,
+- bearer token or auth-header command for advanced setups.
+
+After updating Jira settings, run `Sync This Issue` on a known issue before running a pipeline.
+
+## Salesforce Setup
+
+CaseOps uses two Salesforce roles:
+
+| Role | Purpose |
+| --- | --- |
+| Production read org | Read-only SOQL and metadata retrieval |
+| Sandbox target org | Deploy and test candidate fixes |
+
+The org aliases are configured in Settings or `.env`; they are not hardcoded.
+
+On a machine where Salesforce CLI is authenticated:
 
 ```bash
-sf org login web --alias prod-read
-sf org login web --alias sandbox --instance-url https://test.salesforce.com
-
-sf org auth show-access-token -o prod-read --json
-sf org auth show-access-token -o sandbox --json
+sf org auth show-access-token -o <production-read-alias> --json
+sf org auth show-access-token -o <sandbox-target-alias> --json
 ```
 
 Paste each `result.accessToken`.
 
-For automatic refresh, also run:
+For token refresh support:
 
 ```bash
-sf org auth show-sfdx-auth-url -o prod-read --json
-sf org auth show-sfdx-auth-url -o sandbox --json
+sf org auth show-sfdx-auth-url -o <production-read-alias> --json
+sf org auth show-sfdx-auth-url -o <sandbox-target-alias> --json
 ```
 
-Paste each full `result.sfdxAuthUrl`. That Salesforce auth URL contains the refresh token. CaseOps extracts and stores only the refresh-token value in the active env file.
+Paste each full `result.sfdxAuthUrl`. It contains a refresh token and must be treated as a secret.
 
-Auth notes:
+Also configure the Production and Sandbox instance or Lightning URLs so CaseOps can build correct links and validate auth clearly.
 
-- `sfdxAuthUrl` is Salesforce's current field name for this credential. It does not mean CaseOps uses legacy `sfdx force:*` deploy/retrieve commands.
-- CaseOps authenticates `sf` inside Docker from tokens in `/app/.env.jira`.
-- Host `~/.sf` and `~/.sfdx` are not mounted into the NAS container.
+## Claude Setup
 
-## Claude Authentication
+Use Claude Code auth for the full pipeline.
 
-Use Settings or `/setup/claude-login`.
-
-On your local machine:
+On a machine with Claude Code installed:
 
 ```bash
 claude setup-token
 ```
 
-Paste the token into CaseOps. CaseOps saves it as `CLAUDE_CODE_OAUTH_TOKEN` in the active env file.
+Paste the printed token into the Claude section in Settings.
 
-The old interactive container login banner is no longer needed for normal Salesforce or Claude auth.
+`CASEOPS_LLM_AUTH=claude_code` is recommended. API-key mode is text-only and does not provide the same tool execution behavior.
 
 ## Salesforce Safety
 
 - Production is read-only.
-- The only writable org is the value of `CASEOPS_SANDBOX_TARGET_ORG`.
+- The only writable org is `CASEOPS_SANDBOX_TARGET_ORG`.
 - CaseOps does not deploy to Production.
-- Use Gearset or your normal change-control process for Production promotion.
-- Frontdoor/magic links are only for visual UI inspection when necessary.
-- API, SOQL, retrieve, deploy, and tests must use `sf` CLI and authenticated org aliases.
+- Use your normal change-control process for Production promotion.
+- Frontdoor or magic links are only for visual browser inspection when needed.
+- API, SOQL, retrieve, deploy, and tests must use Salesforce CLI auth.
 
-## Metadata Workspace
+## Generated Files
 
-Current runtime paths:
+Generated files are stored under an issue-specific directory and shown on the `Generated Files` tab for that issue.
 
-| Purpose | Path |
-| --- | --- |
-| Raw Production metadata, read-only | `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/` |
-| Sandbox attempts | `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/` |
-| Confirmed Support package | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/support-owned/` |
-| Confirmed Engineering proposal | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/engineering-proposal/` |
-
-Current NAS values resolve under:
-
-```text
-/app/instance1/outputs/metadata-cache/
-/app/instance1/outputs/metadata-workspaces/
-```
-
-Rules:
-
-- Do not edit raw Production metadata.
-- Capture `baseline-sandbox/` before every Sandbox deploy attempt.
-- Put proposed deployable metadata under `candidate/`.
-- Put rollback metadata or destructive changes under `revert/`.
-- Revert failed or abandoned attempts before starting another attempt.
-- Copy passed work to `<KEY>/confirmed/`.
-
-## Org Knowledge
-
-CaseOps seeds and reads reusable org knowledge under:
-
-```text
-instance1/outputs/org-knowledge/
-```
-
-The pipeline reads `index.json`, selects relevant topic files, and injects only those files into the Claude run. It does not bulk-read all knowledge files.
-
-Seeded topics include:
-
-- helper scripts
-- fields and picklists
-- layouts and record types
-- access and visibility
-- deploy and sandbox
-- automation order
-- query patterns
-- deploy patterns
-
-Durable, verified lessons can be added to the most specific topic file. Do not store secrets, raw tokens, frontdoor links, or customer-private narrative.
+Examples include reports, spreadsheets, or other files created during investigation.
 
 ## Canned Messages
 
-Canned message edits made in Settings are saved persistently at:
+Canned messages are configured in Settings. They are stored in persistent appdata so they survive container restarts and image updates.
 
-```text
-instance1/outputs/settings/canned-messages.json
-```
+Review every message before posting to Jira.
 
-They survive container restarts and image rebuilds because they are stored in mounted appdata.
+## Pipeline Logs
 
-## Copy Pipeline Logs
+Each issue has a pipeline log. Use the copy-log button when reporting a problem, but redact:
 
-The issue detail view has a copy-log button. If browser clipboard APIs are unavailable, CaseOps falls back to selecting/copying text through the page.
+- customer information,
+- Jira issue keys,
+- Salesforce record IDs,
+- org aliases,
+- token values,
+- internal hostnames or paths.
 
 ## Troubleshooting
 
-Check active runs:
+Check container status:
 
 ```bash
-ssh docker@10.0.1.10 "curl -fsS http://127.0.0.1:5350/api/status"
+docker compose ps
 ```
 
-Check container logs:
+Check logs:
 
 ```bash
-ssh docker@10.0.1.10 "/volume1/@appstore/ContainerManager/usr/bin/docker logs --tail 100 caseops"
+docker compose logs --tail 100 caseops
 ```
 
-Check Salesforce preflight from Settings. `/api/settings/status` is designed to return quickly and should not block Settings load on slow runtime checks.
+Restart:
+
+```bash
+docker compose restart caseops
+```
+
+If Jira comments look stale:
+
+1. Click `Sync This Issue`.
+2. Reopen the issue.
+3. Confirm the CaseOps version in Settings.
+4. Check logs if the summary still does not update.
+
+If a pipeline times out:
+
+1. Use `Stop Current Run`.
+2. Use `Repair/Rebuild Pipeline State`.
+3. Increase timeout settings only if the issue legitimately needs a longer metadata/deploy/test cycle.

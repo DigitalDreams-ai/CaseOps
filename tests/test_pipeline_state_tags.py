@@ -117,6 +117,48 @@ class PipelineStateTagTests(unittest.TestCase):
 
         self.assertFalse(flags["is_data_only"])
 
+    def test_data_only_true_when_schema_unknown_but_artifacts_are_no_deploy_data_action(self):
+        key = "HEAL-1"
+        self._write_artifact(
+            key,
+            "test_report",
+            "Production metadata deploy required: No\nFix type: data record update\nConfirmed in Production.",
+        )
+        self._write_state(
+            key,
+            {
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "routing": {"path": "support_resolvable", "confidence": "medium", "reason": "record config"},
+                "deliverable": {
+                    "type": "unknown",
+                    "production_deploy_required": "unknown",
+                },
+            },
+        )
+
+        flags = app._pipeline_file_flags(key, "In Progress")
+
+        self.assertTrue(flags["is_data_only"])
+
+    def test_data_only_true_when_schema_says_no_deploy_required(self):
+        key = "HEAL-1"
+        self._write_state(
+            key,
+            {
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "routing": {"path": "support_resolvable", "confidence": "high", "reason": "admin action"},
+                "deliverable": {
+                    "type": "admin_action",
+                    "production_deploy_required": "no",
+                    "no_deploy_reason": "Existing permission set assignment only.",
+                },
+            },
+        )
+
+        flags = app._pipeline_file_flags(key, "In Progress")
+
+        self.assertTrue(flags["is_data_only"])
+
     def test_blocked_false_for_model_prose_without_schema_on_hold(self):
         key = "HEAL-1"
         self._write_artifact(key, "investigation", "I am completely blocked by my previous assumption.")
@@ -940,7 +982,7 @@ class PipelineStateTagTests(unittest.TestCase):
         self.assertTrue(sfdx_project.is_file())
         self.assertIn("COPY --chown=1027:100 docker/sfdx-project.json /app/sfdx-project.json", dockerfile)
         self.assertIn("/app/force-app/main/default", dockerfile)
-        self.assertIn("ENV CASEOPS_VERSION=0.1.7", dockerfile)
+        self.assertIn("ENV CASEOPS_VERSION=0.1.8", dockerfile)
 
         payload = json.loads(sfdx_project.read_text(encoding="utf-8"))
         self.assertEqual(payload["packageDirectories"][0]["path"], "force-app")

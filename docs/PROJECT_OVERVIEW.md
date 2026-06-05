@@ -1,33 +1,33 @@
 # CaseOps Project Overview
 
-CaseOps is a Flask-based operations tool for Jira-to-Salesforce support work. It syncs assigned Jira issues, runs a Claude Code pipeline to investigate Salesforce problems, validates proposed fixes in a single allowlisted Sandbox, and drafts customer-facing and internal handoff notes.
+CaseOps is a Dockerized Flask web app for Jira-to-Salesforce support work. It syncs Jira issues, runs a Claude Code investigation pipeline, validates candidate fixes in a configured Salesforce Sandbox, and drafts internal notes or customer-facing Jira replies.
 
-CaseOps does not deploy to Production. Production Salesforce access is read-only.
+CaseOps does not deploy to Salesforce Production. Production access is read-only.
 
-## Current Deployment
+## Runtime Model
 
-The active pilot deployment runs in Docker on the NAS:
+CaseOps is intended to run from a published Docker image:
 
-- SSH: `ssh docker@10.0.1.10`
-- Stack/code/env: `/volume1/docker/stacks/caseops`
-- Appdata reference: `/volume1/docker/appdata/caseops`
-- Container: `caseops`
-- Host URL: `http://10.0.1.10:5350`
-- Container URL: `http://127.0.0.1:5000`
+```text
+ghcr.io/sdbingham/caseops:0.1.8
+```
 
-The NAS deployment bind-mounts source files for predictable pilot updates:
+The container uses:
 
-- `app.py`
-- `templates/`
-- `static/`
-- `skills/`
-- `scripts/`
-- `instance1/outputs/`
-- `.env.jira.nas` as `/app/.env.jira`
+- `/data` for persistent runtime data,
+- `/data/outputs` for Jira sync data and generated artifacts,
+- `/data/.env` for Settings-managed configuration and tokens,
+- `/tmp/caseops` for temporary files.
+
+The default web URL is:
+
+```text
+http://localhost:5350
+```
 
 ## What CaseOps Produces
 
-Issue artifacts are stored under the active outputs directory, currently `instance1/outputs/`:
+Issue artifacts are stored in persistent appdata:
 
 - `jira/` - raw Jira issue bundles, markdown summaries, manifest.
 - `investigations/` - issue understanding and diagnosis record.
@@ -37,10 +37,11 @@ Issue artifacts are stored under the active outputs directory, currently `instan
 - `test-reports/` - Sandbox validation results.
 - `engineering-escalations/` - Engineering handoffs when required.
 - `pipeline-logs/` - streamed run logs.
+- `generated-files/` - issue-specific generated reports and files.
 - `settings/` - persistent Settings overrides, including canned messages.
 - `org-knowledge/` - reusable Salesforce knowledge selected by topic.
-
-Salesforce metadata cache and workspaces are under `instance1/outputs/metadata-cache/` and `instance1/outputs/metadata-workspaces/`.
+- `metadata-cache/` - read-only Production metadata retrievals.
+- `metadata-workspaces/` - Sandbox attempts, rollback evidence, and confirmed packages.
 
 ## Pipeline Summary
 
@@ -58,14 +59,14 @@ CaseOps runs a 12-step pipeline:
 | 8 | Orchestrator | Prepare proposed solution |
 | 9 | Sub-agent | Deploy and test in allowlisted Sandbox |
 | 10 | Sub-agent | Draft internal notes, Jira message, and handoff |
-| 11 | Orchestrator | Generate dated summary |
+| 11 | Orchestrator | Generate summary |
 | 12 | Orchestrator | Return action report |
 
-Both Support-resolvable and Engineering-escalation paths run Sandbox validation when a proposed solution exists. Engineering handoffs should include evidence, not just a hypothesis.
+Engineering handoffs should include evidence, not just a hypothesis.
 
 ## Salesforce Command Contract
 
-CaseOps uses modern `sf` CLI commands only for Salesforce CLI work.
+CaseOps uses modern `sf` CLI commands for Salesforce work.
 
 Allowed command families:
 
@@ -78,14 +79,14 @@ Allowed command families:
 
 Forbidden for routine CaseOps retrieve/deploy:
 
-- legacy `sfdx force:*`
-- `package.xml`
-- `--manifest`
-- frontdoor or magic-link session IDs as API tokens
+- legacy `sfdx force:*`,
+- `package.xml`,
+- `--manifest`,
+- frontdoor or magic-link session IDs as API tokens.
 
 ## Related Docs
 
+- [CaseOps Quickstart](CASEOPS_QUICKSTART.md)
+- [Tester Guide](TESTER_GUIDE.md)
 - [User Guide](USER_GUIDE.md)
-- [Architecture](ARCHITECTURE.md)
 - [Docker Setup](DOCKER_SETUP.md)
-- [Technical Overview](TECHNICAL_OVERVIEW.md)

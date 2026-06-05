@@ -2409,6 +2409,16 @@ def _infer_deliverable_state(
     }
 
 
+def _deliverable_is_data_only(deliverable: dict[str, Any], *, legacy_detected: bool = False) -> bool:
+    """Return true when durable state or legacy artifacts identify a no-deploy data/admin fix."""
+    deploy_required = str(deliverable.get("production_deploy_required") or "unknown").strip().lower()
+    if deploy_required in {"no", "n/a"}:
+        return True
+    if deploy_required == "yes":
+        return False
+    return bool(legacy_detected)
+
+
 def _normalize_tool_name(tool_name: str) -> str:
     """Normalize a tool name for policy checks."""
     return (tool_name or "").strip().lower().replace("_", "-")
@@ -2925,9 +2935,7 @@ def _build_pipeline_resume_plan(
         has_test_report=artifacts["test_report"]["exists"] and artifacts["test_report"]["size"] > 0,
     )
     deliverable = _infer_deliverable_state(state, is_data_only_legacy=has_data_only_legacy)
-    has_no_deploy = deliverable["production_deploy_required"] in {"no", "n/a"} or (
-        not has_schema and has_data_only_legacy
-    )
+    has_no_deploy = _deliverable_is_data_only(deliverable, legacy_detected=has_data_only_legacy)
 
     def sig_complete(field: str) -> bool:
         return _signatures_match(signatures.get(field, ""), stored_signatures.get(field))
@@ -6423,11 +6431,9 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
         has_eng_handoff=has_eng_handoff and (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).is_file(),
         has_test_report=has_test_report and (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).is_file(),
     )
-    deliverable = _infer_deliverable_state(state_payload, is_data_only_legacy=has_data_only_legacy and not has_schema)
+    deliverable = _infer_deliverable_state(state_payload, is_data_only_legacy=has_data_only_legacy)
     is_blocked = routing["path"] == "on_hold" or (not has_schema and _investigation_indicates_blocked(key))
-    is_data_only = deliverable["production_deploy_required"] in {"no", "n/a"}
-    if not has_schema and has_data_only_legacy:
-        is_data_only = True
+    is_data_only = _deliverable_is_data_only(deliverable, legacy_detected=has_data_only_legacy)
 
     needs_escalation = (
         (has_schema and routing["path"] == "engineering_required")

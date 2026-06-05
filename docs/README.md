@@ -1,34 +1,37 @@
 # CaseOps Documentation
 
-All general CaseOps documentation lives in this directory. Skill instructions stay under `skills/` because Claude Code loads them from those paths at runtime.
+Start with the shareable docs below. They are written for a tester or friend who needs to install, configure, and use CaseOps without internal deployment details.
 
-## Start Here
+## Shareable Docs
 
-- [Project Overview](PROJECT_OVERVIEW.md) - what CaseOps is and how it is used.
-- [User Guide](USER_GUIDE.md) - dashboard usage, Settings, tokens, pipeline actions.
-- [Docker Setup](DOCKER_SETUP.md) - current NAS deployment and update rules.
-- [Architecture](ARCHITECTURE.md) - runtime model, pipeline, storage, org knowledge.
-- [Technical Overview](TECHNICAL_OVERVIEW.md) - deeper implementation notes.
+- [CaseOps Quickstart](CASEOPS_QUICKSTART.md) - fastest path to run the Docker image.
+- [Tester Guide](TESTER_GUIDE.md) - what to test, safety rules, and troubleshooting.
+- [User Guide](USER_GUIDE.md) - dashboard, Settings, auth, pipeline actions, generated files.
+- [Docker Setup](DOCKER_SETUP.md) - compose, env file, update, logs, and backups.
+- [Project Overview](PROJECT_OVERVIEW.md) - what CaseOps is and how the pipeline works.
 
-## Reference
+## Maintainer Reference
 
-- [API](API.md) - Flask routes and endpoint behavior.
-- [Agents](AGENTS.md) - Claude Code skills and sub-agent model.
-- [Pipeline Architecture](PIPELINE_ARCHITECTURE.md) - pipeline-specific orchestration notes.
-- [Pipeline Framework Alignment Plan](PIPELINE_FRAMEWORK_ALIGNMENT_PLAN.md) - deterministic resume planning, loop-control, quality gates, and telemetry plan.
-- [Instance Routing](INSTANCE_ROUTING.md) - workspace and path isolation.
-- [Workspaces](WORKSPACES.md) - local multi-workspace usage.
-- [Claude Launcher Guide](CLAUDE_LAUNCHER_GUIDE.md) - Claude Code authentication notes.
-- [Nightly Setup](NIGHTLY_SETUP.md) - scheduled operation notes.
-- [Enhancement Plan](CASEOPS_ENHANCEMENT_PLAN.md) - current backlog and pilot hardening items.
-- [Deprecated Components](DEPRECATED.md) - archived legacy agents retained outside the active pipeline.
+These docs are useful for development and architecture work, but they are not required for a tester:
+
+- [Architecture](ARCHITECTURE.md)
+- [Technical Overview](TECHNICAL_OVERVIEW.md)
+- [API](API.md)
+- [Agents](AGENTS.md)
+- [Pipeline Architecture](PIPELINE_ARCHITECTURE.md)
+- [Instance Routing](INSTANCE_ROUTING.md)
+- [Workspaces](WORKSPACES.md)
+- [Nightly Setup](NIGHTLY_SETUP.md)
+- [Deprecated Components](DEPRECATED.md)
+
+Planning prompts and implementation plans are maintainer-only. Do not include them in a shared tester package.
 
 ## Current Non-Negotiables
 
 - Production Salesforce is read-only.
 - The only writable Salesforce org is `CASEOPS_SANDBOX_TARGET_ORG`.
-- Salesforce retrieve/deploy uses modern `sf` CLI only.
+- Salesforce retrieve/deploy uses modern `sf` CLI commands.
 - Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest` for routine CaseOps retrieve/deploy.
-- Frontdoor and magic links are only for visual UI inspection, not API/SOQL/retrieve/deploy.
-- Runtime appdata is under the active instance outputs tree, including `instance1/outputs/metadata-cache/` and `instance1/outputs/metadata-workspaces/`.
-- Org knowledge lives in `outputs/org-knowledge/` and is selected progressively by topic.
+- Frontdoor and magic links are for visual inspection only, not API/SOQL/retrieve/deploy auth.
+- Runtime data belongs in persistent appdata mounted at `/data`.
+- Do not share credentials, Jira issue keys, customer names, Salesforce record IDs, internal hostnames, or full logs in bug reports.

@@ -1,63 +1,72 @@
 # CaseOps Quickstart
 
-Use [User Guide](USER_GUIDE.md) for the full walkthrough.
+Use this when setting up CaseOps from the published Docker image.
 
-## NAS Pilot
+## Requirements
 
-1. Open:
+- Docker Desktop or Docker Engine with Docker Compose.
+- A Jira account with API token access.
+- Salesforce CLI authenticated to:
+  - one Production org for read-only investigation,
+  - one Sandbox org for deploy and test.
+- Claude Code installed locally so you can run `claude setup-token`.
 
-   ```text
-   http://10.0.1.10:5350
-   ```
+## Start CaseOps
 
-2. Confirm Settings status is healthy.
+Create a folder for the deployment and add:
 
-3. Select an issue.
+- `docker-compose.yml`
+- `.env.example`
 
-4. Click the issue pipeline action.
-
-5. Watch the pipeline log and step indicator.
-
-6. Review generated artifacts:
-
-   - investigation
-   - test report
-   - internal notes
-   - Jira message
-   - engineering handoff, if present
-
-## Auth Refresh
-
-Salesforce:
+Copy the env template:
 
 ```bash
-sf org auth show-access-token -o prod-read --json
-sf org auth show-access-token -o sandbox --json
-sf org auth show-sfdx-auth-url -o prod-read --json
-sf org auth show-sfdx-auth-url -o sandbox --json
+cp .env.example .env
 ```
 
-Paste values in Settings:
+Edit `.env` with your Jira URL, Jira API credentials, Salesforce aliases, and Salesforce URLs.
+
+Start the container:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Open:
 
 ```text
-/settings
+http://localhost:5350
 ```
 
-Claude:
+## Complete Settings
+
+Open Settings in the app.
+
+1. Confirm the CaseOps version is shown beside the Settings title.
+2. In Jira, verify the Jira URL, email, and token.
+3. In Salesforce, paste Production and Sandbox access tokens.
+4. Paste SFDX auth URLs if you want CaseOps to refresh Salesforce access tokens.
+5. In Claude, run:
 
 ```bash
 claude setup-token
 ```
 
-Paste the token in Settings, or use the Claude token setup page:
+Paste the printed token into the Claude section.
 
-```text
-/settings
-```
+## First Test
+
+1. Click `Sync This Issue` for one approved issue, or run a limited Jira sync.
+2. Open the issue.
+3. Confirm the Jira Summary tab shows current status and comments.
+4. Run the pipeline only after Settings shows Jira, Salesforce, and Claude are ready.
+5. Review generated artifacts before sending any Jira message.
 
 ## Safety
 
-- Production is read-only.
-- Sandbox writes only target `CASEOPS_SANDBOX_TARGET_ORG`.
-- Retrieve/deploy uses modern `sf` CLI only.
-- Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
+- Production Salesforce is read-only.
+- The Sandbox target is the only writable org.
+- CaseOps does not deploy to Production.
+- Do not use frontdoor links as API credentials.
+- Keep credentials out of screenshots, bug reports, and logs.

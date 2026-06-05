@@ -1,172 +1,177 @@
 # CaseOps Docker Setup
 
-## Current NAS Deployment
+This is the generic Docker setup for someone testing or running CaseOps from a published image.
 
-NAS access:
+## Image
 
-```bash
-ssh docker@10.0.1.10
-```
-
-Paths:
+Current image:
 
 ```text
-/volume1/docker/stacks/caseops      # stack, code, compose, env
-/volume1/docker/appdata/caseops     # appdata reference
+ghcr.io/sdbingham/caseops:0.1.8
 ```
 
-Container:
+You can also use `ghcr.io/sdbingham/caseops:latest`, but a numbered tag is easier to support.
 
-```text
-caseops
-```
+## Compose File
 
-Synology Docker binary:
+Use the provided `docker-compose.example.yml` as `docker-compose.yml`.
 
-```bash
-/volume1/@appstore/ContainerManager/usr/bin/docker
-```
+The important model is:
 
-## Compose Model
+- the application runs from the image,
+- `/data` is persistent runtime data,
+- `.env` is mounted at `/data/.env` so Settings can update tokens,
+- the app listens on container port `8080`,
+- the default host port is `5350`.
 
-The pilot deployment bind-mounts source files for predictable updates:
+Example:
 
 ```yaml
-volumes:
-  - ./instance1/outputs:/app/instance1/outputs
-  - ./.env.jira.nas:/app/.env.jira
-  - ./app.py:/app/app.py:ro
-  - ./templates:/app/templates:ro
-  - ./static:/app/static:ro
-  - ./skills:/app/skills:ro
-  - ./scripts:/app/scripts:ro
+services:
+  caseops:
+    image: ghcr.io/sdbingham/caseops:0.1.8
+    ports:
+      - "${CASEOPS_HOST_PORT:-5350}:8080"
+    env_file:
+      - .env
+    environment:
+      CASEOPS_PORT: "8080"
+      CASEOPS_DATA_DIR: /data
+      CASEOPS_OUTPUTS_DIR: /data/outputs
+      CASEOPS_JIRA_OUT_DIR: /data/outputs/jira
+      CASEOPS_JIRA_ENV_FILE: /data/.env
+      CASEOPS_TEMP_DIR: /tmp/caseops
+      CLAUDE_CODE_TMPDIR: /tmp/caseops/claude-code
+      HOME: /home/caseops
+      SF_DATA_DIR: /data/.sf
+      SFDX_DIR: /data/.sfdx
+    volumes:
+      - ./caseops-data:/data
+      - ./.env:/data/.env
+    restart: unless-stopped
 ```
 
-Current exposed port:
+## Env File
 
-```text
-host 5350 -> container 5000
-```
-
-## Start, Restart, Recreate
-
-From the NAS stack directory:
+Copy:
 
 ```bash
-cd /volume1/docker/stacks/caseops
-/volume1/@appstore/ContainerManager/usr/bin/docker compose up -d caseops
-/volume1/@appstore/ContainerManager/usr/bin/docker restart caseops
+cp .env.example .env
 ```
 
-Use `compose up -d caseops` when `docker-compose.yml` mount definitions change. A plain restart is enough for `app.py`, `templates/`, `static/`, `skills/`, or `scripts/` changes because they are bind-mounted.
+Fill in:
 
-Use rebuild only for:
+- Jira base URL, email, and API token.
+- Default Jira assignee, if you use issue assignment filtering.
+- Production read org alias.
+- Sandbox target org alias.
+- Production and Sandbox Salesforce URLs.
+- Claude auth mode, normally `CASEOPS_LLM_AUTH=claude_code`.
 
-- `Dockerfile`
-- Python dependencies
-- npm/global CLI installs
-- OS packages
+You can leave Salesforce and Claude tokens blank initially and paste them through Settings.
+
+## Start
 
 ```bash
-cd /volume1/docker/stacks/caseops
-/volume1/@appstore/ContainerManager/usr/bin/docker compose up -d --build caseops
+docker compose pull
+docker compose up -d
 ```
 
-## Authentication Files
-
-NAS env file:
+Open:
 
 ```text
-/volume1/docker/stacks/caseops/.env.jira.nas
+http://localhost:5350
 ```
 
-Container env file:
+## Stop, Restart, Update
 
-```text
-/app/.env.jira
+Stop:
+
+```bash
+docker compose down
 ```
 
-This file must be writable. CaseOps saves Salesforce token refreshes and Settings changes there.
+Restart:
 
-## Claude Code Auth
+```bash
+docker compose restart caseops
+```
 
-On a local machine:
+Update to the image tag in your compose file:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Switch to a specific version:
+
+```bash
+CASEOPS_IMAGE=ghcr.io/sdbingham/caseops:0.1.8 docker compose up -d
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:CASEOPS_IMAGE="ghcr.io/sdbingham/caseops:0.1.8"
+docker compose up -d
+```
+
+## Logs and Health
+
+Container status:
+
+```bash
+docker compose ps
+```
+
+Logs:
+
+```bash
+docker compose logs --tail 100 caseops
+```
+
+Health endpoint:
+
+```bash
+curl -fsS http://localhost:5350/health
+```
+
+Settings status:
+
+```bash
+curl -fsS http://localhost:5350/api/settings/status
+```
+
+## Persistent Data
+
+The `caseops-data` folder contains runtime data:
+
+- Jira raw bundles and summaries,
+- issue artifacts,
+- pipeline logs,
+- generated files,
+- metadata cache and workspaces,
+- Salesforce CLI state,
+- Settings-managed token updates.
+
+Back it up before deleting the deployment folder.
+
+## Authentication Notes
+
+Salesforce:
+
+```bash
+sf org auth show-access-token -o <production-read-alias> --json
+sf org auth show-access-token -o <sandbox-target-alias> --json
+sf org auth show-sfdx-auth-url -o <production-read-alias> --json
+sf org auth show-sfdx-auth-url -o <sandbox-target-alias> --json
+```
+
+Claude:
 
 ```bash
 claude setup-token
 ```
 
-Paste the token at:
-
-```text
-http://10.0.1.10:5350/setup/claude-login
-```
-
-CaseOps saves `CLAUDE_CODE_OAUTH_TOKEN` in the active env file. Do not mount host `~/.claude` into the container.
-
-## Salesforce Auth
-
-On an authenticated local machine:
-
-```bash
-sf org login web --alias prod-read
-sf org login web --alias sandbox --instance-url https://test.salesforce.com
-
-sf org auth show-access-token -o prod-read --json
-sf org auth show-access-token -o sandbox --json
-sf org auth show-sfdx-auth-url -o prod-read --json
-sf org auth show-sfdx-auth-url -o sandbox --json
-```
-
-Paste access tokens and optional full `result.sfdxAuthUrl` values in Settings:
-
-```text
-http://10.0.1.10:5350/settings
-```
-
-CaseOps authenticates `sf` inside the container from env tokens. Do not mount host `~/.sf` or `~/.sfdx`.
-
-## Salesforce CLI Rules
-
-Use modern `sf` CLI only. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest` for routine CaseOps retrieve/deploy.
-
-The helper script is available inside Docker:
-
-```bash
-/volume1/@appstore/ContainerManager/usr/bin/docker exec caseops python /app/scripts/sf_caseops_helper.py --help
-```
-
-## Health Checks
-
-Check active runs:
-
-```bash
-curl -fsS http://127.0.0.1:5350/api/status
-```
-
-Check logs:
-
-```bash
-/volume1/@appstore/ContainerManager/usr/bin/docker logs --tail 100 caseops
-```
-
-Check helper and syntax:
-
-```bash
-/volume1/@appstore/ContainerManager/usr/bin/docker exec caseops python /app/scripts/sf_caseops_helper.py --help
-/volume1/@appstore/ContainerManager/usr/bin/docker exec caseops python -c "import py_compile; py_compile.compile('/app/app.py', cfile='/tmp/app.pyc', doraise=True)"
-```
-
-## Backups
-
-Back up persistent issue artifacts:
-
-```bash
-tar czf ~/caseops-outputs.tgz -C /volume1/docker/stacks/caseops instance1/outputs
-```
-
-Back up persistent metadata cache and workspaces:
-
-```bash
-tar czf ~/caseops-metadata.tgz -C /volume1/docker/stacks/caseops instance1/outputs/metadata-cache instance1/outputs/metadata-workspaces
-```
+Paste values in Settings. Do not commit `.env`, share tokens, or paste token values into bug reports.
