@@ -1654,6 +1654,11 @@ def _instance_cache_key(key: str) -> str:
     return f"{workspace}:{key}"
 
 
+def _invalidate_jira_summary_cache(key: str) -> None:
+    jira_summary_cache.pop(key, None)
+    jira_summary_cache.pop(_instance_cache_key(key), None)
+
+
 def _validate_instance_path(path: Path, operation: str = "write") -> None:
     """Hard rule: Prevent writes/operations to shared directories.
 
@@ -5628,7 +5633,7 @@ def _stream_proc(cmd: list[str], run_key: str) -> None:
             jira_summary_cache.clear()
         else:
             # For individual issue syncs/runs, clear that issue's cached data
-            jira_summary_cache.pop(run_key, None)
+            _invalidate_jira_summary_cache(run_key)
 
         if cmd and "jira_sync.py" in (arg for arg in cmd):
             if run_key == _GLOBAL_KEY:
@@ -5672,8 +5677,7 @@ def _sync_issue_from_jira_now(key: str, *, timeout: int = 120) -> tuple[bool, st
         details = (proc.stderr or proc.stdout or f"exit {proc.returncode}").strip()
         return False, details[:500]
 
-    jira_summary_cache.pop(key, None)
-    jira_summary_cache.pop(_instance_cache_key(key), None)
+    _invalidate_jira_summary_cache(key)
     manifest_changed([key])
     return True, ""
 
@@ -5741,7 +5745,7 @@ def _stream_claude_proc(prompt: str, run_key: str, issue_key: str | None = None)
         _finish_run_control(run_key)
         # Phase 2: invalidate caches when pipeline completes so stale flags aren't served
         if issue_key:
-            jira_summary_cache.pop(issue_key, None)
+            _invalidate_jira_summary_cache(issue_key)
             investigation_cache.pop(issue_key, None)
         _log_emit_line(run_key, "Done: global run" if run_key == _GLOBAL_KEY else f"Done: {run_key}")
         _log_emit_done(run_key)
@@ -5855,7 +5859,7 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
             _active_keys.discard(run_key)
         _finish_run_control(run_key)
         # Phase 2: invalidate caches for this issue when full-issue run completes
-        jira_summary_cache.pop(key, None)
+        _invalidate_jira_summary_cache(key)
         investigation_cache.pop(key, None)
         _log_emit_line(run_key, f"Done: {run_key}")
         _log_emit_done(run_key)
@@ -5928,7 +5932,7 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
         with _state_lock:
             _active_keys.discard(run_key)
         _finish_run_control(run_key)
-        jira_summary_cache.pop(key, None)
+        _invalidate_jira_summary_cache(key)
         investigation_cache.pop(key, None)
         _log_emit_line(run_key, f"Done: {run_key}")
         _log_emit_done(run_key)
@@ -7105,7 +7109,7 @@ def api_pipeline_state_repair():
         "previous_state_ignored": True,
     }
     plan_path = _write_pipeline_resume_plan(plan)
-    jira_summary_cache.pop(key, None)
+    _invalidate_jira_summary_cache(key)
     investigation_cache.pop(key, None)
     manifest_changed([key])
     next_step = plan.get("next_step") or {}

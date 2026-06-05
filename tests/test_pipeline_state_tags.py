@@ -903,6 +903,22 @@ class PipelineStateTagTests(unittest.TestCase):
         self.assertNotIn(app._instance_cache_key(key), app.jira_summary_cache)
         changed.assert_called_once_with([key])
 
+    def test_stream_proc_invalidates_instance_scoped_jira_summary_cache(self):
+        key = "HEAL-1"
+        app.jira_summary_cache[app._instance_cache_key(key)] = {"raw": "stale", "html": "stale"}
+        cmd = [app.sys.executable, "jira_sync.py", "--issue", key]
+
+        with patch.object(app, "_do_stream_proc") as do_stream:
+            with patch.object(app, "_finish_run_control"):
+                with patch.object(app, "_log_emit_line"):
+                    with patch.object(app, "_log_emit_done"):
+                        with patch.object(app, "manifest_changed") as changed:
+                            app._stream_proc(cmd, key)
+
+        do_stream.assert_called_once_with(cmd, key)
+        self.assertNotIn(app._instance_cache_key(key), app.jira_summary_cache)
+        changed.assert_called_once_with([key])
+
     def test_jira_sync_existing_active_manifest_keys_excludes_done_statuses(self):
         import jira_sync
 
@@ -924,7 +940,7 @@ class PipelineStateTagTests(unittest.TestCase):
         self.assertTrue(sfdx_project.is_file())
         self.assertIn("COPY --chown=1027:100 docker/sfdx-project.json /app/sfdx-project.json", dockerfile)
         self.assertIn("/app/force-app/main/default", dockerfile)
-        self.assertIn("ENV CASEOPS_VERSION=0.1.6", dockerfile)
+        self.assertIn("ENV CASEOPS_VERSION=0.1.7", dockerfile)
 
         payload = json.loads(sfdx_project.read_text(encoding="utf-8"))
         self.assertEqual(payload["packageDirectories"][0]["path"], "force-app")
