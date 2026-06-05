@@ -124,6 +124,14 @@ def main() -> int:
         existing_keys = set(old_manifest.keys())
         keys = [k for k in keys if k not in existing_keys]
         print(f"Filtered to {len(keys)} new issue(s) (not in manifest)")
+    elif args.include_existing_active and not args.issue:
+        existing_active_keys = existing_active_manifest_keys(old_manifest, exclude=set(keys))
+        if existing_active_keys:
+            keys.extend(existing_active_keys)
+            print(
+                f"Including {len(existing_active_keys)} existing active manifest issue(s) for refresh",
+                flush=True,
+            )
     newest_updated = state.get("newestUpdated")
     newest_created = state.get("newestCreated")
     manifest_rows = []
@@ -238,6 +246,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--all-fields", action="store_true", help='Fetch audit-style fields ["*all"].')
     parser.add_argument("--incremental", action="store_true", help="Add updated >= state.newestUpdated to the JQL.")
     parser.add_argument("--new-only", action="store_true", help="Sync only issues created since last sync (created >= state.newestCreated).")
+    parser.add_argument(
+        "--include-existing-active",
+        action="store_true",
+        help="Also refresh active issues already present in manifest.csv even when they no longer match the current JQL.",
+    )
     parser.add_argument("--page-size", type=int, default=100)
     parser.add_argument("--max-issues", type=int, help="Maximum number of issues to sync from a JQL search.")
     parser.add_argument("--no-attachments", action="store_true", help="Skip attachment file downloads.")
@@ -252,6 +265,34 @@ def default_assignee() -> str:
 
 def default_jql() -> str:
     return f'assignee = "{default_assignee()}" AND statusCategory != Done ORDER BY created ASC'
+
+
+DONE_MANIFEST_STATUSES = {
+    "closed",
+    "resolved",
+    "canceled",
+    "cancelled",
+    "done",
+    "escalated to engineering",
+}
+
+
+def manifest_status_is_active(status: str) -> bool:
+    normalized = " ".join((status or "").strip().lower().split())
+    return bool(normalized) and normalized not in DONE_MANIFEST_STATUSES
+
+
+def existing_active_manifest_keys(
+    old_manifest: dict[str, dict[str, str]],
+    *,
+    exclude: set[str] | None = None,
+) -> list[str]:
+    excluded = exclude or set()
+    return [
+        key
+        for key, row in old_manifest.items()
+        if key not in excluded and manifest_status_is_active(row.get("Status", ""))
+    ]
 
 
 def resolve_issue_fields(args: argparse.Namespace) -> list[str]:

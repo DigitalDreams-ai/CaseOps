@@ -882,13 +882,49 @@ class PipelineStateTagTests(unittest.TestCase):
         status = app._settings_status_skeleton()
         self.assertEqual(status["caseops"]["version"], app.CASEOPS_VERSION)
 
+    def test_sync_issue_from_jira_now_runs_issue_scoped_sync(self):
+        key = "HEAL-1"
+        completed = subprocess.CompletedProcess(["python"], 0, stdout="ok", stderr="")
+        with patch.object(app.subprocess, "run", return_value=completed) as run:
+            with patch.object(app, "manifest_changed") as changed:
+                app.jira_summary_cache[key] = {"raw": "stale", "html": "stale"}
+                app.jira_summary_cache[app._instance_cache_key(key)] = {"raw": "stale", "html": "stale"}
+
+                ok, error = app._sync_issue_from_jira_now(key, timeout=12)
+
+        self.assertTrue(ok)
+        self.assertEqual(error, "")
+        cmd = run.call_args.args[0]
+        self.assertIn("jira_sync.py", cmd)
+        self.assertIn("--issue", cmd)
+        self.assertIn(key, cmd)
+        self.assertIn("--out-dir", cmd)
+        self.assertNotIn(key, app.jira_summary_cache)
+        self.assertNotIn(app._instance_cache_key(key), app.jira_summary_cache)
+        changed.assert_called_once_with([key])
+
+    def test_jira_sync_existing_active_manifest_keys_excludes_done_statuses(self):
+        import jira_sync
+
+        old_manifest = {
+            "HEAL-1": {"Status": "Waiting for customer"},
+            "HEAL-2": {"Status": "Resolved"},
+            "HEAL-3": {"Status": "Escalated to Engineering"},
+            "HEAL-4": {"Status": "In Progress"},
+        }
+
+        self.assertEqual(
+            jira_sync.existing_active_manifest_keys(old_manifest, exclude={"HEAL-4"}),
+            ["HEAL-1"],
+        )
+
     def test_docker_image_includes_minimal_sfdx_project_workspace(self):
         dockerfile = (app.ROOT / "Dockerfile").read_text(encoding="utf-8")
         sfdx_project = app.ROOT / "docker" / "sfdx-project.json"
         self.assertTrue(sfdx_project.is_file())
         self.assertIn("COPY --chown=1027:100 docker/sfdx-project.json /app/sfdx-project.json", dockerfile)
         self.assertIn("/app/force-app/main/default", dockerfile)
-        self.assertIn("ENV CASEOPS_VERSION=0.1.5", dockerfile)
+        self.assertIn("ENV CASEOPS_VERSION=0.1.6", dockerfile)
 
         payload = json.loads(sfdx_project.read_text(encoding="utf-8"))
         self.assertEqual(payload["packageDirectories"][0]["path"], "force-app")

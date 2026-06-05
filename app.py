@@ -5639,6 +5639,53 @@ def _stream_proc(cmd: list[str], run_key: str) -> None:
         _log_emit_done(run_key)
 
 
+def _sync_issue_from_jira_now(key: str, *, timeout: int = 120) -> tuple[bool, str]:
+    """Refresh one issue's Jira raw bundle/summary after a local Jira write."""
+    env_file = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+    cmd = [
+        sys.executable,
+        "jira_sync.py",
+        "--env-file",
+        env_file,
+        "--issue",
+        key,
+        "--out-dir",
+        str(OUTPUTS / "jira"),
+    ]
+    env = os.environ.copy()
+    env["CASEOPS_JIRA_ENV_FILE"] = env_file
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=env,
+        )
+    except subprocess.TimeoutExpired:
+        return False, f"Timed out refreshing {key} from Jira after {timeout}s."
+    except Exception as exc:
+        return False, str(exc)[:500]
+
+    if proc.returncode != 0:
+        details = (proc.stderr or proc.stdout or f"exit {proc.returncode}").strip()
+        return False, details[:500]
+
+    jira_summary_cache.pop(key, None)
+    jira_summary_cache.pop(_instance_cache_key(key), None)
+    manifest_changed([key])
+    return True, ""
+
+
+def _issue_sync_result(key: str) -> dict[str, Any]:
+    ok, error = _sync_issue_from_jira_now(key)
+    result: dict[str, Any] = {"ok": ok}
+    if not ok:
+        result["error"] = error
+    return result
+
+
 def _save_claude_output(content: str, key: str) -> None:
     """Parse Claude output with Suggested reply and [INTERNAL] sections into separate files.
 
@@ -6850,7 +6897,15 @@ def api_run():
     cmd: list[str] | None = None
 
     if action == "sync":
-        cmd = [sys.executable, "jira_sync.py", "--env-file", env_file, "--out-dir", str(OUTPUTS / "jira")]
+        cmd = [
+            sys.executable,
+            "jira_sync.py",
+            "--env-file",
+            env_file,
+            "--include-existing-active",
+            "--out-dir",
+            str(OUTPUTS / "jira"),
+        ]
     elif action == "sync_new":
         cmd = [sys.executable, "jira_sync.py", "--env-file", env_file, "--new-only", "--out-dir", str(OUTPUTS / "jira")]
     elif action == "sync_issue" and key:
@@ -7196,7 +7251,7 @@ def api_post_comment(key: str):
         )
         with urllib.request.urlopen(req) as resp:
             result = json.loads(resp.read().decode("utf-8"))
-        return jsonify({"ok": True, "id": result.get("id", "")})
+        return jsonify({"ok": True, "id": result.get("id", ""), "sync": _issue_sync_result(key)})
     except urllib.error.HTTPError as exc:
         details = exc.read().decode("utf-8", errors="replace")
         return jsonify({"error": f"Jira {exc.code}: {details[:300]}"}), 502
@@ -7248,7 +7303,7 @@ def api_issue_transition(key: str):
     except Exception as e:
         sys.stderr.write(f"Warning: failed to update manifest for {key}: {e}\n")
 
-    return jsonify({"ok": True, "new_status": new_status})
+    return jsonify({"ok": True, "new_status": new_status, "sync": _issue_sync_result(key)})
 
 
 @app.post("/api/issue/<key>/mark-viewed")
@@ -7371,7 +7426,7 @@ def api_send_canned_message(key: str):
             except Exception:
                 pass  # Non-fatal — comment was posted successfully
 
-        return jsonify({"ok": True, "id": result.get("id", "")})
+        return jsonify({"ok": True, "id": result.get("id", ""), "sync": _issue_sync_result(key)})
     except urllib.error.HTTPError as exc:
         details = exc.read().decode("utf-8", errors="replace")
         return jsonify({"error": f"Jira {exc.code}: {details[:300]}"}), 502
