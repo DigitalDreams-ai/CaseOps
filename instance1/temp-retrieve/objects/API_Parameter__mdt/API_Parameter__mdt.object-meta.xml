@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>Stores the field and parameter mapping for API Operations</description>
-    <label>API Parameter</label>
-    <pluralLabel>API Parameters</pluralLabel>
-    <visibility>Public</visibility>
-</CustomObject>

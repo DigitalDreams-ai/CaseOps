@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Financial_Responsible_Party__c</fullName>
-    <formula>IF(Related_Account__r.Financial_Responsible_Party__c &lt;&gt;&apos;&apos;, True, False)</formula>
-    <label>Financially Responsible</label>
-    <trackTrending>false</trackTrending>
-    <type>Checkbox</type>
-</CustomField>

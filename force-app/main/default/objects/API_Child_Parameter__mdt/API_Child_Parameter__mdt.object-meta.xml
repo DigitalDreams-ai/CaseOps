@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>Used to track parameters that are nested for arrays like child records for the root SObject used for the API Operation.</description>
-    <label>API Child Parameter</label>
-    <pluralLabel>API Child Parameters</pluralLabel>
-    <visibility>Public</visibility>
-</CustomObject>

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Guardian__c</fullName>
-    <defaultValue>false</defaultValue>
-    <inlineHelpText>Check this box if the parent acts as a legal guardian for the child. This indicates that the parent has the responsibility to make decisions and provide care and guidance in various aspects of the child&apos;s life.</inlineHelpText>
-    <label>Guardian</label>
-    <trackTrending>false</trackTrending>
-    <type>Checkbox</type>
-</CustomField>

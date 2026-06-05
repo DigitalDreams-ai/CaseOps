@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Issuing_Authority_Needs_to_Be_Set</fullName>
-    <active>true</active>
-    <errorConditionFormula>ISBLANK(Issuing_Authority__c)</errorConditionFormula>
-    <errorDisplayField>Issuing_Authority__c</errorDisplayField>
-    <errorMessage>An Issuing Provider is needed to create the Provider License</errorMessage>
-</ValidationRule>

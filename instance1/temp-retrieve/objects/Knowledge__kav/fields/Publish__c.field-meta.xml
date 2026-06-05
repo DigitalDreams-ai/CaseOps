@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Publish__c</fullName>
-    <defaultValue>false</defaultValue>
-    <description>Checked via scheduled flow when ready to publish</description>
-    <label>Publish</label>
-    <type>Checkbox</type>
-</CustomField>

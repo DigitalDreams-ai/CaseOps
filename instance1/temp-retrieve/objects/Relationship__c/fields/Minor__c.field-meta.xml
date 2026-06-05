@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Minor__c</fullName>
-    <formula>Account__r.Is_Minor__c</formula>
-    <label>Minor</label>
-    <trackTrending>false</trackTrending>
-    <type>Checkbox</type>
-</CustomField>

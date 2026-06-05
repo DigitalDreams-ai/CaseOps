@@ -43,6 +43,28 @@ node_modules/
 
 # Temporary metadata retrieval and testing (sf CLI)
 temp/
+temp-*/
+temp_*/
+temp_retrieve/
+temp_admin_team/
+temp-sf-retrieve/
+C*temp-sf-retrieve/
+
+# Retrieved Salesforce metadata must not be committed to CaseOps.
+force-app/main/default/*
+!force-app/main/default/.gitkeep
+field-retrieval/
+flowexport/
+flows/
+orgs/
+prod-metadata/
+retrieve-prod/
+retrieved_metadata/
+retrieved_metadata_sharing/
+unpackaged/
+deploy-*/
+deploy_*/
+sandbox-deploy/
 
 # Logs
 logs/
@@ -94,9 +116,11 @@ outputs/pipeline-logs/
 instance1/.sfdx/
 instance1/.claude/
 instance1/outputs/
+instance1/temp-retrieve/
 instance2/.sfdx/
 instance2/.claude/
 instance2/outputs/
+instance2/temp-retrieve/
 
 # Local assistant/session data (track CaseOps Claude Code skill stub under .claude/skills/)
 .claude/*
