@@ -920,6 +920,11 @@
                                 <div class="field-note">Used by Auto-Process All and Reprocess All. Single-issue runs still use one orchestrator.</div>
                             </div>
                             <div class="settings-field">
+                                <label for="global-max-queue-passes">Queue Pass Limit</label>
+                                <input id="global-max-queue-passes" name="CASEOPS_GLOBAL_MAX_QUEUE_PASSES" type="number" min="1" max="24" step="1" />
+                                <div class="field-note">Maximum full-queue passes before stopping. CaseOps stops earlier when no issue advances.</div>
+                            </div>
+                            <div class="settings-field">
                                 <label for="claude-total-timeout">Claude Total Timeout</label>
                                 <select id="claude-total-timeout" name="CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS">
                                     <option value="1200">20 minutes</option>

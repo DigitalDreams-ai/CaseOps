@@ -397,6 +397,7 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
     "JIRA_BEARER_TOKEN",
     "CASEOPS_ANTHROPIC_MODEL",
     "CASEOPS_GLOBAL_MAX_PARALLEL",
+    "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
     "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
     "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
     "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
@@ -5948,6 +5949,10 @@ def _global_max_parallel() -> int:
     return _env_int("CASEOPS_GLOBAL_MAX_PARALLEL", 1, min_value=1, max_value=4)
 
 
+def _global_max_queue_passes() -> int:
+    return _env_int("CASEOPS_GLOBAL_MAX_QUEUE_PASSES", 12, min_value=1, max_value=24)
+
+
 def _plan_pending_issue_steps(plan: dict[str, Any]) -> list[dict[str, Any]]:
     """Steps that require per-issue work. Global summary/report steps are excluded."""
     return [
@@ -5955,6 +5960,41 @@ def _plan_pending_issue_steps(plan: dict[str, Any]) -> list[dict[str, Any]]:
         if step.get("step") not in {11, 12}
         and step.get("status") not in {"complete", "skipped"}
     ]
+
+
+def _global_issue_queue_fingerprint(plan: dict[str, Any]) -> str:
+    """In-memory queue fingerprint used to detect progress within one global run."""
+    payload = {
+        "status": plan.get("status") or "",
+        "source_mtime": plan.get("source_mtime") or "",
+        "mode": plan.get("mode") or "",
+        "routing": plan.get("routing") or {},
+        "deliverable": plan.get("deliverable") or {},
+        "loop_state": plan.get("loop_state") or {},
+        "next_step": plan.get("next_step") or {},
+        "signatures": plan.get("signatures") or {},
+        "transition_contracts": plan.get("transition_contracts") or {},
+        "artifacts": plan.get("artifacts") or {},
+        "metadata": plan.get("metadata") or {},
+        "steps": plan.get("steps") or [],
+    }
+    return _sha256_signature(json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str))
+
+
+def _global_issue_queue_snapshot(key: str) -> tuple[bool, str, str]:
+    row = next((r for r in _read_manifest() if r.get("Key") == key), {})
+    plan = _build_pipeline_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
+    fingerprint = _global_issue_queue_fingerprint(plan)
+    pending = _plan_pending_issue_steps(plan)
+    if pending:
+        next_step = pending[0]
+        return False, f"incomplete; next STEP_{next_step.get('step')} ({next_step.get('name')}, {next_step.get('status')})", fingerprint
+    return True, "complete", fingerprint
+
+
+def _global_issue_queue_detail(key: str) -> tuple[bool, str]:
+    complete, detail, _fingerprint = _global_issue_queue_snapshot(key)
+    return complete, detail
 
 
 def _select_global_issue_queue(run_key: str) -> list[str]:
@@ -5965,13 +6005,11 @@ def _select_global_issue_queue(run_key: str) -> list[str]:
         key = (row.get("Key") or "").strip()
         if not key:
             continue
-        plan = _build_pipeline_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
-        pending = _plan_pending_issue_steps(plan)
-        if pending:
-            next_step = pending[0]
+        complete, detail = _global_issue_queue_detail(key)
+        if not complete:
             _log_emit_line(
                 run_key,
-                f"Queue: {key} next STEP_{next_step.get('step')} ({next_step.get('name')}, {next_step.get('status')})",
+                f"Queue: {key} {detail}",
             )
             queued.append(key)
         else:
@@ -5993,12 +6031,8 @@ def _run_global_issue_worker(key: str, index: int, total: int, *, reprocess: boo
         else:
             _stream_full_issue(key, key, run_preflight=False)
 
-        row = next((r for r in _read_manifest() if r.get("Key") == key), {})
-        plan = _build_pipeline_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
-        pending = _plan_pending_issue_steps(plan)
-        if pending:
-            next_step = pending[0]
-            detail = f"incomplete; next STEP_{next_step.get('step')} ({next_step.get('name')}, {next_step.get('status')})"
+        complete, detail = _global_issue_queue_detail(key)
+        if not complete:
             _log_emit_line(_GLOBAL_KEY, f"Queue: {key} {detail}")
             return key, False, detail
         _log_emit_line(_GLOBAL_KEY, f"Queue: {key} complete")
@@ -6032,43 +6066,113 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
             _log_emit_line(run_key, "STEP_1 __sync__ complete")
 
         _log_emit_line(run_key, "STEP_2 __queue__")
+        reprocess = "reprocess all active issues" in instruction.lower()
         queue_keys = _select_global_issue_queue(run_key)
         if not queue_keys:
             _log_emit_line(run_key, "Queue: no issue pipeline work needed.")
             return
 
-        reprocess = "reprocess all active issues" in instruction.lower()
         max_parallel = _global_max_parallel()
-        _log_emit_line(run_key, f"Queue: processing {len(queue_keys)} issue(s), max_parallel={max_parallel}")
+        max_passes = _global_max_queue_passes()
+        total_initial = len(queue_keys)
+        last_snapshots = {key: _global_issue_queue_snapshot(key) for key in queue_keys}
+        last_details = {key: snapshot[1] for key, snapshot in last_snapshots.items()}
+        last_fingerprints = {key: snapshot[2] for key, snapshot in last_snapshots.items()}
+        incomplete_details = dict(last_details)
+        completed_keys: set[str] = set()
 
-        results: list[tuple[str, bool, str]] = []
-        if max_parallel == 1:
-            for idx, key in enumerate(queue_keys, start=1):
-                if _run_stop_requested(run_key):
-                    _log_emit_line(run_key, "Queue: stop requested; no further issues will be started.")
-                    break
-                results.append(_run_global_issue_worker(key, idx, len(queue_keys), reprocess=reprocess))
-        else:
-            with ThreadPoolExecutor(max_workers=max_parallel) as executor:
-                futures = {
-                    executor.submit(_run_global_issue_worker, key, idx, len(queue_keys), reprocess=reprocess): key
-                    for idx, key in enumerate(queue_keys, start=1)
-                }
-                for future in as_completed(futures):
-                    results.append(future.result())
+        _log_emit_line(
+            run_key,
+            f"Queue: processing {total_initial} issue(s), max_parallel={max_parallel}, max_passes={max_passes}",
+        )
+
+        for queue_pass in range(1, max_passes + 1):
+            if not queue_keys:
+                break
+            if _run_stop_requested(run_key):
+                _log_emit_line(run_key, "Queue: stop requested; no further issues will be started.")
+                break
+
+            _log_emit_line(run_key, f"Queue pass {queue_pass}: processing {len(queue_keys)} issue(s)")
+            pass_results: list[tuple[str, bool, str]] = []
+            if max_parallel == 1:
+                for idx, key in enumerate(queue_keys, start=1):
                     if _run_stop_requested(run_key):
-                        for pending in futures:
-                            pending.cancel()
-                        _log_emit_line(run_key, "Queue: stop requested; pending issue starts were canceled where possible.")
+                        _log_emit_line(run_key, "Queue: stop requested; no further issues will be started.")
                         break
+                    pass_results.append(_run_global_issue_worker(key, idx, len(queue_keys), reprocess=reprocess))
+            else:
+                with ThreadPoolExecutor(max_workers=max_parallel) as executor:
+                    futures = {
+                        executor.submit(_run_global_issue_worker, key, idx, len(queue_keys), reprocess=reprocess): key
+                        for idx, key in enumerate(queue_keys, start=1)
+                    }
+                    for future in as_completed(futures):
+                        pass_results.append(future.result())
+                        if _run_stop_requested(run_key):
+                            for pending in futures:
+                                pending.cancel()
+                            _log_emit_line(run_key, "Queue: stop requested; pending issue starts were canceled where possible.")
+                            break
 
-        complete = sum(1 for _key, ok, _detail in results if ok)
-        incomplete = len(results) - complete
+            next_queue: list[str] = []
+            pass_completed = 0
+            pass_incomplete = 0
+            progressed = 0
+            for key, ok, detail in pass_results:
+                previous_detail = last_details.get(key)
+                previous_fingerprint = last_fingerprints.get(key)
+                snapshot_complete, snapshot_detail, snapshot_fingerprint = _global_issue_queue_snapshot(key)
+                if ok and snapshot_complete:
+                    completed_keys.add(key)
+                    incomplete_details.pop(key, None)
+                    pass_completed += 1
+                    if previous_detail != "complete" or previous_fingerprint != snapshot_fingerprint:
+                        progressed += 1
+                    last_details[key] = "complete"
+                    last_fingerprints[key] = snapshot_fingerprint
+                    continue
+                pass_incomplete += 1
+                incomplete_details[key] = snapshot_detail
+                if snapshot_detail != previous_detail or snapshot_fingerprint != previous_fingerprint:
+                    progressed += 1
+                    next_queue.append(key)
+                last_details[key] = snapshot_detail
+                last_fingerprints[key] = snapshot_fingerprint
+
+            _log_emit_line(
+                run_key,
+                f"Queue pass {queue_pass}: complete={pass_completed}, incomplete={pass_incomplete}, progressed={progressed}",
+            )
+
+            if _run_stop_requested(run_key):
+                break
+            if not next_queue:
+                remaining = len(incomplete_details)
+                if remaining:
+                    _log_emit_line(
+                        run_key,
+                        f"Queue stalled: {remaining} issue(s) still incomplete, but no issue advanced during pass {queue_pass}.",
+                    )
+                    _log_emit_line(run_key, "Queue stalled: stopping to avoid repeating the same failed work.")
+                break
+
+            queue_keys = next_queue
+            if queue_pass < max_passes:
+                _log_emit_line(run_key, f"Queue: requeueing {len(queue_keys)} issue(s) that advanced but are not complete.")
+        else:
+            if incomplete_details:
+                _log_emit_line(
+                    run_key,
+                    f"Queue: reached max_passes={max_passes}; remaining incomplete issues require manual review or another run.",
+                )
+
+        complete = len(completed_keys)
+        incomplete = len(incomplete_details)
         _log_emit_line(run_key, f"Queue: finished. complete={complete}, incomplete={incomplete}")
         if incomplete:
-            for key, ok, detail in results:
-                if not ok:
-                    _log_emit_line(run_key, f"Queue incomplete: {key} — {detail}")
+            for key, detail in incomplete_details.items():
+                _log_emit_line(run_key, f"Queue incomplete: {key} — {detail}")
         manifest_changed()
     finally:
         with _state_lock:
@@ -7716,6 +7820,7 @@ def api_get_settings():
         "JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
         "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
         "CASEOPS_GLOBAL_MAX_PARALLEL",
+        "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
         "CASEOPS_AUTO_SYNC_ENABLED",
@@ -7728,6 +7833,7 @@ def api_get_settings():
     }
     defaults = {
         "CASEOPS_GLOBAL_MAX_PARALLEL": "1",
+        "CASEOPS_GLOBAL_MAX_QUEUE_PASSES": "12",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS": "false",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES": "false",
         "CASEOPS_AUTO_SYNC_ENABLED": "false",
@@ -7759,6 +7865,7 @@ def api_post_settings():
     for key in ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
                 "CASEOPS_ANTHROPIC_MODEL",
                 "CASEOPS_GLOBAL_MAX_PARALLEL",
+                "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
                 "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
                 "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
                 "CASEOPS_AUTO_SYNC_ENABLED",
