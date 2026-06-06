@@ -2,7 +2,7 @@
 
 ## Hard allowlist (read first)
 
-- Read **`CASEOPS_SANDBOX_TARGET_ORG`** from the active env file identified by `CASEOPS_JIRA_ENV_FILE`. Docker deployments normally mount this as `/data/.env`. That string is the **only** org allowed for deploys, metadata writes, and mutating Data/API operations in this skill.
+- Read **`CASEOPS_SANDBOX_TARGET_ORG`** from the active env file identified by `CASEOPS_ENV_FILE`. Docker deployments normally mount this as `/data/.env`. That string is the **only** org allowed for deploys, metadata writes, and mutating Data/API operations in this skill.
 - Compare your Salesforce CLI default org, `--target-org`, and any UI session to that value **before** any write. Mismatch → **STOP**; do not deploy to a different sandbox “temporarily.”
 - If the variable is unset, **STOP** and ask the operator to add it in Settings or the active env file.
 - Changing the allowlisted org is done in Settings or the active env file, not by improvising another target in chat.

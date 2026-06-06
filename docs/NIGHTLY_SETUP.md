@@ -23,7 +23,7 @@ curl -fsS http://127.0.0.1:5350/api/status
 Example local sync:
 
 ```bash
-python jira_sync.py --env-file .env.jira --incremental
+python jira_sync.py --env-file .env --incremental
 ```
 
 ## Do Not Schedule

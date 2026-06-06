@@ -39,7 +39,7 @@ services:
       CASEOPS_DATA_DIR: /data
       CASEOPS_OUTPUTS_DIR: /data/outputs
       CASEOPS_JIRA_OUT_DIR: /data/outputs/jira
-      CASEOPS_JIRA_ENV_FILE: /data/.env
+      CASEOPS_ENV_FILE: /data/.env
       CASEOPS_TEMP_DIR: /tmp/caseops
       CLAUDE_CODE_TMPDIR: /tmp/caseops/claude-code
       HOME: /home/caseops

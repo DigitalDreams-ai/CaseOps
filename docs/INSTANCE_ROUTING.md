@@ -11,7 +11,7 @@ The active instance is determined by Flask startup arguments and environment:
 - `--env-file`
 - `CASEOPS_DATA_DIR`
 - `CASEOPS_OUTPUTS_DIR`
-- `CASEOPS_JIRA_ENV_FILE`
+- `CASEOPS_ENV_FILE`
 - `CASEOPS_TEMP_DIR`
 
 Claude Code subprocesses inherit the same paths from `app.py`.

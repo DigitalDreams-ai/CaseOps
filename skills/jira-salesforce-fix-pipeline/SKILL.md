@@ -1,7 +1,7 @@
 ---
 name: jira-salesforce-fix-pipeline
 description: Runs the CaseOps Jira-to-Salesforce fix pipeline. Use when the user asks to retrieve Jira issues, process and work assigned issues, diagnose Salesforce problems, investigate Production metadata, determine whether to escalate to Engineering, implement fixes and generate proposed solutions in the Sandbox named by CASEOPS_SANDBOX_TARGET_ORG in the active env file, iterate if needed, draft internal notes plus a Jira response, and produce a dated issue summary. Routes Closed/Resolved issues to outputs/closed-resolved/ and pre-escalated issues to outputs/engineering-escalations/ without processing. Both Support-resolvable and Engineering-escalation paths run implementation + testing to include proposed solutions.
-compatibility: CaseOps repo root, active env file from CASEOPS_JIRA_ENV_FILE, Python 3 for `jira_sync.py`, Salesforce CLI for Production read-only investigation and Sandbox deploy/test.
+compatibility: CaseOps repo root, active env file from CASEOPS_ENV_FILE, Python 3 for `jira_sync.py`, Salesforce CLI for Production read-only investigation and Sandbox deploy/test.
 ---
 
 # Jira Salesforce Fix Pipeline
@@ -32,7 +32,7 @@ Supporting references (load when doing the step they support):
 
 ## Required Inputs
 
-- Active env file configured with valid Jira credentials (`JIRA_EMAIL` + `JIRA_API_TOKEN`, or `JIRA_BEARER_TOKEN`, or `JIRA_AUTH_HEADER_COMMAND`). The path must be available in `CASEOPS_JIRA_ENV_FILE`.
+- Active env file configured with valid Jira credentials (`JIRA_EMAIL` + `JIRA_API_TOKEN`, or `JIRA_BEARER_TOKEN`, or `JIRA_AUTH_HEADER_COMMAND`). The path must be available in `CASEOPS_ENV_FILE`.
 - `JIRA_BASE_URL` and `CASEOPS_DEFAULT_ASSIGNEE` set in the active env file.
 - Read **`CASEOPS_SANDBOX_TARGET_ORG`** from the active env file before deployment. That is the **only** org that may receive deploys or writes for Sandbox testing (see `salesforce-sandbox-deploy-test` and `references/safety-policy.md`).
 - Production org access or exported Production metadata for read-only investigation.
@@ -58,7 +58,7 @@ This pipeline is an **orchestrator**. Steps **1, 2, 4, 7, 8, 11, and 12** run in
 
 ## Available Scripts
 
-- **`jira_sync.py`** (repo root): Sync Jira into `outputs/jira/` (raw JSON, summaries, `manifest.csv`). Run with the active env file from `CASEOPS_JIRA_ENV_FILE`; add `--incremental` when only recent changes matter.
+- **`jira_sync.py`** (repo root): Sync Jira into `outputs/jira/` (raw JSON, summaries, `manifest.csv`). Run with the active env file from `CASEOPS_ENV_FILE`; add `--incremental` when only recent changes matter.
 
 ## How to Run This Pipeline (Full Steps 1–12 Orchestration)
 
@@ -68,7 +68,7 @@ This skill orchestrates the complete pipeline from issue sync through summary ge
 
 Throughout Steps 1–12, you MUST emit step progress lines to stdout in the format `STEP_N identifier` (e.g., `STEP_3 ISSUE-33753`). These lines are parsed by the CaseOps GUI in real-time to update the pipeline progress indicator. Without these explicit output lines, the progress indicator will not display. Do not launch background pipeline work and say you will be notified later; execute sequentially in the current Claude Code run and stream progress as each step starts and finishes. Do not use the Workflow tool, `/workflows`, detached scripts, background shell jobs, `nohup`, or any runner that returns a task ID instead of streaming current work. Sub-agents are allowed only when the playbook calls for them and their results are awaited before the next pipeline step.
 
-Do not `source` the active env file in shell commands. CaseOps exports the runtime variables needed by the pipeline, and env files may contain values with spaces that are not shell-safe. Use the exported canonical aliases directly: `CASEOPS_PRODUCTION_READ_ORG` for Production and `CASEOPS_SANDBOX_TARGET_ORG` for Sandbox.
+Do not `source` the active env file in shell commands. CaseOps exports the runtime variables needed by the pipeline, and the env file may contain values with spaces that are not shell-safe. Use the exported canonical aliases directly: `CASEOPS_PRODUCTION_READ_ORG` for Production and `CASEOPS_SANDBOX_TARGET_ORG` for Sandbox.
 
 For global runs that process multiple issues, emit a single timestamped line at the start of each issue in this format: `Run started: <ISSUE_KEY> at YYYY-MM-DD HH:MM:SS <TZ>`.
 
@@ -79,7 +79,7 @@ For global runs that process multiple issues, emit a single timestamped line at 
 ### Operator Setup
 
 Before running:
-1. **Ensure the active env file is configured** with Jira credentials, Salesforce orgs, and URLs. In Docker this is usually `/data/.env`; local development should point `CASEOPS_JIRA_ENV_FILE` at the correct local env file.
+1. **Ensure the active env file is configured** with Jira credentials, Salesforce orgs, and URLs. In Docker this is usually `/data/.env`; local development should point `CASEOPS_ENV_FILE` at the correct local env file.
 2. **Verify `CASEOPS_SANDBOX_TARGET_ORG`** is set in the active env file (e.g., `sandbox`). This is the **only** org that may receive Step 8–9 Sandbox deploys.
 3. **Python 3** and **sf CLI** are available on the system.
 
@@ -90,7 +90,7 @@ Before running:
 **Emit to stdout:** `STEP_1 __sync__`
 
 ```bash
-python jira_sync.py --env-file "$CASEOPS_JIRA_ENV_FILE"
+python jira_sync.py --env-file "$CASEOPS_ENV_FILE"
 ```
 
 - Fetches all issues assigned to `CASEOPS_DEFAULT_ASSIGNEE` from Jira.

@@ -161,7 +161,7 @@ The orchestrator selects relevant files by keyword matching against the active i
 
 Settings writes use the active env file or mounted outputs:
 
-- Salesforce and Claude tokens: `/app/.env.jira`
+- Salesforce and Claude tokens: `/app/.env`
 - Canned messages: `outputs/settings/canned-messages.json`
 - Org knowledge: `outputs/org-knowledge/`
 

@@ -29,7 +29,7 @@ from caseops_paths import PROJECT_ROOT, default_jira_dir, default_jira_env_file
 
 
 def load_env(env_file: Path) -> None:
-    """Load .env.jira into os.environ (non-destructive)."""
+    """Load .env into os.environ (non-destructive)."""
     if not env_file.exists():
         return
     for line in env_file.read_text(encoding="utf-8").splitlines():
@@ -68,7 +68,7 @@ def main() -> int:
     parser.add_argument(
         "--env-file",
         default=str(default_jira_env_file()),
-        help="Jira env file (default: .env.jira)",
+        help="Jira env file (default: .env)",
     )
     args = parser.parse_args()
 

@@ -16,7 +16,7 @@ services:
       CASEOPS_JIRA_OUT_DIR: /data/outputs/jira
       CASEOPS_TEMP_DIR: /tmp/caseops
       CLAUDE_CODE_TMPDIR: /tmp/caseops/claude-code
-      CASEOPS_JIRA_ENV_FILE: /data/.env
+      CASEOPS_ENV_FILE: /data/.env
     volumes:
       # Persistent runtime data: Jira sync output, pipeline logs, generated files,
       # Salesforce CLI state, metadata cache, and metadata workspaces.

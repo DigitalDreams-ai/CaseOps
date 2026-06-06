@@ -349,7 +349,7 @@ _RUNTIME_HOME = _safe_runtime_home()
 if os.environ.get("HOME") != _RUNTIME_HOME.as_posix():
     os.environ["HOME"] = _RUNTIME_HOME.as_posix()
 
-    # Set in `.env.jira`: how CaseOps passes auth to the `claude` subprocess (see caseops_llm_auth_uses_anthropic_api_key).
+    # Set in `.env`: how CaseOps passes auth to the `claude` subprocess (see caseops_llm_auth_uses_anthropic_api_key).
 CASEOPS_LLM_AUTH_ENV = "CASEOPS_LLM_AUTH"
 
 # ---------------------------------------------------------------------------
@@ -1561,7 +1561,7 @@ def _check_and_refresh_salesforce_tokens(env_file_path: Path) -> None:
 
         # If timestamp missing, initialize it now and attempt refresh if refresh tokens exist
         if not match_ts:
-            print("[WARN] SF_TOKENS_REFRESHED_AT not in .env.jira. Initializing...")
+            print("[WARN] SF_TOKENS_REFRESHED_AT not in .env. Initializing...")
             if match_prod_token or match_sandbox_token:
                 _attempt_token_refresh(env_file_path, env_content, match_prod_token, match_sandbox_token)
             else:
@@ -1629,7 +1629,7 @@ def _attempt_token_refresh(env_file_path: Path, env_content: str, prod_token_mat
         )
 
     if prod_ok or sandbox_ok:
-        # Update .env.jira with new tokens and timestamp
+        # Update .env with new tokens and timestamp
         lines = env_content.split("\n")
         new_lines = [l for l in lines if not l.startswith(("SF_PROD_ACCESS_TOKEN=", "SF_SANDBOX_ACCESS_TOKEN=", "SF_TOKENS_REFRESHED_AT="))]
         if prod_new:
@@ -1739,7 +1739,7 @@ def _validate_instance_path(path: Path, operation: str = "write") -> None:
 
 
 def _load_jira_env(env_file: Path | None = None) -> None:
-    """Load .env.jira (or workspace-specific variant) into os.environ.
+    """Load the active .env file into os.environ.
 
     By default does not overwrite existing non-empty values.
     Exceptions:
@@ -1749,7 +1749,7 @@ def _load_jira_env(env_file: Path | None = None) -> None:
     - Any key: if currently unset or empty/whitespace, the file value is applied.
     """
     if env_file is None:
-        env_file = ROOT / ".env.jira"
+        env_file = ROOT / ".env"
     if not env_file.exists():
         return
     for line in env_file.read_text(encoding="utf-8").splitlines():
@@ -1823,7 +1823,7 @@ def _jira_auth_header() -> str:
     token = os.environ.get("JIRA_API_TOKEN")
     if email and token:
         return f"Basic {base64.b64encode(f'{email}:{token}'.encode()).decode()}"
-    raise RuntimeError("No Jira auth found in .env.jira")
+    raise RuntimeError("No Jira auth found in .env")
 
 
 def _mask_secret(value: str) -> str:
@@ -1834,9 +1834,9 @@ def _mask_secret(value: str) -> str:
 
 
 def _read_env_file(env_file: Path | None = None) -> dict[str, str]:
-    """Read .env.jira and return dict of all keys/values (including empty lines, comments stripped)."""
+    """Read .env and return dict of all keys/values (including empty lines, comments stripped)."""
     if env_file is None:
-        env_file = ROOT / ".env.jira"
+        env_file = ROOT / ".env"
     result: dict[str, str] = {}
     if not env_file.exists():
         return result
@@ -1854,13 +1854,13 @@ def _read_env_file(env_file: Path | None = None) -> dict[str, str]:
 
 
 def _write_env_file(updates: dict[str, str], env_file: Path | None = None) -> None:
-    """Update .env.jira with new values, preserving comments and structure.
+    """Update .env with new values, preserving comments and structure.
 
     If a key already exists in the file, update its value. If not, append it.
     Then reload the environment.
     """
     if env_file is None:
-        env_file = ROOT / ".env.jira"
+        env_file = ROOT / ".env"
 
     # Read existing file
     existing_lines: list[str] = []
@@ -1902,9 +1902,9 @@ def _write_env_file(updates: dict[str, str], env_file: Path | None = None) -> No
 
 
 def _remove_env_keys(keys: set[str], env_file: Path | None = None) -> None:
-    """Remove keys from .env.jira and the running process environment."""
+    """Remove keys from .env and the running process environment."""
     if env_file is None:
-        env_file = ROOT / ".env.jira"
+        env_file = ROOT / ".env"
     if not env_file.exists():
         for key in keys:
             os.environ.pop(key, None)
@@ -4061,7 +4061,8 @@ def _claude_process_env() -> dict[str, str]:
     # Pass instance-specific directories to Claude Skill
     env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
     env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")
-    env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+    env["CASEOPS_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
+    env["CASEOPS_JIRA_ENV_FILE"] = env["CASEOPS_ENV_FILE"]
     if TEMP_ROOT:
         temp_root = Path(TEMP_ROOT)
         claude_tmp = temp_root / "claude-code"
@@ -4482,13 +4483,13 @@ def _collect_runtime_preflight(run_soql: bool = False) -> dict[str, Any]:
         # was slow.
         result["sf"]["version_warning"] = _command_error(version)
 
-    env_file_path = Path(app.config["ENV_FILE_PATH"]) if app.config.get("ENV_FILE_PATH") else ROOT / ".env.jira"
+    env_file_path = Path(app.config["ENV_FILE_PATH"]) if app.config.get("ENV_FILE_PATH") else ROOT / ".env"
 
     def check_org(role: str, alias: str) -> None:
         global _sf_orgs_cache, _sf_orgs_cache_time
         role_status = result["sf"][role]
         if not alias:
-            fail(f"Missing {role} Salesforce org alias in .env.jira.")
+            fail(f"Missing {role} Salesforce org alias in .env.")
             return
 
         token_key = "SF_PROD_ACCESS_TOKEN" if role == "prod" else "SF_SANDBOX_ACCESS_TOKEN"
@@ -5096,7 +5097,7 @@ def _salesforce_browser_prompt_section() -> str:
         )
     if not has_magic:
         lines.append(
-            "- No Salesforce session link is set in `.env.jira` "
+            "- No Salesforce session link is set in `.env` "
             "(`CASEOPS_SALESFORCE_MAGIC_LINK`, `CASEOPS_PRODUCTION_MAGIC_LINK`, and/or `CASEOPS_SANDBOX_MAGIC_LINK`). "
             "If login blocks progress, say what you need."
         )
@@ -5118,7 +5119,8 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
         env = os.environ.copy()
         env["COLUMNS"] = "999"  # Prevent terminal wrapping in subprocess output
         env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")  # Instance-specific Jira output dir
-        env["CASEOPS_JIRA_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+        env["CASEOPS_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
+        env["CASEOPS_JIRA_ENV_FILE"] = env["CASEOPS_ENV_FILE"]
         if TEMP_ROOT:
             env["CASEOPS_TEMP_DIR"] = str(TEMP_ROOT)
         metadata_dirs = _metadata_workspace_dirs()
@@ -5208,7 +5210,7 @@ def _do_stream_anthropic_messages_api(prompt: str, run_key: str, issue_key: str 
     if not api_key:
         _log_emit_line(
             run_key,
-            "ERROR: ANTHROPIC_API_KEY is empty. Set it in `.env.jira` when using CASEOPS_LLM_AUTH=api_key.",
+            "ERROR: ANTHROPIC_API_KEY is empty. Set it in `.env` when using CASEOPS_LLM_AUTH=api_key.",
         )
         return False
     model = (os.environ.get("CASEOPS_ANTHROPIC_MODEL") or "claude-sonnet-4-6").strip()
@@ -5641,7 +5643,7 @@ def _stream_proc(cmd: list[str], run_key: str) -> None:
 
 def _sync_issue_from_jira_now(key: str, *, timeout: int = 120) -> tuple[bool, str]:
     """Refresh one issue's Jira raw bundle/summary after a local Jira write."""
-    env_file = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+    env_file = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
     cmd = [
         sys.executable,
         "jira_sync.py",
@@ -5653,6 +5655,7 @@ def _sync_issue_from_jira_now(key: str, *, timeout: int = 120) -> tuple[bool, st
         str(OUTPUTS / "jira"),
     ]
     env = os.environ.copy()
+    env["CASEOPS_ENV_FILE"] = env_file
     env["CASEOPS_JIRA_ENV_FILE"] = env_file
     try:
         proc = subprocess.run(
@@ -5753,9 +5756,9 @@ def _issue_pipeline_runtime_ready(run_key: str) -> bool:
 
     sandbox_target = (os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip()
     if not sandbox_target:
-        _log_emit_line(run_key, "ERROR: CASEOPS_SANDBOX_TARGET_ORG not set in .env.jira")
+        _log_emit_line(run_key, "ERROR: CASEOPS_SANDBOX_TARGET_ORG not set in .env")
         _log_emit_line(run_key, "       Step 9 (deploy+test) requires an allowlisted Sandbox org.")
-        _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env.jira and retry.")
+        _log_emit_line(run_key, "       Set CASEOPS_SANDBOX_TARGET_ORG in .env and retry.")
         return False
     if evidence.get("enabled") and not evidence.get("all_ok"):
         _log_emit_line(run_key, "Preflight: evidence branch blockers detected; review branch evidence files.")
@@ -6007,7 +6010,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
             return
 
         if "sync all issues from jira" in instruction.lower():
-            env_file = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+            env_file = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
             _log_emit_line(run_key, "STEP_1 __sync__")
             _log_emit_line(run_key, "CaseOps runtime: running Jira sync in the foreground")
             rc = _do_stream_proc(
@@ -6093,8 +6096,8 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
     # Instance-specific outputs directory (may differ from ROOT/outputs in multi-instance setup)
     outputs_dir_relative = OUTPUTS.relative_to(ROOT).as_posix() if OUTPUTS.is_relative_to(ROOT) else str(OUTPUTS)
 
-    # Instance-specific env file (may differ from ROOT/.env.jira in multi-instance setup)
-    env_file_path = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+    # Instance-specific env file (may differ from ROOT/.env in multi-instance setup)
+    env_file_path = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
     env_file_relative = Path(env_file_path).relative_to(ROOT).as_posix() if Path(env_file_path).is_relative_to(ROOT) else env_file_path
 
     core = (
@@ -6115,11 +6118,11 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"**CRITICAL for multi-instance deployments:** All file paths in this run must use:\n"
         f"`{outputs_dir_relative}/` instead of the generic `outputs/` references in the playbook.\n"
         f"Example: Instead of `outputs/investigations/{{KEY}}.md`, use `{outputs_dir_relative}/investigations/{{KEY}}.md`\n\n"
-        f"## Instance Configuration (.env.jira)\n"
+        f"## Instance Configuration (.env)\n"
         f"**CRITICAL for multi-instance deployments:** Use the instance-specific configuration file:\n"
         f"- Read Jira credentials and Salesforce orgs from: `{env_file_relative}`\n"
-        f"- Do NOT read from `ROOT/.env.jira` (this is another instance's config)\n"
-        f"- Environment variable available: `CASEOPS_JIRA_ENV_FILE={env_file_path}`\n"
+        f"- Do NOT read from `ROOT/.env` (this is another instance's config)\n"
+        f"- Environment variable available: `CASEOPS_ENV_FILE={env_file_path}`\n"
         f"- Canonical Salesforce aliases: Production uses `CASEOPS_PRODUCTION_READ_ORG`; Sandbox uses `CASEOPS_SANDBOX_TARGET_ORG`.\n"
         f"- Do not invent generic `ORG`, `PROD_ORG`, or `SANDBOX_ORG` variables unless you assign them from the canonical aliases in the same shell command.\n"
         f"- Do not `source {env_file_relative}` in shell commands. Some values contain spaces and are not shell-safe. CaseOps already exports the needed runtime env vars to this process.\n"
@@ -6885,7 +6888,7 @@ def api_run():
     is_global = action in ("sync", "full", "reprocess", "sync_new")
     run_key = _GLOBAL_KEY if is_global else key
 
-    env_file = app.config.get("ENV_FILE_PATH", str(ROOT / ".env.jira"))
+    env_file = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
     use_claude_cli = False
     use_full_issue = False
     use_reprocess_issue = False
@@ -7258,7 +7261,7 @@ def api_post_comment(key: str):
 
 @app.get("/api/issue/<key>/transitions")
 def api_issue_transitions(key: str):
-    _load_jira_env(Path(app.config.get("ENV_FILE_PATH", ROOT / ".env.jira")))  # Use instance-specific .env.jira
+    _load_jira_env(Path(app.config.get("ENV_FILE_PATH", ROOT / ".env")))  # Use instance-specific .env
     try:
         auth = _jira_auth_header()
     except ValueError as e:
@@ -7281,7 +7284,7 @@ def api_issue_transition(key: str):
     if not transition_id:
         return jsonify({"error": "transition_id required"}), 400
 
-    _load_jira_env(Path(app.config.get("ENV_FILE_PATH", ROOT / ".env.jira")))  # Use instance-specific .env.jira
+    _load_jira_env(Path(app.config.get("ENV_FILE_PATH", ROOT / ".env")))  # Use instance-specific .env
     try:
         auth = _jira_auth_header()
     except ValueError as e:
@@ -7672,7 +7675,7 @@ def api_magic_links():
 
 @app.route("/api/orgs", methods=["GET"])
 def api_orgs():
-    """Return Salesforce org identifiers from .env.jira for URL construction."""
+    """Return Salesforce org identifiers from .env for URL construction."""
     return jsonify({
         "prod": os.environ.get("CASEOPS_PRODUCTION_READ_ORG", ""),
         "sandbox": os.environ.get("CASEOPS_SANDBOX_TARGET_ORG", ""),
@@ -7696,7 +7699,7 @@ def settings_page():
 
 @app.route("/api/settings", methods=["GET"])
 def api_get_settings():
-    """Return current settings from .env.jira with secrets masked."""
+    """Return current settings from .env with secrets masked."""
     env_file_path = app.config.get("ENV_FILE_PATH")
     settings = _read_env_file(Path(env_file_path) if env_file_path else None)
 
@@ -7734,10 +7737,10 @@ def api_get_settings():
 
 @app.route("/api/settings", methods=["POST"])
 def api_post_settings():
-    """Save settings to .env.jira. Preserves masked values (doesn't overwrite)."""
+    """Save settings to .env. Preserves masked values (doesn't overwrite)."""
     body = request.get_json(silent=True) or {}
 
-    # Filter and validate (CASEOPS_LLM_AUTH is read-only, set via .env.jira only)
+    # Filter and validate (CASEOPS_LLM_AUTH is read-only, set via .env only)
     updates = {}
     for key in ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
                 "CASEOPS_ANTHROPIC_MODEL",
@@ -8087,7 +8090,7 @@ def api_setup_claude_credentials():
             return jsonify({"error": "Paste only the token printed by `claude setup-token`, not a shell export line or multi-line output"}), 400
 
         env_file_path = app.config.get("ENV_FILE_PATH")
-        env_file = Path(env_file_path) if env_file_path else ROOT / ".env.jira"
+        env_file = Path(env_file_path) if env_file_path else ROOT / ".env"
         _write_env_file({"CLAUDE_CODE_OAUTH_TOKEN": token}, env_file)
         _remove_env_keys({"CLAUDE_CREDENTIALS_B64"}, env_file)
         os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
@@ -8234,7 +8237,7 @@ def api_setup_salesforce_auth():
 
 @app.post("/api/setup/refresh-salesforce-tokens")
 def api_refresh_salesforce_tokens():
-    """Update SF tokens (access + optional refresh) and set refresh timestamp in .env.jira."""
+    """Update SF tokens (access + optional refresh) and set refresh timestamp in .env."""
     try:
         body = request.get_json(silent=True) or {}
         prod_token = _normalize_salesforce_access_token(body.get("sf_prod_access_token"))
@@ -8247,9 +8250,9 @@ def api_refresh_salesforce_tokens():
         if not any([prod_token, sandbox_token, prod_sfdx_auth_url, sandbox_sfdx_auth_url]):
             return jsonify({"error": "Paste at least one Salesforce access-token JSON value or SFDX auth URL JSON value"}), 400
 
-        env_file = os.environ.get("CASEOPS_JIRA_ENV_FILE") or app.config.get("ENV_FILE_PATH")
+        env_file = os.environ.get("CASEOPS_ENV_FILE") or app.config.get("ENV_FILE_PATH")
         if not env_file:
-            return jsonify({"error": "CASEOPS_JIRA_ENV_FILE not set"}), 500
+            return jsonify({"error": "CASEOPS_ENV_FILE not set"}), 500
 
         env_path = Path(env_file)
         env_content = env_path.read_text(encoding="utf-8")
@@ -8312,7 +8315,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--workspace",
         default=os.environ.get("CASEOPS_WORKSPACE", "default"),
-        help="Workspace name (for multi-org isolation). Reads from .env.jira.{workspace}",
+        help="Workspace name for output isolation. Env config is always read from .env unless --env-file or CASEOPS_ENV_FILE is set.",
     )
     parser.add_argument(
         "--port",
@@ -8328,7 +8331,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--env-file",
         default=None,
-        help="Path to .env.jira file (default: .env.jira.{workspace} or .env.jira)",
+        help="Path to .env file (default: .env)",
     )
     _args = parser.parse_args()
 
@@ -8344,7 +8347,11 @@ if __name__ == "__main__":
         OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
     _ensure_directory_writable(OUTPUTS, "outputs")
 
-    env_override = (os.environ.get("CASEOPS_JIRA_ENV_FILE") or "").strip()
+    env_override = (
+        os.environ.get("CASEOPS_ENV_FILE")
+        or os.environ.get("CASEOPS_JIRA_ENV_FILE")
+        or ""
+    ).strip()
     if _args.env_file:
         env_file_path = Path(_args.env_file)
         _load_jira_env(env_file_path)
@@ -8352,8 +8359,11 @@ if __name__ == "__main__":
         env_file_path = Path(env_override)
         _load_jira_env(env_file_path)
     else:
-        env_file_path = ROOT / f".env.jira.{WORKSPACE}" if WORKSPACE != "default" else ROOT / ".env.jira"
+        env_file_path = ROOT / ".env"
         _load_jira_env(env_file_path)
+
+    os.environ["CASEOPS_ENV_FILE"] = str(env_file_path)
+    os.environ["CASEOPS_JIRA_ENV_FILE"] = str(env_file_path)
 
     # Initialize instance-specific runtime and metadata workspaces.
     temp_override = (os.environ.get("CASEOPS_TEMP_DIR") or "").strip()
@@ -8402,17 +8412,17 @@ if __name__ == "__main__":
     except Exception as e:
         raise RuntimeError(f"OUTPUTS directory is not writable: {OUTPUTS}\nError: {e}") from e
 
-    # Validate .env.jira file exists and is readable
+    # Validate .env file exists and is readable
     if not env_file_path.exists():
-        raise RuntimeError(f".env.jira file does not exist: {env_file_path}")
+        raise RuntimeError(f".env file does not exist: {env_file_path}")
     if not env_file_path.is_file():
-        raise RuntimeError(f".env.jira is not a file: {env_file_path}")
+        raise RuntimeError(f".env is not a file: {env_file_path}")
 
     try:
         env_file_path.read_text(encoding="utf-8")
-        print(f"[OK] .env.jira file is readable")
+        print(f"[OK] .env file is readable")
     except Exception as e:
-        raise RuntimeError(f".env.jira file is not readable: {env_file_path}\nError: {e}") from e
+        raise RuntimeError(f".env file is not readable: {env_file_path}\nError: {e}") from e
 
     # Validate all required subdirectories exist
     required_subdirs = [
@@ -8440,7 +8450,7 @@ if __name__ == "__main__":
     print(f"[OK] Subprocess environment variables to be set:")
     print(f"  - CASEOPS_OUTPUTS_DIR={OUTPUTS}")
     print(f"  - CASEOPS_JIRA_OUT_DIR={OUTPUTS / 'jira'}")
-    print(f"  - CASEOPS_JIRA_ENV_FILE={env_file_path}")
+    print(f"  - CASEOPS_ENV_FILE={env_file_path}")
     print(f"  - CASEOPS_WORKSPACE={WORKSPACE}")
     metadata_dirs = _metadata_workspace_dirs()
     print(f"  - CASEOPS_TEMP_DIR={TEMP_ROOT}")

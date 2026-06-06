@@ -14,7 +14,7 @@ description: Retrieves, normalizes, and analyzes Jira issues for Salesforce impl
 
 ## Workflow
 
-1. Retrieve Jira issue data using the active env file: `python jira_sync.py --env-file "$CASEOPS_JIRA_ENV_FILE"`. If `CASEOPS_JIRA_ENV_FILE` is not set, ask the operator to configure it or use available Jira tools, exports, URLs, or pasted content.
+1. Retrieve Jira issue data using the active env file: `python jira_sync.py --env-file "$CASEOPS_ENV_FILE"`. If `CASEOPS_ENV_FILE` is not set, ask the operator to configure it or use available Jira tools, exports, URLs, or pasted content.
 2. Identify issue key, summary, description, comments, attachments, labels, components, priority, and status.
 3. Extract observed behavior, expected behavior, acceptance criteria, reproduction steps, and constraints.
 4. Identify missing information that blocks Salesforce diagnosis.
@@ -24,7 +24,7 @@ description: Retrieves, normalizes, and analyzes Jira issues for Salesforce impl
 
 ## Available Scripts
 
-- `jira_sync.py`: Syncs Jira issues into `outputs/jira/` as raw JSON, markdown summaries, attachments, forms, and a manifest. Run from the repo root with the active env file from `CASEOPS_JIRA_ENV_FILE`. Use `--issue KEY` for one issue or `--jql "..."` for a query.
+- `jira_sync.py`: Syncs Jira issues into `outputs/jira/` as raw JSON, markdown summaries, attachments, forms, and a manifest. Run from the repo root with the active env file from `CASEOPS_ENV_FILE`. Use `--issue KEY` for one issue or `--jql "..."` for a query.
 
 ## References
 

@@ -8,7 +8,7 @@ This document covers browser setup and Salesforce magic link (frontdoor) managem
 
 ### Chrome Dev Path
 
-CaseOps sub-agents may run Salesforce UI checks in a Chrome Dev browser when visual inspection is necessary. Configure this in the active env file identified by `CASEOPS_JIRA_ENV_FILE`:
+CaseOps sub-agents may run Salesforce UI checks in a Chrome Dev browser when visual inspection is necessary. Configure this in the active env file identified by `CASEOPS_ENV_FILE`:
 
 ```
 CASEOPS_CLAUDE_BROWSER=C:\Program Files\Google\Chrome Dev\Application\chrome.exe

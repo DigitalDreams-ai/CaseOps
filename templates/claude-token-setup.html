@@ -214,7 +214,7 @@
         <div class="step">
             <span class="step-number">3</span><span class="step-title">Paste below</span>
             <div class="step-desc">
-                CaseOps stores this as <code>CLAUDE_CODE_OAUTH_TOKEN</code> in the active env file. On NAS, that is <code>/volume1/docker/stacks/caseops/.env.jira.nas</code>.
+                CaseOps stores this as <code>CLAUDE_CODE_OAUTH_TOKEN</code> in the active env file. On NAS, that is the stack <code>.env</code> file mounted into the container.
             </div>
             <textarea id="token-input" placeholder="Paste the token printed by claude setup-token"></textarea>
             <button class="btn" onclick="saveToken()" id="submit-btn">Save & Finish</button>

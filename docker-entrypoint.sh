@@ -2,11 +2,11 @@
 # Note: NOT using set -e because Flask restart sends SIGTERM which exits with non-zero code
 # The loop handles all exit codes gracefully
 
-# Note: .env.jira is loaded by docker-compose via env_file directive.
+# Note: .env is loaded by docker-compose via env_file directive.
 # Variables like SF_PROD_*, SF_SANDBOX_*, CASEOPS_*, etc. are already in the environment.
 # No need to source here as it conflicts with comments containing special characters.
 
-env_file_path="${CASEOPS_JIRA_ENV_FILE:-/app/.env.jira}"
+env_file_path="${CASEOPS_ENV_FILE:-${CASEOPS_JIRA_ENV_FILE:-/app/.env}}"
 
 # Load selected runtime secrets from the mounted env file. Do not source the
 # entire file; values such as Windows paths and comments can break shell parsing.
@@ -44,8 +44,8 @@ while true; do
   echo "Initializing CaseOps service..."
   echo "========================================"
 
-  # Re-load selected runtime secrets in case /app/.env.jira changed before a restart.
-  env_file_path="${CASEOPS_JIRA_ENV_FILE:-/app/.env.jira}"
+  # Re-load selected runtime secrets in case /app/.env changed before a restart.
+  env_file_path="${CASEOPS_ENV_FILE:-${CASEOPS_JIRA_ENV_FILE:-/app/.env}}"
   if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && [ -f "$env_file_path" ]; then
     CLAUDE_CODE_OAUTH_TOKEN="$(grep -m1 '^CLAUDE_CODE_OAUTH_TOKEN=' "$env_file_path" | cut -d= -f2-)"
     export CLAUDE_CODE_OAUTH_TOKEN

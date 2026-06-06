@@ -1,6 +1,6 @@
 # CaseOps Instances
 
-CaseOps supports multiple instances by running the same image with different compose stack directories, ports, env files, and appdata mounts.
+CaseOps supports multiple instances by running the same image with different compose stack directories, ports, one `.env` file per stack, and appdata mounts.
 
 The current Docker model does not require repo-local `instance1/` or `instance2/` directories. Runtime state should live in a mounted appdata directory and appear inside the container as `/data`.
 

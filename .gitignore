@@ -2,8 +2,6 @@
 .env
 .env.*
 !.env.example
-!.env.jira.example
-.env.jira
 
 # CaseOps local secrets
 caseops/.env

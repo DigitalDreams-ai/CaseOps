@@ -18,16 +18,16 @@ If Jira access is unavailable, ask for an export or pasted issue details instead
 
 ## Local Retrieval
 
-Use the repo-level Jira sync script when Jira credentials are available. Use the active env file from `CASEOPS_JIRA_ENV_FILE`. Always run from the repo root:
+Use the repo-level Jira sync script when Jira credentials are available. Use the active env file from `CASEOPS_ENV_FILE`. Always run from the repo root:
 
 ```text
-python jira_sync.py --env-file "$CASEOPS_JIRA_ENV_FILE" --issue ISSUE-123 --no-attachments --no-forms
+python jira_sync.py --env-file "$CASEOPS_ENV_FILE" --issue ISSUE-123 --no-attachments --no-forms
 ```
 
 For the default queue:
 
 ```text
-python jira_sync.py --env-file "$CASEOPS_JIRA_ENV_FILE" --max-issues 10 --no-attachments --no-forms
+python jira_sync.py --env-file "$CASEOPS_ENV_FILE" --max-issues 10 --no-attachments --no-forms
 ```
 
 Outputs:

@@ -8,7 +8,7 @@ description: Mandatory for jira-salesforce-fix-pipeline after a proposed solutio
 ## Hard requirements (non-negotiable)
 
 1. **Mandatory** when `jira-salesforce-fix-pipeline` has prepared a proposed solution in Step 8. This applies to Support-owned fixes and Engineering proposal validation.
-2. **Single writable org:** Read **`CASEOPS_SANDBOX_TARGET_ORG`** from the active env file, preferably `CASEOPS_JIRA_ENV_FILE`. That value is the **only** Salesforce org (alias or username) that may receive **deploys, metadata writes, or mutating data/API operations** for this skill. Treat it as the org allowlist.
+2. **Single writable org:** Read **`CASEOPS_SANDBOX_TARGET_ORG`** from the active env file, preferably `CASEOPS_ENV_FILE`. That value is the **only** Salesforce org (alias or username) that may receive **deploys, metadata writes, or mutating data/API operations** for this skill. Treat it as the org allowlist.
 3. If **`CASEOPS_SANDBOX_TARGET_ORG`** is missing or empty, **STOP** — do not deploy; tell the operator to set it.
 4. Before any deploy or write, confirm the CLI/API target (e.g. `sf` `--target-org`, org picker, or session) **exactly matches** that allowlisted value. If it does not match, **STOP** — do not “pick the closest sandbox” or override in chat.
 5. **Production and all other orgs:** No deploy and no mutating operations unless the org is exactly the allowlisted sandbox value. Production remains **read-only** for investigation only (separate skills/prompts).

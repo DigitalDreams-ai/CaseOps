@@ -15,7 +15,7 @@ User provides:
 ## Steps 1-12: Your Responsibilities
 
 ### Step 1-2: Setup (You do this)
-1. If "full" action: Run `python jira_sync.py --env-file "$CASEOPS_JIRA_ENV_FILE"` to sync from Jira
+1. If "full" action: Run `python jira_sync.py --env-file "$CASEOPS_ENV_FILE"` to sync from Jira
 2. Read `outputs/jira/manifest.csv` and classify every issue:
    - **Closed/Resolved/Canceled?** → Archive to `outputs/closed-resolved/{key}.md`. Skip this issue.
    - **Status = "Escalated to Engineering"?** → Archive to `outputs/engineering-escalations/{key}.md`. Skip this issue.

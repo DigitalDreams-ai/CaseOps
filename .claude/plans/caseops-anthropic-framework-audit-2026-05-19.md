@@ -61,7 +61,7 @@
 
 ### ✓ Metadata Clarity
 - `jira-salesforce-fix-pipeline` description is specific and actionable (line 3-4)
-  - Names mandatory configs: `CASEOPS_SANDBOX_TARGET_ORG`, `.env.jira`
+  - Names mandatory configs: `CASEOPS_SANDBOX_TARGET_ORG`, `.env`
   - Explains when to use (Jira issues, Salesforce diagnosis) and when not (general explanations, non-Jira tasks)
 - `salesforce-sandbox-deploy-test` leads with **hard requirements** (security-first)
   - Line 8-14: non-negotiable allowlist checks

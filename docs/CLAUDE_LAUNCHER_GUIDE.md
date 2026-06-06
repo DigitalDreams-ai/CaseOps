@@ -42,7 +42,7 @@ Process ISSUE-12345 through the full pipeline.
 
 Manual launches still require:
 
-- active `.env.jira`
+- active `.env`
 - Jira outputs or Jira credentials
 - configured Salesforce token auth
 - `CASEOPS_SANDBOX_TARGET_ORG`

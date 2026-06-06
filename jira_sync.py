@@ -13,8 +13,8 @@ HEAL triage defaults follow CaseOps intake rules:
 - Attached Jira Forms are retrieved through the Forms API by default when
   available.
 
-Authentication is intentionally external to this script. It loads `.env.jira`
-by default, or `CASEOPS_JIRA_ENV_FILE` when set. Prefer
+Authentication is intentionally external to this script. It loads `.env`
+by default, or `CASEOPS_ENV_FILE` when set. Prefer
 JIRA_AUTH_HEADER_COMMAND with a local OAuth/session helper that prints an
 Authorization header, for example:
 

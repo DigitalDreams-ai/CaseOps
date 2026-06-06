@@ -10,8 +10,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 
 
 def default_jira_env_file() -> str:
-    """Return the Jira env file path used by local helper scripts."""
-    return os.environ.get("CASEOPS_JIRA_ENV_FILE") or str(PROJECT_ROOT / ".env.jira")
+    """Return the env file path used by local helper scripts."""
+    return (
+        os.environ.get("CASEOPS_ENV_FILE")
+        or os.environ.get("CASEOPS_JIRA_ENV_FILE")
+        or str(PROJECT_ROOT / ".env")
+    )
 
 
 def default_jira_dir(*, for_write: bool = False) -> Path:

@@ -485,7 +485,7 @@ def process_active_issues_parallel(
     if out_dir is None:
         out_dir = PROJECT_ROOT / "outputs"
     if env_file is None:
-        env_file = str(PROJECT_ROOT / ".env.jira")
+        env_file = str(PROJECT_ROOT / ".env")
     results_dir = out_dir / "step-8-results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -610,7 +610,7 @@ examples:
     parser.add_argument(
         "--env-file",
         default=default_jira_env_file(),
-        help="Jira credentials env file (default: .env.jira)",
+        help="Jira credentials env file (default: .env)",
     )
     parser.add_argument(
         "--jira-dir",
