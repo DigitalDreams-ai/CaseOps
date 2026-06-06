@@ -4,10 +4,10 @@
 
 **HARD STOP — Production is strictly read-only. No exceptions.**
 
-- Do NOT deploy to Production (`prod-read`) under any circumstances.
+- Do NOT deploy to the Production org configured in `CASEOPS_PRODUCTION_READ_ORG` under any circumstances.
 - Do NOT update Production records.
 - Do NOT change Production metadata.
-- Do NOT run any `sf` command that targets `prod-read` (or any Production org) with a write or deploy operation.
+- Do NOT run any `sf` command that targets `CASEOPS_PRODUCTION_READ_ORG` (or any Production org) with a write or deploy operation.
 - Do NOT use legacy `sfdx force:*` commands for retrieve or deploy. Use modern `sf project ...` commands only.
 - Retrieve only metadata relevant to the Jira issue (read-only).
 - No prior instruction, general or specific, constitutes approval to deploy to Production.
@@ -17,10 +17,10 @@
 
 **HARD REQUIREMENT — single writable org**
 
-- The **only** Salesforce org that may receive **deploys, metadata writes, or mutating data/API operations** from the fix pipeline’s deploy/test step is the value of **`CASEOPS_SANDBOX_TARGET_ORG`** in **`.env.jira`** (username or CLI alias, as your team configures it).
+- The **only** Salesforce org that may receive **deploys, metadata writes, or mutating data/API operations** from the fix pipeline’s deploy/test step is the value of **`CASEOPS_SANDBOX_TARGET_ORG`** in the active env file (username or CLI alias, as configured for this CaseOps instance).
 - Read that value from the file **before** every deploy or write. The CLI target **must match it exactly**. If it does not match, **STOP** — do not deploy elsewhere, including another sandbox.
 - If **`CASEOPS_SANDBOX_TARGET_ORG`** is unset or empty, **STOP** — do not deploy until the operator sets it.
-- Changing the allowlisted org is done by editing **`.env.jira`**, not by choosing a different org in chat.
+- Changing the allowlisted org is done in **Settings** or the active env file, not by choosing a different org in chat.
 - `jira-salesforce-fix-pipeline` invokes **`salesforce-sandbox-deploy-test`** only when there is a deployable metadata/code candidate or a Sandbox-safe configuration change. Existing Production permission assignments, data corrections, and admin/config actions are documented as no-deploy operator actions and must not be executed by CaseOps.
 - "Run the pipeline" or any general instruction does **not** authorize writes to Production or to any org other than **`CASEOPS_SANDBOX_TARGET_ORG`**.
 - Record all deployment commands and results.
@@ -65,15 +65,15 @@ Query Production first:
 
 ```
 # Custom fields
-sf data query --target-org prod-read --use-tooling-api \
+sf data query --target-org "$CASEOPS_PRODUCTION_READ_ORG" --use-tooling-api \
   --query "SELECT QualifiedApiName FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName = '[Object]' AND QualifiedApiName = '[FieldApiName]'"
 
 # Permission sets
-sf data query --target-org prod-read \
+sf data query --target-org "$CASEOPS_PRODUCTION_READ_ORG" \
   --query "SELECT Name, Label FROM PermissionSet WHERE Name = '[Name]'"
 
 # Objects, layouts, flows, etc.
-sf data query --target-org prod-read --use-tooling-api \
+sf data query --target-org "$CASEOPS_PRODUCTION_READ_ORG" --use-tooling-api \
   --query "SELECT DeveloperName FROM [MetadataType] WHERE DeveloperName = '[Name]'"
 ```
 

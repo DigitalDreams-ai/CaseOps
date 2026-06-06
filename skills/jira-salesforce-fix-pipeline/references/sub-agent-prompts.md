@@ -105,7 +105,7 @@ Return a compact summary (max 400 tokens) containing:
 
 ## Step 9 — Deploy, test, and iterate
 
-**Before spawning:** Read exported env var **`CASEOPS_SANDBOX_TARGET_ORG`**. If missing or empty, **STOP** and tell the operator to set it in Settings / `.env.jira`. Pass that exact string into the prompt below. Only that org may receive deploys or writes.
+**Before spawning:** Read exported env var **`CASEOPS_SANDBOX_TARGET_ORG`**. If missing or empty, **STOP** and tell the operator to set it in Settings or the active env file. Pass that exact string into the prompt below. Only that org may receive deploys or writes.
 
 ```
 You are deploying and testing a Salesforce fix in Sandbox.
@@ -241,7 +241,7 @@ FORBIDDEN IN THIS FILE (hard stop if present):
 ✗ Metadata names or change lists
 ✗ Engineering-specific terminology (thread ID, trigger, handler, etc.)
 ✗ Test case descriptions
-✗ "Sean" or any internal name
+✗ Operator names or internal personal names
 ✗ References to Gearset or Sandbox-only work
 ✗ Root cause analysis intended for diagnosis only
 ✗ Internal diagnosis details or investigation notes
@@ -276,7 +276,7 @@ CHECKPOINT: Is outputs/jira-messages/<KEY>.md now saved and contains ZERO intern
 STEP C: DRAFT DOCUMENT 2 (Internal Notes — Internal Diagnosis Only)
 ════════════════════════════════════════════════════════════════════════
 
-AUDIENCE: Sean only (internal reference, NOT posted to Jira)
+AUDIENCE: Operator only (internal reference, NOT posted to Jira)
 TEMPLATE: internal-notes-template.md
 OUTPUT FILE: outputs/internal-notes/<KEY>.md
 

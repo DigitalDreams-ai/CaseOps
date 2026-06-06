@@ -27,7 +27,7 @@
 
 ## Operator setup (CaseOps GUI + Claude)
 
-Put **Chrome Dev** in `.env.jira` as `CASEOPS_CLAUDE_BROWSER` only for visual UI checks. Default Salesforce access is **sf CLI + SOQL**. Use **`CASEOPS_PRODUCTION_MAGIC_LINK`** only for read-only visual Production UI inspection and **`CASEOPS_SANDBOX_MAGIC_LINK`** only for visual Sandbox UI inspection or UI-only actions. Do not use frontdoor session IDs as API bearer tokens; they do not replace `sf` CLI auth. See **AGENTS.md**. Refresh frontdoor links when sessions expire; treat them like secrets.
+Put **Chrome Dev** in the active env file as `CASEOPS_CLAUDE_BROWSER` only for visual UI checks. In Docker this is normally `/data/.env`; local development should point `CASEOPS_JIRA_ENV_FILE` at the correct local env file. Default Salesforce access is **sf CLI + SOQL**. Use **`CASEOPS_PRODUCTION_MAGIC_LINK`** only for read-only visual Production UI inspection and **`CASEOPS_SANDBOX_MAGIC_LINK`** only for visual Sandbox UI inspection or UI-only actions. Do not use frontdoor session IDs as API bearer tokens; they do not replace `sf` CLI auth. See **AGENTS.md**. Refresh frontdoor links when sessions expire; treat them like secrets.
 
 ---
 
@@ -36,7 +36,7 @@ Put **Chrome Dev** in `.env.jira` as `CASEOPS_CLAUDE_BROWSER` only for visual UI
 Run from the repo root:
 
 ```bash
-python jira_sync.py --env-file .env.jira
+python jira_sync.py --env-file "$CASEOPS_JIRA_ENV_FILE"
 ```
 
 For follow-up runs where only recent changes matter, add `--incremental`.

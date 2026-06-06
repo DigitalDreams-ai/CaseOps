@@ -49,7 +49,7 @@ description: Mandatory for jira-salesforce-fix-pipeline after a proposed solutio
 ## Quality Checks
 
 - Deploy and mutating operations targeted **only** the org value in **`CASEOPS_SANDBOX_TARGET_ORG`**.
-- Target was verified against `.env.jira` before deploy, not assumed from memory or defaults.
+- Target was verified against `CASEOPS_SANDBOX_TARGET_ORG` from the active env file before deploy, not assumed from memory or defaults.
 - Engineering proposal packages are clearly marked as Sandbox-only proposals, not Production changes.
 - Deployment command and result are recorded.
 - Deployment uses modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.

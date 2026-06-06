@@ -188,7 +188,7 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
                 deploy_test_iteration += 1
                 
                 # Before spawning Step 9: Verify Sandbox org
-                sandbox_org = read_env_variable(".env.jira", "CASEOPS_SANDBOX_TARGET_ORG")
+                sandbox_org = read_env_variable(active_env_file(), "CASEOPS_SANDBOX_TARGET_ORG")
                 IF sandbox_org IS EMPTY OR NOT REACHABLE:
                     log(f"STEP_9 {issue_key} ✗ BLOCKER: CASEOPS_SANDBOX_TARGET_ORG missing or unreachable")
                     log(f"END {issue_key} disposition=on-hold (Sandbox org blocker)")
@@ -365,7 +365,7 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
 |---|---|---|
 | Step 3 returns no Issue Understanding | Spawn Step 3 again, or ask user for manual issue clarification | on-hold |
 | Step 5/6 metadata loop > 3 iterations | Escalate with "Metadata discovery incomplete" | on-hold |
-| `.env.jira` missing CASEOPS_SANDBOX_TARGET_ORG | Stop run, report error | system-error |
+| Active env file missing CASEOPS_SANDBOX_TARGET_ORG | Stop run, report error | system-error |
 | Sandbox org unreachable or credentials invalid | Stop run, report error | system-error |
 | Step 9 failure loop > 3 iterations | Escalate to Engineering with test details | on-hold |
 | Step 10 file validation fails (mixed customer/internal) | Re-prompt Step 10 sub-agent, or escalate | on-hold |

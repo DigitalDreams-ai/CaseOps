@@ -23,8 +23,8 @@ Jira drafts contain **two separate sections**, each with distinct purpose and vo
 - **Tone:** Human, direct, no corporate fluff
 - **Example:** "The validation rule was blocking that update. I fixed it in our test environment and confirmed it works."
 
-### [INTERNAL] (Sean's internal memo, Jira comment only)
-- **Audience:** Sean (internal Jira memo, not posted to customer)
+### [INTERNAL] (operator internal memo, Jira comment only)
+- **Audience:** Operator/internal reviewer (internal Jira memo, not posted to customer)
 - **Content:** What it's NOT → where the gap is → why the symptom happens → action needed
 - **Length:** Keep short; full investigation evidence stays in Investigation tab
 - **Example:** "NOT a missing field. The validation rule conditions were outdated — didn't account for the new status value. Fixed by adding the new status to the rule condition. Engineering will review."
@@ -66,7 +66,7 @@ Every customer-facing draft must pass **all** of these:
 7. Draft internal notes and append additional details that emerged, but do not recreate the handoff.
 8. **Draft both sections:**
    - **Suggested reply** (customer message) — apply voice rules checklist
-   - **[INTERNAL]** (Sean's memo) — lean root-cause memo
+   - **[INTERNAL]** (operator memo) — lean root-cause memo
 
 ## Production vs Sandbox (mandatory in drafts)
 
@@ -160,4 +160,4 @@ Action: Monitor Sandbox fix for 24h in pre-prod. Then Gearset promotion to Produ
 - Negation (what it's NOT)
 - Root cause (why it happened)
 - Fix (what changed)
-- Action (what Sean does next)
+- Action (what the operator does next)

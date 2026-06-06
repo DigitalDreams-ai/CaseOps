@@ -15,7 +15,7 @@ User provides:
 ## Steps 1-12: Your Responsibilities
 
 ### Step 1-2: Setup (You do this)
-1. If "full" action: Run `python jira_sync.py --env-file .env.jira` to sync from Jira
+1. If "full" action: Run `python jira_sync.py --env-file "$CASEOPS_JIRA_ENV_FILE"` to sync from Jira
 2. Read `outputs/jira/manifest.csv` and classify every issue:
    - **Closed/Resolved/Canceled?** → Archive to `outputs/closed-resolved/{key}.md`. Skip this issue.
    - **Status = "Escalated to Engineering"?** → Archive to `outputs/engineering-escalations/{key}.md`. Skip this issue.
@@ -172,7 +172,7 @@ else:
 
 ## Error Handling
 
-### Blocker: Missing .env.jira or Sandbox Credentials
+### Blocker: Missing Active Env File or Sandbox Credentials
 - Stop immediately
 - Report error to user
 - Do NOT proceed with Steps 8-9

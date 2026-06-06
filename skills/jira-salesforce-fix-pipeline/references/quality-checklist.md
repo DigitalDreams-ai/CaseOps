@@ -21,8 +21,8 @@ Verify before treating a run as complete.
 - Engineering handoffs include the Engineering Message section: simple problem description and potential fix. Include problem location section with artifact details from Step 6.
 - Engineering handoff notes are stored under `outputs/engineering-escalations/`.
 - Step 9 is **mandatory** for every Support-resolvable issue (after Step 8). It is skipped **only** when Step 7 routes to Engineering escalation.
-- **`CASEOPS_SANDBOX_TARGET_ORG`** from `.env.jira` is the **only** writable deploy target for Step 9; production and other orgs must not receive deploys or writes from this pipeline.
-- The target Sandbox is explicit in the Step 9 sub-agent prompt and matches `.env.jira` before deployment.
+- **`CASEOPS_SANDBOX_TARGET_ORG`** from the active env file is the **only** writable deploy target for Step 9; production and other orgs must not receive deploys or writes from this pipeline.
+- The target Sandbox is explicit in the Step 9 sub-agent prompt and matches `CASEOPS_SANDBOX_TARGET_ORG` before deployment.
 - Tests map to Jira acceptance criteria.
 - Failed iterations are recorded in `outputs/investigations/<KEY>.md` before re-spawning sub-agents.
 - The dated issue summary `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` is created or updated after all issues are processed.

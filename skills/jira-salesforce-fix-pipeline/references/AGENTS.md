@@ -8,7 +8,7 @@ This document covers browser setup and Salesforce magic link (frontdoor) managem
 
 ### Chrome Dev Path
 
-CaseOps sub-agents may run Salesforce UI checks in a Chrome Dev browser when visual inspection is necessary. Configure in `.env.jira`:
+CaseOps sub-agents may run Salesforce UI checks in a Chrome Dev browser when visual inspection is necessary. Configure this in the active env file identified by `CASEOPS_JIRA_ENV_FILE`:
 
 ```
 CASEOPS_CLAUDE_BROWSER=C:\Program Files\Google\Chrome Dev\Application\chrome.exe
@@ -36,7 +36,7 @@ Verify the path exists before running sub-agents. Agents will fail with timeout 
 Magic links are pre-authenticated Salesforce browser URLs that allow CaseOps sub-agents to bypass login screens for UI inspection only. They are not API credentials.
 
 **Security:** Magic links are **sensitive browser session secrets**. Treat them as passwords:
-- Store only in `.env.jira` (never in git)
+- Store only in the active env file (never in git)
 - Rotate regularly (see expiry schedule below)
 - Do not share via email or chat
 - Use HTTPS URLs only
@@ -46,13 +46,13 @@ Magic links are pre-authenticated Salesforce browser URLs that allow CaseOps sub
 Used only for **read-only visual Production UI inspection** when CLI/SOQL cannot answer the question. Use `sf` CLI for Steps 5 and 6 metadata retrieval.
 
 ```
-CASEOPS_PRODUCTION_MAGIC_LINK=https://prod-read.my.salesforce.com/secur/frontdoor.jsp?sid=00D0b000000vHFc!AQEAQBx...
+CASEOPS_PRODUCTION_MAGIC_LINK=https://your-production-domain.my.salesforce.com/secur/frontdoor.jsp?sid=...
 ```
 
 **How to get:**
 1. Log in to Production as an authorized admin.
 2. Use the org's supported login URL/session copy process if available.
-3. Save the complete frontdoor URL in `.env.jira`.
+3. Save the complete frontdoor URL in Settings or the active env file.
 4. Test in a private browser: paste URL, should authenticate without login prompt.
 
 **Expiry:** Typically 30 days from generation. If sub-agents see a login page in browser UI, link has expired — refresh. Do not use frontdoor SIDs for API `curl` tests.
@@ -62,13 +62,13 @@ CASEOPS_PRODUCTION_MAGIC_LINK=https://prod-read.my.salesforce.com/secur/frontdoo
 Used only for **visual Sandbox UI inspection** or UI-only actions. Use `sf project deploy`, `sf data query`, and Apex test commands for Step 9 deploy/test.
 
 ```
-CASEOPS_SANDBOX_MAGIC_LINK=https://prod-read--sean.sandbox.my.salesforce.com/secur/frontdoor.jsp?sid=00DEa00000RViur!AQEAQPx...
+CASEOPS_SANDBOX_MAGIC_LINK=https://your-sandbox-domain.sandbox.my.salesforce.com/secur/frontdoor.jsp?sid=...
 ```
 
 **How to get:**
 1. Log in to Sandbox with `CASEOPS_SANDBOX_TARGET_ORG` credentials
 2. Use the org's supported login URL/session copy process if available
-3. Save the complete frontdoor URL in `.env.jira`
+3. Save the complete frontdoor URL in Settings or the active env file
 4. Test in private browser: paste URL, should authenticate without login prompt
 
 **Expiry:** Typically 30 days. If browser UI checks hit login, refresh. If CLI deploy/test fails with auth errors, fix `sf` CLI auth instead.
@@ -98,9 +98,9 @@ Set this **instead of** separate PRODUCTION and SANDBOX links. Workflow will use
 1. Log out of stale Salesforce sessions if needed
 2. Log in fresh to **Production** as admin
 3. Generate or copy a fresh browser login URL using the org's supported process
-4. Update `CASEOPS_PRODUCTION_MAGIC_LINK` in `.env.jira`
+4. Update `CASEOPS_PRODUCTION_MAGIC_LINK` in Settings or the active env file
 5. Repeat for Sandbox: log in with `CASEOPS_SANDBOX_TARGET_ORG` user, refresh `CASEOPS_SANDBOX_MAGIC_LINK`
-6. **Do NOT commit .env.jira** — it remains gitignored
+6. **Do NOT commit the active env file** — it must remain gitignored
 7. Test: manually visit each URL in a private browser window
 8. Alert team: inform about rotation so they know to expect new links if they need to debug sub-agent runs
 
@@ -169,7 +169,7 @@ When sub-agents (Steps 5, 6, 9) require Salesforce access:
 ## Best Practices
 
 1. **Rotate magic links monthly** — set a calendar reminder
-2. **Never share `.env.jira`** — it contains secrets
+2. **Never share the active env file** — it contains secrets
 3. **Use private/incognito browser tabs** for manual magic-link testing
 4. **Log out immediately** after admin investigations — don't leave sessions open
 5. **Restrict admin account access** — only CaseOps-authorized administrators should hold admin credentials
