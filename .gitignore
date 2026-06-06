@@ -10,6 +10,11 @@ caseops/.env
 caseops/.env.*
 !caseops/.env.example
 
+# Local deployment/runtime files. Use docker-compose.example.yml for sharing.
+/docker-compose.yml
+/claude-settings.json
+HEAL-*_pipelineLogs.txt
+
 # CCI
 .cci
 /src.orig
@@ -30,12 +35,16 @@ caseops/.pytest_cache/
 .localdevserver/
 deploy-options.json
 
+# Root Salesforce/CumulusCI package templates are not part of CaseOps.
+/cumulusci.yml
+/pmd-rules.xml
+/.forceignore
+/sfdx-project.json
+/robot/
+
 # LWC
 **/lwc/jsconfig.json
 coverage/
-
-# Robot Framework results
-robot/Standard-Unlocked/results/
 
 # Dependencies and tool caches
 node_modules/
@@ -51,8 +60,7 @@ temp-sf-retrieve/
 C*temp-sf-retrieve/
 
 # Retrieved Salesforce metadata must not be committed to CaseOps.
-force-app/main/default/*
-!force-app/main/default/.gitkeep
+force-app/
 field-retrieval/
 flowexport/
 flows/

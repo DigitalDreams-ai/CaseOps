@@ -401,7 +401,6 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
     "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
     "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
     "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
-    "CASEOPS_USE_CCI_FOR_AUTH",
     "CASEOPS_PRODUCTION_READ_ORG",
     "CASEOPS_SANDBOX_TARGET_ORG",
     "CASEOPS_PRODUCTION_INSTANCE_URL",
@@ -7717,7 +7716,6 @@ def api_get_settings():
     exposed_keys = {
         "JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
         "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
-        "CASEOPS_USE_CCI_FOR_AUTH",
         "CASEOPS_GLOBAL_MAX_PARALLEL",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
@@ -7727,7 +7725,6 @@ def api_get_settings():
         "CASEOPS_PRODUCTION_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL",
     }
     defaults = {
-        "CASEOPS_USE_CCI_FOR_AUTH": "false",
         "CASEOPS_GLOBAL_MAX_PARALLEL": "1",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS": "false",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES": "false",
@@ -7756,7 +7753,6 @@ def api_post_settings():
     updates = {}
     for key in ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
                 "CASEOPS_ANTHROPIC_MODEL",
-                "CASEOPS_USE_CCI_FOR_AUTH",
                 "CASEOPS_GLOBAL_MAX_PARALLEL",
                 "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
                 "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
@@ -7905,9 +7901,6 @@ def _settings_status_skeleton() -> dict[str, Any]:
         "sf_installed": bool(shutil.which("sf")),
         "sf_prod": {"authenticated": False, "alias": prod_alias},
         "sf_sandbox": {"authenticated": False, "alias": sand_alias},
-        "cci_installed": bool(shutil.which("cumulusci") or shutil.which("cci")),
-        "cci_prod": {"authenticated": False},
-        "cci_sandbox": {"authenticated": False},
     }
 
 
@@ -7916,7 +7909,6 @@ def _build_settings_status() -> dict[str, Any]:
     status = _settings_status_skeleton()
     env_file_path = app.config.get("ENV_FILE_PATH")
     settings = _read_env_file(Path(env_file_path) if env_file_path else None)
-    use_cci = os.environ.get("CASEOPS_USE_CCI_FOR_AUTH", "false").lower() == "true"
     prod_alias = _env_first("CASEOPS_PRODUCTION_READ_ORG", settings=settings)
     sand_alias = _env_first("CASEOPS_SANDBOX_TARGET_ORG", settings=settings)
 
@@ -7970,34 +7962,6 @@ def _build_settings_status() -> dict[str, Any]:
             "ok": False,
             "issues": [f"Runtime preflight status failed: {type(e).__name__}: {e}"],
         }
-
-    # Check CCI
-    if shutil.which("cumulusci") or shutil.which("cci"):
-        status["cci_installed"] = True
-
-        # Check prod org
-        if prod_alias and use_cci:
-            try:
-                result = subprocess.run(
-                    ["cci", "org", "info", prod_alias],
-                    capture_output=True, text=True, timeout=5
-                )
-                if result.returncode == 0:
-                    status["cci_prod"]["authenticated"] = True
-            except Exception:
-                pass
-
-        # Check sandbox org
-        if sand_alias and use_cci:
-            try:
-                result = subprocess.run(
-                    ["cci", "org", "info", sand_alias],
-                    capture_output=True, text=True, timeout=5
-                )
-                if result.returncode == 0:
-                    status["cci_sandbox"]["authenticated"] = True
-            except Exception:
-                pass
 
     status["cache"] = {
         "generated_at": datetime.now(timezone.utc).isoformat(),

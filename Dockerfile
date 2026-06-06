@@ -17,11 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN ln -sf /usr/bin/python3 /usr/local/bin/python && \
     ln -sf /usr/bin/pip3 /usr/local/bin/pip
 
-# Install Claude Code CLI
+# Install Claude Code CLI and Salesforce CLI.
 RUN npm install -g @anthropic-ai/claude-code @salesforce/cli
-
-# Install CumulusCI (for CI/CD, scratch orgs, sandboxes)
-RUN python3 -m pip install --no-cache-dir --break-system-packages cumulusci
 
 # Install Python deps
 RUN python3 -m pip install --no-cache-dir --break-system-packages flask markdown anthropic
