@@ -3,7 +3,7 @@
 
 CRITICAL: Proposal-only. This skill NEVER executes Production changes.
 Reads solution plan and test report, proposes safe Production promotion plan.
-All Production access is read-only. Only Sean can authorize execution via explicit request.
+All Production access is read-only. Only the operator can authorize execution via explicit request.
 
 Input:
   - outputs/solution-plans/{KEY}.md (required, affected components)
@@ -19,7 +19,7 @@ Usage:
 SAFETY GUARANTEE:
 - No sf deploy, sfdx deploy, or any Production write capability
 - Output is markdown proposal only
-- Operator executes manually after Sean's explicit "proceed" request
+- Operator executes manually after the operator's explicit "proceed" request
 - All steps are concrete (exact CLI commands, not vague instructions)
 """
 
@@ -55,7 +55,7 @@ def load_env(env_file: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Production Promotion Plan: propose safe Production deployment plan (PROPOSAL ONLY, requires explicit Sean approval)"
+        description="Production Promotion Plan: propose safe Production deployment plan (PROPOSAL ONLY, requires explicit operator approval)"
     )
     parser.add_argument("--key", required=True, help="Jira issue key (e.g., HEAL-33150)")
     parser.add_argument(
@@ -120,8 +120,8 @@ def main() -> int:
 
 This skill PROPOSES a promotion plan only. It NEVER executes any Production changes.
 - CaseOps has ZERO authority to write to Production
-- Only Sean can authorize Production deployment via explicit request
-- You MUST state on every plan: "Awaiting Sean's explicit authorization. Do not execute without approval."
+- Only the operator can authorize Production deployment via explicit request
+- You MUST state on every plan: "Awaiting the operator's explicit authorization. Do not execute without approval."
 
 ## Issue: {key}
 
@@ -206,12 +206,12 @@ Return ONLY a JSON code block (no preamble, no explanation):
 
 ```json
 {{
-  "promotion_plan": "CRITICAL: Awaiting Sean's explicit authorization. Do not execute without approval.\\n\\n# Production Promotion Plan: {key}\\n\\n..."
+  "promotion_plan": "CRITICAL: Awaiting the operator's explicit authorization. Do not execute without approval.\\n\\n# Production Promotion Plan: {key}\\n\\n..."
 }}
 ```
 
 CRITICAL RULES:
-1. Start with "⚠️ Awaiting Sean's explicit authorization. Do not execute without approval."
+1. Start with "⚠️ Awaiting the operator's explicit authorization. Do not execute without approval."
 2. Every step must be concrete (exact command, not "use Gearset" or "contact admin")
 3. Rollback must be as detailed as promotion
 4. All double quotes in markdown escaped as \", all newlines as \\n
@@ -268,7 +268,7 @@ Always include: exact CLI commands, validation steps, and explicit approval requ
                 file=sys.stderr,
             )
             promotion_plan_text = (
-                "⚠️ Awaiting Sean's explicit authorization. Do not execute without approval.\n\n"
+                "⚠️ Awaiting the operator's explicit authorization. Do not execute without approval.\n\n"
                 + promotion_plan_text
             )
 

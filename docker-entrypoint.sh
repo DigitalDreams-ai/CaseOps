@@ -8,20 +8,33 @@
 
 env_file_path="${CASEOPS_ENV_FILE:-${CASEOPS_JIRA_ENV_FILE:-/app/.env}}"
 
+load_env_value_if_unset() {
+  key="$1"
+  current_value="$(eval "printf '%s' \"\${$key:-}\"")"
+  if [ -n "$current_value" ] || [ ! -f "$env_file_path" ]; then
+    return
+  fi
+  file_value="$(grep -m1 "^${key}=" "$env_file_path" | cut -d= -f2- | tr -d '\r')"
+  if [ -n "$file_value" ]; then
+    export "$key=$file_value"
+  fi
+}
+
 # Load selected runtime secrets from the mounted env file. Do not source the
 # entire file; values such as Windows paths and comments can break shell parsing.
-if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && [ -f "$env_file_path" ]; then
-  CLAUDE_CODE_OAUTH_TOKEN="$(grep -m1 '^CLAUDE_CODE_OAUTH_TOKEN=' "$env_file_path" | cut -d= -f2-)"
-  export CLAUDE_CODE_OAUTH_TOKEN
-fi
+load_env_value_if_unset "CLAUDE_CODE_OAUTH_TOKEN"
+load_env_value_if_unset "CASEOPS_LLM_AUTH"
 
 # Initialize Claude Code settings directory.
 # Use a guaranteed writable home for Claude metadata and avoid relying on inherited
 # HOME values from the host/legacy shells when running as a numeric user.
 caseops_home="${HOME:-/home/caseops}"
-if [ -z "$caseops_home" ] || [ "$caseops_home" = "/" ] || [ "$caseops_home" = "//" ] || [ "$caseops_home" = "C:Userssean" ]; then
+if [ -z "$caseops_home" ] || [ "$caseops_home" = "/" ] || [ "$caseops_home" = "//" ]; then
   caseops_home="/home/caseops"
 fi
+case "$caseops_home" in
+  C:Users*) caseops_home="/home/caseops" ;;
+esac
 export HOME="$caseops_home"
 mkdir -p "$HOME/.claude" || true
 
@@ -46,15 +59,16 @@ while true; do
 
   # Re-load selected runtime secrets in case /app/.env changed before a restart.
   env_file_path="${CASEOPS_ENV_FILE:-${CASEOPS_JIRA_ENV_FILE:-/app/.env}}"
-  if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && [ -f "$env_file_path" ]; then
-    CLAUDE_CODE_OAUTH_TOKEN="$(grep -m1 '^CLAUDE_CODE_OAUTH_TOKEN=' "$env_file_path" | cut -d= -f2-)"
-    export CLAUDE_CODE_OAUTH_TOKEN
-  fi
+  load_env_value_if_unset "CLAUDE_CODE_OAUTH_TOKEN"
+  load_env_value_if_unset "CASEOPS_LLM_AUTH"
 
   # Reinitialize Claude Code settings directory.
-  if [ -z "$caseops_home" ] || [ "$caseops_home" = "/" ] || [ "$caseops_home" = "//" ] || [ "$caseops_home" = "C:Userssean" ]; then
+  if [ -z "$caseops_home" ] || [ "$caseops_home" = "/" ] || [ "$caseops_home" = "//" ]; then
     caseops_home="/home/caseops"
   fi
+  case "$caseops_home" in
+    C:Users*) caseops_home="/home/caseops" ;;
+  esac
   export HOME="$caseops_home"
   mkdir -p "$HOME/.claude" || true
 

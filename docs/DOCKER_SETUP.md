@@ -70,6 +70,8 @@ Fill in:
 
 You can leave Salesforce and Claude tokens blank initially and paste them through Settings.
 
+Upgrade note: CaseOps now uses `.env` as the single env filename. If an older local setup has a Jira-specific env filename, rename or copy it to `.env` before starting.
+
 ## Start
 
 ```bash

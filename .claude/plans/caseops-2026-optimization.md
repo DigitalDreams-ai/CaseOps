@@ -1,6 +1,6 @@
 # CaseOps 2026 Application-Layer Optimization Plan
 
-**Owner:** Sean  
+**Owner:** CaseOps maintainer
 **Scope:** Application-layer optimization (batch, cache, pre-compute, confidence flags)  
 **Constraint:** Dev/test only. No Jira writes. No production deployment.  
 **Timeline:** Single session  
@@ -184,7 +184,7 @@ If any phase fails:
 
 ## Architect Decision Points
 
-If uncertain, ask: **"What would Sean prioritize—speed or simplicity here?"**
+If uncertain, ask: **"What would the CaseOps maintainer prioritize—speed or simplicity here?"**
 
 ### Known Decisions
 - Batch size: prioritize throughput over latency (12 chosen for safety)

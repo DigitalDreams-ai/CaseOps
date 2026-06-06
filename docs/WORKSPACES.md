@@ -32,6 +32,8 @@ python app.py --workspace job2 --outputs-dir .local/job2/outputs --env-file .loc
 
 `.local/` should stay ignored.
 
+CaseOps uses `.env` as the single default env filename. Workspaces isolate outputs and cache state; they do not automatically select a different env file. Use `--env-file` only when you intentionally want a custom local path.
+
 ## Isolation
 
 Each workspace should have its own:

@@ -23,11 +23,11 @@ These are non-negotiable:
 5. **The org alias in `CASEOPS_PRODUCTION_READ_ORG` is read-only.**
 6. **Do not use frontdoor/magic links for API, SOQL, retrieve, deploy, or tests.**
 7. **Do not use legacy `sfdx force:*`, routine `package.xml`, or routine `--manifest`.**
-8. **Do not sync to NAS, restart Docker, rebuild Docker, or mutate remote deployment unless Sean explicitly asks in the current conversation.**
+8. **Do not sync to NAS, restart Docker, rebuild Docker, or mutate remote deployment unless the operator explicitly asks in the current conversation.**
 
 If there is any uncertainty, ask yourself:
 
-**"What would Sean's Salesforce/Anthropic architect do?"**
+**"What would a Salesforce/Anthropic architect do?"**
 
 Then choose the conservative path that prevents Jira writes and Production writes.
 

@@ -1,9 +1,9 @@
 # CaseOps API
 
-Base URL on NAS:
+Base URL in Docker:
 
 ```text
-http://10.0.1.10:5350
+http://localhost:5350
 ```
 
 Base URL locally:

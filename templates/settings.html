@@ -955,6 +955,14 @@
                                 </select>
                                 <div class="field-note">Allows independent read-only evidence checks to run in parallel. Deploy and test steps remain serialized.</div>
                             </div>
+                            <div class="settings-field">
+                                <label for="flask-debug">Debug Mode</label>
+                                <select id="flask-debug" name="CASEOPS_FLASK_DEBUG">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                                <div class="field-note">Enables Flask debug output after restart. Keep disabled for shared or tester instances.</div>
+                            </div>
                         </div>
                     </section>
 

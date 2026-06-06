@@ -2,7 +2,7 @@
 
 Use this prompt in a fresh Codex session when you want the agent to implement the remaining work in:
 
-`C:\Users\sean\Projects\Salesforce\DigitalDreams\CaseOps\docs\PIPELINE_FRAMEWORK_SUCCESS_PLAN.md`
+`docs/PIPELINE_FRAMEWORK_SUCCESS_PLAN.md`
 
 ---
 
@@ -12,7 +12,7 @@ You are Codex working in the CaseOps repository.
 
 Your objective is to implement all remaining work in:
 
-`C:\Users\sean\Projects\Salesforce\DigitalDreams\CaseOps\docs\PIPELINE_FRAMEWORK_SUCCESS_PLAN.md`
+`docs/PIPELINE_FRAMEWORK_SUCCESS_PLAN.md`
 
 Treat that file as the source of truth. Read it first. Re-read it before each phase. Every decision, edit, test, and validation must map back to a phase, acceptance criterion, stop rule, or definition of done in that plan.
 
@@ -22,14 +22,14 @@ Treat that file as the source of truth. Read it first. Re-read it before each ph
 2. Use subagents for focused discovery, implementation review, test planning, and validation.
 3. Keep the parent Codex agent as the orchestrator. The parent owns final integration, sequencing, risk decisions, and the final verification summary.
 4. Subagents must return concise results with file references, risks, and recommended edits. They must not dump large file contents.
-5. If any subagent is unsure, it must ask itself exactly: **"What would Sean's Salesforce/Anthropic architect do?"** Then it must make the conservative architecture-quality decision and explain it.
+5. If any subagent is unsure, it must ask itself exactly: **"What would a Salesforce/Anthropic architect do?"** Then it must make the conservative architecture-quality decision and explain it.
 6. Do not implement broad rewrites. Use thin vertical slices.
 7. Do not add regex exceptions when the plan calls for machine-readable state.
 8. Do not use Production Salesforce writes, Jira writes, or destructive Git commands.
 9. Do not use frontdoor/magic links for API, SOQL, retrieve, deploy, or tests.
 10. Do not use legacy `sfdx force:*`, routine `package.xml`, or routine `--manifest`.
 11. Use modern `sf` CLI only for Salesforce CLI work.
-12. Do not sync to NAS, rebuild Docker, restart Docker, or mutate remote deployment unless Sean explicitly asks for that step in the current conversation.
+12. Do not sync to NAS, rebuild Docker, restart Docker, or mutate remote deployment unless the operator explicitly asks for that step in the current conversation.
 
 ## Required First Actions
 
@@ -77,7 +77,7 @@ Return:
 - tests to add,
 - file references.
 Do not edit files unless explicitly assigned.
-If unsure, ask: "What would Sean's Salesforce/Anthropic architect do?" Then choose the conservative path.
+If unsure, ask: "What would a Salesforce/Anthropic architect do?" Then choose the conservative path.
 ```
 
 ## Required Subagents
@@ -260,7 +260,7 @@ Return:
 - acceptance criteria still unmet,
 - tests not run,
 - whether implementation matches the plan,
-- whether any decision should be revisited by asking: **"What would Sean's Salesforce/Anthropic architect do?"**
+- whether any decision should be revisited by asking: **"What would a Salesforce/Anthropic architect do?"**
 
 ## Implementation Rules For The Parent Codex Agent
 
@@ -272,7 +272,7 @@ The parent agent must:
 4. Avoid touching unrelated files.
 5. Preserve user/NAS/appdata path rules.
 6. After each phase, update the checklist and run targeted validation.
-7. Keep changes local unless Sean explicitly asks for NAS sync/restart/rebuild.
+7. Keep changes local unless the operator explicitly asks for NAS sync/restart/rebuild.
 8. Never mark the work complete until the plan's definition of done is honestly satisfied or remaining blockers are clearly listed.
 
 ## Preferred Implementation Sequence

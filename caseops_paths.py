@@ -11,6 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 
 def default_jira_env_file() -> str:
     """Return the env file path used by local helper scripts."""
+    # 2026-06-06 compatibility alias; remove after deployments have moved to CASEOPS_ENV_FILE.
     return (
         os.environ.get("CASEOPS_ENV_FILE")
         or os.environ.get("CASEOPS_JIRA_ENV_FILE")

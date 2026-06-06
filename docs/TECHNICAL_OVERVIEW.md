@@ -49,7 +49,7 @@ CaseOps stores Salesforce access and refresh tokens in the active env file and a
 Important env keys:
 
 ```env
-CASEOPS_PRODUCTION_READ_ORG=prod-read
+CASEOPS_PRODUCTION_READ_ORG=yourcompany-prod
 CASEOPS_SANDBOX_TARGET_ORG=sandbox
 CASEOPS_PRODUCTION_INSTANCE_URL=https://login.salesforce.com
 CASEOPS_SANDBOX_INSTANCE_URL=https://test.salesforce.com
@@ -161,7 +161,7 @@ The orchestrator selects relevant files by keyword matching against the active i
 
 Settings writes use the active env file or mounted outputs:
 
-- Salesforce and Claude tokens: `/app/.env`
+- Salesforce and Claude tokens: `/data/.env` in Docker, or the active local `.env` path
 - Canned messages: `outputs/settings/canned-messages.json`
 - Org knowledge: `outputs/org-knowledge/`
 
@@ -174,3 +174,17 @@ outputs/pipeline-logs/
 ```
 
 Log sanitization strips ANSI terminal control sequences and redacts Salesforce access-token patterns.
+
+## Validation
+
+Run the default test suite from the repo root:
+
+```bash
+python -m unittest discover -q
+```
+
+For a faster targeted pass while working on pipeline state or packaging hygiene:
+
+```bash
+python -m unittest tests.test_no_hardcoded_org_refs tests.test_pipeline_state_tags -q
+```

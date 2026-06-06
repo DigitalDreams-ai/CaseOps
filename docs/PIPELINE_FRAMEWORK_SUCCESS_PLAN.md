@@ -352,8 +352,8 @@ If parallelism makes logs or state harder to reason about, revert it.
 
 - `/api/settings/status` remains fast.
 - Claude and Salesforce preflight run with `HOME=/home/caseops`.
-- Appdata paths are under `/volume1/docker/appdata/caseops/instance1/outputs`.
-- No runtime output is written under `/volume1/docker/stacks/caseops/instance1`.
+- Appdata paths are under the mounted `/data/outputs` directory.
+- No runtime output is written under the compose stack directory or repo root.
 
 ## Risks
 

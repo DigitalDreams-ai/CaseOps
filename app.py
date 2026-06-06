@@ -4062,6 +4062,7 @@ def _claude_process_env() -> dict[str, str]:
     env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
     env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")
     env["CASEOPS_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
+    # 2026-06-06 compatibility alias; remove after deployments have moved to CASEOPS_ENV_FILE.
     env["CASEOPS_JIRA_ENV_FILE"] = env["CASEOPS_ENV_FILE"]
     if TEMP_ROOT:
         temp_root = Path(TEMP_ROOT)
@@ -5120,6 +5121,7 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
         env["COLUMNS"] = "999"  # Prevent terminal wrapping in subprocess output
         env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")  # Instance-specific Jira output dir
         env["CASEOPS_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
+        # 2026-06-06 compatibility alias; remove after deployments have moved to CASEOPS_ENV_FILE.
         env["CASEOPS_JIRA_ENV_FILE"] = env["CASEOPS_ENV_FILE"]
         if TEMP_ROOT:
             env["CASEOPS_TEMP_DIR"] = str(TEMP_ROOT)
@@ -5233,10 +5235,15 @@ def _do_stream_anthropic_messages_api(prompt: str, run_key: str, issue_key: str 
         buf = ""
         full_response = ""
         token_usage = {field: 0 for field in _TOKEN_USAGE_FIELDS}
-        system_prompt = """You are CaseOps, a Jira triage and issue investigation assistant owned by Sean.
+        operator_name = (
+            os.environ.get("CASEOPS_EXAMPLE_ASSIGNEE_NAME")
+            or os.environ.get("CASEOPS_DEFAULT_ACTOR")
+            or "the operator"
+        ).strip()
+        system_prompt = f"""You are CaseOps, a Jira triage and issue investigation assistant supporting {operator_name}.
 
 ## Your voice
-Sound like Sean, not like a perfect LLM. Be direct, concrete, human.
+Sound like a practical support operator, not like a perfect LLM. Be direct, concrete, human.
 
 ## Message formats: two audiences
 
@@ -5270,7 +5277,7 @@ Lean root-cause memo: not agent chatter. Intended as paste-ready Jira internal t
 - Where the real gap is
 - Why the symptom shows up
 - Keep it short. Full evidence stays in Investigation section.
-- Include Action: {what Sean does next} if applicable.
+- Include Action: what the operator does next, if applicable.
 
 ## Your task
 Analyze the issue. Draft both formats. If you don't have enough info for a solid Suggested reply, ask clarifying questions instead of guessing. Better to ask than to send weak prose."""
@@ -5656,6 +5663,7 @@ def _sync_issue_from_jira_now(key: str, *, timeout: int = 120) -> tuple[bool, st
     ]
     env = os.environ.copy()
     env["CASEOPS_ENV_FILE"] = env_file
+    # 2026-06-06 compatibility alias; remove after deployments have moved to CASEOPS_ENV_FILE.
     env["CASEOPS_JIRA_ENV_FILE"] = env_file
     try:
         proc = subprocess.run(
@@ -7710,6 +7718,7 @@ def api_get_settings():
         "CASEOPS_GLOBAL_MAX_PARALLEL",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
+        "CASEOPS_FLASK_DEBUG",
         "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
         "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
         "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
@@ -7719,6 +7728,7 @@ def api_get_settings():
         "CASEOPS_GLOBAL_MAX_PARALLEL": "1",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS": "false",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES": "false",
+        "CASEOPS_FLASK_DEBUG": "false",
         "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS": "240",
         "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS": "1200",
     }
@@ -7747,6 +7757,7 @@ def api_post_settings():
                 "CASEOPS_GLOBAL_MAX_PARALLEL",
                 "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
                 "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
+                "CASEOPS_FLASK_DEBUG",
                 "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
                 "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
                 "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
@@ -8349,6 +8360,7 @@ if __name__ == "__main__":
 
     env_override = (
         os.environ.get("CASEOPS_ENV_FILE")
+        # 2026-06-06 compatibility alias; remove after deployments have moved to CASEOPS_ENV_FILE.
         or os.environ.get("CASEOPS_JIRA_ENV_FILE")
         or ""
     ).strip()
@@ -8363,6 +8375,7 @@ if __name__ == "__main__":
         _load_jira_env(env_file_path)
 
     os.environ["CASEOPS_ENV_FILE"] = str(env_file_path)
+    # 2026-06-06 compatibility alias; remove after deployments have moved to CASEOPS_ENV_FILE.
     os.environ["CASEOPS_JIRA_ENV_FILE"] = str(env_file_path)
 
     # Initialize instance-specific runtime and metadata workspaces.
@@ -8414,7 +8427,14 @@ if __name__ == "__main__":
 
     # Validate .env file exists and is readable
     if not env_file_path.exists():
-        raise RuntimeError(f".env file does not exist: {env_file_path}")
+        legacy_env = env_file_path.parent / (".env" + ".jira")
+        migration_hint = ""
+        if env_file_path.name == ".env" and legacy_env.exists():
+            migration_hint = (
+                f"\nUpgrade note: CaseOps now uses `.env` as the single env file. "
+                f"Rename `{legacy_env.name}` to `.env`, or start with `--env-file` for a custom path."
+            )
+        raise RuntimeError(f".env file does not exist: {env_file_path}{migration_hint}")
     if not env_file_path.is_file():
         raise RuntimeError(f".env is not a file: {env_file_path}")
 
@@ -8508,4 +8528,10 @@ if __name__ == "__main__":
     print(f"[OK] Metadata cache: {_metadata_workspace_dirs()['cache_root']}")
 
     # use_reloader=False prevents the dev reloader from killing SSE streams
-    app.run(debug=True, threaded=True, host="0.0.0.0", port=_args.port, use_reloader=False)
+    app.run(
+        debug=_env_flag("CASEOPS_FLASK_DEBUG", False),
+        threaded=True,
+        host="0.0.0.0",
+        port=_args.port,
+        use_reloader=False,
+    )
