@@ -46,7 +46,7 @@ Magic links are pre-authenticated Salesforce browser URLs that allow CaseOps sub
 Used only for **read-only visual Production UI inspection** when CLI/SOQL cannot answer the question. Use `sf` CLI for Steps 5 and 6 metadata retrieval.
 
 ```
-CASEOPS_PRODUCTION_MAGIC_LINK=https://your-production-domain.my.salesforce.com/secur/frontdoor.jsp?sid=...
+CASEOPS_PRODUCTION_MAGIC_LINK=<production visual-inspection login URL>
 ```
 
 **How to get:**
@@ -62,7 +62,7 @@ CASEOPS_PRODUCTION_MAGIC_LINK=https://your-production-domain.my.salesforce.com/s
 Used only for **visual Sandbox UI inspection** or UI-only actions. Use `sf project deploy`, `sf data query`, and Apex test commands for Step 9 deploy/test.
 
 ```
-CASEOPS_SANDBOX_MAGIC_LINK=https://your-sandbox-domain.sandbox.my.salesforce.com/secur/frontdoor.jsp?sid=...
+CASEOPS_SANDBOX_MAGIC_LINK=<sandbox visual-inspection login URL>
 ```
 
 **How to get:**

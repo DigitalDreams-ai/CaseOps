@@ -18,7 +18,7 @@ description: Drafts internal implementation notes, Engineering handoff notes, an
 Jira drafts contain **two separate sections**, each with distinct purpose and voice:
 
 ### Suggested reply (customer-facing, for portal)
-- **Audience:** Issue reporter (e.g., Carlin in Product)
+- **Audience:** Issue reporter (for example, a product or support stakeholder)
 - **Content:** What you found → what it means for them → next step or question
 - **Tone:** Human, direct, no corporate fluff
 - **Example:** "The validation rule was blocking that update. I fixed it in our test environment and confirmed it works."

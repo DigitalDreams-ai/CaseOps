@@ -22,6 +22,7 @@ HEAL-*_pipelineLogs.txt
 __pycache__/
 *.py[cod]
 .pytest_cache/
+tests/
 caseops/__pycache__/
 caseops/**/__pycache__/
 caseops/**/*.pyc
@@ -119,18 +120,16 @@ outputs/pipeline-logs/
 .project
 .settings/
 
-# Legacy local multi-instance state directories.
+# Legacy local runtime state directories.
 instance1/
 instance2/
 
-# Local assistant/session data (track CaseOps Claude Code skill stub under .claude/skills/)
-.claude/*
-!.claude/skills/
-!.claude/skills/jira-salesforce-fix-pipeline/
-!.claude/skills/jira-salesforce-fix-pipeline/SKILL.md
-!.claude/plans/
-!.claude/plans/*.md
+# Local assistant/session data. CaseOps source skills live only under skills/.
+.claude/
 .playwright-mcp/
+
+# Local planning, architecture, audit, and implementation notes.
+docs/planning/
 
 # OS files
 .DS_Store

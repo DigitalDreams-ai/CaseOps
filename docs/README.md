@@ -10,21 +10,7 @@ Start with the shareable docs below. They are written for a tester or friend who
 - [Docker Setup](DOCKER_SETUP.md) - compose, env file, update, logs, and backups.
 - [Project Overview](PROJECT_OVERVIEW.md) - what CaseOps is and how the pipeline works.
 
-## Maintainer Reference
-
-These docs are useful for development and architecture work, but they are not required for a tester:
-
-- [Architecture](ARCHITECTURE.md)
-- [Technical Overview](TECHNICAL_OVERVIEW.md)
-- [API](API.md)
-- [Agents](AGENTS.md)
-- [Pipeline Architecture](PIPELINE_ARCHITECTURE.md)
-- [Instance Routing](INSTANCE_ROUTING.md)
-- [Workspaces](WORKSPACES.md)
-- [Nightly Setup](NIGHTLY_SETUP.md)
-- [Deprecated Components](DEPRECATED.md)
-
-Planning prompts and implementation plans are maintainer-only. Do not include them in a shared tester package.
+Maintainer-only planning, architecture, and debug notes are kept out of Git under `docs/planning/`.
 
 ## Current Non-Negotiables
 

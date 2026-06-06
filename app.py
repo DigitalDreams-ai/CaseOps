@@ -1647,7 +1647,7 @@ def _attempt_token_refresh(env_file_path: Path, env_content: str, prod_token_mat
 def _instance_cache_key(key: str) -> str:
     """Generate instance-specific cache key to prevent cross-instance contamination.
 
-    Prefixes key with current WORKSPACE so parallel instances don't share cache entries.
+    Prefixes key with current WORKSPACE so separate runs don't share cache entries.
     """
     workspace = os.environ.get("CASEOPS_WORKSPACE", "default")
     return f"{workspace}:{key}"
@@ -1661,11 +1661,11 @@ def _invalidate_jira_summary_cache(key: str) -> None:
 def _validate_instance_path(path: Path, operation: str = "write") -> None:
     """Hard rule: Prevent writes/operations to shared directories.
 
-    CRITICAL for multi-instance isolation. Raises RuntimeError if path violates
-    instance-routing rules.
+    CRITICAL for Docker data isolation. Raises RuntimeError if path violates
+    configured data-directory rules.
 
     Allowed patterns:
-    - OUTPUTS / ... (instance-specific outputs)
+    - OUTPUTS / ... (configured outputs directory)
     - skills/ ... (shared read-only)
     - static/ ... (shared read-only)
     - templates/ ... (shared read-only)
@@ -5350,7 +5350,7 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                 _log_emit_line(run_key, "Claude Code OAuth token configured: CLAUDE_CODE_OAUTH_TOKEN")
             else:
                 _log_emit_line(run_key, "WARNING: Claude Code auth token not configured.")
-                _log_emit_line(run_key, "Run /setup/claude-login and paste output from `claude setup-token`.")
+                _log_emit_line(run_key, "Open Settings > Claude and paste output from `claude setup-token`.")
 
         env = _claude_process_env()
         env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
@@ -5784,7 +5784,7 @@ def _issue_pipeline_runtime_ready(run_key: str) -> bool:
         except (FileNotFoundError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
             _log_emit_line(run_key, "ERROR: `claude` CLI not found or not responding")
             _log_emit_line(run_key, "       CASEOPS_LLM_AUTH=claude_code requires Claude Code installed.")
-            _log_emit_line(run_key, "       Verify: `claude --version` runs, then use `/setup/claude-login` with `claude setup-token`.")
+            _log_emit_line(run_key, "       Verify: `claude --version` runs, then open Settings > Claude and paste output from `claude setup-token`.")
             return False
 
     if caseops_llm_auth_uses_anthropic_api_key():
@@ -6101,10 +6101,10 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
     skill_md = (ROOT / "skills" / "jira-salesforce-fix-pipeline" / "SKILL.md").resolve()
     skill_line = str(skill_md) if skill_md.is_file() else f"(missing) {skill_md}"
 
-    # Instance-specific outputs directory (may differ from ROOT/outputs in multi-instance setup)
+    # Configured outputs directory, normally /data/outputs in Docker.
     outputs_dir_relative = OUTPUTS.relative_to(ROOT).as_posix() if OUTPUTS.is_relative_to(ROOT) else str(OUTPUTS)
 
-    # Instance-specific env file (may differ from ROOT/.env in multi-instance setup)
+    # Configured env file, normally /data/.env in Docker.
     env_file_path = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
     env_file_relative = Path(env_file_path).relative_to(ROOT).as_posix() if Path(env_file_path).is_relative_to(ROOT) else env_file_path
 
@@ -6122,21 +6122,21 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"  {skill_line}\n"
         f"Use `references/sub-agent-prompts.md`, `references/safety-policy.md`, `references/quality-checklist.md`, "
         f"and `assets/` under that skill when the playbook points to them.\n\n"
-        f"## Instance Output Directory\n"
-        f"**CRITICAL for multi-instance deployments:** All file paths in this run must use:\n"
+        f"## CaseOps Output Directory\n"
+        f"**CRITICAL for Docker runs:** All file paths in this run must use:\n"
         f"`{outputs_dir_relative}/` instead of the generic `outputs/` references in the playbook.\n"
         f"Example: Instead of `outputs/investigations/{{KEY}}.md`, use `{outputs_dir_relative}/investigations/{{KEY}}.md`\n\n"
-        f"## Instance Configuration (.env)\n"
-        f"**CRITICAL for multi-instance deployments:** Use the instance-specific configuration file:\n"
+        f"## CaseOps Configuration (.env)\n"
+        f"**CRITICAL for Docker runs:** Use the active configuration file:\n"
         f"- Read Jira credentials and Salesforce orgs from: `{env_file_relative}`\n"
-        f"- Do NOT read from `ROOT/.env` (this is another instance's config)\n"
+        f"- Do NOT read from `ROOT/.env`; Docker uses `/data/.env`.\n"
         f"- Environment variable available: `CASEOPS_ENV_FILE={env_file_path}`\n"
         f"- Canonical Salesforce aliases: Production uses `CASEOPS_PRODUCTION_READ_ORG`; Sandbox uses `CASEOPS_SANDBOX_TARGET_ORG`.\n"
         f"- Do not invent generic `ORG`, `PROD_ORG`, or `SANDBOX_ORG` variables unless you assign them from the canonical aliases in the same shell command.\n"
         f"- Do not `source {env_file_relative}` in shell commands. Some values contain spaces and are not shell-safe. CaseOps already exports the needed runtime env vars to this process.\n"
         f"- If a command needs local aliases, assign them from exported vars inline, e.g. `PROD_ORG=\"$CASEOPS_PRODUCTION_READ_ORG\"; SANDBOX_ORG=\"$CASEOPS_SANDBOX_TARGET_ORG\"; ...`.\n\n"
         f"## Salesforce Metadata Workspace\n"
-        f"**CRITICAL for multi-instance deployments and clean rollback:** Do not use root-level `temp*`, "
+        f"**CRITICAL for clean rollback:** Do not use root-level `temp*`, "
         f"`retrieve*`, `deploy*`, or `metadata*` directories. Use this persistent workspace contract:\n"
         f"- Raw Production retrievals, read-only cache: `${{CASEOPS_METADATA_RAW_PROD_DIR}}/{key}/`\n"
         f"- Issue workspace: `${{CASEOPS_METADATA_WORKSPACES_DIR}}/{key}/`\n"
@@ -6203,7 +6203,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"\n{_salesforce_browser_prompt_section()}"
         f"## CaseOps Output Files (update these when your task is complete)\n"
         f"You can read and write these files directly for issue {key}:\n"
-        f"(Use `{outputs_dir_relative}/` prefix for multi-instance deployments)\n"
+        f"(Use `{outputs_dir_relative}/` prefix for Docker/persistent output paths)\n"
         f"\n"
         f"| File | Purpose | When to Update |\n"
         f"|------|---------|----------------|\n"
@@ -8052,12 +8052,6 @@ def api_settings_status():
     return jsonify(status)
 
 
-@app.get("/setup/claude-login")
-def setup_claude_login():
-    """Serve Claude Code token setup form."""
-    return render_template("claude-token-setup.html")
-
-
 @app.post("/api/setup/claude-credentials")
 def api_setup_claude_credentials():
     """Save Claude Code OAuth token generated by `claude setup-token`."""
@@ -8497,21 +8491,18 @@ if __name__ == "__main__":
     print(f"[OK] Startup validation PASSED - instance isolation ready")
     print(f"{'='*70}\n")
 
-    # Initialize skill registry (loads all skills once at startup)
-    # Load order: .claude first (stubs), then skills/ (full versions with guides, wins on duplicate names)
+    # Initialize skill registry (loads all skills once at startup).
+    # skills/ is the only canonical CaseOps skill source.
+    # Claude runtime state and must not influence app behavior.
     print(f"Initializing skill registry...")
-    skill_registry.load_all_skills(
-        ROOT / ".claude" / "skills",
-        ROOT / "skills"
-    )
+    skill_registry.load_all_skills(ROOT / "skills")
     print(f"[OK] Skill registry loaded: {skill_registry.skill_count()} skills")
     print(f"     Skills: {', '.join(skill_registry.list_skills())}\n")
 
     # Register skill paths (pass to subprocesses via env vars)
     print(f"Registering skill paths for subprocess environment...")
-    for skill_dir in [ROOT / "skills", ROOT / ".claude" / "skills"]:
-        if not skill_dir.exists():
-            continue
+    skill_dir = ROOT / "skills"
+    if skill_dir.exists():
         for skill_path in skill_dir.iterdir():
             if skill_path.is_dir() and (skill_path / "SKILL.md").exists():
                 skill_name = skill_path.name
@@ -8524,7 +8515,7 @@ if __name__ == "__main__":
     if claude_oauth_token:
         print("[OK] Claude Code OAuth token configured")
     else:
-        print("[WARN] Claude Code OAuth token not configured - use /setup/claude-login")
+        print("[WARN] Claude Code OAuth token not configured - open Settings > Claude")
 
     # Check Salesforce tokens and auto-refresh if needed (8h TTL, auto-refresh at 4h)
     _check_and_refresh_salesforce_tokens(env_file_path)
