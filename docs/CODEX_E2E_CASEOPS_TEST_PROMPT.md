@@ -19,8 +19,8 @@ These are non-negotiable:
 1. **NEVER write to Jira.**
 2. **NEVER modify Jira issue status, comments, fields, assignee, tags, or metadata.**
 3. **NEVER write to Salesforce Production.**
-4. **NEVER deploy, update data, assign permissions, run mutating Apex, or run any mutating command against Production alias `10xhealth`.**
-5. **Production alias `10xhealth` is read-only.**
+4. **NEVER deploy, update data, assign permissions, run mutating Apex, or run any mutating command against the Production alias from `CASEOPS_PRODUCTION_READ_ORG`.**
+5. **The org alias in `CASEOPS_PRODUCTION_READ_ORG` is read-only.**
 6. **Do not use frontdoor/magic links for API, SOQL, retrieve, deploy, or tests.**
 7. **Do not use legacy `sfdx force:*`, routine `package.xml`, or routine `--manifest`.**
 8. **Do not sync to NAS, restart Docker, rebuild Docker, or mutate remote deployment unless Sean explicitly asks in the current conversation.**
@@ -73,14 +73,14 @@ Do not stop only because an issue needs normal Salesforce/Jira human action. Sto
 
 ## Forbidden Commands And Actions
 
-Never run commands that write to Production alias `10xhealth`, including but not limited to:
+Never run commands that write to the Production alias from `CASEOPS_PRODUCTION_READ_ORG`, including but not limited to:
 
-- `sf project deploy ... -o 10xhealth`
-- `sf data create ... -o 10xhealth`
-- `sf data update ... -o 10xhealth`
-- `sf data delete ... -o 10xhealth`
-- `sf apex run ... -o 10xhealth`
-- permission assignment commands against `10xhealth`
+- `sf project deploy ... -o "$CASEOPS_PRODUCTION_READ_ORG"`
+- `sf data create ... -o "$CASEOPS_PRODUCTION_READ_ORG"`
+- `sf data update ... -o "$CASEOPS_PRODUCTION_READ_ORG"`
+- `sf data delete ... -o "$CASEOPS_PRODUCTION_READ_ORG"`
+- `sf apex run ... -o "$CASEOPS_PRODUCTION_READ_ORG"`
+- permission assignment commands against `CASEOPS_PRODUCTION_READ_ORG`
 - any REST call that mutates Production
 
 Never call Jira write APIs:
