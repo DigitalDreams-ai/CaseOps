@@ -982,6 +982,7 @@ class PipelineStateTagTests(unittest.TestCase):
         self.assertTrue(sfdx_project.is_file())
         self.assertIn("COPY --chown=1027:100 docker/sfdx-project.json /app/sfdx-project.json", dockerfile)
         self.assertIn("/app/force-app/main/default", dockerfile)
+        self.assertNotIn("/app/instance1", dockerfile)
         self.assertIn("ENV CASEOPS_VERSION=0.1.8", dockerfile)
 
         payload = json.loads(sfdx_project.read_text(encoding="utf-8"))

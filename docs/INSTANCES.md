@@ -1,49 +1,79 @@
 # CaseOps Instances
 
-CaseOps supports multiple instances by running the same codebase with different outputs and env files.
+CaseOps supports multiple instances by running the same image with different compose stack directories, ports, env files, and appdata mounts.
 
-The active pilot uses a single NAS instance:
+The current Docker model does not require repo-local `instance1/` or `instance2/` directories. Runtime state should live in a mounted appdata directory and appear inside the container as `/data`.
+
+## Docker Instance Pattern
+
+Example host layout:
 
 ```text
-instance1/
+caseops-primary/
+  docker-compose.yml
+  .env
+  caseops-data/
+    outputs/
+caseops-test/
+  docker-compose.yml
+  .env
+  caseops-data/
+    outputs/
+```
+
+Each compose file should map its appdata to `/data`:
+
+```yaml
+volumes:
+  - ./caseops-data:/data
+  - ./.env:/data/.env
+```
+
+Each instance should have a unique host port:
+
+```yaml
+ports:
+  - "5350:8080"
+```
+
+## Isolation
+
+Each container has separate:
+
+- `.env` file,
+- `/data/.sf` and `/data/.sfdx`,
+- `/data/outputs`,
+- Jira manifest and issue artifacts,
+- metadata cache and workspaces,
+- pipeline logs,
+- Sandbox allowlist settings.
+
+## Runtime Paths
+
+Inside the container:
+
+```text
+/data/
+  .env
+  .sf/
+  .sfdx/
   outputs/
     metadata-cache/
     metadata-workspaces/
 ```
 
-## Local Multi-Instance Pattern
+Temporary files should use `/tmp/caseops`.
 
-Example:
+## Local Development
 
-```powershell
-python app.py --workspace instance1 --outputs-dir instance1/outputs --env-file instance1/.env.jira --port 5000
-python app.py --workspace instance2 --outputs-dir instance2/outputs --env-file instance2/.env.jira --port 5351
-```
-
-Each process has separate:
-
-- output files
-- Jira manifest
-- Salesforce tokens
-- metadata workspace
-- pipeline logs
-
-## NAS Pilot
-
-The NAS deployment currently runs one container:
-
-```text
-caseops -> instance1
-```
-
-Add more containers only after deciding how to isolate ports, env files, outputs, and Sandbox allowlists.
+For local non-Docker development, prefer `outputs/` in the repo root or a temp/appdata path passed with `--outputs-dir`. Do not commit local runtime directories.
 
 ## Reset One Instance
 
 Stop the instance first, then archive or remove its state:
 
 ```bash
-tar czf caseops-instance1-backup.tgz instance1/outputs
+tar czf caseops-backup.tgz caseops-data
 ```
 
 Do not delete state while a pipeline is active.

@@ -1,15 +1,36 @@
 # CaseOps Workspaces
 
-Workspaces are local-development support for running more than one CaseOps process from the same repo.
+Workspaces are a logical label for separating cache keys and pipeline state. In Docker, isolation should primarily come from separate containers with separate `/data` mounts.
 
-For the NAS pilot, use the single configured `instance1` deployment unless a second container is explicitly planned.
+Repo-local `instance1/` and `instance2/` directories are legacy local-development artifacts and are not required for the Docker image.
 
-## Launch Locally
+## Docker Pattern
+
+Use separate compose projects:
+
+```text
+caseops-primary/
+  docker-compose.yml
+  .env
+  caseops-data/
+caseops-test/
+  docker-compose.yml
+  .env
+  caseops-data/
+```
+
+Each stack maps its own appdata to `/data` and uses a unique host port.
+
+## Local Development
+
+For a second local process, pass explicit paths outside tracked source:
 
 ```bash
-python app.py --workspace job1 --outputs-dir instance1/outputs --env-file instance1/.env.jira --port 5000
-python app.py --workspace job2 --outputs-dir instance2/outputs --env-file instance2/.env.jira --port 5351
+python app.py --workspace job1 --outputs-dir .local/job1/outputs --env-file .local/job1/.env --port 5000
+python app.py --workspace job2 --outputs-dir .local/job2/outputs --env-file .local/job2/.env --port 5351
 ```
+
+`.local/` should stay ignored.
 
 ## Isolation
 
@@ -23,10 +44,11 @@ Each workspace should have its own:
 
 ## Metadata
 
-When `--outputs-dir instance1/outputs` is used, metadata defaults beside it:
+Metadata defaults under the active outputs directory:
 
 ```text
-instance1/outputs/metadata-workspaces/
+<outputs-dir>/metadata-cache/
+<outputs-dir>/metadata-workspaces/
 ```
 
 Do not share a metadata workspace between two active instances.

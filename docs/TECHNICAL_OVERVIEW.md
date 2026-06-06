@@ -7,31 +7,27 @@ CaseOps is a Flask application that launches Claude Code CLI subprocesses for AI
 Core components:
 
 - `app.py` - Flask routes, settings, runtime preflight, pipeline launching, log streaming, path validation.
-- `jira_sync.py` - Jira API sync into `outputs/jira/`.
+- `jira_sync.py` - Jira API sync into the active outputs directory, normally `/data/outputs/jira/`.
 - `caseops_paths.py` - path helpers.
 - `templates/` and `static/` - dashboard UI.
 - `skills/` - Claude Code skills and sub-agent prompts.
 - `scripts/sf_caseops_helper.py` - deterministic Salesforce helper for common metadata mechanics.
 
-## Docker/NAS Runtime
+## Docker Runtime
 
-The NAS container runs as `caseops` and exposes Flask on host port `5350`.
+The container runs as `caseops` and exposes Flask on container port `8080`. The default compose template maps host port `5350` to `8080`.
 
-Mounted runtime files:
+Mounted runtime paths:
 
-- `/app/app.py`
-- `/app/templates`
-- `/app/static`
-- `/app/skills`
-- `/app/scripts`
-- `/app/instance1/outputs`
-- `/app/.env.jira`
+- `/data` - persistent appdata
+- `/data/.env` - writable env file managed by Settings
+- `/data/.sf` and `/data/.sfdx` - Salesforce CLI state
+- `/data/outputs` - Jira data, generated artifacts, logs, metadata cache, and metadata workspaces
+- `/tmp/caseops` - disposable temp files
 
-The active env file on the host is:
+The application code lives inside the image. Do not bind-mount source files for normal tester/shared-image deployments.
 
-```text
-/volume1/docker/stacks/caseops/.env.jira.nas
-```
+The legacy repo-local `instance1/` and `instance2/` directories are not part of the Docker runtime model.
 
 ## Authentication
 
@@ -119,11 +115,11 @@ The orchestrator keeps sub-agent summaries compact and relies on files for detai
 Current implementation:
 
 ```text
-instance1/outputs/metadata-cache/
+/data/outputs/metadata-cache/
   production/<org>/<api-version>/
     raw/<KEY>/
     summaries/
-instance1/outputs/metadata-workspaces/
+/data/outputs/metadata-workspaces/
   <KEY>/
     metadata-workspace.json
     attempt-N/
@@ -148,7 +144,7 @@ Runtime guards in `app.py` reject known unsafe root-level paths such as `temp*`,
 
 ## Org Knowledge
 
-`outputs/org-knowledge/` is persistent appdata. On startup, CaseOps seeds default files and non-destructively merges new required rules and index topics.
+`/data/outputs/org-knowledge/` is persistent appdata. On startup, CaseOps seeds default files and non-destructively merges new required rules and index topics.
 
 Current seeded areas:
 

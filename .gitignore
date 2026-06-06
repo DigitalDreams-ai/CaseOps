@@ -33,6 +33,7 @@ caseops/.pytest_cache/
 .sf/
 .sfdx/
 .localdevserver/
+.local/
 deploy-options.json
 
 # Root Salesforce/CumulusCI package templates are not part of CaseOps.
@@ -120,15 +121,9 @@ outputs/pipeline-logs/
 .project
 .settings/
 
-# Multi-instance state directories (each instance has isolated .sfdx, .claude, outputs)
-instance1/.sfdx/
-instance1/.claude/
-instance1/outputs/
-instance1/temp-retrieve/
-instance2/.sfdx/
-instance2/.claude/
-instance2/outputs/
-instance2/temp-retrieve/
+# Legacy local multi-instance state directories.
+instance1/
+instance2/
 
 # Local assistant/session data (track CaseOps Claude Code skill stub under .claude/skills/)
 .claude/*

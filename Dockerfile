@@ -46,8 +46,8 @@ COPY --chown=1027:100 skills/ /app/skills/
 COPY --chown=1027:100 scripts/ /app/scripts/
 
 # Create output/cache mount points with proper permissions.
-RUN mkdir -p /app/outputs /app/.temp /app/instance1/outputs /app/instance1/.temp /app/force-app/main/default && \
-    chown -R 1027:100 /app/outputs /app/.temp /app/instance1 /app/force-app /app/sfdx-project.json
+RUN mkdir -p /app/outputs /app/.temp /app/force-app/main/default && \
+    chown -R 1027:100 /app/outputs /app/.temp /app/force-app /app/sfdx-project.json
 
 # Expose Flask port
 EXPOSE 8080
@@ -69,7 +69,7 @@ RUN chmod +x /app/docker-entrypoint.sh
 USER caseops
 
 # CaseOps runs on port 5000; Claude Code CLI will be invoked as subprocess
-# .env.jira is mounted at runtime (see docker-compose.yml)
+# The writable env file is mounted at runtime (see docker-compose.example.yml).
 # Entrypoint initializes Claude Code sandbox settings before starting Flask
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["--port", "8080"]

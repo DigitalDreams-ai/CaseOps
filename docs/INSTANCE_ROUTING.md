@@ -9,29 +9,35 @@ The active instance is determined by Flask startup arguments and environment:
 - `--workspace`
 - `--outputs-dir`
 - `--env-file`
+- `CASEOPS_DATA_DIR`
 - `CASEOPS_OUTPUTS_DIR`
 - `CASEOPS_JIRA_ENV_FILE`
+- `CASEOPS_TEMP_DIR`
 
 Claude Code subprocesses inherit the same paths from `app.py`.
 
-## Current NAS Instance
+## Current Docker Instance
 
 ```text
-/app/instance1/outputs
-/app/instance1/outputs/metadata-cache
-/app/instance1/outputs/metadata-workspaces
-/app/.env.jira
+/data
+/data/outputs
+/data/outputs/metadata-cache
+/data/outputs/metadata-workspaces
+/data/.env
+/tmp/caseops
 ```
 
-Host paths:
+Common compose mapping:
 
-```text
-/volume1/docker/stacks/caseops/instance1/outputs
-/volume1/docker/stacks/caseops/.env.jira.nas
+```yaml
+volumes:
+  - ./caseops-data:/data
+  - ./.env:/data/.env
 ```
 
 ## Allowed Runtime Writes
 
+- `CASEOPS_DATA_DIR`
 - `CASEOPS_OUTPUTS_DIR`
 - `outputs/settings/canned-messages.json`
 - `outputs/org-knowledge/`
@@ -42,15 +48,17 @@ Host paths:
 - `CASEOPS_METADATA_RAW_PROD_DIR`
 - `CASEOPS_METADATA_SANDBOX_WORK_DIR`
 - `CASEOPS_METADATA_CONFIRMED_DIR`
-- active env file `/app/.env.jira`
+- active env file, normally `/data/.env`
+- temp directory, normally `/tmp/caseops`
 
 ## Forbidden Runtime Writes
 
-- root `outputs/`
+- root `outputs/` in a containerized deployment
 - root `temp*`
 - root `retrieve*`
 - root `deploy*`
 - root `metadata*`
+- root `force-app/` in the Git repo
 - root `.sf`
 - root `.sfdx`
 - root `.claude`

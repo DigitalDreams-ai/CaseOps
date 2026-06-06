@@ -320,7 +320,7 @@ def _safe_runtime_home() -> Path:
     candidates = [
         os.environ.get("HOME"),
         os.environ.get("CASEOPS_HOME"),
-        "/app/instance1",
+        "/home/caseops",
     ]
     for candidate in candidates:
         if not candidate:
@@ -1647,7 +1647,7 @@ def _attempt_token_refresh(env_file_path: Path, env_content: str, prod_token_mat
 def _instance_cache_key(key: str) -> str:
     """Generate instance-specific cache key to prevent cross-instance contamination.
 
-    Prefixes key with current WORKSPACE so instance1 and instance2 don't share cache entries.
+    Prefixes key with current WORKSPACE so parallel instances don't share cache entries.
     """
     workspace = os.environ.get("CASEOPS_WORKSPACE", "default")
     return f"{workspace}:{key}"
@@ -1666,8 +1666,6 @@ def _validate_instance_path(path: Path, operation: str = "write") -> None:
 
     Allowed patterns:
     - OUTPUTS / ... (instance-specific outputs)
-    - instance1/ ... (instance1 state)
-    - instance2/ ... (instance2 state)
     - skills/ ... (shared read-only)
     - static/ ... (shared read-only)
     - templates/ ... (shared read-only)
@@ -1711,7 +1709,7 @@ def _validate_instance_path(path: Path, operation: str = "write") -> None:
             # path is NOT under forbidden, which is what we want
             pass
 
-    # For write operations, enforce path must be under OUTPUTS or instance directory
+    # For write operations, enforce path must be under OUTPUTS.
     if operation in ("write", "mkdir", "create"):
         outputs_resolved = OUTPUTS.resolve()
         try:
@@ -1719,20 +1717,10 @@ def _validate_instance_path(path: Path, operation: str = "write") -> None:
             # Path IS under OUTPUTS, allowed
             return
         except ValueError:
-            # Path is NOT under OUTPUTS, check if it's under instance-specific directory
+            # Path is NOT under OUTPUTS.
             pass
 
-        # Check if it's under instance1/ or instance2/ state directories
-        instance_dirs = [ROOT / "instance1", ROOT / "instance2"]
-        for inst_dir in instance_dirs:
-            try:
-                path_resolved.relative_to(inst_dir.resolve())
-                # Path IS under instance dir, allowed
-                return
-            except ValueError:
-                pass
-
-        # Path not under OUTPUTS or instance dirs - this is risky for writes
+        # Path not under OUTPUTS - this is risky for writes
         # Allow shared read-only dirs and specific ROOT files for now
         read_only_dirs = [ROOT / "skills", ROOT / "static", ROOT / "templates", ROOT / "scripts"]
         for ro_dir in read_only_dirs:

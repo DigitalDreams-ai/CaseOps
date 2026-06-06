@@ -7,7 +7,7 @@ CaseOps combines a Flask dashboard, deterministic Python/Jira helpers, Claude Co
 ```text
 Jira API
   -> jira_sync.py
-  -> instance outputs
+  -> /data/outputs
   -> Flask dashboard
   -> Claude Code pipeline
   -> Salesforce sf CLI
@@ -24,9 +24,9 @@ Jira API
 | `static/` | CSS, JS, icons |
 | `skills/` | Claude Code skills and prompts |
 | `scripts/sf_caseops_helper.py` | Deterministic Salesforce helper commands |
-| `instance1/outputs/` | Persistent issue artifacts and appdata |
-| `instance1/outputs/metadata-cache/` | Persistent read-only Production metadata cache |
-| `instance1/outputs/metadata-workspaces/` | Persistent issue workspaces, Sandbox attempts, rollback evidence, confirmed packages |
+| `/data/outputs/` | Persistent issue artifacts and appdata |
+| `/data/outputs/metadata-cache/` | Persistent read-only Production metadata cache |
+| `/data/outputs/metadata-workspaces/` | Persistent issue workspaces, Sandbox attempts, rollback evidence, confirmed packages |
 
 ## Pipeline
 
@@ -49,10 +49,13 @@ Sub-agents run with isolated context and return compact summaries. Detailed evid
 
 ## Runtime Storage
 
-Current NAS runtime:
+Current Docker runtime:
 
 ```text
-instance1/
+/data/
+  .env
+  .sf/
+  .sfdx/
   outputs/
     jira/
     investigations/
@@ -62,26 +65,28 @@ instance1/
     test-reports/
     engineering-escalations/
     closed-resolved/
+    generated-files/
     pipeline-logs/
+    pipeline-state/
     settings/
     org-knowledge/
-  metadata-cache/
-    production/<org>/<api-version>/
-      raw/
-      summaries/
-  metadata-workspaces/
-    <KEY>/
-      metadata-workspace.json
-      attempt-001/
-        baseline-sandbox/
-        candidate/
-        revert/
-      confirmed/
-        support-owned/
-        engineering-proposal/
+    metadata-cache/
+      production/<org>/<api-version>/
+        raw/
+        summaries/
+    metadata-workspaces/
+      <KEY>/
+        metadata-workspace.json
+        attempt-001/
+          baseline-sandbox/
+          candidate/
+          revert/
+        confirmed/
+          support-owned/
+          engineering-proposal/
 ```
 
-`outputs/` is persistent appdata. Legacy `.temp/metadata/` is migration-only historical evidence and is not used for new work.
+`/data` is persistent appdata. `/tmp/caseops` is temporary runtime scratch space and can be discarded between container starts.
 
 ## Salesforce Metadata Rules
 
