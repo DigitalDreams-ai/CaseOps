@@ -176,8 +176,11 @@ def run_sync(args: argparse.Namespace) -> int:
     # Merge single-issue result back into the full manifest
     if args.issue and result == 0 and manifest_path.exists() and existing_rows:
         new_rows = read_manifest(manifest_path)
+        new_keys = {row["Key"] for row in new_rows}
         for row in new_rows:
             existing_rows[row["Key"]] = row  # update or add the synced key
+        if args.issue not in new_keys:
+            existing_rows.pop(args.issue, None)
         fieldnames = MANIFEST_FIELDNAMES
         merged = {k: {fn: row.get(fn, "") for fn in fieldnames} for k, row in existing_rows.items()}
         with manifest_path.open("w", encoding="utf-8", newline="") as f:

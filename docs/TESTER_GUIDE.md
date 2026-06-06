@@ -28,7 +28,7 @@ Recommended files:
 If using GHCR, the compose file should reference:
 
 ```text
-ghcr.io/sdbingham/caseops:0.1.8
+ghcr.io/sdbingham/caseops:0.1.9
 ```
 
 If using an archive, load it first:

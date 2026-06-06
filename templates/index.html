@@ -291,6 +291,7 @@
   let cachedIssues = [];
   let runToastTimer = null;
   let filterDebounceTimer = null;
+  let autoSyncTimer = null;
   const SESSION_ACTIVE_ISSUE = 'caseops.activeIssueKey';
   const SESSION_ACTIVE_TAB = 'caseops.activeTabId';
 
@@ -1922,7 +1923,10 @@
     const count = document.getElementById('bulk-count');
     if (bar && count) {
       count.textContent = selectedIssues.size;
-      bar.style.display = selectedIssues.size > 0 ? 'block' : 'none';
+      bar.style.display = selectMode ? 'block' : 'none';
+      document.querySelectorAll('.bulk-btn').forEach(btn => {
+        btn.disabled = selectedIssues.size === 0;
+      });
     }
   }
 
@@ -1950,6 +1954,8 @@
     });
     if (!selectMode) {
       clearBulkSelection();
+    } else {
+      updateBulkActionBar();
     }
   }
 
@@ -1992,6 +1998,36 @@
     }
     updateStatus();
     setIssueRunning(runKey, true);
+  }
+
+  // ── Scheduled Jira sync ───────────────────────────────────
+
+  async function loadAutoSyncSettings() {
+    try {
+      const res = await fetch('/api/settings');
+      if (!res.ok) return;
+      const settings = await res.json();
+      applyAutoSyncSettings(settings);
+    } catch (_) {
+      // Settings are optional for page load; leave scheduled sync disabled.
+    }
+  }
+
+  function applyAutoSyncSettings(settings) {
+    if (autoSyncTimer) {
+      clearInterval(autoSyncTimer);
+      autoSyncTimer = null;
+    }
+    const enabled = String(settings.CASEOPS_AUTO_SYNC_ENABLED || 'false').toLowerCase() === 'true';
+    const minutes = Math.max(0, parseInt(settings.CASEOPS_AUTO_SYNC_INTERVAL_MINUTES || '0', 10) || 0);
+    if (!enabled || minutes === 0) return;
+
+    const intervalMs = minutes * 60 * 1000;
+    autoSyncTimer = setInterval(() => {
+      if (!activeRuns.has('__global__')) {
+        runAction('sync');
+      }
+    }, intervalMs);
   }
 
   function hideRunToast() {
@@ -2538,10 +2574,12 @@
       if (!activeKey) resetMainToOverview();
       initStream();
       initIssuesSSE();
+      loadAutoSyncSettings();
     })
     .catch(() => {
       initStream();
       initIssuesSSE();
+      loadAutoSyncSettings();
     });
   initLogPaneLayout();
 

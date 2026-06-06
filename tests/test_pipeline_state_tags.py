@@ -976,6 +976,15 @@ class PipelineStateTagTests(unittest.TestCase):
             ["HEAL-1"],
         )
 
+    def test_jira_sync_excludes_closed_resolved_statuses(self):
+        import jira_sync
+
+        self.assertTrue(jira_sync.sync_status_is_excluded("Closed"))
+        self.assertTrue(jira_sync.sync_status_is_excluded(" resolved "))
+        self.assertTrue(jira_sync.sync_status_is_excluded("Canceled"))
+        self.assertFalse(jira_sync.sync_status_is_excluded("Escalated to Engineering"))
+        self.assertFalse(jira_sync.sync_status_is_excluded("Waiting for customer"))
+
     def test_docker_image_includes_minimal_sfdx_project_workspace(self):
         dockerfile = (app.ROOT / "Dockerfile").read_text(encoding="utf-8")
         sfdx_project = app.ROOT / "docker" / "sfdx-project.json"
@@ -983,7 +992,7 @@ class PipelineStateTagTests(unittest.TestCase):
         self.assertIn("COPY --chown=1027:100 docker/sfdx-project.json /app/sfdx-project.json", dockerfile)
         self.assertIn("/app/force-app/main/default", dockerfile)
         self.assertNotIn("/app/instance1", dockerfile)
-        self.assertIn("ENV CASEOPS_VERSION=0.1.8", dockerfile)
+        self.assertIn("ENV CASEOPS_VERSION=0.1.9", dockerfile)
 
         payload = json.loads(sfdx_project.read_text(encoding="utf-8"))
         self.assertEqual(payload["packageDirectories"][0]["path"], "force-app")

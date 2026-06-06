@@ -144,6 +144,14 @@ def main() -> int:
         summary = (issue.get("fields", {}).get("summary") or "")[:60]
         print(f"[{i}/{len(keys)}] {key} - {status}: {summary}", flush=True)
 
+        updated = issue.get("fields", {}).get("updated")
+        created = issue.get("fields", {}).get("created")
+        newest_updated = max_jira_datetime(newest_updated, updated)
+        newest_created = max_jira_datetime(newest_created, created)
+        if sync_status_is_excluded(status):
+            print(f"[{i}/{len(keys)}] {key} - skipped; status is {status}", flush=True)
+            continue
+
         print(f"[{i}/{len(keys)}] {key} - fetching comments, changelog, worklogs...", flush=True)
         comments = client.get_paginated(f"/rest/api/3/issue/{key}/comment", "comments", args.page_size)
         changelog = client.get_paginated(f"/rest/api/3/issue/{key}/changelog", "values", args.page_size)
@@ -179,11 +187,6 @@ def main() -> int:
         write_json(raw_dir / f"{key}.json", bundle)
         (summary_dir / f"{key}.md").write_text(render_summary(bundle), encoding="utf-8")
         print(f"[{i}/{len(keys)}] {key} - written ({len(comments)} comments, {len(attachments)} attachments, {len(forms)} forms)", flush=True)
-
-        updated = issue.get("fields", {}).get("updated")
-        created = issue.get("fields", {}).get("created")
-        newest_updated = max_jira_datetime(newest_updated, updated)
-        newest_created = max_jira_datetime(newest_created, created)
 
         pri_raw = issue.get("fields", {}).get("priority")
         priority_name = ""
@@ -223,11 +226,14 @@ def main() -> int:
             "newestUpdated": newest_updated,
             "newestCreated": newest_created,
             "lastJql": jql,
-            "lastIssueCount": len(keys),
+            "lastIssueCount": len(manifest_rows),
         },
     )
 
-    print(f"Synced {len(keys)} issue(s) into {out_dir}")
+    skipped_count = len(keys) - len(manifest_rows)
+    print(f"Synced {len(manifest_rows)} issue(s) into {out_dir}")
+    if skipped_count:
+        print(f"Skipped {skipped_count} closed/resolved/canceled issue(s).")
     return 0
 
 
@@ -275,6 +281,18 @@ DONE_MANIFEST_STATUSES = {
     "done",
     "escalated to engineering",
 }
+
+SYNC_EXCLUDED_STATUSES = {
+    "closed",
+    "resolved",
+    "canceled",
+    "cancelled",
+}
+
+
+def sync_status_is_excluded(status: str) -> bool:
+    normalized = " ".join((status or "").strip().lower().split())
+    return normalized in SYNC_EXCLUDED_STATUSES
 
 
 def manifest_status_is_active(status: str) -> bool:

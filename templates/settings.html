@@ -956,6 +956,19 @@
                                 <div class="field-note">Allows independent read-only evidence checks to run in parallel. Deploy and test steps remain serialized.</div>
                             </div>
                             <div class="settings-field">
+                                <label for="auto-sync-enabled">Scheduled Jira Sync</label>
+                                <select id="auto-sync-enabled" name="CASEOPS_AUTO_SYNC_ENABLED">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                                <div class="field-note">Runs Jira sync on an interval while the CaseOps browser UI is open.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="auto-sync-minutes">Jira Sync Interval Minutes</label>
+                                <input id="auto-sync-minutes" name="CASEOPS_AUTO_SYNC_INTERVAL_MINUTES" type="number" min="0" step="1" />
+                                <div class="field-note">Use 0 to disable interval syncs. The enable toggle is the primary control.</div>
+                            </div>
+                            <div class="settings-field">
                                 <label for="flask-debug">Debug Mode</label>
                                 <select id="flask-debug" name="CASEOPS_FLASK_DEBUG">
                                     <option value="false">Disabled</option>

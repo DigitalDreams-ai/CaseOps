@@ -59,17 +59,17 @@ Failed or misleading:
 
 ### High - Published Image Drift Risk
 
-The repo now contains the `.env` consolidation, but `Dockerfile` and `docker-compose.example.yml` still advertise `0.1.8`.
+At review time, the repo contained the `.env` consolidation, but the published Docker version references still pointed at the previous image tag.
 
 Evidence:
 
-- `Dockerfile` sets `CASEOPS_VERSION=0.1.8`.
-- `docker-compose.example.yml` defaults to `ghcr.io/sdbingham/caseops:0.1.8`.
+- `Dockerfile` set the previous `CASEOPS_VERSION`.
+- `docker-compose.example.yml` defaulted to the previous GHCR image tag.
 - The audit built a local image successfully, but did not publish it.
 
 Impact:
 
-- Unless `0.1.8` was rebuilt and pushed after commit `967a170`, `docker pull ghcr.io/sdbingham/caseops:0.1.8` will not contain the env-file changes.
+- Unless the published tag is rebuilt and pushed after the relevant source commits, `docker pull` will not contain the env-file changes.
 - A tester may be reading docs from the repo while running an older image.
 
 Recommendation:
