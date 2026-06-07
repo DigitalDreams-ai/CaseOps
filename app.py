@@ -41,8 +41,12 @@ from flask import Flask, Response, jsonify, render_template, request, send_file,
 
 from caseops_paths import default_jira_dir
 from issue_clusters import (
+    build_delta_validation_plan,
     read_issue_cluster_context,
     rebuild_issue_clusters,
+    write_cluster_safety_validation,
+    write_delta_validation_plan,
+    write_similarity_adjudication,
     write_similarity_correction,
 )
 from jira_sync import JiraClient, update_manifest_status
@@ -3464,6 +3468,27 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
             lines.append(f"- Similarity safety: requires_delta_validation={bool(similarity.get('safety', {}).get('requires_delta_validation', False))}, "
                          f"reuse_allowed={bool(similarity.get('safety', {}).get('reuse_allowed', False))}, "
                          f"reuse_reason={similarity.get('safety', {}).get('reuse_reason', 'n/a')}")
+            lines.append(f"- Model adjudication: enabled={bool(similarity.get('model_adjudication_enabled'))}, status={similarity.get('adjudication_status', 'not_available')}")
+            if similarity.get("model_adjudication_fallback"):
+                lines.append(f"- Model adjudication fallback: {similarity.get('model_adjudication_fallback')}")
+
+            delta_plan = similarity.get("delta_validation") if isinstance(similarity.get("delta_validation"), dict) else {}
+            if delta_plan:
+                lines.extend([
+                    "",
+                    "### Delta Validation Gate",
+                    f"- Enabled: {bool(delta_plan.get('enabled'))}",
+                    f"- Gate result: {delta_plan.get('gate_result', 'unknown')}",
+                    f"- Allowed mode: {delta_plan.get('selected_mode_if_allowed', 'delta_validation')}",
+                    f"- Fallback mode: {delta_plan.get('fallback_mode', 'full_investigation')}",
+                    f"- Reason: {delta_plan.get('reason', '')}",
+                    "- Required Salesforce checks:",
+                ])
+                for check in (delta_plan.get("salesforce_validation_checks") or [])[:8]:
+                    lines.append(f"  - {check}")
+                lines.append("- Drafting guardrails:")
+                for guardrail in (delta_plan.get("drafting_guardrails") or [])[:8]:
+                    lines.append(f"  - {guardrail}")
 
             for section in ("Open matches", "Closed matches"):
                 matches = similarity.get("open_matches" if section == "Open matches" else "closed_matches") or []
@@ -3480,15 +3505,25 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
                     status = match.get("status", "")
                     stale = "stale" if bool(match.get("is_stale")) else "current"
                     classification = match.get("classification", "")
+                    confidence = match.get("confidence")
                     reasons = match.get("reasons", [])
                     evidence_terms = match.get("evidence_terms", [])
                     evidence = ", ".join(evidence_terms[:4])
                     reason = ", ".join(str(r) for r in reasons[:3])
                     lines.append(
                         f"- {key} ({status}, {stale}, {classification})"
+                        + (f"; confidence: {confidence}" if confidence is not None else "")
                         + (f"; reasons: {reason}" if reason else "")
                         + (f"; evidence: {evidence}" if evidence else "")
                     )
+                    adjudication = match.get("adjudication") if isinstance(match.get("adjudication"), dict) else {}
+                    if adjudication:
+                        validation = ", ".join((adjudication.get("required_validation") or [])[:3])
+                        against = ", ".join((adjudication.get("evidence_against") or [])[:3])
+                        if against:
+                            lines.append(f"  - Evidence against / difference warnings: {against}")
+                        if validation:
+                            lines.append(f"  - Required validation: {validation}")
         else:
             lines.append(f"- Reason: {similarity.get('selected_mode_reason', 'No cluster context for this issue.')}")
         lines.append("")
@@ -3688,6 +3723,8 @@ def _log_resume_plan_summary(run_key: str, plan: dict[str, Any], plan_path: Path
     candidate_count = similarity.get("candidate_count", 0)
     open_count = similarity.get("open_count", 0)
     closed_count = similarity.get("closed_count", 0)
+    adjudication_status = similarity.get("adjudication_status", "not_available")
+    delta_plan = similarity.get("delta_validation") if isinstance(similarity.get("delta_validation"), dict) else {}
     if similarity.get("enabled") or similarity.get("lookup_performed"):
         if similarity_cluster_id:
             _log_emit_line(
@@ -3696,6 +3733,17 @@ def _log_resume_plan_summary(run_key: str, plan: dict[str, Any], plan_path: Path
                 f"(open={open_count}, closed={closed_count}), classification={classification or 'unrelated'}, "
                 f"mode={selected_mode}, reason={selected_mode_reason}"
             )
+            _log_emit_line(
+                run_key,
+                f"Similarity adjudication: enabled={bool(similarity.get('model_adjudication_enabled'))}, "
+                f"status={adjudication_status}, fallback={_safe_cluster_text(similarity.get('model_adjudication_fallback')) or 'n/a'}"
+            )
+            if delta_plan:
+                _log_emit_line(
+                    run_key,
+                    f"Delta validation gate: enabled={bool(delta_plan.get('enabled'))}, "
+                    f"result={delta_plan.get('gate_result', 'unknown')}, reason={delta_plan.get('reason', '')}"
+                )
         else:
             _log_emit_line(
                 run_key,
@@ -6673,12 +6721,16 @@ def _build_similarity_lookup_for_plan(
     normalized = {
         "enabled": True,
         "lookup_performed": True,
+        "model_adjudication_enabled": bool(similarity_settings.get("model_adjudication")),
+        "delta_mode_enabled": bool(similarity_settings.get("delta_mode")),
         "cluster_id": cluster_id,
         "cluster_state": _safe_cluster_text(cluster_context.get("cluster_state")),
         "canonical_issue": _safe_cluster_text(cluster_context.get("cluster", {}).get("canonical_issue") if isinstance(cluster_context.get("cluster"), dict) else ""),
         "cluster_type": _safe_cluster_text(cluster_context.get("cluster_type")),
         "summary_url": _safe_cluster_text(cluster_context.get("summary_url")),
         "summary_preview": _safe_cluster_text(cluster_context.get("summary_preview")),
+        "adjudication": cluster_context.get("adjudication") if isinstance(cluster_context.get("adjudication"), dict) else None,
+        "adjudication_packet": cluster_context.get("adjudication_packet") if isinstance(cluster_context.get("adjudication_packet"), dict) else None,
         "members": [],
         "open_matches": [],
         "closed_matches": [],
@@ -6697,6 +6749,8 @@ def _build_similarity_lookup_for_plan(
             "status": _safe_cluster_text(member.get("status")),
             "is_open": bool(member.get("is_open")),
             "is_stale": bool(member.get("is_stale")),
+            "confidence": member.get("confidence"),
+            "adjudication": member.get("adjudication") if isinstance(member.get("adjudication"), dict) else None,
         })
     for member in open_matches:
         if not isinstance(member, dict):
@@ -6709,6 +6763,8 @@ def _build_similarity_lookup_for_plan(
             "status": _safe_cluster_text(member.get("status")),
             "is_stale": bool(member.get("is_stale")),
             "jira_updated": _safe_cluster_text(member.get("jira_updated")),
+            "confidence": member.get("confidence"),
+            "adjudication": member.get("adjudication") if isinstance(member.get("adjudication"), dict) else None,
         })
     for member in closed_matches:
         if not isinstance(member, dict):
@@ -6721,6 +6777,8 @@ def _build_similarity_lookup_for_plan(
             "status": _safe_cluster_text(member.get("status")),
             "is_stale": bool(member.get("is_stale")),
             "jira_updated": _safe_cluster_text(member.get("jira_updated")),
+            "confidence": member.get("confidence"),
+            "adjudication": member.get("adjudication") if isinstance(member.get("adjudication"), dict) else None,
         })
 
     safety_raw = cluster_context.get("cluster", {}).get("safety") if isinstance(cluster_context.get("cluster"), dict) else {}
@@ -6748,6 +6806,7 @@ def _build_similarity_lookup_for_plan(
     normalized["classifications"] = sorted({member["classification"] for member in normalized["members"] if member.get("classification")})
     normalized["issue_is_stale"] = bool(target["is_stale"]) if target else False
 
+    delta_mode_enabled = bool(similarity_settings.get("delta_mode"))
     selected_mode = "full_investigation"
     if normalized["issue_is_stale"]:
         selected_mode = "manual_review"
@@ -6755,17 +6814,17 @@ def _build_similarity_lookup_for_plan(
     elif normalized["cluster_id"]:
         if classification == "same_problem_same_fix":
             if safety["reuse_allowed"]:
-                selected_mode = "delta_validation" if safety["requires_delta_validation"] else "cluster_context_full_investigation"
+                selected_mode = "delta_validation" if delta_mode_enabled and safety["requires_delta_validation"] else "cluster_context_full_investigation"
                 selected_mode_reason = (
                     "Use delta validation path; reuse is allowed for this cluster but requires issue-level validation."
-                    if safety["requires_delta_validation"]
+                    if delta_mode_enabled and safety["requires_delta_validation"]
                     else "Same-problem signal found; run context-aware investigation in full scope."
                 )
             else:
                 selected_mode = "cluster_context_full_investigation"
                 selected_mode_reason = "Same-problem candidate found; reuse safety does not currently allow direct delta reuse."
         elif classification == "same_problem_needs_record_validation":
-            if safety["reuse_allowed"] and safety["requires_delta_validation"]:
+            if delta_mode_enabled and safety["reuse_allowed"] and safety["requires_delta_validation"]:
                 selected_mode = "delta_validation"
                 selected_mode_reason = "Same root-cause pattern found; require record/user-level validation."
             else:
@@ -6788,6 +6847,26 @@ def _build_similarity_lookup_for_plan(
 
     normalized["selected_mode"] = selected_mode
     normalized["selected_mode_reason"] = selected_mode_reason
+    normalized["adjudication_status"] = (
+        "valid"
+        if isinstance(normalized.get("adjudication"), dict) and normalized["adjudication"].get("valid")
+        else "not_available"
+    )
+    if normalized["model_adjudication_enabled"] and normalized["adjudication_status"] != "valid":
+        normalized["model_adjudication_fallback"] = "No valid persisted adjudication; keep normal/full investigation behavior."
+        if selected_mode == "delta_validation":
+            normalized["selected_mode"] = "cluster_context_full_investigation"
+            normalized["selected_mode_reason"] = "Delta validation blocked because no valid model adjudication is persisted."
+    delta_plan = build_delta_validation_plan(
+        normalized,
+        delta_mode_enabled=delta_mode_enabled,
+    )
+    normalized["delta_validation"] = delta_plan
+    if delta_mode_enabled:
+        write_delta_validation_plan(OUTPUTS, issue_key=key, plan=delta_plan)
+        if not delta_plan.get("allowed") and normalized["selected_mode"] == "delta_validation":
+            normalized["selected_mode"] = delta_plan.get("fallback_mode") or "cluster_context_full_investigation"
+            normalized["selected_mode_reason"] = f"Delta validation blocked: {delta_plan.get('reason', 'safety gate failed')}"
     return normalized
 
 
@@ -7424,6 +7503,60 @@ def api_file(key: str, ftype: str):
 @app.get("/api/issue/<key>/similarity-context")
 def api_issue_similarity_context(key: str):
     return jsonify(read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key))
+
+
+@app.get("/api/issue/<key>/similarity-adjudication-packet")
+def api_issue_similarity_adjudication_packet(key: str):
+    cluster_context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
+    if not isinstance(cluster_context, dict) or not cluster_context.get("cluster_id"):
+        return jsonify({"error": "issue has no similarity cluster"}), 404
+    packet = cluster_context.get("adjudication_packet")
+    if not isinstance(packet, dict):
+        return jsonify({"error": "adjudication packet unavailable"}), 404
+    return jsonify(packet)
+
+
+@app.post("/api/issue/<key>/similarity-adjudication")
+def api_issue_similarity_adjudication(key: str):
+    data = request.get_json(silent=True) or {}
+    model_output = str(data.get("model_output", "")).strip()
+    if not model_output:
+        return jsonify({"error": "model_output required"}), 400
+    cluster_context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
+    if not isinstance(cluster_context, dict) or not cluster_context.get("cluster_id"):
+        return jsonify({"error": "issue has no similarity cluster"}), 404
+    packet = cluster_context.get("adjudication_packet") if isinstance(cluster_context.get("adjudication_packet"), dict) else {}
+    candidate_keys = packet.get("candidate_keys") if isinstance(packet.get("candidate_keys"), list) else []
+    result = write_similarity_adjudication(
+        outputs_dir=OUTPUTS,
+        issue_key=key,
+        cluster_id=str(cluster_context.get("cluster_id", "")),
+        model_output=model_output,
+        candidate_keys=candidate_keys,
+    )
+    return jsonify(result)
+
+
+@app.post("/api/issue/<key>/similarity-safety-validation")
+def api_issue_similarity_safety_validation(key: str):
+    data = request.get_json(silent=True) or {}
+    cluster_context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
+    if not isinstance(cluster_context, dict) or not cluster_context.get("cluster_id"):
+        return jsonify({"error": "issue has no similarity cluster"}), 404
+    checks = data.get("salesforce_checks")
+    if not isinstance(checks, list):
+        checks = []
+    result = write_cluster_safety_validation(
+        OUTPUTS,
+        issue_key=key,
+        cluster_id=str(cluster_context.get("cluster_id", "")),
+        validation_status=str(data.get("validation_status", "")).strip(),
+        salesforce_checks=[str(item) for item in checks],
+        reuse_reason=str(data.get("reuse_reason", "")).strip(),
+    )
+    if result.get("error"):
+        return jsonify(result), 400
+    return jsonify(result)
 
 
 @app.post("/api/issue/<key>/similarity-correction")
@@ -8111,7 +8244,7 @@ def serve_generated_file(key: str, filename: str):
 
 @app.get("/files/issue-clusters/<path:filename>")
 def serve_issue_cluster_file(filename: str):
-    if not re.fullmatch(r"[a-z0-9._-]+\\.md", str(filename).lower()):
+    if not re.fullmatch(r"[a-z0-9._-]+\.md", str(filename).lower()):
         return jsonify({"error": "invalid"}), 400
 
     root = (OUTPUTS / "issue-clusters").resolve()
@@ -8324,6 +8457,7 @@ def api_get_settings():
         "CASEOPS_SIMILAR_ISSUES_DELTA_MODE",
         "CASEOPS_SIMILAR_ISSUES_CANDIDATE_LIMIT",
         "CASEOPS_SIMILAR_ISSUES_LOOKBACK_DAYS",
+        "CASEOPS_SIMILAR_ISSUES_CURRENT_USER",
         "CASEOPS_AUTO_SYNC_ENABLED",
         "CASEOPS_AUTO_SYNC_INTERVAL_MINUTES",
         "CASEOPS_FLASK_DEBUG",
@@ -8347,6 +8481,7 @@ def api_get_settings():
         "CASEOPS_SIMILAR_ISSUES_DELTA_MODE": "false",
         "CASEOPS_SIMILAR_ISSUES_CANDIDATE_LIMIT": "15",
         "CASEOPS_SIMILAR_ISSUES_LOOKBACK_DAYS": "180",
+        "CASEOPS_SIMILAR_ISSUES_CURRENT_USER": "",
         "CASEOPS_AUTO_SYNC_ENABLED": "false",
         "CASEOPS_AUTO_SYNC_INTERVAL_MINUTES": "0",
         "CASEOPS_FLASK_DEBUG": "false",
@@ -8389,6 +8524,7 @@ def api_post_settings():
                 "CASEOPS_SIMILAR_ISSUES_DELTA_MODE",
                 "CASEOPS_SIMILAR_ISSUES_CANDIDATE_LIMIT",
                 "CASEOPS_SIMILAR_ISSUES_LOOKBACK_DAYS",
+                "CASEOPS_SIMILAR_ISSUES_CURRENT_USER",
                 "CASEOPS_AUTO_SYNC_ENABLED",
                 "CASEOPS_AUTO_SYNC_INTERVAL_MINUTES",
                 "CASEOPS_FLASK_DEBUG",

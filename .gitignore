@@ -23,6 +23,9 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 tests/
+!tests/
+tests/*
+!tests/test_issue_clusters.py
 caseops/__pycache__/
 caseops/**/__pycache__/
 caseops/**/*.pyc

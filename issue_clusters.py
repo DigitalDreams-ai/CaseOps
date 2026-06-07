@@ -27,6 +27,9 @@ CORRECTIONS_FILE = "corrections.jsonl"
 CLUSTER_FILE_PREFIX = "cluster-"
 CLUSTER_SCHEMA_VERSION = 1
 CORRECTION_SCHEMA_VERSION = 1
+ADJUDICATION_SCHEMA_VERSION = 1
+DELTA_VALIDATION_SCHEMA_VERSION = 1
+CLUSTER_SAFETY_VALIDATION_SCHEMA_VERSION = 1
 
 DEFAULT_CANDIDATE_LIMIT = 15
 DEFAULT_LOOKBACK_DAYS = 180
@@ -36,6 +39,23 @@ MIN_AUTO_CLUSTER_SCORE = 0.82
 MIN_TEXT_SCORE = 0.3
 
 CLOSED_STATUSES = {"closed", "resolved", "canceled", "cancelled"}
+SIMILARITY_CLASSIFICATIONS = {
+    "same_problem_same_fix",
+    "same_problem_needs_record_validation",
+    "same_symptom_different_possible_cause",
+    "related_context_only",
+    "unrelated",
+}
+SIMILARITY_PIPELINE_MODES = {
+    "full_investigation",
+    "cluster_context_full_investigation",
+    "delta_validation",
+    "issue_specific_response_only",
+    "manual_review",
+}
+ADJUDICATION_FILE = "adjudications.jsonl"
+DELTA_VALIDATION_FILE = "delta-validation-plans.jsonl"
+CLUSTER_SAFETY_VALIDATION_FILE = "cluster-safety-validations.jsonl"
 
 _CLOSED_STATUS_RE = re.compile(r"^(?:closed|resolved|canceled|cancelled)$", re.IGNORECASE)
 _WORD_RE = re.compile(r"[a-z0-9]+(?:_[a-z0-9]+|[a-z0-9._-]+)?", re.IGNORECASE)
@@ -45,10 +65,10 @@ _MANAGED_PREFIX_RE = re.compile(r"\b([a-z][a-z0-9_]*)__c\b", re.IGNORECASE)
 _FILE_IDENTIFIER_RE = re.compile(r"\b[A-Za-z0-9]{15,18}\b")
 _EMAIL_RE = re.compile(r"\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b", re.IGNORECASE)
 _SF_TOKEN_RE = re.compile(r"\b00D[a-z0-9]{12,18}![A-Za-z0-9._~=-]+\b", re.IGNORECASE)
-_FRONTDOOR_RE = re.compile(r"(?i)([?&]sid=)[^\\s&\"'<>]+")
-_SFDX_AUTH_RE = re.compile(r"force://[^\"'<>\\s]+")
-_LOCAL_PATH_RE = re.compile(r"(?:(?:[a-zA-Z]:\\|/)(?:[\\w.-]+[/\\\\])+[\\w.-]+)")
-_ASSIGNEE_TOKEN_RE = re.compile(r"\s*[;,]\\s*")
+_FRONTDOOR_RE = re.compile(r"(?i)([?&]sid=)[^\s&\"'<>]+")
+_SFDX_AUTH_RE = re.compile(r"force://[^\"'<>\s]+")
+_LOCAL_PATH_RE = re.compile(r"(?:(?:[a-zA-Z]:\\|/)(?:[\w .-]+[/\\])+[\w .-]+)")
+_ASSIGNEE_TOKEN_RE = re.compile(r"\s*[;,]\s*")
 
 CORRECTION_ACTIONS = {
     "mark_same_root_cause",
@@ -120,6 +140,18 @@ def _cluster_root(outputs_dir: Path) -> Path:
 
 def _corrections_path(outputs_dir: Path) -> Path:
     return _cluster_root(outputs_dir) / CORRECTIONS_FILE
+
+
+def _adjudications_path(outputs_dir: Path) -> Path:
+    return _cluster_root(outputs_dir) / ADJUDICATION_FILE
+
+
+def _delta_validation_path(outputs_dir: Path) -> Path:
+    return _cluster_root(outputs_dir) / DELTA_VALIDATION_FILE
+
+
+def _cluster_safety_validation_path(outputs_dir: Path) -> Path:
+    return _cluster_root(outputs_dir) / CLUSTER_SAFETY_VALIDATION_FILE
 
 
 @dataclass(frozen=True)
@@ -532,6 +564,31 @@ class CandidateMatch:
     terms: list[str]
 
 
+@dataclass(frozen=True)
+class AdjudicationCandidate:
+    key: str
+    classification: str
+    confidence: float
+    evidence_for: list[str]
+    evidence_against: list[str]
+    required_validation: list[str]
+    recommended_pipeline_mode: str
+    rationale: str
+
+
+@dataclass(frozen=True)
+class AdjudicationResult:
+    current_issue: str
+    cluster_id: str
+    schema_version: int
+    adjudicator: str
+    candidates: list[AdjudicationCandidate]
+    selected_canonical_issue: str
+    selected_pipeline_mode: str
+    safety_gate: dict[str, Any]
+    created_at: str = ""
+
+
 def _score_pair(base: IssueFingerprint, other: IssueFingerprint, *, lookback_days: int) -> CandidateMatch:
     score = 0.0
     reasons: list[str] = []
@@ -670,6 +727,595 @@ def _sanitize_public_summary(text: str, org_aliases: set[str] | None = None) -> 
     for alias in aliases:
         sanitized = sanitized.replace(alias, "[REDACTED_ORG_ALIAS]")
     return sanitized
+
+
+def _safe_str_list(value: Any, *, limit: int = 12) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    result = [_safe_text(item) for item in value if _safe_text(item)]
+    return result[:limit]
+
+
+def _has_auto_cluster_evidence(match: CandidateMatch) -> bool:
+    reasons = set(match.reasons)
+    if "shared_object_and_field_pair" in reasons:
+        return True
+    if "shared_salesforce_field" in reasons and ("shared_error_term" in reasons or "shared_jira_component_or_label" in reasons):
+        return True
+    if "shared_jira_component_or_label" in reasons and "shared_error_term" in reasons:
+        return True
+    return False
+
+
+def similarity_adjudication_json_schema() -> dict[str, Any]:
+    return {
+        "schema_version": ADJUDICATION_SCHEMA_VERSION,
+        "type": "object",
+        "required": [
+            "schema_version",
+            "current_issue",
+            "cluster_id",
+            "adjudicator",
+            "candidates",
+            "selected_canonical_issue",
+            "selected_pipeline_mode",
+            "safety_gate",
+        ],
+        "properties": {
+            "schema_version": {"const": ADJUDICATION_SCHEMA_VERSION},
+            "current_issue": {"type": "string"},
+            "cluster_id": {"type": "string"},
+            "adjudicator": {"type": "string"},
+            "selected_canonical_issue": {"type": "string"},
+            "selected_pipeline_mode": {"enum": sorted(SIMILARITY_PIPELINE_MODES)},
+            "candidates": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": [
+                        "key",
+                        "classification",
+                        "confidence",
+                        "evidence_for",
+                        "evidence_against",
+                        "required_validation",
+                        "recommended_pipeline_mode",
+                        "rationale",
+                    ],
+                    "properties": {
+                        "key": {"type": "string"},
+                        "classification": {"enum": sorted(SIMILARITY_CLASSIFICATIONS)},
+                        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                        "evidence_for": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                        "evidence_against": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                        "required_validation": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                        "recommended_pipeline_mode": {"enum": sorted(SIMILARITY_PIPELINE_MODES)},
+                        "rationale": {"type": "string"},
+                    },
+                    "additionalProperties": False,
+                },
+            },
+            "safety_gate": {
+                "type": "object",
+                "required": [
+                    "reuse_allowed",
+                    "requires_salesforce_validation",
+                    "requires_delta_validation",
+                    "stale_artifact_block",
+                    "reason",
+                ],
+                "properties": {
+                    "reuse_allowed": {"type": "boolean"},
+                    "requires_salesforce_validation": {"type": "boolean"},
+                    "requires_delta_validation": {"type": "boolean"},
+                    "stale_artifact_block": {"type": "boolean"},
+                    "reason": {"type": "string"},
+                },
+                "additionalProperties": False,
+            },
+        },
+        "additionalProperties": False,
+    }
+
+
+def _strict_json_object(text: str) -> dict[str, Any]:
+    raw = _safe_text(text)
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
+        raw = re.sub(r"\s*```$", "", raw)
+    parsed = json.loads(raw)
+    if not isinstance(parsed, dict):
+        raise ValueError("adjudication output must be a JSON object")
+    return parsed
+
+
+def _fallback_adjudication(
+    *,
+    issue_key: str,
+    cluster_id: str,
+    reason: str,
+) -> dict[str, Any]:
+    return {
+        "schema_version": ADJUDICATION_SCHEMA_VERSION,
+        "current_issue": issue_key,
+        "cluster_id": cluster_id,
+        "adjudicator": "fallback",
+        "candidates": [],
+        "selected_canonical_issue": "",
+        "selected_pipeline_mode": "full_investigation",
+        "safety_gate": {
+            "reuse_allowed": False,
+            "requires_salesforce_validation": True,
+            "requires_delta_validation": True,
+            "stale_artifact_block": True,
+            "reason": reason,
+        },
+        "valid": False,
+        "fallback_reason": reason,
+        "created_at": _now_timestamp(),
+    }
+
+
+def validate_similarity_adjudication(
+    payload: dict[str, Any],
+    *,
+    issue_key: str,
+    cluster_id: str = "",
+    candidate_keys: set[str] | list[str] | tuple[str, ...] = (),
+) -> dict[str, Any]:
+    allowed_keys = {_safe_text(key) for key in candidate_keys if _safe_text(key)}
+    required_top = set(similarity_adjudication_json_schema()["required"])
+    actual_top = set(payload.keys())
+    if actual_top != required_top:
+        missing = sorted(required_top - actual_top)
+        extra = sorted(actual_top - required_top)
+        raise ValueError(f"invalid top-level adjudication keys; missing={missing}, extra={extra}")
+    if payload.get("schema_version") != ADJUDICATION_SCHEMA_VERSION:
+        raise ValueError("unsupported adjudication schema_version")
+    if _safe_text(payload.get("current_issue")) != _safe_text(issue_key):
+        raise ValueError("current_issue does not match requested issue")
+    if cluster_id and _safe_text(payload.get("cluster_id")) != _safe_text(cluster_id):
+        raise ValueError("cluster_id does not match requested cluster")
+    selected_mode = _safe_text(payload.get("selected_pipeline_mode"))
+    if selected_mode not in SIMILARITY_PIPELINE_MODES:
+        raise ValueError("invalid selected_pipeline_mode")
+
+    candidates_raw = payload.get("candidates")
+    if not isinstance(candidates_raw, list):
+        raise ValueError("candidates must be a list")
+    normalized_candidates: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    required_candidate_keys = {
+        "key",
+        "classification",
+        "confidence",
+        "evidence_for",
+        "evidence_against",
+        "required_validation",
+        "recommended_pipeline_mode",
+        "rationale",
+    }
+    for candidate in candidates_raw:
+        if not isinstance(candidate, dict):
+            raise ValueError("candidate must be an object")
+        if set(candidate.keys()) != required_candidate_keys:
+            raise ValueError("candidate has invalid keys")
+        key = _safe_text(candidate.get("key"))
+        if not key:
+            raise ValueError("candidate key is required")
+        if allowed_keys and key not in allowed_keys:
+            raise ValueError(f"candidate {key} was not in the retrieved candidate set")
+        if key in seen:
+            raise ValueError(f"candidate {key} appears more than once")
+        seen.add(key)
+        classification = _safe_text(candidate.get("classification"))
+        if classification not in SIMILARITY_CLASSIFICATIONS:
+            raise ValueError(f"candidate {key} has invalid classification")
+        try:
+            confidence = float(candidate.get("confidence"))
+        except (TypeError, ValueError):
+            raise ValueError(f"candidate {key} confidence must be numeric")
+        if confidence < 0 or confidence > 1:
+            raise ValueError(f"candidate {key} confidence out of range")
+        recommended_mode = _safe_text(candidate.get("recommended_pipeline_mode"))
+        if recommended_mode not in SIMILARITY_PIPELINE_MODES:
+            raise ValueError(f"candidate {key} has invalid recommended_pipeline_mode")
+        evidence_for = _safe_str_list(candidate.get("evidence_for"), limit=20)
+        evidence_against = _safe_str_list(candidate.get("evidence_against"), limit=20)
+        required_validation = _safe_str_list(candidate.get("required_validation"), limit=20)
+        if not evidence_for:
+            raise ValueError(f"candidate {key} must include evidence_for")
+        if not evidence_against:
+            raise ValueError(f"candidate {key} must include evidence_against")
+        if not required_validation:
+            raise ValueError(f"candidate {key} must include required_validation")
+        normalized_candidates.append({
+            "key": key,
+            "classification": classification,
+            "confidence": round(confidence, 4),
+            "evidence_for": evidence_for,
+            "evidence_against": evidence_against,
+            "required_validation": required_validation,
+            "recommended_pipeline_mode": recommended_mode,
+            "rationale": _safe_text(candidate.get("rationale"))[:1000],
+        })
+
+    safety_gate = payload.get("safety_gate")
+    if not isinstance(safety_gate, dict):
+        raise ValueError("safety_gate must be an object")
+    required_safety = {
+        "reuse_allowed",
+        "requires_salesforce_validation",
+        "requires_delta_validation",
+        "stale_artifact_block",
+        "reason",
+    }
+    if set(safety_gate.keys()) != required_safety:
+        raise ValueError("safety_gate has invalid keys")
+    normalized_safety = {
+        "reuse_allowed": bool(safety_gate.get("reuse_allowed")),
+        "requires_salesforce_validation": bool(safety_gate.get("requires_salesforce_validation")),
+        "requires_delta_validation": bool(safety_gate.get("requires_delta_validation")),
+        "stale_artifact_block": bool(safety_gate.get("stale_artifact_block")),
+        "reason": _safe_text(safety_gate.get("reason"))[:1000],
+    }
+    if normalized_safety["reuse_allowed"] and not normalized_safety["requires_salesforce_validation"]:
+        raise ValueError("reuse_allowed still requires Salesforce validation")
+
+    return {
+        "schema_version": ADJUDICATION_SCHEMA_VERSION,
+        "current_issue": _safe_text(issue_key),
+        "cluster_id": _safe_text(payload.get("cluster_id")),
+        "adjudicator": _safe_text(payload.get("adjudicator")) or "model",
+        "candidates": normalized_candidates,
+        "selected_canonical_issue": _safe_text(payload.get("selected_canonical_issue")),
+        "selected_pipeline_mode": selected_mode,
+        "safety_gate": normalized_safety,
+        "valid": True,
+        "created_at": _now_timestamp(),
+    }
+
+
+def parse_similarity_adjudication_output(
+    text: str,
+    *,
+    issue_key: str,
+    cluster_id: str = "",
+    candidate_keys: set[str] | list[str] | tuple[str, ...] = (),
+) -> dict[str, Any]:
+    try:
+        payload = _strict_json_object(text)
+        return validate_similarity_adjudication(
+            payload,
+            issue_key=issue_key,
+            cluster_id=cluster_id,
+            candidate_keys=candidate_keys,
+        )
+    except Exception as exc:
+        return _fallback_adjudication(
+            issue_key=_safe_text(issue_key),
+            cluster_id=_safe_text(cluster_id),
+            reason=f"malformed_model_output: {type(exc).__name__}: {exc}",
+        )
+
+
+def build_candidate_adjudication_packet(
+    cluster_context: dict[str, Any],
+    *,
+    issue_key: str,
+    candidate_limit: int = DEFAULT_CANDIDATE_LIMIT,
+) -> dict[str, Any]:
+    cluster = cluster_context.get("cluster") if isinstance(cluster_context.get("cluster"), dict) else {}
+    members = cluster_context.get("members") if isinstance(cluster_context.get("members"), list) else []
+    current_member = next(
+        (item for item in members if isinstance(item, dict) and _safe_text(item.get("key")).lower() == _safe_text(issue_key).lower()),
+        {},
+    )
+    candidates = []
+    for member in members:
+        if not isinstance(member, dict):
+            continue
+        key = _safe_text(member.get("key"))
+        if not key or key.lower() == _safe_text(issue_key).lower():
+            continue
+        candidates.append({
+            "key": key,
+            "status": _safe_text(member.get("status")),
+            "relationship": _safe_text(member.get("relationship")),
+            "preliminary_classification": _safe_text(member.get("classification")) or "related_context_only",
+            "reasons": _safe_str_list(member.get("reasons"), limit=8),
+            "evidence_terms": _safe_str_list(member.get("evidence_terms"), limit=12),
+            "is_open": bool(member.get("is_open")),
+            "is_stale": bool(member.get("is_stale")),
+            "jira_updated": _safe_text(member.get("jira_updated")),
+        })
+    candidates.sort(key=lambda item: (item["is_stale"], not item["is_open"], item["key"]))
+    candidates = candidates[:max(1, min(candidate_limit, DEFAULT_CANDIDATE_LIMIT))]
+    shared = cluster.get("shared_findings") if isinstance(cluster.get("shared_findings"), dict) else {}
+    packet = {
+        "schema_version": ADJUDICATION_SCHEMA_VERSION,
+        "current_issue": {
+            "key": _safe_text(issue_key),
+            "status": _safe_text(cluster_context.get("status")),
+            "preliminary_classification": _safe_text(current_member.get("classification")) or _safe_text(cluster_context.get("cluster_type")),
+            "reasons": _safe_str_list(current_member.get("reasons"), limit=8),
+            "evidence_terms": _safe_str_list(current_member.get("evidence_terms"), limit=12),
+            "is_stale": bool(current_member.get("is_stale")),
+        },
+        "cluster": {
+            "cluster_id": _safe_text(cluster_context.get("cluster_id")),
+            "canonical_issue": _safe_text(cluster.get("canonical_issue")),
+            "safety": cluster.get("safety") if isinstance(cluster.get("safety"), dict) else {},
+            "shared_findings": {
+                "components": _safe_str_list(shared.get("components"), limit=12),
+                "objects": _safe_str_list(shared.get("objects"), limit=12),
+                "error_terms": _safe_str_list(shared.get("error_terms"), limit=12),
+                "managed_prefixes": _safe_str_list(shared.get("managed_prefixes"), limit=12),
+            },
+        },
+        "candidates": candidates,
+        "candidate_keys": [item["key"] for item in candidates],
+        "output_schema": similarity_adjudication_json_schema(),
+    }
+    prompt = (
+        "Classify only the supplied candidate issues. Do not search Jira, files, or the full issue corpus.\n"
+        "Return strict JSON only, with exactly the output_schema keys and candidate keys supplied.\n"
+        "Every candidate must include confidence, evidence_for, evidence_against, required_validation, "
+        "and recommended_pipeline_mode. Do not allow reuse without Salesforce validation.\n\n"
+        f"{json.dumps(packet, indent=2)}"
+    )
+    return {**packet, "prompt": _sanitize_public_summary(prompt)}
+
+
+def write_similarity_adjudication(
+    outputs_dir: Path,
+    *,
+    issue_key: str,
+    cluster_id: str,
+    model_output: str,
+    candidate_keys: set[str] | list[str] | tuple[str, ...],
+) -> dict[str, Any]:
+    result = parse_similarity_adjudication_output(
+        model_output,
+        issue_key=issue_key,
+        cluster_id=cluster_id,
+        candidate_keys=candidate_keys,
+    )
+    _cluster_root(outputs_dir).mkdir(parents=True, exist_ok=True)
+    with _adjudications_path(outputs_dir).open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(result, ensure_ascii=False, sort_keys=True) + "\n")
+    return result
+
+
+def _read_similarity_adjudications(outputs_dir: Path) -> list[dict[str, Any]]:
+    path = _adjudications_path(outputs_dir)
+    if not path.exists():
+        return []
+    results: list[dict[str, Any]] = []
+    try:
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            if not raw.strip():
+                continue
+            row = json.loads(raw)
+            if isinstance(row, dict):
+                results.append(row)
+    except Exception:
+        return []
+    return results
+
+
+def read_latest_similarity_adjudication(
+    outputs_dir: Path,
+    *,
+    issue_key: str,
+    cluster_id: str = "",
+) -> dict[str, Any] | None:
+    issue_key_norm = _safe_text(issue_key).lower()
+    cluster_id_norm = _safe_text(cluster_id)
+    for row in reversed(_read_similarity_adjudications(outputs_dir)):
+        if _safe_text(row.get("current_issue")).lower() != issue_key_norm:
+            continue
+        if cluster_id_norm and _safe_text(row.get("cluster_id")) != cluster_id_norm:
+            continue
+        return row
+    return None
+
+
+def _apply_adjudication_to_members(members: list[dict[str, Any]], adjudication: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not adjudication or not adjudication.get("valid"):
+        return members
+    by_key = {
+        _safe_text(item.get("key")): item
+        for item in adjudication.get("candidates", [])
+        if isinstance(item, dict) and _safe_text(item.get("key"))
+    }
+    updated = []
+    for member in members:
+        payload = dict(member)
+        candidate = by_key.get(_safe_text(member.get("key")))
+        if candidate:
+            payload["classification"] = _safe_text(candidate.get("classification")) or payload.get("classification", "")
+            payload["confidence"] = candidate.get("confidence")
+            payload["adjudication"] = {
+                "evidence_for": _safe_str_list(candidate.get("evidence_for"), limit=10),
+                "evidence_against": _safe_str_list(candidate.get("evidence_against"), limit=10),
+                "required_validation": _safe_str_list(candidate.get("required_validation"), limit=10),
+                "recommended_pipeline_mode": _safe_text(candidate.get("recommended_pipeline_mode")),
+                "rationale": _safe_text(candidate.get("rationale")),
+            }
+        updated.append(payload)
+    return updated
+
+
+def build_delta_validation_plan(
+    similarity_lookup: dict[str, Any],
+    *,
+    delta_mode_enabled: bool,
+) -> dict[str, Any]:
+    classification = _safe_text(similarity_lookup.get("classification") or similarity_lookup.get("cluster_type"))
+    safety = similarity_lookup.get("safety") if isinstance(similarity_lookup.get("safety"), dict) else {}
+    issue_is_stale = bool(similarity_lookup.get("issue_is_stale"))
+    adjudication = similarity_lookup.get("adjudication") if isinstance(similarity_lookup.get("adjudication"), dict) else {}
+    adjudication_valid = bool(adjudication.get("valid"))
+    stale_matches = [
+        _safe_text(item.get("key"))
+        for item in (similarity_lookup.get("open_matches") or []) + (similarity_lookup.get("closed_matches") or [])
+        if isinstance(item, dict) and item.get("is_stale")
+    ]
+    blockers = []
+    if not delta_mode_enabled:
+        blockers.append("CASEOPS_SIMILAR_ISSUES_DELTA_MODE is disabled")
+    if classification not in {"same_problem_same_fix", "same_problem_needs_record_validation"}:
+        blockers.append(f"classification {classification or 'missing'} does not allow delta validation")
+    if not bool(safety.get("reuse_allowed")):
+        blockers.append("cluster safety reuse_allowed is false")
+    if not bool(safety.get("requires_delta_validation")):
+        blockers.append("cluster safety does not require an explicit delta validation path")
+    if issue_is_stale or stale_matches:
+        blockers.append("one or more cluster artifacts are stale")
+    if not adjudication_valid:
+        blockers.append("no valid model adjudication is persisted for this issue")
+
+    allowed = not blockers
+    checks = [
+        "Confirm affected user, record, org configuration, and permissions for this issue.",
+        "Confirm the same Salesforce automation/component path is active for this issue.",
+        "Confirm current metadata/source signatures have not drifted since the canonical investigation.",
+        "Run Sandbox-only validation for deployable metadata changes before drafting final resolution.",
+        "For data-only/no-deploy fixes, verify Production read-only facts and document the operator/admin action without executing it.",
+    ]
+    guardrails = [
+        "No Production writes, deploys, Apex anonymous, data updates, permission assignments, or destructive operations.",
+        "No Jira comments or status writes from similarity reuse without the existing explicit approval flow.",
+        "Do not reuse stale test reports or stale closed-issue artifacts as authoritative evidence.",
+        "Customer/internal drafts must include issue-specific user/record/config facts and cannot be copied verbatim from a related issue.",
+    ]
+    return {
+        "schema_version": DELTA_VALIDATION_SCHEMA_VERSION,
+        "enabled": bool(delta_mode_enabled),
+        "allowed": allowed,
+        "gate_result": "pass" if allowed else "blocked",
+        "selected_mode_if_allowed": "delta_validation",
+        "fallback_mode": "cluster_context_full_investigation" if similarity_lookup.get("cluster_id") else "full_investigation",
+        "blockers": blockers,
+        "salesforce_validation_checks": checks,
+        "drafting_guardrails": guardrails,
+        "stale_match_keys": [key for key in stale_matches if key],
+        "reason": "Delta validation allowed with persisted adjudication and reuse safety." if allowed else "; ".join(blockers),
+    }
+
+
+def write_delta_validation_plan(outputs_dir: Path, *, issue_key: str, plan: dict[str, Any]) -> dict[str, Any]:
+    payload = {
+        "issue": _safe_text(issue_key),
+        "created_at": _now_timestamp(),
+        "plan": plan,
+    }
+    _cluster_root(outputs_dir).mkdir(parents=True, exist_ok=True)
+    with _delta_validation_path(outputs_dir).open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
+    return payload
+
+
+def write_cluster_safety_validation(
+    outputs_dir: Path,
+    *,
+    issue_key: str,
+    cluster_id: str,
+    validation_status: str,
+    salesforce_checks: list[str],
+    reuse_reason: str = "",
+) -> dict[str, Any]:
+    status = _safe_text(validation_status).lower()
+    checks = _safe_str_list(salesforce_checks, limit=20)
+    if status not in {"pass", "fail"}:
+        return {"error": "validation_status must be pass or fail"}
+    if not checks:
+        return {"error": "salesforce_checks required"}
+    if status == "pass" and not reuse_reason:
+        return {"error": "reuse_reason required when validation passes"}
+
+    payload = {
+        "schema_version": CLUSTER_SAFETY_VALIDATION_SCHEMA_VERSION,
+        "issue": _safe_text(issue_key),
+        "cluster_id": _safe_text(cluster_id),
+        "validation_status": status,
+        "reuse_allowed": status == "pass",
+        "reuse_reason": _safe_text(reuse_reason)[:1000],
+        "salesforce_checks": checks,
+        "artifact_signature": _artifact_signature(outputs_dir, issue_key),
+        "created_at": _now_timestamp(),
+    }
+    _cluster_root(outputs_dir).mkdir(parents=True, exist_ok=True)
+    with _cluster_safety_validation_path(outputs_dir).open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
+    return payload
+
+
+def _read_cluster_safety_validations(outputs_dir: Path) -> list[dict[str, Any]]:
+    path = _cluster_safety_validation_path(outputs_dir)
+    if not path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    try:
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            if not raw.strip():
+                continue
+            payload = json.loads(raw)
+            if isinstance(payload, dict):
+                rows.append(payload)
+    except Exception:
+        return []
+    return rows
+
+
+def read_latest_cluster_safety_validation(
+    outputs_dir: Path,
+    *,
+    issue_key: str,
+    cluster_id: str,
+) -> dict[str, Any] | None:
+    issue_norm = _safe_text(issue_key).lower()
+    cluster_norm = _safe_text(cluster_id)
+    for row in reversed(_read_cluster_safety_validations(outputs_dir)):
+        if _safe_text(row.get("issue")).lower() != issue_norm:
+            continue
+        if _safe_text(row.get("cluster_id")) != cluster_norm:
+            continue
+        return row
+    return None
+
+
+def _apply_cluster_safety_validation(
+    outputs_dir: Path,
+    *,
+    issue_key: str,
+    cluster_payload: dict[str, Any],
+) -> dict[str, Any]:
+    cluster_id = _safe_text(cluster_payload.get("cluster_id"))
+    validation = read_latest_cluster_safety_validation(outputs_dir, issue_key=issue_key, cluster_id=cluster_id)
+    if not validation:
+        return cluster_payload
+    safety = cluster_payload.get("safety") if isinstance(cluster_payload.get("safety"), dict) else {}
+    current_signature = _artifact_signature(outputs_dir, issue_key)
+    stored_signature = _safe_text(validation.get("artifact_signature"))
+    stale = bool(stored_signature and current_signature and stored_signature != current_signature)
+    safety = dict(safety)
+    safety["validated_by_delta_validation"] = bool(validation.get("reuse_allowed")) and not stale
+    safety["validation_status"] = _safe_text(validation.get("validation_status"))
+    safety["validation_issue"] = _safe_text(validation.get("issue"))
+    safety["validation_stale"] = stale
+    safety["validation_checks"] = _safe_str_list(validation.get("salesforce_checks"), limit=20)
+    if validation.get("reuse_allowed") and not stale:
+        safety["reuse_allowed"] = True
+        safety["reuse_reason"] = _safe_text(validation.get("reuse_reason"))
+    else:
+        safety["reuse_allowed"] = False
+        if stale:
+            safety["reuse_reason"] = "Cluster safety validation is stale relative to current artifacts."
+    cluster_payload["safety"] = safety
+    cluster_payload["latest_safety_validation"] = validation
+    return cluster_payload
 
 
 def _build_cluster_payload(
@@ -877,6 +1523,8 @@ def _build_dsu(edges: list[tuple[str, str, CandidateMatch]], keys: list[str]) ->
             continue
         if match.score < MIN_AUTO_CLUSTER_SCORE:
             continue
+        if not _has_auto_cluster_evidence(match):
+            continue
         union(left, right)
 
     components: dict[str, list[str]] = {}
@@ -969,6 +1617,8 @@ def rebuild_issue_clusters(
             if match.score < MIN_AUTO_CLUSTER_SCORE:
                 continue
             if match.classification not in {"same_problem_same_fix", "same_problem_needs_record_validation"}:
+                continue
+            if not _has_auto_cluster_evidence(match):
                 continue
             left, right = sorted((key, match.key))
             edges.append((left, right, match))
@@ -1189,7 +1839,13 @@ def read_issue_cluster_context(*, outputs_dir: Path, issue_key: str) -> dict[str
 
     corrections = _read_similarity_corrections(outputs_dir)
     cluster_payload = _apply_similarity_corrections(issue_key, cluster_payload, corrections=corrections)
+    cluster_payload = _apply_cluster_safety_validation(
+        outputs_dir,
+        issue_key=issue_key,
+        cluster_payload=cluster_payload,
+    )
     if cluster_payload.get("detached"):
+        detached_summary_file = _safe_text(cluster_payload.get("summary_file", f"{cluster_id}.md"))
         return {
             "issue": issue_key,
             "cluster_id": cluster_id,
@@ -1200,16 +1856,19 @@ def read_issue_cluster_context(*, outputs_dir: Path, issue_key: str) -> dict[str
             "closed_matches": [],
             "status": issue_row.get("status", ""),
             "cluster_state": "detached",
-            "summary_url": cluster_payload.get("summary_file", f"{cluster_id}.md"),
+            "summary_url": f"/files/issue-clusters/{detached_summary_file}" if detached_summary_file else "",
             "summary_preview": "",
             "corrections_applied": ["detach_from_cluster"],
         }
 
+    latest_adjudication = read_latest_similarity_adjudication(outputs_dir, issue_key=issue_key, cluster_id=cluster_id)
     members_raw = [_member_block(item, output_root={"cluster_id": cluster_id}) for item in cluster_payload.get("members", [])]
     members = [member for member in members_raw if member]
+    members = _apply_adjudication_to_members(members, latest_adjudication)
     members.sort(key=lambda item: (item["relationship"] != "canonical", item["key"]))
-    open_matches = [member for member in members if member["is_open"]]
-    closed_matches = [member for member in members if not member["is_open"]]
+    issue_key_norm = _safe_text(issue_key).lower()
+    open_matches = [member for member in members if member["is_open"] and _safe_text(member.get("key")).lower() != issue_key_norm]
+    closed_matches = [member for member in members if not member["is_open"] and _safe_text(member.get("key")).lower() != issue_key_norm]
 
     summary_file = _safe_text(cluster_payload.get("summary_file", f"{cluster_id}.md"))
     summary_url = ""
@@ -1245,5 +1904,17 @@ def read_issue_cluster_context(*, outputs_dir: Path, issue_key: str) -> dict[str
         "status": issue_row.get("status", ""),
         "summary_url": summary_url,
         "summary_preview": summary_preview,
+        "adjudication": latest_adjudication or None,
+        "adjudication_packet": build_candidate_adjudication_packet(
+            {
+                "issue": issue_key,
+                "cluster_id": cluster_id,
+                "cluster_type": issue_row.get("cluster_type", ""),
+                "cluster": cluster_payload,
+                "members": members,
+                "status": issue_row.get("status", ""),
+            },
+            issue_key=issue_key,
+        ),
         "corrections_applied": sorted(set(applied_corrections)),
     }

@@ -1516,6 +1516,12 @@
       : '';
 
     const actionStatusEl = `<div id="similarity-action-status" class="sim-action-status" style="display:none;"></div>`;
+    const clusterActions = [
+      `<button class="btn" type="button" data-cluster-action="detach_from_cluster" data-target="${escHtml(key)}">Detach From Cluster</button>`,
+    ];
+    if (key !== canonicalIssue) {
+      clusterActions.push(`<button class="btn" type="button" data-cluster-action="make_canonical" data-target="${escHtml(key)}">Make Current Canonical</button>`);
+    }
 
     const sectionHeader = `<div class="sim-overview">
       <div><strong>Cluster:</strong> <span class="monospace">${escHtml(data.cluster_id)}</span></div>
@@ -1523,6 +1529,7 @@
       <div><strong>Cluster Type:</strong> ${escHtml(data.cluster_type || data.classification || 'related_context_only')}</div>
       <div><strong>State:</strong> ${escHtml(data.cluster_state || 'active')}</div>
       <div><strong>Classifications Applied:</strong> ${(corrections.length ? escHtml(corrections.join(', ')) : 'none')}</div>
+      <div class="sim-actions sim-cluster-actions">${clusterActions.join('')}</div>
     </div>`;
 
     const renderMatch = (item) => {
@@ -1532,8 +1539,16 @@
       const status = item.status || (item.is_open ? 'open' : 'closed');
       const statusClass = item.is_open ? 'sim-match-status-open' : 'sim-match-status-closed';
       const classification = escHtml(item.classification || 'related_context_only');
+      const confidence = item.confidence !== undefined && item.confidence !== null ? String(item.confidence) : '';
+      const adjudication = item.adjudication && typeof item.adjudication === 'object' ? item.adjudication : null;
       const reasons = Array.isArray(item.reasons) ? item.reasons.map(v => escHtml(String(v))).filter(Boolean).slice(0, 4) : [];
       const evidenceTerms = Array.isArray(item.evidence_terms) ? item.evidence_terms.map(v => escHtml(String(v))).filter(Boolean).slice(0, 6) : [];
+      const evidenceAgainst = adjudication && Array.isArray(adjudication.evidence_against)
+        ? adjudication.evidence_against.map(v => escHtml(String(v))).filter(Boolean).slice(0, 4)
+        : [];
+      const requiredValidation = adjudication && Array.isArray(adjudication.required_validation)
+        ? adjudication.required_validation.map(v => escHtml(String(v))).filter(Boolean).slice(0, 4)
+        : [];
       const isCurrentIssue = matchKey === key;
 
       const actionButtons = [];
@@ -1550,6 +1565,9 @@
 
       const reasonsHtml = reasons.length ? `<div><strong>Reasons:</strong> ${reasons.map(v => `<span class="sim-reason">${v}</span>`).join(' ')}</div>` : '';
       const evidenceHtml = evidenceTerms.length ? `<div><strong>Evidence:</strong> ${evidenceTerms.join(', ')}</div>` : '';
+      const confidenceHtml = confidence ? `<div><strong>Confidence:</strong> ${escHtml(confidence)}</div>` : '';
+      const againstHtml = evidenceAgainst.length ? `<div><strong>Difference Warnings:</strong> ${evidenceAgainst.join(', ')}</div>` : '';
+      const validationHtml = requiredValidation.length ? `<div><strong>Required Validation:</strong> ${requiredValidation.join(', ')}</div>` : '';
       const actionsHtml = actionButtons.length ? `<div class="sim-actions" data-target="${escHtml(matchKey)}">${actionButtons.join('')}</div>` : '';
       const className = `sim-badge-${(item.classification || 'related_context_only').replace(/[^a-z_]/g, '')}`;
       const classificationHtml = `<span class="sim-badge ${className}">${classification}</span>`;
@@ -1560,8 +1578,11 @@
           ${classificationHtml}
           <span class="${statusClass}">${escHtml(status)} · ${isStale}</span>
         </div>
+        ${confidenceHtml}
         ${reasonsHtml}
         ${evidenceHtml}
+        ${againstHtml}
+        ${validationHtml}
         ${actionsHtml}
       </div>`;
     };
@@ -1582,12 +1603,21 @@
       ${renderSection('Closed/Resolved Matches', closedMatches)}
     </div>`;
 
-    issueBody.querySelectorAll('.sim-actions button[data-action]').forEach((btn) => {
+      issueBody.querySelectorAll('.sim-actions button[data-action]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const action = btn.dataset.action;
         const targetIssue = btn.dataset.target || '';
         const thisIssue = key;
         void applySimilarityCorrection(thisIssue, action, targetIssue, {
+          clusterId: data.cluster_id || '',
+        });
+      });
+    });
+    issueBody.querySelectorAll('.sim-cluster-actions button[data-cluster-action]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.clusterAction;
+        const targetIssue = btn.dataset.target || key;
+        void applySimilarityCorrection(key, action, targetIssue, {
           clusterId: data.cluster_id || '',
         });
       });
@@ -1653,6 +1683,9 @@
       logLine(`Similarity correction ${action} saved for ${issueKey}${targetIssue ? ` (target: ${targetIssue})` : ''}`, 'ok', issueKey);
 
       // Refresh data to reflect persisted action.
+      if (activeIssueData && activeIssueData.key === issueKey) {
+        activeIssueData.similar_issue_cluster = null;
+      }
       const tabEl = document.querySelector(`.tab[data-ftype="similar_issues"]`);
       if (activeKey === issueKey && tabEl) {
         await renderSimilarIssuesTab(issueKey, selectTabSeq);
