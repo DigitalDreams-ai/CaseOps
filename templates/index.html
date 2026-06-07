@@ -272,6 +272,7 @@
 
   let activeKey = null;
   let activeTab = null;
+  let activeIssueData = null;
   /** Incremented on each selectIssue call; stale in-flight responses must not repaint UI. */
   let selectIssueSeq = 0;
   /** Incremented on each selectTab call; stale tab fetches must not overwrite the panel. */
@@ -335,6 +336,7 @@
 
   function resetMainToOverview() {
     activeKey = null;
+    activeIssueData = null;
     document.querySelectorAll('.issue-item').forEach(el => el.classList.remove('selected'));
     const dash = document.getElementById('dashboard');
     const issueBody = document.getElementById('issue-body');
@@ -1078,6 +1080,7 @@
     if (seq !== selectIssueSeq) return;
 
     if (!res.ok || !issue.key) {
+      activeIssueData = null;
       if (seq !== selectIssueSeq) return;
       clearSavedIssueSession();
       logLine(
@@ -1091,6 +1094,7 @@
     }
 
     activeKey = key;
+    activeIssueData = issue;
     selectTabSeq++;
     persistSelectedIssue(key);
     renderLogForKey(key);
@@ -1397,6 +1401,11 @@
     issueBody.innerHTML =
       '<p style="color:#6e7681;padding:20px;">Loading...</p>';
 
+    if (ftype === 'similar_issues') {
+      await renderSimilarIssuesTab(key, seq);
+      return;
+    }
+
     if (ftype === 'generated_files') {
       await loadGeneratedFilesTab(key, issueBody, seq);
       return;
@@ -1466,6 +1475,195 @@
     }
     html += '</div>';
     area.innerHTML = html;
+  }
+
+  async function renderSimilarIssuesTab(key, tabSeq) {
+    const issueBody = document.getElementById('issue-body');
+    if (!issueBody) return;
+
+    const clusterId = (activeIssueData && activeIssueData.key === key && activeIssueData.similar_issue_cluster && activeIssueData.similar_issue_cluster.cluster_id)
+      ? activeIssueData.similar_issue_cluster
+      : null;
+
+    let data = clusterId;
+    if (!data) {
+      try {
+        const res = await fetch(`/api/issue/${key}/similarity-context`);
+        data = await res.json();
+      } catch (e) {
+        issueBody.innerHTML = '<p class="empty">Could not load similar-issues context.</p>';
+        return;
+      }
+    }
+
+    if (tabSeq !== selectTabSeq || activeKey !== key) return;
+    if (!data || !data.cluster_id) {
+      issueBody.innerHTML = '<p class="empty">No similar-issue context available.</p>';
+      return;
+    }
+
+    const canonicalIssue = data.cluster && data.cluster.canonical_issue ? String(data.cluster.canonical_issue) : '';
+    const openMatches = Array.isArray(data.open_matches) ? data.open_matches : [];
+    const closedMatches = Array.isArray(data.closed_matches) ? data.closed_matches : [];
+    const corrections = Array.isArray(data.corrections_applied) ? data.corrections_applied : [];
+
+    const summaryUrl = (data.summary_url || '').trim();
+    const summaryPreview = (data.summary_preview || '').trim();
+
+    const summaryBlock = summaryUrl
+      ? `<p><a href="${escHtml(summaryUrl)}" target="_blank" rel="noopener noreferrer">Open public-safe summary</a></p>
+         ${summaryPreview ? `<p class="sim-summary-preview">${escHtml(summaryPreview)}</p>` : ''}`
+      : '';
+
+    const actionStatusEl = `<div id="similarity-action-status" class="sim-action-status" style="display:none;"></div>`;
+
+    const sectionHeader = `<div class="sim-overview">
+      <div><strong>Cluster:</strong> <span class="monospace">${escHtml(data.cluster_id)}</span></div>
+      <div><strong>Canonical Issue:</strong> ${canonicalIssue ? escHtml(canonicalIssue) : 'not set'}</div>
+      <div><strong>Cluster Type:</strong> ${escHtml(data.cluster_type || data.classification || 'related_context_only')}</div>
+      <div><strong>State:</strong> ${escHtml(data.cluster_state || 'active')}</div>
+      <div><strong>Classifications Applied:</strong> ${(corrections.length ? escHtml(corrections.join(', ')) : 'none')}</div>
+    </div>`;
+
+    const renderMatch = (item) => {
+      const matchKey = String(item.key || '');
+      if (!matchKey) return '';
+      const isStale = item.is_stale ? 'stale' : 'current';
+      const status = item.status || (item.is_open ? 'open' : 'closed');
+      const statusClass = item.is_open ? 'sim-match-status-open' : 'sim-match-status-closed';
+      const classification = escHtml(item.classification || 'related_context_only');
+      const reasons = Array.isArray(item.reasons) ? item.reasons.map(v => escHtml(String(v))).filter(Boolean).slice(0, 4) : [];
+      const evidenceTerms = Array.isArray(item.evidence_terms) ? item.evidence_terms.map(v => escHtml(String(v))).filter(Boolean).slice(0, 6) : [];
+      const isCurrentIssue = matchKey === key;
+
+      const actionButtons = [];
+      actionButtons.push(`<button class="btn primary" type="button" data-action="mark_same_root_cause" data-target="${escHtml(matchKey)}">Mark Same Root Cause</button>`);
+      actionButtons.push(`<button class="btn" type="button" data-action="mark_not_related" data-target="${escHtml(matchKey)}">Mark Not Related</button>`);
+      if (isCurrentIssue) {
+        actionButtons.push(`<button class="btn" type="button" data-action="detach_from_cluster" data-target="${escHtml(matchKey)}">Detach From Cluster</button>`);
+      }
+      if (matchKey !== canonicalIssue) {
+        actionButtons.push(`<button class="btn" type="button" data-action="make_canonical" data-target="${escHtml(matchKey)}">Make Canonical</button>`);
+      } else {
+        actionButtons.push('<span class="sim-badge sim-badge-canonical">Current canonical</span>');
+      }
+
+      const reasonsHtml = reasons.length ? `<div><strong>Reasons:</strong> ${reasons.map(v => `<span class="sim-reason">${v}</span>`).join(' ')}</div>` : '';
+      const evidenceHtml = evidenceTerms.length ? `<div><strong>Evidence:</strong> ${evidenceTerms.join(', ')}</div>` : '';
+      const actionsHtml = actionButtons.length ? `<div class="sim-actions" data-target="${escHtml(matchKey)}">${actionButtons.join('')}</div>` : '';
+      const className = `sim-badge-${(item.classification || 'related_context_only').replace(/[^a-z_]/g, '')}`;
+      const classificationHtml = `<span class="sim-badge ${className}">${classification}</span>`;
+
+      return `<div class="sim-card">
+        <div class="sim-card-header">
+          <a href="/?issue=${escHtml(encodeURIComponent(matchKey))}">${escHtml(matchKey)}</a>
+          ${classificationHtml}
+          <span class="${statusClass}">${escHtml(status)} · ${isStale}</span>
+        </div>
+        ${reasonsHtml}
+        ${evidenceHtml}
+        ${actionsHtml}
+      </div>`;
+    };
+
+    const renderSection = (title, items) => {
+      if (!items.length) {
+        return `<h3>${title}</h3><p class="empty">No ${title.toLowerCase()} matches.</p>`;
+      }
+      return `<h3>${title}</h3><div class="sim-grid">${items.map(renderMatch).join('')}</div>`;
+    };
+
+    issueBody.innerHTML = `<div class="sim-issue-wrap">
+      <h2>Similar Issues</h2>
+      ${actionStatusEl}
+      ${sectionHeader}
+      ${summaryBlock ? `<div class="sim-summary">${summaryBlock}</div>` : ''}
+      ${renderSection('Open Matches', openMatches)}
+      ${renderSection('Closed/Resolved Matches', closedMatches)}
+    </div>`;
+
+    issueBody.querySelectorAll('.sim-actions button[data-action]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        const targetIssue = btn.dataset.target || '';
+        const thisIssue = key;
+        void applySimilarityCorrection(thisIssue, action, targetIssue, {
+          clusterId: data.cluster_id || '',
+        });
+      });
+    });
+
+    if (issueBody.querySelector('.sim-summary a')) {
+      issueBody.querySelector('.sim-summary a')?.addEventListener('click', () => {
+        window.open(summaryUrl, '_blank', 'noopener');
+        return false;
+      }, true);
+    }
+  }
+
+  async function applySimilarityCorrection(issueKey, action, targetIssue, options) {
+    const status = document.getElementById('similarity-action-status');
+    const methodBody = {
+      action,
+      cluster_id: options?.clusterId || '',
+      reference_issue: '',
+      canonical_issue: '',
+    };
+    if (action === 'mark_same_root_cause' || action === 'mark_not_related') {
+      methodBody.reference_issue = targetIssue || '';
+    }
+    if (action === 'make_canonical') {
+      methodBody.canonical_issue = targetIssue || issueKey;
+    }
+
+    if (!methodBody.reference_issue && (action === 'mark_same_root_cause' || action === 'mark_not_related')) {
+      if (status) {
+        status.textContent = 'Reference issue required.';
+        status.style.display = 'block';
+      }
+      return;
+    }
+
+    if (status) {
+      status.textContent = 'Applying correction…';
+      status.style.display = 'block';
+    }
+
+    try {
+      const res = await fetch(`/api/issue/${encodeURIComponent(issueKey)}/similarity-correction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(methodBody),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        const message = data.error || `Failed (${res.status})`;
+        if (status) {
+          status.textContent = message;
+          status.style.color = '#f85149';
+        }
+        logLine(`Similarity correction failed for ${issueKey}: ${message}`, 'err', issueKey);
+        return;
+      }
+
+      if (status) {
+        status.textContent = 'Correction saved.';
+        status.style.color = '#3fb950';
+      }
+      logLine(`Similarity correction ${action} saved for ${issueKey}${targetIssue ? ` (target: ${targetIssue})` : ''}`, 'ok', issueKey);
+
+      // Refresh data to reflect persisted action.
+      const tabEl = document.querySelector(`.tab[data-ftype="similar_issues"]`);
+      if (activeKey === issueKey && tabEl) {
+        await renderSimilarIssuesTab(issueKey, selectTabSeq);
+      }
+    } catch (e) {
+      if (status) {
+        status.textContent = e.message || 'Correction failed';
+        status.style.color = '#f85149';
+      }
+      logLine(`Similarity correction error for ${issueKey}: ${e.message}`, 'err', issueKey);
+    }
   }
 
   function appendPostPanel(key, ftype, rawText, area) {

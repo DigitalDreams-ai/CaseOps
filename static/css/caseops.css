@@ -1599,6 +1599,158 @@ select.desktop-only {
   margin: 16px 0;
 }
 
+/* ── Similar Issues Panel ───────────────────────────────── */
+
+.sim-issue-wrap {
+  display: block;
+  padding: 4px 2px 20px;
+  color: var(--color-text);
+}
+
+.sim-overview {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  padding: 12px;
+  margin-bottom: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.sim-overview .monospace {
+  font-family: 'Courier New', monospace;
+}
+
+.sim-summary {
+  margin: 8px 0 14px;
+  border: 1px dashed var(--color-border);
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(31, 111, 235, 0.05);
+}
+
+.sim-summary-preview {
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  margin: 8px 0 0;
+  color: var(--color-text-secondary);
+}
+
+.sim-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.sim-card {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sim-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-weight: 500;
+}
+
+.sim-match-status-open {
+  display: inline-block;
+  color: #2ea043;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sim-match-status-closed {
+  display: inline-block;
+  color: #8b949e;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sim-reason {
+  display: inline-block;
+  background: rgba(31, 111, 235, 0.12);
+  border: 1px solid rgba(31, 111, 235, 0.3);
+  border-radius: 999px;
+  padding: 0 6px;
+  margin: 0 6px 4px 0;
+  font-size: 11px;
+}
+
+.sim-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sim-actions .btn {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.sim-action-status {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.sim-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.sim-badge-same_problem_same_fix,
+.sim-badge-same_problem_needs_record_validation,
+.sim-badge-same_symptom_different_possible_cause,
+.sim-badge-related_context_only,
+.sim-badge-unrelated,
+.sim-badge-canonical {
+  font-weight: 600;
+}
+
+.sim-badge-same_problem_same_fix {
+  background: rgba(46, 160, 67, 0.18);
+  color: #2ea043;
+}
+
+.sim-badge-same_problem_needs_record_validation {
+  background: rgba(255, 196, 7, 0.18);
+  color: #b59a00;
+}
+
+.sim-badge-same_symptom_different_possible_cause {
+  background: rgba(88, 166, 255, 0.18);
+  color: #58a6ff;
+}
+
+.sim-badge-related_context_only {
+  background: rgba(148, 112, 255, 0.15);
+  color: #b0a5ff;
+}
+
+.sim-badge-unrelated {
+  background: rgba(240, 81, 73, 0.15);
+  color: #f85149;
+}
+
+.sim-badge-canonical {
+  background: rgba(46, 160, 67, 0.18);
+  color: #2ea043;
+}
+
+
 /* ── Lightbox ──────────────────────────────────────────────── */
 
 #lightbox {

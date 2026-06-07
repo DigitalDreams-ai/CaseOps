@@ -40,6 +40,11 @@ from typing import Any
 from flask import Flask, Response, jsonify, render_template, request, send_file, stream_with_context
 
 from caseops_paths import default_jira_dir
+from issue_clusters import (
+    read_issue_cluster_context,
+    rebuild_issue_clusters,
+    write_similarity_correction,
+)
 from jira_sync import JiraClient, update_manifest_status
 from skill_registry import SkillRegistry
 
@@ -402,6 +407,17 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
     "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
     "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
     "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
+    "CASEOPS_SIMILAR_ISSUES_ENABLED",
+    "CASEOPS_SIMILAR_ISSUES_INCLUDE_CLOSED",
+    "CASEOPS_SIMILAR_ISSUES_CURRENT_USER_ONLY",
+    "CASEOPS_SIMILAR_ISSUES_AUTO_CLUSTER",
+    "CASEOPS_SIMILAR_ISSUES_PUBLIC_SAFE_SUMMARIES",
+    "CASEOPS_SIMILAR_ISSUES_PIPELINE_CONTEXT",
+    "CASEOPS_SIMILAR_ISSUES_MODEL_ADJUDICATION",
+    "CASEOPS_SIMILAR_ISSUES_DELTA_MODE",
+    "CASEOPS_SIMILAR_ISSUES_CANDIDATE_LIMIT",
+    "CASEOPS_SIMILAR_ISSUES_LOOKBACK_DAYS",
+    "CASEOPS_SIMILAR_ISSUES_CURRENT_USER",
     "CASEOPS_PRODUCTION_READ_ORG",
     "CASEOPS_SANDBOX_TARGET_ORG",
     "CASEOPS_PRODUCTION_INSTANCE_URL",
@@ -1787,6 +1803,45 @@ def _env_flag(key: str, default: bool = False) -> bool:
 
 def _env_int(key: str, default: int, *, min_value: int | None = None, max_value: int | None = None) -> int:
     raw = (os.environ.get(key) or "").strip()
+    try:
+        value = int(raw) if raw else default
+    except ValueError:
+        value = default
+    if min_value is not None:
+        value = max(min_value, value)
+    if max_value is not None:
+        value = min(max_value, value)
+    return value
+
+
+def _env_flag_from_map(
+    key: str,
+    default: bool = False,
+    settings: dict[str, str] | None = None,
+) -> bool:
+    raw = ""
+    if settings is not None and key in settings:
+        raw = (settings.get(key) or "").strip()
+    if not raw:
+        raw = (os.environ.get(key) or "").strip()
+    if not raw:
+        return bool(default)
+    return raw.lower() in {"1", "true", "yes", "on", "enabled"}
+
+
+def _env_int_from_map(
+    key: str,
+    default: int,
+    *,
+    min_value: int | None = None,
+    max_value: int | None = None,
+    settings: dict[str, str] | None = None,
+) -> int:
+    raw = ""
+    if settings is not None and key in settings:
+        raw = (settings.get(key) or "").strip()
+    if not raw:
+        raw = (os.environ.get(key) or "").strip()
     try:
         value = int(raw) if raw else default
     except ValueError:
@@ -3325,6 +3380,14 @@ def _build_pipeline_resume_plan(
         force_active=force_active,
         rebuild_from_artifacts=rebuild_from_artifacts,
     )
+    similarity_lookup = _build_similarity_lookup_for_plan(key, status=status)
+    plan["similar_issues"] = similarity_lookup
+    plan["similar_issues_context_available"] = bool(similarity_lookup.get("cluster_id") or similarity_lookup.get("cluster_state"))
+    plan["similarity_context_enabled"] = bool(similarity_lookup.get("enabled"))
+    plan["pipeline_similarity_mode"] = str(
+        similarity_lookup.get("selected_mode") or "full_investigation"
+    )
+    plan["pipeline_similarity_mode_reason"] = str(similarity_lookup.get("selected_mode_reason") or "No similarity context selected.")
     return _apply_loop_state_to_plan(
         plan,
         key,
@@ -3371,6 +3434,65 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
         ])
         lines.extend(f"- {line}" for line in recent_evidence[:10])
         lines.append("")
+
+    similarity = plan.get("similar_issues") or {}
+    if similarity.get("enabled") or similarity.get("lookup_performed"):
+        lines.extend([
+            "## STEP_2B Similar Issue Lookup",
+            f"- Enabled: {similarity.get('enabled', False)}",
+            f"- Lookup performed: {similarity.get('lookup_performed', False)}",
+            f"- Selected mode: {similarity.get('selected_mode', 'full_investigation')} — {similarity.get('selected_mode_reason', 'No similarity-based reason available.')}",
+        ])
+        if similarity.get("lookup_error"):
+            lines.append(f"- Status: lookup_failed ({similarity.get('lookup_error')})")
+        if similarity.get("cluster_id"):
+            lines.append(f"- Cluster ID: {similarity.get('cluster_id')}")
+            lines.append(f"- Canonical issue: {similarity.get('canonical_issue') or '(not set)'}")
+            lines.append(f"- Classification for this issue: {similarity.get('classification') or similarity.get('cluster_type') or 'unrelated'}")
+            lines.append(
+                f"- Candidate counts: total={similarity.get('candidate_count', 0)}, open={similarity.get('open_count', 0)}, "
+                f"closed={similarity.get('closed_count', 0)}"
+            )
+            lines.append(
+                f"- Closed/resolved context included: {'yes' if similarity.get('cluster_state', '').lower() == 'active' or not similarity.get('cluster_state') else 'n/a'}"
+            )
+            if similarity.get("summary_url"):
+                lines.append(f"- Public-safe summary: {similarity['summary_url']}")
+            if similarity.get("summary_preview"):
+                lines.append("- Summary preview:")
+                lines.append(f"  {similarity.get('summary_preview')}")
+            lines.append(f"- Similarity safety: requires_delta_validation={bool(similarity.get('safety', {}).get('requires_delta_validation', False))}, "
+                         f"reuse_allowed={bool(similarity.get('safety', {}).get('reuse_allowed', False))}, "
+                         f"reuse_reason={similarity.get('safety', {}).get('reuse_reason', 'n/a')}")
+
+            for section in ("Open matches", "Closed matches"):
+                matches = similarity.get("open_matches" if section == "Open matches" else "closed_matches") or []
+                if not matches:
+                    continue
+                lines.append("")
+                lines.append(f"### {section}")
+                for match in matches[:10]:
+                    if not isinstance(match, dict):
+                        continue
+                    key = match.get("key", "")
+                    if not key:
+                        continue
+                    status = match.get("status", "")
+                    stale = "stale" if bool(match.get("is_stale")) else "current"
+                    classification = match.get("classification", "")
+                    reasons = match.get("reasons", [])
+                    evidence_terms = match.get("evidence_terms", [])
+                    evidence = ", ".join(evidence_terms[:4])
+                    reason = ", ".join(str(r) for r in reasons[:3])
+                    lines.append(
+                        f"- {key} ({status}, {stale}, {classification})"
+                        + (f"; reasons: {reason}" if reason else "")
+                        + (f"; evidence: {evidence}" if evidence else "")
+                    )
+        else:
+            lines.append(f"- Reason: {similarity.get('selected_mode_reason', 'No cluster context for this issue.')}")
+        lines.append("")
+
     lines.extend([
         "| Step | Status | Action |",
         "| --- | --- | --- |",
@@ -3558,6 +3680,32 @@ def _log_resume_plan_summary(run_key: str, plan: dict[str, Any], plan_path: Path
     step_num = next_step.get("step", "?")
     name = next_step.get("name", "Unknown")
     status = next_step.get("status", "unknown")
+    similarity = plan.get("similar_issues") or {}
+    similarity_cluster_id = _safe_cluster_text(similarity.get("cluster_id"))
+    selected_mode = str(similarity.get("selected_mode", "full_investigation"))
+    selected_mode_reason = _safe_cluster_text(similarity.get("selected_mode_reason") or "normal pipeline controls")
+    classification = _safe_cluster_text(similarity.get("classification") or similarity.get("cluster_type"))
+    candidate_count = similarity.get("candidate_count", 0)
+    open_count = similarity.get("open_count", 0)
+    closed_count = similarity.get("closed_count", 0)
+    if similarity.get("enabled") or similarity.get("lookup_performed"):
+        if similarity_cluster_id:
+            _log_emit_line(
+                run_key,
+                f"Similarity lookup: cluster_id={similarity_cluster_id}, candidates={candidate_count} "
+                f"(open={open_count}, closed={closed_count}), classification={classification or 'unrelated'}, "
+                f"mode={selected_mode}, reason={selected_mode_reason}"
+            )
+        else:
+            _log_emit_line(
+                run_key,
+                f"Similarity lookup: no cluster assigned; mode={selected_mode}, reason={selected_mode_reason}"
+            )
+    elif similarity.get("lookup_error"):
+        _log_emit_line(
+            run_key,
+            f"Similarity lookup failed: {similarity.get('lookup_error')}"
+        )
     _log_emit_line(
         run_key,
         f"Resume planner: next STEP_{step_num} ({name}, {status}); {completed}/{total} step checkpoints complete. Plan: {_path_relative_for_prompt(plan_path)}",
@@ -5625,8 +5773,16 @@ def _do_stream_claude(prompt: str, run_key: str, issue_key: str | None = None) -
 
 
 def _stream_proc(cmd: list[str], run_key: str) -> None:
+    rc = 1
     try:
-        _do_stream_proc(cmd, run_key)
+        rc = _do_stream_proc(cmd, run_key)
+        if cmd and "jira_sync.py" in (arg for arg in cmd) and rc == 0:
+            _log_emit_line(run_key, "Rebuilding similarity index after Jira sync...")
+            _rebuild_similarity_clusters_if_enabled(
+                run_key=run_key,
+                manifest_rows=_read_manifest(),
+                log=lambda msg: _log_emit_line(run_key, msg),
+            )
     finally:
         with _state_lock:
             _active_keys.discard(run_key)
@@ -5640,7 +5796,7 @@ def _stream_proc(cmd: list[str], run_key: str) -> None:
             # For individual issue syncs/runs, clear that issue's cached data
             _invalidate_jira_summary_cache(run_key)
 
-        if cmd and "jira_sync.py" in (arg for arg in cmd):
+        if cmd and "jira_sync.py" in (arg for arg in cmd) and rc == 0:
             if run_key == _GLOBAL_KEY:
                 manifest_changed()
             else:
@@ -5685,6 +5841,11 @@ def _sync_issue_from_jira_now(key: str, *, timeout: int = 120) -> tuple[bool, st
         return False, details[:500]
 
     _invalidate_jira_summary_cache(key)
+    _rebuild_similarity_clusters_if_enabled(
+        run_key=key,
+        manifest_rows=_read_manifest(),
+        log=lambda msg: _log_emit_line(key, msg),
+    )
     manifest_changed([key])
     return True, ""
 
@@ -6062,6 +6223,11 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
             if rc != 0:
                 _log_emit_line(run_key, f"ERROR: Jira sync failed with exit code {rc}; stopping Auto-Process All before issue processing.")
                 return
+            _rebuild_similarity_clusters_if_enabled(
+                run_key=run_key,
+                manifest_rows=_read_manifest(),
+                log=lambda msg: _log_emit_line(run_key, msg),
+            )
             manifest_changed()
             _log_emit_line(run_key, "STEP_1 __sync__ complete")
 
@@ -6367,6 +6533,265 @@ def _read_manifest() -> list[dict[str, str]]:
         return list(csv.DictReader(f))
 
 
+def _read_similarity_settings(settings: dict[str, str] | None = None) -> dict[str, Any]:
+    settings = settings or {}
+    include_closed = _env_flag_from_map(
+        "CASEOPS_SIMILAR_ISSUES_INCLUDE_CLOSED",
+        default=True,
+        settings=settings,
+    )
+    current_user_only = _env_flag_from_map(
+        "CASEOPS_SIMILAR_ISSUES_CURRENT_USER_ONLY",
+        default=True,
+        settings=settings,
+    )
+    current_user = (settings.get("CASEOPS_SIMILAR_ISSUES_CURRENT_USER") or "").strip()
+    if not current_user:
+        current_user = (os.environ.get("CASEOPS_SIMILAR_ISSUES_CURRENT_USER") or "").strip()
+
+    return {
+        "enabled": _env_flag_from_map("CASEOPS_SIMILAR_ISSUES_ENABLED", default=True, settings=settings),
+        "include_closed": include_closed,
+        "current_user_only": current_user_only,
+        "current_user": current_user,
+        "auto_cluster": _env_flag_from_map("CASEOPS_SIMILAR_ISSUES_AUTO_CLUSTER", default=True, settings=settings),
+        "public_safe_summaries": _env_flag_from_map(
+            "CASEOPS_SIMILAR_ISSUES_PUBLIC_SAFE_SUMMARIES",
+            default=True,
+            settings=settings,
+        ),
+        "candidate_limit": _env_int_from_map(
+            "CASEOPS_SIMILAR_ISSUES_CANDIDATE_LIMIT",
+            15,
+            min_value=1,
+            max_value=200,
+            settings=settings,
+        ),
+        "lookback_days": _env_int_from_map(
+            "CASEOPS_SIMILAR_ISSUES_LOOKBACK_DAYS",
+            180,
+            min_value=1,
+            max_value=3650,
+            settings=settings,
+        ),
+        "pipeline_context": _env_flag_from_map("CASEOPS_SIMILAR_ISSUES_PIPELINE_CONTEXT", default=False, settings=settings),
+        "model_adjudication": _env_flag_from_map("CASEOPS_SIMILAR_ISSUES_MODEL_ADJUDICATION", default=False, settings=settings),
+        "delta_mode": _env_flag_from_map("CASEOPS_SIMILAR_ISSUES_DELTA_MODE", default=False, settings=settings),
+        "org_aliases": {
+            str(settings.get("CASEOPS_PRODUCTION_READ_ORG") or os.environ.get("CASEOPS_PRODUCTION_READ_ORG") or "").strip().lower(),
+            str(settings.get("CASEOPS_SANDBOX_TARGET_ORG") or os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip().lower(),
+        },
+    }
+
+
+def _rebuild_similarity_clusters_if_enabled(
+    *,
+    run_key: str,
+    manifest_rows: list[dict[str, str]] | None = None,
+    settings: dict[str, str] | None = None,
+    log_prefix: str | None = None,
+    log: Any = None,
+) -> dict[str, Any] | None:
+    similarity_settings = _read_similarity_settings(settings)
+    if not similarity_settings["enabled"]:
+        return None
+
+    try:
+        return rebuild_issue_clusters(
+            outputs_dir=OUTPUTS,
+            manifest_rows=manifest_rows,
+            include_closed=bool(similarity_settings["include_closed"]),
+            current_user_only=bool(similarity_settings["current_user_only"]),
+            auto_cluster=bool(similarity_settings["auto_cluster"]),
+            candidate_limit=int(similarity_settings["candidate_limit"]),
+            lookback_days=int(similarity_settings["lookback_days"]),
+            current_user=str(similarity_settings["current_user"]),
+            public_safe_summaries=bool(similarity_settings["public_safe_summaries"]),
+            org_aliases=set(similarity_settings["org_aliases"]),
+            log=(lambda msg: _log_emit_line(run_key, msg)) if log is None else log,
+        )
+    except Exception as exc:
+        message = (
+            f"{log_prefix + ': ' if log_prefix else ''}"
+            f"similarity cluster rebuild failed: {type(exc).__name__}: {exc}"
+        )
+        if log is not None:
+            log(message)
+        else:
+            _log_emit_line(run_key, message)
+        return None
+
+
+def _safe_cluster_text(value: Any) -> str:
+    return "" if value is None else str(value).strip()
+
+
+def _build_similarity_lookup_for_plan(
+    key: str,
+    *,
+    status: str = "",
+) -> dict[str, Any]:
+    similarity_settings = _read_similarity_settings()
+    if not bool(similarity_settings.get("pipeline_context")):
+        return {"enabled": False, "lookup_performed": False, "selected_mode": "full_investigation", "lookup_error": ""}
+
+    cluster_context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
+    if not isinstance(cluster_context, dict):
+        return {
+            "enabled": True,
+            "lookup_performed": False,
+            "selected_mode": "full_investigation",
+            "lookup_error": "cluster context not available",
+        }
+
+    cluster_id = _safe_cluster_text(cluster_context.get("cluster_id"))
+    if not cluster_id:
+        return {
+            "enabled": True,
+            "lookup_performed": True,
+            "cluster_id": "",
+            "cluster_state": _safe_cluster_text(cluster_context.get("cluster_state") or "unclustered"),
+            "selected_mode": "full_investigation",
+            "selected_mode_reason": "No cluster match found.",
+            "open_matches": [],
+            "closed_matches": [],
+            "members": [],
+            "canonical_issue": "",
+            "classification": "",
+            "cluster_type": _safe_cluster_text(cluster_context.get("cluster_type")),
+            "summary_url": _safe_cluster_text(cluster_context.get("summary_url")),
+            "summary_preview": _safe_cluster_text(cluster_context.get("summary_preview")),
+            "safety": {},
+            "candidate_count": 0,
+            "open_count": 0,
+            "closed_count": 0,
+        }
+
+    members = cluster_context.get("members") or []
+    open_matches = cluster_context.get("open_matches") or []
+    closed_matches = cluster_context.get("closed_matches") or []
+    normalized = {
+        "enabled": True,
+        "lookup_performed": True,
+        "cluster_id": cluster_id,
+        "cluster_state": _safe_cluster_text(cluster_context.get("cluster_state")),
+        "canonical_issue": _safe_cluster_text(cluster_context.get("cluster", {}).get("canonical_issue") if isinstance(cluster_context.get("cluster"), dict) else ""),
+        "cluster_type": _safe_cluster_text(cluster_context.get("cluster_type")),
+        "summary_url": _safe_cluster_text(cluster_context.get("summary_url")),
+        "summary_preview": _safe_cluster_text(cluster_context.get("summary_preview")),
+        "members": [],
+        "open_matches": [],
+        "closed_matches": [],
+        "classifications": [],
+    }
+
+    for member in members:
+        if not isinstance(member, dict):
+            continue
+        normalized["members"].append({
+            "key": _safe_cluster_text(member.get("key")),
+            "classification": _safe_cluster_text(member.get("classification")),
+            "reasons": list(member.get("reasons") or []) if isinstance(member.get("reasons"), list) else [],
+            "relationship": _safe_cluster_text(member.get("relationship")),
+            "evidence_terms": list(member.get("evidence_terms") or []) if isinstance(member.get("evidence_terms"), list) else [],
+            "status": _safe_cluster_text(member.get("status")),
+            "is_open": bool(member.get("is_open")),
+            "is_stale": bool(member.get("is_stale")),
+        })
+    for member in open_matches:
+        if not isinstance(member, dict):
+            continue
+        normalized["open_matches"].append({
+            "key": _safe_cluster_text(member.get("key")),
+            "classification": _safe_cluster_text(member.get("classification")),
+            "reasons": list(member.get("reasons") or []) if isinstance(member.get("reasons"), list) else [],
+            "evidence_terms": list(member.get("evidence_terms") or []) if isinstance(member.get("evidence_terms"), list) else [],
+            "status": _safe_cluster_text(member.get("status")),
+            "is_stale": bool(member.get("is_stale")),
+            "jira_updated": _safe_cluster_text(member.get("jira_updated")),
+        })
+    for member in closed_matches:
+        if not isinstance(member, dict):
+            continue
+        normalized["closed_matches"].append({
+            "key": _safe_cluster_text(member.get("key")),
+            "classification": _safe_cluster_text(member.get("classification")),
+            "reasons": list(member.get("reasons") or []) if isinstance(member.get("reasons"), list) else [],
+            "evidence_terms": list(member.get("evidence_terms") or []) if isinstance(member.get("evidence_terms"), list) else [],
+            "status": _safe_cluster_text(member.get("status")),
+            "is_stale": bool(member.get("is_stale")),
+            "jira_updated": _safe_cluster_text(member.get("jira_updated")),
+        })
+
+    safety_raw = cluster_context.get("cluster", {}).get("safety") if isinstance(cluster_context.get("cluster"), dict) else {}
+    safety = {
+        "requires_delta_validation": bool(safety_raw.get("requires_delta_validation") if isinstance(safety_raw, dict) else False),
+        "reuse_allowed": bool(safety_raw.get("reuse_allowed") if isinstance(safety_raw, dict) else False),
+        "reuse_reason": _safe_cluster_text(safety_raw.get("reuse_reason") if isinstance(safety_raw, dict) else ""),
+    }
+    normalized["safety"] = safety
+
+    normalized["candidate_count"] = len(normalized["members"])
+    normalized["open_count"] = len(normalized["open_matches"])
+    normalized["closed_count"] = len(normalized["closed_matches"])
+
+    target = None
+    key_lower = key.lower()
+    for member in normalized["members"]:
+        if member["key"].lower() == key_lower:
+            target = member
+            break
+    classification = _safe_cluster_text(target["classification"] if target else normalized["cluster_type"])
+    normalized["classification"] = classification
+    if not classification:
+        classification = "related_context_only"
+    normalized["classifications"] = sorted({member["classification"] for member in normalized["members"] if member.get("classification")})
+    normalized["issue_is_stale"] = bool(target["is_stale"]) if target else False
+
+    selected_mode = "full_investigation"
+    if normalized["issue_is_stale"]:
+        selected_mode = "manual_review"
+        selected_mode_reason = "Related cluster evidence is stale for this issue."
+    elif normalized["cluster_id"]:
+        if classification == "same_problem_same_fix":
+            if safety["reuse_allowed"]:
+                selected_mode = "delta_validation" if safety["requires_delta_validation"] else "cluster_context_full_investigation"
+                selected_mode_reason = (
+                    "Use delta validation path; reuse is allowed for this cluster but requires issue-level validation."
+                    if safety["requires_delta_validation"]
+                    else "Same-problem signal found; run context-aware investigation in full scope."
+                )
+            else:
+                selected_mode = "cluster_context_full_investigation"
+                selected_mode_reason = "Same-problem candidate found; reuse safety does not currently allow direct delta reuse."
+        elif classification == "same_problem_needs_record_validation":
+            if safety["reuse_allowed"] and safety["requires_delta_validation"]:
+                selected_mode = "delta_validation"
+                selected_mode_reason = "Same root-cause pattern found; require record/user-level validation."
+            else:
+                selected_mode = "cluster_context_full_investigation"
+                selected_mode_reason = "Same-problem-like signal found, but safe reuse requires additional safety gates."
+        elif classification == "same_symptom_different_possible_cause":
+            selected_mode = "cluster_context_full_investigation"
+            selected_mode_reason = "Same symptom appears, but root cause may differ."
+        elif classification == "related_context_only":
+            selected_mode = "cluster_context_full_investigation"
+            selected_mode_reason = "Related context found; run normal investigation with similarity context."
+        elif classification == "unrelated":
+            selected_mode = "full_investigation"
+            selected_mode_reason = "No usable similar-issue signal for this issue."
+        else:
+            selected_mode = "cluster_context_full_investigation"
+            selected_mode_reason = "Cluster signal present; treat as related context."
+    else:
+        selected_mode_reason = "No issue cluster assigned; run full investigation."
+
+    normalized["selected_mode"] = selected_mode
+    normalized["selected_mode_reason"] = selected_mode_reason
+    return normalized
+
+
+
 def _count_open_issues(issues: list[dict[str, str]]) -> int:
     """Count issues not in closed/resolved/escalated states."""
     closed_statuses = {"closed", "resolved", "canceled", "cancelled", "escalated to engineering"}
@@ -6393,6 +6818,9 @@ def _is_jira_escalated_any(status: str = "") -> bool:
 def _available_tabs(key: str) -> list[dict[str, str]]:
     tabs = []
     internal_only = {"hypothesis"}
+    cluster_context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
+    if cluster_context.get("cluster_id"):
+        tabs.append({"id": "similar_issues", "label": "Similar Issues"})
     for ftype, rel in FILE_LOCATIONS.items():
         if ftype == "attachments" or ftype in internal_only:
             continue
@@ -6925,6 +7353,7 @@ def api_issue(key: str):
     due = row.get("Due", "") or ""
     flags = _pipeline_file_flags(key, status)
     tabs = _available_tabs(key)
+    cluster_context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
     return jsonify({
         "key": key,
         "status": row.get("Status", ""),
@@ -6939,6 +7368,7 @@ def api_issue(key: str):
         "claude_prompt": _claude_prompt(key, row.get("Summary", "")),
         "jira_url": f"{JIRA_BASE_URL}/browse/{key}" if JIRA_BASE_URL else "",
         "reporter": _get_issue_reporter(key),
+        "similar_issue_cluster": cluster_context,
         **flags,
     })
 
@@ -6988,6 +7418,51 @@ def api_file(key: str, ftype: str):
         jira_summary_cache[cache_key] = result
         _cache_evict(jira_summary_cache)
 
+    return jsonify(result)
+
+
+@app.get("/api/issue/<key>/similarity-context")
+def api_issue_similarity_context(key: str):
+    return jsonify(read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key))
+
+
+@app.post("/api/issue/<key>/similarity-correction")
+def api_issue_similarity_correction(key: str):
+    data = request.get_json(silent=True) or {}
+    action = str(data.get("action", "")).strip()
+    if not action:
+        return jsonify({"error": "action required"}), 400
+
+    cluster_id = str(data.get("cluster_id", "")).strip()
+    reference_issue = str(data.get("reference_issue", "")).strip()
+    canonical_issue = str(data.get("canonical_issue", "")).strip()
+    reason = str(data.get("reason", "")).strip()
+
+    if not cluster_id:
+        cluster_context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
+        if isinstance(cluster_context, dict):
+            cluster_id = str(cluster_context.get("cluster_id", "")).strip()
+    if not cluster_id:
+        return jsonify({"error": "issue has no similarity cluster"}), 404
+
+    if action == "make_canonical" and not canonical_issue:
+        canonical_issue = key
+
+    result = write_similarity_correction(
+        outputs_dir=OUTPUTS,
+        issue=key,
+        action=action,
+        cluster_id=cluster_id,
+        reference_issue=reference_issue,
+        canonical_issue=canonical_issue,
+        reason=reason,
+    )
+
+    if not isinstance(result, dict):
+        return jsonify({"error": "internal correction error"}), 500
+
+    if result.get("error"):
+        return jsonify({"error": result.get("error")}), 400
     return jsonify(result)
 
 
@@ -7634,6 +8109,22 @@ def serve_generated_file(key: str, filename: str):
     return send_file(path, as_attachment=True)
 
 
+@app.get("/files/issue-clusters/<path:filename>")
+def serve_issue_cluster_file(filename: str):
+    if not re.fullmatch(r"[a-z0-9._-]+\\.md", str(filename).lower()):
+        return jsonify({"error": "invalid"}), 400
+
+    root = (OUTPUTS / "issue-clusters").resolve()
+    path = (root / filename).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return jsonify({"error": "forbidden"}), 403
+    if not path.is_file():
+        return jsonify({"error": "not found"}), 404
+    return send_file(path)
+
+
 @app.get("/files/rollup/<path:filename>")
 def serve_issue_rollup(filename: str):
     if not _ROLLUP_FILENAME.match(filename):
@@ -7823,6 +8314,16 @@ def api_get_settings():
         "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
+        "CASEOPS_SIMILAR_ISSUES_ENABLED",
+        "CASEOPS_SIMILAR_ISSUES_INCLUDE_CLOSED",
+        "CASEOPS_SIMILAR_ISSUES_CURRENT_USER_ONLY",
+        "CASEOPS_SIMILAR_ISSUES_AUTO_CLUSTER",
+        "CASEOPS_SIMILAR_ISSUES_PUBLIC_SAFE_SUMMARIES",
+        "CASEOPS_SIMILAR_ISSUES_PIPELINE_CONTEXT",
+        "CASEOPS_SIMILAR_ISSUES_MODEL_ADJUDICATION",
+        "CASEOPS_SIMILAR_ISSUES_DELTA_MODE",
+        "CASEOPS_SIMILAR_ISSUES_CANDIDATE_LIMIT",
+        "CASEOPS_SIMILAR_ISSUES_LOOKBACK_DAYS",
         "CASEOPS_AUTO_SYNC_ENABLED",
         "CASEOPS_AUTO_SYNC_INTERVAL_MINUTES",
         "CASEOPS_FLASK_DEBUG",
@@ -7836,6 +8337,16 @@ def api_get_settings():
         "CASEOPS_GLOBAL_MAX_QUEUE_PASSES": "12",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS": "false",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES": "false",
+        "CASEOPS_SIMILAR_ISSUES_ENABLED": "true",
+        "CASEOPS_SIMILAR_ISSUES_INCLUDE_CLOSED": "true",
+        "CASEOPS_SIMILAR_ISSUES_CURRENT_USER_ONLY": "true",
+        "CASEOPS_SIMILAR_ISSUES_AUTO_CLUSTER": "true",
+        "CASEOPS_SIMILAR_ISSUES_PUBLIC_SAFE_SUMMARIES": "true",
+        "CASEOPS_SIMILAR_ISSUES_PIPELINE_CONTEXT": "false",
+        "CASEOPS_SIMILAR_ISSUES_MODEL_ADJUDICATION": "false",
+        "CASEOPS_SIMILAR_ISSUES_DELTA_MODE": "false",
+        "CASEOPS_SIMILAR_ISSUES_CANDIDATE_LIMIT": "15",
+        "CASEOPS_SIMILAR_ISSUES_LOOKBACK_DAYS": "180",
         "CASEOPS_AUTO_SYNC_ENABLED": "false",
         "CASEOPS_AUTO_SYNC_INTERVAL_MINUTES": "0",
         "CASEOPS_FLASK_DEBUG": "false",
@@ -7868,6 +8379,16 @@ def api_post_settings():
                 "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
                 "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
                 "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
+                "CASEOPS_SIMILAR_ISSUES_ENABLED",
+                "CASEOPS_SIMILAR_ISSUES_INCLUDE_CLOSED",
+                "CASEOPS_SIMILAR_ISSUES_CURRENT_USER_ONLY",
+                "CASEOPS_SIMILAR_ISSUES_AUTO_CLUSTER",
+                "CASEOPS_SIMILAR_ISSUES_PUBLIC_SAFE_SUMMARIES",
+                "CASEOPS_SIMILAR_ISSUES_PIPELINE_CONTEXT",
+                "CASEOPS_SIMILAR_ISSUES_MODEL_ADJUDICATION",
+                "CASEOPS_SIMILAR_ISSUES_DELTA_MODE",
+                "CASEOPS_SIMILAR_ISSUES_CANDIDATE_LIMIT",
+                "CASEOPS_SIMILAR_ISSUES_LOOKBACK_DAYS",
                 "CASEOPS_AUTO_SYNC_ENABLED",
                 "CASEOPS_AUTO_SYNC_INTERVAL_MINUTES",
                 "CASEOPS_FLASK_DEBUG",
@@ -7875,7 +8396,9 @@ def api_post_settings():
                 "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
                 "CASEOPS_PRODUCTION_READ_ORG", "CASEOPS_SANDBOX_TARGET_ORG",
                 "CASEOPS_PRODUCTION_INSTANCE_URL", "CASEOPS_SANDBOX_INSTANCE_URL"]:
-        value = body.get(key, "").strip()
+        if key not in body:
+            continue
+        value = str(body.get(key, "")).strip()
         # Skip masked values (user didn't change them)
         if value.startswith("••••"):
             continue
@@ -8499,6 +9022,7 @@ if __name__ == "__main__":
     for subdir in [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
         "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
+        "issue-clusters",
         "closed-resolved", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces", "summaries"
     ]:
         _ensure_directory_writable(OUTPUTS / subdir, f"outputs/{subdir}")
@@ -8555,6 +9079,7 @@ if __name__ == "__main__":
     required_subdirs = [
         "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
         "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
+        "issue-clusters",
         "closed-resolved", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces",
         _SUMMARY_DIR
     ]
@@ -8565,6 +9090,12 @@ if __name__ == "__main__":
         if not subdir_path.is_dir():
             raise RuntimeError(f"Subdirectory is not a directory: {subdir_path}")
     print(f"[OK] All required subdirectories exist ({len(required_subdirs)} dirs)")
+
+    _rebuild_similarity_clusters_if_enabled(
+        run_key="startup",
+        manifest_rows=_read_manifest(),
+        log=lambda msg: None,
+    )
 
     # Validate app config is set
     if not app.config.get("WORKSPACE"):
