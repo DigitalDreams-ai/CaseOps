@@ -51,6 +51,10 @@ Common actions:
 
 Run pipeline actions only on approved issues.
 
+`Auto-Process All` and `Reprocess All (No Sync)` skip issues already marked `Escalated to Engineering` in Jira. Use a single-issue run only when you intentionally want to inspect or override one escalated issue.
+
+The final queue summary includes the stop reason, such as all queued issues complete, stalled/no progress, max passes reached, or stop requested. Incomplete issue lines include the reason CaseOps stopped retrying that issue.
+
 ## Similar Issues
 
 The Similar Issues tab shows other issues that appear to share the same problem pattern.

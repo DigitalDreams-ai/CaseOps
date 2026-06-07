@@ -103,6 +103,8 @@ Expected behavior:
 - Sandbox is the only writable Salesforce org.
 - The run log shows step progress.
 - Pipeline artifacts are written under `/data/outputs`.
+- `Auto-Process All` and `Reprocess All (No Sync)` skip Jira issues already marked `Escalated to Engineering`.
+- The final global queue summary reports why the queue stopped and gives actionable incomplete reasons per issue.
 - Stop Current Run stops an active pipeline cleanly.
 - Pipeline State Repair/Rebuild is available for stale or inconsistent state after a stopped or failed run.
 

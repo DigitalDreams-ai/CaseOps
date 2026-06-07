@@ -6210,9 +6210,14 @@ def _select_global_issue_queue(run_key: str) -> list[str]:
     rows = _read_manifest()
     queued: list[str] = []
     skipped = 0
+    skipped_escalated = 0
     for row in rows:
         key = (row.get("Key") or "").strip()
         if not key:
+            continue
+        status = row.get("Status", "")
+        if _disposition(status) == "escalated":
+            skipped_escalated += 1
             continue
         complete, detail = _global_issue_queue_detail(key)
         if not complete:
@@ -6223,7 +6228,9 @@ def _select_global_issue_queue(run_key: str) -> list[str]:
             queued.append(key)
         else:
             skipped += 1
-    _log_emit_line(run_key, f"Queue: {len(queued)} issue(s) need pipeline work; {skipped} already current.")
+    if skipped_escalated:
+        _log_emit_line(run_key, f"Queue: skipped {skipped_escalated} issue(s) already Escalated to Engineering.")
+    _log_emit_line(run_key, f"Queue: {len(queued)} issue(s) need pipeline work; {skipped} already current; {skipped_escalated} escalated skipped.")
     return queued
 
 
@@ -6293,7 +6300,9 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
         last_details = {key: snapshot[1] for key, snapshot in last_snapshots.items()}
         last_fingerprints = {key: snapshot[2] for key, snapshot in last_snapshots.items()}
         incomplete_details = dict(last_details)
+        incomplete_reasons: dict[str, str] = {key: f"needs work; {detail}" for key, detail in last_details.items()}
         completed_keys: set[str] = set()
+        stop_reason = "completed"
 
         _log_emit_line(
             run_key,
@@ -6305,6 +6314,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                 break
             if _run_stop_requested(run_key):
                 _log_emit_line(run_key, "Queue: stop requested; no further issues will be started.")
+                stop_reason = "stop requested"
                 break
 
             _log_emit_line(run_key, f"Queue pass {queue_pass}: processing {len(queue_keys)} issue(s)")
@@ -6313,6 +6323,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                 for idx, key in enumerate(queue_keys, start=1):
                     if _run_stop_requested(run_key):
                         _log_emit_line(run_key, "Queue: stop requested; no further issues will be started.")
+                        stop_reason = "stop requested"
                         break
                     pass_results.append(_run_global_issue_worker(key, idx, len(queue_keys), reprocess=reprocess))
             else:
@@ -6327,6 +6338,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                             for pending in futures:
                                 pending.cancel()
                             _log_emit_line(run_key, "Queue: stop requested; pending issue starts were canceled where possible.")
+                            stop_reason = "stop requested"
                             break
 
             next_queue: list[str] = []
@@ -6340,6 +6352,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                 if ok and snapshot_complete:
                     completed_keys.add(key)
                     incomplete_details.pop(key, None)
+                    incomplete_reasons.pop(key, None)
                     pass_completed += 1
                     if previous_detail != "complete" or previous_fingerprint != snapshot_fingerprint:
                         progressed += 1
@@ -6348,8 +6361,13 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                     continue
                 pass_incomplete += 1
                 incomplete_details[key] = snapshot_detail
+                if detail.startswith("failed unexpectedly") or detail == "already running":
+                    incomplete_reasons[key] = f"worker {detail}; planner says {snapshot_detail}"
+                else:
+                    incomplete_reasons[key] = f"needs more work; {snapshot_detail}"
                 if snapshot_detail != previous_detail or snapshot_fingerprint != previous_fingerprint:
                     progressed += 1
+                    incomplete_reasons[key] = f"advanced this pass; {snapshot_detail}"
                     next_queue.append(key)
                 last_details[key] = snapshot_detail
                 last_fingerprints[key] = snapshot_fingerprint
@@ -6360,15 +6378,20 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
             )
 
             if _run_stop_requested(run_key):
+                stop_reason = "stop requested"
                 break
             if not next_queue:
                 remaining = len(incomplete_details)
                 if remaining:
+                    stop_reason = "stalled"
                     _log_emit_line(
                         run_key,
                         f"Queue stalled: {remaining} issue(s) still incomplete, but no issue advanced during pass {queue_pass}.",
                     )
                     _log_emit_line(run_key, "Queue stalled: stopping to avoid repeating the same failed work.")
+                    for key, detail in incomplete_details.items():
+                        if not incomplete_reasons.get(key, "").startswith("worker "):
+                            incomplete_reasons[key] = f"stalled/no progress in pass {queue_pass}; {detail}"
                 break
 
             queue_keys = next_queue
@@ -6376,17 +6399,24 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                 _log_emit_line(run_key, f"Queue: requeueing {len(queue_keys)} issue(s) that advanced but are not complete.")
         else:
             if incomplete_details:
+                stop_reason = "max passes reached"
                 _log_emit_line(
                     run_key,
                     f"Queue: reached max_passes={max_passes}; remaining incomplete issues require manual review or another run.",
                 )
+                for key, detail in incomplete_details.items():
+                    if not incomplete_reasons.get(key, "").startswith("worker "):
+                        incomplete_reasons[key] = f"max_passes={max_passes} reached; {detail}"
 
         complete = len(completed_keys)
         incomplete = len(incomplete_details)
-        _log_emit_line(run_key, f"Queue: finished. complete={complete}, incomplete={incomplete}")
+        if incomplete == 0 and stop_reason == "completed":
+            stop_reason = "all queued issues complete"
+        _log_emit_line(run_key, f"Queue: finished. complete={complete}, incomplete={incomplete}, reason={stop_reason}")
         if incomplete:
             for key, detail in incomplete_details.items():
-                _log_emit_line(run_key, f"Queue incomplete: {key} — {detail}")
+                reason = incomplete_reasons.get(key) or f"needs work; {detail}"
+                _log_emit_line(run_key, f"Queue incomplete: {key} — {reason}")
         manifest_changed()
     finally:
         with _state_lock:
