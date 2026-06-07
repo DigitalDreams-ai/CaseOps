@@ -38,6 +38,7 @@ Issue artifacts are stored in persistent appdata:
 - `engineering-escalations/` - Engineering handoffs when required.
 - `pipeline-logs/` - streamed run logs.
 - `generated-files/` - issue-specific generated reports and files.
+- `issue-clusters/` - public-safe similar-issue summaries, deterministic cluster state, local corrections, adjudication records, and safety-validation records.
 - `settings/` - persistent Settings overrides, including canned messages.
 - `org-knowledge/` - reusable Salesforce knowledge selected by topic.
 - `metadata-cache/` - read-only Production metadata retrievals.
@@ -51,6 +52,7 @@ CaseOps runs a 12-step pipeline:
 | --- | --- | --- |
 | 1 | Orchestrator | Sync Jira |
 | 2 | Orchestrator | Triage by Jira status |
+| 2B | Orchestrator | Look up similar issues and add safe cluster context |
 | 3 | Sub-agent | Analyze issue |
 | 4 | Orchestrator | Create hypothesis and smallest viable fix |
 | 5 | Sub-agent | Retrieve relevant Production metadata read-only |
@@ -63,6 +65,19 @@ CaseOps runs a 12-step pipeline:
 | 12 | Orchestrator | Return action report |
 
 Engineering handoffs should include evidence, not just a hypothesis.
+
+## Similar Issues
+
+CaseOps automatically creates current-user-only similarity clusters from synced Jira issues and existing CaseOps artifacts. Closed and resolved issues are included as context, even though they are excluded from normal active queue processing.
+
+The first implementation is intentionally conservative:
+
+- deterministic fingerprints and evidence terms identify candidates,
+- the issue detail page separates open matches from closed/resolved matches,
+- the current issue is not shown as a match to itself,
+- public-safe cluster summaries are written under `/data/outputs/issue-clusters`,
+- operator corrections are stored locally in appdata,
+- pipeline reuse and delta validation remain gated by adjudication and Salesforce validation.
 
 ## Salesforce Command Contract
 

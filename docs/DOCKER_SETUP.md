@@ -106,6 +106,16 @@ docker compose pull
 docker compose up -d
 ```
 
+Confirm the updated image is running:
+
+```bash
+docker compose ps
+docker compose logs --tail 100 caseops
+curl -fsS http://localhost:5350/health
+```
+
+Then open Settings and confirm the displayed CaseOps version matches the image tag you intended to run.
+
 Switch to a specific version:
 
 ```bash

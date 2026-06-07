@@ -14,6 +14,7 @@ If `CASEOPS_HOST_PORT` is changed in `.env`, use that port.
 
 The dashboard lists synced Jira issues and their CaseOps state. Select an issue to view:
 
+- Similar Issues
 - Jira Summary
 - Investigation
 - Internal Notes
@@ -50,6 +51,27 @@ Common actions:
 
 Run pipeline actions only on approved issues.
 
+## Similar Issues
+
+The Similar Issues tab shows other issues that appear to share the same problem pattern.
+
+CaseOps automatically builds these clusters from synced Jira data and CaseOps artifacts for the current configured user. Closed and resolved issues are included for context because they may contain a previous diagnosis or fix.
+
+The tab separates:
+
+- open matches,
+- closed/resolved matches,
+- evidence terms,
+- match reasons,
+- stale/current artifact status,
+- public-safe cluster summary links.
+
+Available local correction actions include marking a match as the same root cause, marking it not related, detaching the current issue from a cluster, or making an issue canonical for the cluster.
+
+These correction actions update CaseOps appdata only. They do not post to Jira and do not write to Salesforce.
+
+Similarity context can inform the pipeline, but it should not replace issue-specific validation. Delta/reuse behavior is gated by model adjudication, fresh Salesforce validation, and stale-artifact checks.
+
 ## Settings
 
 Settings shows the installed CaseOps version beside the page title.
@@ -61,6 +83,7 @@ Use Settings to configure and verify:
 - Salesforce Sandbox target access,
 - Claude Code OAuth token,
 - pipeline timeout and parallelism settings,
+- similar issue clustering controls,
 - canned messages,
 - restart and state repair tools.
 

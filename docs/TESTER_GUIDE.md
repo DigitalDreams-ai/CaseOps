@@ -64,6 +64,7 @@ In Select mode, confirm `Sync Selected` and `Run Pipeline` are visible immediate
 
 Open a synced issue and verify available tabs render without errors:
 
+- Similar Issues, when related issues exist
 - Jira Summary
 - Investigation
 - Internal Notes
@@ -75,6 +76,21 @@ Open a synced issue and verify available tabs render without errors:
 
 Generated files must appear under an issue-specific directory, not directly under the root outputs directory.
 
+## Similar Issues Check
+
+Use a safe group of approved test issues that are about the same problem.
+
+Expected behavior:
+
+1. CaseOps automatically groups similar current-user issues.
+2. The Similar Issues tab shows open matches separately from closed/resolved matches.
+3. Closed/resolved issues can appear as similarity context.
+4. The current issue is not listed as a similar match to itself.
+5. Evidence terms and reasons are visible enough to understand why issues were grouped.
+6. The public-safe cluster summary link opens without exposing credentials or private org details.
+7. Local correction buttons save and refresh the panel without posting to Jira.
+8. Similarity context does not bypass Salesforce validation before any reuse or delta behavior.
+
 ## Pipeline Check
 
 Run the pipeline only on an approved test issue.
@@ -82,6 +98,7 @@ Run the pipeline only on an approved test issue.
 Expected behavior:
 
 - Preflight validates Jira, Claude, Production read access, and Sandbox target access.
+- Similar issue context may appear in the resume plan, but unsafe reuse falls back to normal/full investigation.
 - Production Salesforce is read-only.
 - Sandbox is the only writable Salesforce org.
 - The run log shows step progress.

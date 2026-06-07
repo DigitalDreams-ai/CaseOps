@@ -17,11 +17,13 @@ CaseOps is built for workflows where Salesforce Production must stay read-only a
 
 - Jira issue sync, including comments, attachments, forms, labels, and status.
 - Searchable issue dashboard with status and CaseOps tags.
+- Similar Issues clustering for current-user issues, including open and closed/resolved issue context.
 - Settings UI for Jira, Salesforce, Claude Code, canned messages, pipeline controls, and runtime status.
 - Claude Code powered 12-step investigation pipeline.
 - Read-only Production Salesforce metadata and SOQL investigation.
 - Sandbox deploy/test/revert workflow for candidate fixes.
 - Generated artifacts for investigations, hypotheses, internal notes, Jira drafts, test reports, pipeline logs, metadata workspaces, and generated files.
+- Public-safe issue-cluster summaries and local correction state for related issues.
 - Docker-first runtime with persistent appdata under `/data`.
 
 ## Safety Model
@@ -138,6 +140,7 @@ The container stores persistent runtime state under `/data`:
 - `/data/outputs/jira` - Jira sync data.
 - `/data/outputs/pipeline-logs` - streamed pipeline logs.
 - `/data/outputs/generated-files` - issue-specific generated reports and files.
+- `/data/outputs/issue-clusters` - public-safe similar-issue cluster summaries and local correction state.
 - `/data/outputs/metadata-cache` - read-only Production metadata retrievals.
 - `/data/outputs/metadata-workspaces` - Sandbox attempts, rollback evidence, and confirmed packages.
 - `/data/.sf` and `/data/.sfdx` - Salesforce CLI state.
@@ -179,8 +182,11 @@ The Docker image copies only product files: app source, templates, static assets
 Before publishing a new image, verify:
 
 ```bash
-python -m py_compile app.py jira_sync.py skill_registry.py caseops_paths.py scripts/sf_caseops_helper.py
+python -m unittest discover tests
+python -m py_compile app.py jira_sync.py skill_registry.py caseops_paths.py scripts/sf_caseops_helper.py issue_clusters.py
 ```
+
+Also run a container smoke test and confirm `/health` returns `{"ok": true}` before pushing a numbered image tag and `latest`.
 
 ## Security
 
