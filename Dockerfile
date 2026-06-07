@@ -1,7 +1,7 @@
 FROM node:20-slim
 
 WORKDIR /app
-ENV CASEOPS_VERSION=0.1.9
+ENV CASEOPS_VERSION=0.1.10
 
 # Install system deps + Python runtime.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -38,7 +38,7 @@ RUN set -eux; \
 
 # Copy only product files. Runtime data, credentials, local Salesforce metadata,
 # Jira outputs, screenshots, and issue logs must stay in bind-mounted appdata.
-COPY --chown=1027:100 app.py jira_sync.py skill_registry.py caseops_paths.py canned-messages.json docker-entrypoint.sh /app/
+COPY --chown=1027:100 app.py issue_clusters.py jira_sync.py skill_registry.py caseops_paths.py canned-messages.json docker-entrypoint.sh /app/
 COPY --chown=1027:100 docker/sfdx-project.json /app/sfdx-project.json
 COPY --chown=1027:100 templates/ /app/templates/
 COPY --chown=1027:100 static/ /app/static/
