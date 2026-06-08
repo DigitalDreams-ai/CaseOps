@@ -1986,6 +1986,11 @@ def _remove_env_keys(keys: set[str], env_file: Path | None = None) -> None:
 
 CLOSED_STATUSES = {"closed", "resolved", "canceled", "cancelled"}
 ESCALATED_STATUS = "escalated to engineering"
+ESCALATED_STATUS_ALIASES = {
+    ESCALATED_STATUS,
+    "escalated to eng",
+    "jira escalated",
+}
 
 FILE_LOCATIONS: dict[str, str] = {
     "jira_summary":       "jira/summary/{key}.md",
@@ -2005,7 +2010,7 @@ FILE_LABELS: dict[str, str] = {
     "internal_notes":  "Internal Notes",
     "jira_message":    "Jira Message",
     "test_report":     "Test Report",
-    "eng_handoff":     "Eng Handoff",
+    "eng_handoff":     "Needs Engineering",
     "closed_resolved": "Closed / Resolved / Canceled",
     "attachments":     "Attachments",
     "generated_files": "Generated Files",
@@ -6206,6 +6211,28 @@ def _global_issue_queue_detail(key: str) -> tuple[bool, str]:
     return complete, detail
 
 
+def _queue_incomplete_summary_bucket(detail: str) -> str:
+    """Normalize an incomplete queue detail for grouped end-of-run counts."""
+    text = str(detail or "").strip()
+    match = re.search(r"next STEP_(\d+)\s+\(([^,()]+),\s*([^)]+)\)", text)
+    if match:
+        step, name, status = match.groups()
+        return f"STEP_{step} {name.strip()} ({status.strip()})"
+    if text.startswith("worker already running"):
+        return "worker already running"
+    if text.startswith("worker failed unexpectedly"):
+        return "worker failed unexpectedly"
+    if "max_passes=" in text:
+        return "max passes reached"
+    if text.startswith("stalled/no progress"):
+        return "stalled/no progress"
+    if text.startswith("advanced this pass"):
+        return "advanced but incomplete"
+    if text.startswith("needs more work") or text.startswith("needs work"):
+        return "needs more work"
+    return "other incomplete"
+
+
 def _select_global_issue_queue(run_key: str) -> list[str]:
     rows = _read_manifest()
     queued: list[str] = []
@@ -6414,6 +6441,10 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
             stop_reason = "all queued issues complete"
         _log_emit_line(run_key, f"Queue: finished. complete={complete}, incomplete={incomplete}, reason={stop_reason}")
         if incomplete:
+            summary_counts = Counter(_queue_incomplete_summary_bucket(reason) for reason in incomplete_reasons.values())
+            _log_emit_line(run_key, "Queue incomplete summary:")
+            for bucket, count in summary_counts.most_common():
+                _log_emit_line(run_key, f"  - {bucket}: {count}")
             for key, detail in incomplete_details.items():
                 reason = incomplete_reasons.get(key) or f"needs work; {detail}"
                 _log_emit_line(run_key, f"Queue incomplete: {key} — {reason}")
@@ -6903,25 +6934,31 @@ def _build_similarity_lookup_for_plan(
 
 def _count_open_issues(issues: list[dict[str, str]]) -> int:
     """Count issues not in closed/resolved/escalated states."""
-    closed_statuses = {"closed", "resolved", "canceled", "cancelled", "escalated to engineering"}
-    return sum(1 for issue in issues if issue.get("Status", "").lower() not in closed_statuses)
+    return sum(1 for issue in issues if _disposition(issue.get("Status", "")) == "active")
+
+
+def _normalized_jira_status(status: str = "") -> str:
+    return (status or "").strip().lower()
+
+
+def _is_closed_status(status: str = "") -> bool:
+    return _normalized_jira_status(status) in CLOSED_STATUSES
 
 
 def _disposition(status: str) -> str:
-    s = status.lower()
-    if s in CLOSED_STATUSES:
+    if _is_closed_status(status):
         return "closed"
-    if s == ESCALATED_STATUS:
+    if _is_jira_engineering_escalated(status):
         return "escalated"
     return "active"
 
 
 def _is_jira_engineering_escalated(status: str = "") -> bool:
-    return (status or "").strip().lower() == ESCALATED_STATUS
+    return _normalized_jira_status(status) in ESCALATED_STATUS_ALIASES
 
 
 def _is_jira_escalated_any(status: str = "") -> bool:
-    return "escalated" in (status or "").strip().lower()
+    return _is_jira_engineering_escalated(status)
 
 
 def _available_tabs(key: str) -> list[dict[str, str]]:
@@ -7043,7 +7080,75 @@ def _migrate_legacy_issue_summaries() -> None:
 _ROLLUP_FILENAME = re.compile(r"^(?:summaries/\d{4}-\d{2}-\d{2}/issue-summary-\d{4}-\d{2}-\d{2}\.md|issue-summary-\d{4}-\d{2}-\d{2}\.md)$")
 
 
-def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
+def _ordered_unique_tags(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    tags: list[str] = []
+    for value in values:
+        tag = str(value or "").strip().lower()
+        if not tag or tag in seen:
+            continue
+        seen.add(tag)
+        tags.append(tag)
+    return tags
+
+
+def _pipeline_state_has_stale_step(state: dict[str, Any]) -> bool:
+    steps = state.get("steps") if isinstance(state.get("steps"), list) else []
+    return any(str(step.get("status") or "").strip().lower() == "stale" for step in steps if isinstance(step, dict))
+
+
+def _test_report_indicates_failed_validation(key: str) -> bool:
+    path = OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)
+    if not path.is_file():
+        return False
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")[:50000]
+    except OSError:
+        return False
+    if _test_report_confirms_fix(key):
+        return False
+    return bool(
+        re.search(
+            r"(?is)\b(failed validation|validation failed|not fixed|unresolved|revert(?:ed)?|do not proceed|test(?:s)? failed)\b",
+            text,
+        )
+    )
+
+
+def _issue_needs_customer_reply(key: str) -> bool:
+    paths = (
+        OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key),
+        OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key),
+    )
+    text_parts: list[str] = []
+    for path in paths:
+        if not path.is_file():
+            continue
+        try:
+            text_parts.append(path.read_text(encoding="utf-8", errors="replace")[:25000])
+        except OSError:
+            continue
+    text = "\n\n".join(text_parts)
+    return bool(
+        text
+        and re.search(
+            r"(?is)\b(please confirm|please verify|can you confirm|waiting for (?:customer|user|requester)|customer confirmation|requester confirmation)\b",
+            text,
+        )
+    )
+
+
+def _issue_has_similar_issue_context(key: str) -> bool:
+    try:
+        context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
+    except Exception:
+        return False
+    if not context.get("cluster_id"):
+        return False
+    return bool(context.get("open_matches") or context.get("closed_matches"))
+
+
+def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
     """Which pipeline output files exist for this issue (for dashboard / API)."""
     # Phase 2: check investigation_cache before disk I/O for investigation/solution flags
     cache_key = _instance_cache_key(key)
@@ -7071,13 +7176,30 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
         has_test_report=has_test_report and (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).is_file(),
     )
     deliverable = _infer_deliverable_state(state_payload, is_data_only_legacy=has_data_only_legacy)
+    production_deploy_required = str(deliverable.get("production_deploy_required") or "unknown").strip().lower()
     is_blocked = routing["path"] == "on_hold" or (not has_schema and _investigation_indicates_blocked(key))
     is_data_only = _deliverable_is_data_only(deliverable, legacy_detected=has_data_only_legacy)
+    has_confirmed_solution = _test_report_confirms_fix(key)
+    has_failed_validation = _test_report_indicates_failed_validation(key)
+    pipeline_state = _calculate_pipeline_state(key, status).value
+    has_generated_files = bool(_generated_files_for_issue(key))
+    has_similar_issues = _issue_has_similar_issue_context(key)
+    needs_customer_reply = _issue_needs_customer_reply(key)
+    has_stale_pipeline_step = _pipeline_state_has_stale_step(state_payload)
 
     needs_escalation = (
         (has_schema and routing["path"] == "engineering_required")
         or (not has_schema and has_eng_handoff)
     ) and not is_jira_escalated_any
+    is_ready_to_deploy = bool(
+        pipeline_state == PipelineState.VALIDATED.value
+        and has_confirmed_solution
+        and production_deploy_required == "yes"
+        and not is_blocked
+        and not is_data_only
+        and not needs_escalation
+        and not is_jira_escalated_any
+    )
 
     return {
         # Legacy flags (kept for backward compatibility during transition)
@@ -7087,17 +7209,79 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, bool]:
         "has_jira_message": (OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)).exists(),
         "has_test_report": (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists(),
         "has_eng_handoff": has_eng_handoff,
-        "has_confirmed_solution": _test_report_confirms_fix(key),
+        "has_confirmed_solution": has_confirmed_solution,
+        "has_failed_validation": has_failed_validation,
         "has_solution": has_solution,
         "needs_escalation": needs_escalation,
         "is_jira_escalated": is_jira_escalated,
         "is_jira_escalated_any": is_jira_escalated_any,
+        "production_deploy_required": production_deploy_required,
+        "is_ready_to_deploy": is_ready_to_deploy,
 
         # Pipeline state machine (authoritative status first, file-only fallback)
-        "pipeline_state": _calculate_pipeline_state(key, status).value,
+        "pipeline_state": pipeline_state,
         "is_escalation_path": routing["path"] == "engineering_required",  # Source of truth: routing state
         "is_blocked": is_blocked,
         "is_data_only": is_data_only,
+        "has_generated_files": has_generated_files,
+        "has_similar_issues": has_similar_issues,
+        "needs_customer_reply": needs_customer_reply,
+        "has_stale_pipeline_step": has_stale_pipeline_step,
+    }
+
+
+def _derive_issue_tag_contract(status: str, flags: dict[str, Any], *, has_new_comments: bool = False) -> dict[str, Any]:
+    """Return the canonical issue tag contract.
+
+    Exactly one primary tag is assigned. Secondary condition tags are only for
+    independent filters; aliases and internal implementation labels stay out of
+    this contract to prevent UI/search drift.
+    """
+    disposition = _disposition(status)
+    pipeline_state = str(flags.get("pipeline_state") or "").strip().lower()
+
+    if disposition == "closed":
+        primary = "closed"
+    elif disposition == "escalated" or flags.get("is_jira_escalated_any") or pipeline_state == PipelineState.ESCALATED_TO_ENGINEERING.value:
+        primary = "escalated to engineering"
+    elif flags.get("is_blocked"):
+        primary = "blocked"
+    elif flags.get("needs_escalation") or pipeline_state == PipelineState.ENGINEERING_HANDOFF.value:
+        primary = "needs engineering"
+    elif flags.get("is_data_only"):
+        primary = "data only"
+    elif flags.get("is_ready_to_deploy"):
+        primary = "ready to deploy"
+    elif pipeline_state == PipelineState.VALIDATED.value:
+        primary = "complete no deploy"
+    elif pipeline_state == PipelineState.ANALYZED.value:
+        primary = "analyzed"
+    elif pipeline_state == PipelineState.INVESTIGATING.value:
+        primary = "in progress"
+    else:
+        primary = "not triaged"
+
+    conditions: list[str] = []
+    if has_new_comments:
+        conditions.append("new comments")
+    if pipeline_state in {PipelineState.INVESTIGATING.value, PipelineState.ANALYZED.value}:
+        conditions.append("partial run")
+    if flags.get("has_stale_pipeline_step"):
+        conditions.append("stale")
+    if flags.get("has_failed_validation"):
+        conditions.append("failed validation")
+    if flags.get("has_similar_issues"):
+        conditions.append("similar issues")
+    if flags.get("has_generated_files"):
+        conditions.append("generated files")
+    if flags.get("needs_customer_reply"):
+        conditions.append("customer reply needed")
+
+    condition_tags = _ordered_unique_tags([tag for tag in conditions if tag != primary])
+    return {
+        "primary_tag": primary,
+        "condition_tags": condition_tags,
+        "tags": _ordered_unique_tags([primary, *condition_tags]),
     }
 
 
@@ -7410,6 +7594,7 @@ def api_issues():
         flags = _pipeline_file_flags(key, status)
         due = row.get("Due", "") or ""
         has_new_comments = row.get("HasNewComments", "false").lower() == "true"
+        tag_contract = _derive_issue_tag_contract(status, flags, has_new_comments=has_new_comments)
         result.append({
             "key": key,
             "status": status,
@@ -7423,6 +7608,7 @@ def api_issues():
             "jira_url": f"{JIRA_BASE_URL}/browse/{key}" if JIRA_BASE_URL else "",
             "hasNewComments": has_new_comments,
             **flags,
+            **tag_contract,
         })
     return jsonify(result)
 
@@ -7461,6 +7647,8 @@ def api_issue(key: str):
     status = row.get("Status", "")
     due = row.get("Due", "") or ""
     flags = _pipeline_file_flags(key, status)
+    has_new_comments = row.get("HasNewComments", "false").lower() == "true"
+    tag_contract = _derive_issue_tag_contract(status, flags, has_new_comments=has_new_comments)
     tabs = _available_tabs(key)
     cluster_context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
     return jsonify({
@@ -7479,6 +7667,7 @@ def api_issue(key: str):
         "reporter": _get_issue_reporter(key),
         "similar_issue_cluster": cluster_context,
         **flags,
+        **tag_contract,
     })
 
 

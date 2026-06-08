@@ -21,19 +21,37 @@ The dashboard lists synced Jira issues and their CaseOps state. Select an issue 
 - Jira Message
 - Test Report
 - Generated Files
-- Engineering Handoff, when present
+- Needs Engineering, when present
 - Pipeline Log
 
-The issue filter can search by issue key, summary text, status text, and tags.
+The issue filter can search by issue key, summary text, status text, and canonical tags.
 
-Common tags include:
+Each issue has exactly one primary tag:
 
-- `new comments`
-- `not triaged`
-- `data only`
-- `blocked`
-- `validated`
-- `needs escalation`
+| Primary tag | Criteria |
+| --- | --- |
+| `not triaged` | Active Jira issue with no CaseOps investigation state yet |
+| `in progress` | Pipeline investigation has started but has not reached analysis |
+| `analyzed` | Analysis/draft work exists, but Sandbox validation is not complete |
+| `blocked` | CaseOps found an explicit blocker or on-hold state |
+| `data only` | Pipeline completed with a no-deploy data/admin action |
+| `ready to deploy` | Sandbox validation is current and Production deployment is required |
+| `complete no deploy` | Pipeline completed and no Production deployment is required |
+| `needs engineering` | CaseOps determined Engineering ownership is required |
+| `escalated to engineering` | Jira status is escalated to Engineering |
+| `closed` | Jira issue is closed, resolved, or canceled |
+
+Issues may also have independent condition tags:
+
+| Condition tag | Criteria |
+| --- | --- |
+| `new comments` | Jira has comments newer than the last CaseOps viewed marker |
+| `partial run` | Pipeline state is `in progress` or `analyzed` |
+| `stale` | Persisted resume state has a stale step |
+| `failed validation` | Test report indicates failed validation or not fixed |
+| `similar issues` | Similar-issue clustering found related open or closed issues |
+| `generated files` | Issue-specific generated files exist |
+| `customer reply needed` | Drafts or notes ask the requester to confirm or verify |
 
 ## Issue Actions
 
@@ -53,7 +71,11 @@ Run pipeline actions only on approved issues.
 
 `Auto-Process All` and `Reprocess All (No Sync)` skip issues already marked `Escalated to Engineering` in Jira. Use a single-issue run only when you intentionally want to inspect or override one escalated issue.
 
-The final queue summary includes the stop reason, such as all queued issues complete, stalled/no progress, max passes reached, or stop requested. Incomplete issue lines include the reason CaseOps stopped retrying that issue.
+The final queue summary includes the stop reason, such as all queued issues complete, stalled/no progress, max passes reached, or stop requested. Incomplete issue lines include the reason CaseOps stopped retrying that issue, and grouped counts summarize repeated blockers by step and status.
+
+`Ready to Deploy` means Sandbox validation is current, the solution is confirmed, and the persisted deliverable state says a Production deployment is required. This is the tag to use when looking for issues ready for your Production deployment process.
+
+`partial run` finds issues where CaseOps started the pipeline but has not reached a terminal outcome yet. `needs engineering` means CaseOps determined the work is not support-resolvable and needs Engineering instead of a Support-owned deployment.
 
 ## Similar Issues
 

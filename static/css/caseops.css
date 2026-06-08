@@ -161,19 +161,19 @@ select.desktop-only {
   font-weight: 600;
 }
 
-.badge.state-validated {
+.badge.tag-complete-no-deploy {
   background: rgba(63, 185, 80, 0.3);
   color: #3fb950;
   font-weight: 600;
 }
 
-.badge.state-engineering-handoff {
+.badge.tag-needs-engineering {
   background: rgba(210, 153, 34, 0.2);
   color: #d29922;
   font-weight: 600;
 }
 
-.badge.state-escalated {
+.badge.tag-escalated-engineering {
   background: rgba(34, 180, 207, 0.2);
   color: #22b4cf;
   font-weight: 600;
@@ -192,15 +192,63 @@ select.desktop-only {
   font-weight: 600;
 }
 
-.badge.badge-needs-escalation {
-  background: rgba(210, 153, 34, 0.2);
-  color: #d29922;
+.badge.badge-ready-deploy {
+  background: rgba(35, 134, 54, 0.22);
+  color: #238636;
+  font-weight: 700;
+}
+
+.badge.tag-closed {
+  background: rgba(110, 118, 129, 0.18);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
-.badge.badge-escalated-jira {
-  background: rgba(3, 188, 184, 0.2);
-  color: #03bcb8;
+.badge.tag-new-comments {
+  background: rgba(88, 166, 255, 0.14);
+  color: #1f6feb;
+  font-weight: 600;
+}
+
+.badge.tag-partial-run {
+  background: rgba(110, 118, 129, 0.16);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.badge.tag-stale {
+  background: rgba(255, 171, 0, 0.22);
+  color: #b7791f;
+  font-weight: 600;
+}
+
+.badge.tag-failed-validation {
+  background: rgba(248, 81, 73, 0.18);
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
+.badge.tag-similar-issues {
+  background: rgba(88, 166, 255, 0.16);
+  color: #1f6feb;
+  font-weight: 600;
+}
+
+.badge.tag-generated-files {
+  background: rgba(139, 92, 246, 0.16);
+  color: #8b5cf6;
+  font-weight: 600;
+}
+
+.badge.tag-customer-reply {
+  background: rgba(210, 153, 34, 0.18);
+  color: var(--color-warn);
+  font-weight: 600;
+}
+
+.badge.tag-generic {
+  background: rgba(110, 118, 129, 0.16);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
@@ -847,11 +895,6 @@ select.desktop-only {
   background: rgba(63, 185, 80, 0.3);
   color: var(--color-success);
   font-weight: 600;
-}
-
-.detail-badge.escalated {
-  background: rgba(210, 153, 34, 0.2);
-  color: var(--color-warn);
 }
 
 @media (max-width: 768px) {

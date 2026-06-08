@@ -816,25 +816,63 @@
       });
   }
 
+  const ISSUE_TAG_LABELS = {
+    'not triaged': 'Not Triaged',
+    'in progress': 'In Progress',
+    'analyzed': 'Analyzed',
+    'blocked': 'Blocked',
+    'data only': 'Data Only',
+    'ready to deploy': 'Ready to Deploy',
+    'complete no deploy': 'Complete No Deploy',
+    'needs engineering': 'Needs Engineering',
+    'escalated to engineering': 'Escalated to Engineering',
+    'closed': 'Closed',
+    'new comments': 'New Comments',
+    'partial run': 'Partial Run',
+    'stale': 'Stale',
+    'failed validation': 'Failed Validation',
+    'similar issues': 'Similar Issues',
+    'generated files': 'Generated Files',
+    'customer reply needed': 'Customer Reply Needed',
+  };
+
+  const ISSUE_TAG_CLASSES = {
+    'not triaged': 'state-untriaged',
+    'in progress': 'state-investigating',
+    'analyzed': 'state-analyzed',
+    'blocked': 'badge-blocked',
+    'data only': 'badge-data-only',
+    'ready to deploy': 'badge-ready-deploy',
+    'complete no deploy': 'tag-complete-no-deploy',
+    'needs engineering': 'tag-needs-engineering',
+    'escalated to engineering': 'tag-escalated-engineering',
+    'closed': 'tag-closed',
+    'new comments': 'tag-new-comments',
+    'partial run': 'tag-partial-run',
+    'stale': 'tag-stale',
+    'failed validation': 'tag-failed-validation',
+    'similar issues': 'tag-similar-issues',
+    'generated files': 'tag-generated-files',
+    'customer reply needed': 'tag-customer-reply',
+  };
+
+  function issueTagLabel(tag) {
+    return ISSUE_TAG_LABELS[tag] || String(tag || '').replace(/\b\w/g, ch => ch.toUpperCase());
+  }
+
+  function issueTagClass(tag) {
+    return ISSUE_TAG_CLASSES[tag] || 'tag-generic';
+  }
+
+  function issueTagBadge(tag, title = '') {
+    if (!tag) return '';
+    const label = issueTagLabel(tag);
+    const cls = issueTagClass(tag);
+    return `<span class="badge ${cls}" title="${escHtml(title || label)}">${escHtml(label)}</span>`;
+  }
+
   function issueSearchTags(issue) {
-    const tags = [
-      issue.disposition,
-      issue.status,
-      issue.pipeline_state,
-      String(issue.pipeline_state || '').replace(/_/g, ' '),
-    ];
-    const state = issue.pipeline_state;
-    if (state === 'untriaged') tags.push('not triaged');
-    if (state === 'investigating') tags.push('investigating');
-    if (state === 'analyzed') tags.push('analyzed');
-    if (state === 'validated') tags.push('validated');
-    if (state === 'engineering_handoff') tags.push('engineering handoff');
-    if (state === 'escalated_to_engineering') tags.push('escalated to engineering', 'escalated to eng');
-    if (issue.is_blocked && !issue.is_data_only) tags.push('blocked');
-    if (issue.is_data_only && !issue.is_blocked && !issue.has_eng_handoff) tags.push('data only', 'data-only', 'no deploy', 'no-deploy');
-    if (issue.needs_escalation && !issue.is_data_only) tags.push('needs escalation');
-    if (issue.is_jira_escalated && !issue.is_data_only) tags.push('escalated to eng', 'jira escalated');
-    if (issue.hasNewComments) tags.push('new comments');
+    const tags = Array.isArray(issue.tags) ? issue.tags : [];
     return tags.filter(Boolean).join(' ').toLowerCase();
   }
 
@@ -844,6 +882,7 @@
     const searchable = [
       issue.key || '',
       issue.summary || '',
+      issue.status || '',
       issueSearchTags(issue),
     ].join(' ').toLowerCase();
     return q.split(/\s+/).every(term => searchable.includes(term));
@@ -976,46 +1015,13 @@
       item.dataset.key = issue.key;
       const isChecked = selectedIssues.has(issue.key);
 
-      // State machine badge display
+      // Canonical tag display: one primary tag plus independent conditions.
       let stateBadge = '';
       let secondaryBadges = '';
 
-      if (label === 'Active') {
-        const state = issue.pipeline_state;
-
-        // Primary state badge (based on pipeline state and Jira status)
-        if (state === 'untriaged') {
-          stateBadge = '<span class="badge state-untriaged" title="No pipeline work started. Run investigation.">Not Triaged</span>';
-        } else if (state === 'investigating') {
-          stateBadge = '<span class="badge state-investigating" title="Pipeline investigation is in progress.">Investigating</span>';
-        } else if (state === 'analyzed') {
-          stateBadge = '<span class="badge state-analyzed" title="Analysis complete. Decision made (fix or escalate).">Analyzed</span>';
-        } else if (state === 'validated') {
-          stateBadge = '<span class="badge state-validated" title="Solution tested and confirmed in Sandbox.">Validated</span>';
-        } else if (state === 'engineering_handoff') {
-          stateBadge = issue.needs_escalation
-            ? '<span class="badge state-engineering-handoff" title="CaseOps has prepared an Engineering handoff; Jira has not been escalated yet.">Needs Escalation</span>'
-            : '<span class="badge state-engineering-handoff" title="CaseOps has prepared an Engineering handoff.">Engineering Handoff</span>';
-        } else if (state === 'escalated_to_engineering') {
-          stateBadge = '<span class="badge state-escalated" title="Jira status is Escalated to Engineering.">Escalated to Engineering</span>';
-        }
-
-        // Secondary flags: validated combinations only
-        // - Blocked and Data Only are mutually exclusive
-        // - Data Only and Escalation are mutually exclusive
-        if (issue.is_blocked && !issue.is_data_only) {
-          secondaryBadges += '<span class="badge badge-blocked" title="Issue is blocked/waiting. Action required.">Blocked</span>';
-        }
-        if (issue.is_data_only && !issue.is_blocked && !issue.has_eng_handoff) {
-          secondaryBadges += '<span class="badge badge-data-only" title="Data-only fix (no metadata deploy).">Data Only</span>';
-        }
-        if (issue.needs_escalation && !issue.is_data_only && state !== 'engineering_handoff') {
-          secondaryBadges += '<span class="badge badge-needs-escalation" title="Issue determined to need escalation (engineering-escalations file exists).">Needs Escalation</span>';
-        }
-        if (issue.is_jira_escalated && !issue.is_data_only && state !== 'escalated_to_engineering') {
-          secondaryBadges += '<span class="badge badge-escalated-jira" title="Escalated to Engineering (Jira status).">Escalated to Eng</span>';
-        }
-      }
+      stateBadge = issueTagBadge(issue.primary_tag);
+      const conditionTags = Array.isArray(issue.condition_tags) ? issue.condition_tags : [];
+      secondaryBadges = conditionTags.map(tag => issueTagBadge(tag)).join('');
 
       const newCommentsIndicator =
         issue.hasNewComments
@@ -1120,17 +1126,17 @@
     const badgesEl = document.getElementById('detail-badges');
     if (badgesEl) {
       const badges = [];
+      const tagBadges = [
+        issue.primary_tag,
+        ...(Array.isArray(issue.condition_tags) ? issue.condition_tags : []),
+      ].map(tag => issueTagBadge(tag)).join('');
       if (issue.has_jira_summary) badges.push({text: '✓ Synced', cls: ''});
       if (issue.has_investigation) badges.push({text: '✓ Investigated', cls: ''});
       if (issue.has_internal_notes) badges.push({text: '✓ Notes', cls: ''});
       if (issue.has_jira_message) badges.push({text: '✓ Draft', cls: ''});
       if (issue.has_solution) badges.push({text: '✓ Solution', cls: 'solution'});
-      if (issue.needs_escalation) badges.push({text: '📋 Needs Escalation', cls: 'escalated'});
-      else if (issue.has_eng_handoff && !issue.is_jira_escalated) badges.push({text: '📋 Engineering Handoff', cls: 'escalated'});
-      if (issue.is_jira_escalated) badges.push({text: '🔀 Escalated to Engineering', cls: 'escalated'});
-      badgesEl.innerHTML = badges.length > 0
-        ? badges.map(b => `<span class="detail-badge${b.cls ? ' ' + b.cls : ''}">${escHtml(b.text)}</span>`).join('')
-        : '';
+      const artifactBadges = badges.map(b => `<span class="detail-badge${b.cls ? ' ' + b.cls : ''}">${escHtml(b.text)}</span>`).join('');
+      badgesEl.innerHTML = tagBadges + artifactBadges;
 
       // Phase 4: Load confidence flag and show badge if low-confidence
       fetch(`/api/issue/${key}/confidence-flag`)

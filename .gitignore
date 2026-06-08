@@ -26,6 +26,7 @@ tests/
 !tests/
 tests/*
 !tests/test_issue_clusters.py
+!tests/test_global_queue.py
 caseops/__pycache__/
 caseops/**/__pycache__/
 caseops/**/*.pyc

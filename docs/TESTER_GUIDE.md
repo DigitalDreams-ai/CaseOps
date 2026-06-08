@@ -60,6 +60,10 @@ Verify issue filtering by:
 
 In Select mode, confirm `Sync Selected` and `Run Pipeline` are visible immediately, even before selecting issues, and disabled until at least one issue is selected.
 
+When a test issue has a confirmed Sandbox validation and `production_deploy_required=yes`, confirm the dashboard shows/searches the `Ready to Deploy` tag and does not show `Validated` as the active-list state label.
+
+Confirm every issue has exactly one primary tag. Confirm `partial run` finds issues in `In Progress` or `Analyzed` state, and `needs engineering` finds issues requiring Engineering ownership.
+
 ## Issue Detail Check
 
 Open a synced issue and verify available tabs render without errors:
@@ -71,7 +75,7 @@ Open a synced issue and verify available tabs render without errors:
 - Jira Message
 - Test Report
 - Generated Files, when present
-- Engineering Handoff, when present
+- Needs Engineering, when present
 - Pipeline Log
 
 Generated files must appear under an issue-specific directory, not directly under the root outputs directory.
@@ -104,7 +108,7 @@ Expected behavior:
 - The run log shows step progress.
 - Pipeline artifacts are written under `/data/outputs`.
 - `Auto-Process All` and `Reprocess All (No Sync)` skip Jira issues already marked `Escalated to Engineering`.
-- The final global queue summary reports why the queue stopped and gives actionable incomplete reasons per issue.
+- The final global queue summary reports why the queue stopped, groups incomplete issues by repeated step/status blockers, and gives actionable incomplete reasons per issue.
 - Stop Current Run stops an active pipeline cleanly.
 - Pipeline State Repair/Rebuild is available for stale or inconsistent state after a stopped or failed run.
 
