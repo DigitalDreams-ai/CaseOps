@@ -916,82 +916,6 @@ def _ensure_metadata_workspace_dirs() -> None:
     """Create the shared directory contract used by Salesforce pipeline agents."""
     for path in _metadata_workspace_dirs().values():
         path.mkdir(parents=True, exist_ok=True)
-    _migrate_legacy_metadata_workspace()
-
-
-def _legacy_metadata_workspace_dirs() -> dict[str, Path]:
-    """Return the old `.temp/metadata` workspace directories for migration only."""
-    base_temp = TEMP_ROOT if TEMP_ROOT is not None else OUTPUTS.parent / ".temp"
-    root = base_temp / "metadata"
-    return {
-        "root": root,
-        "raw_prod": root / "raw-production",
-        "sandbox_work": root / "sandbox-work",
-        "confirmed": root / "confirmed",
-    }
-
-
-def _copy_tree_missing(src: Path, dst: Path) -> int:
-    """Copy files from src to dst without overwriting existing files."""
-    copied = 0
-    if not src.is_dir():
-        return copied
-    for item in src.rglob("*"):
-        rel = item.relative_to(src)
-        target = dst / rel
-        if item.is_dir():
-            target.mkdir(parents=True, exist_ok=True)
-            continue
-        if target.exists():
-            continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(item, target)
-        copied += 1
-    return copied
-
-
-def _migrate_legacy_metadata_workspace() -> None:
-    """Copy old `.temp/metadata` evidence into the persistent outputs layout.
-
-    The old tree is left untouched. This is deliberately non-destructive and
-    missing-file only so reruns cannot overwrite newer workspace artifacts.
-    """
-    legacy = _legacy_metadata_workspace_dirs()
-    current = _metadata_workspace_dirs()
-    legacy_root = legacy["root"]
-    if not legacy_root.is_dir():
-        return
-    marker = current["root"] / ".legacy-migration.json"
-    copied: dict[str, int] = {}
-
-    copied["raw-production"] = _copy_tree_missing(legacy["raw_prod"], current["raw_prod"])
-    copied["sandbox-work"] = _copy_tree_missing(legacy["sandbox_work"], current["sandbox_work"])
-
-    confirmed_count = 0
-    if legacy["confirmed"].is_dir():
-        for issue_dir in legacy["confirmed"].iterdir():
-            if issue_dir.is_dir():
-                confirmed_count += _copy_tree_missing(
-                    issue_dir,
-                    current["confirmed"] / issue_dir.name / "confirmed",
-                )
-    copied["confirmed"] = confirmed_count
-
-    if any(copied.values()) or not marker.exists():
-        marker.write_text(
-            json.dumps(
-                {
-                    "legacyRoot": str(legacy_root),
-                    "persistentRoot": str(current["root"]),
-                    "copied": copied,
-                    "migratedAt": datetime.now(timezone.utc).isoformat(),
-                    "note": "Legacy files were copied missing-file-only; legacy tree was not deleted.",
-                },
-                indent=2,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
 
 
 def _org_knowledge_dir() -> Path:
@@ -1354,52 +1278,11 @@ def _persistent_canned_messages_file() -> Path:
     return OUTPUTS / "settings" / "canned-messages.json"
 
 
-def _legacy_canned_messages_candidates() -> list[Path]:
-    """Return previous custom canned-message locations that should be migrated."""
-    legacy_files: list[Path] = [OUTPUTS.parent / "canned-messages.json"]
-
-    workspace = app.config.get("WORKSPACE") or os.environ.get("CASEOPS_WORKSPACE", "default")
-    if workspace and workspace != "default":
-        workspace_legacy = ROOT / workspace / "canned-messages.json"
-        if workspace_legacy.exists():
-            legacy_files.append(workspace_legacy)
-
-    return [path for path in legacy_files if path.exists() and path.is_file()]
-
-
-def _migrate_legacy_canned_messages_file(target: Path) -> bool:
-    """Copy the first available legacy canned-messages file into the canonical path."""
-    if target.exists():
-        return True
-    for legacy in _legacy_canned_messages_candidates():
-        if not legacy.exists() or not legacy.is_file():
-            continue
-        try:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(legacy, target)
-            return True
-        except OSError:
-            return False
-    return False
-
-
-def _legacy_canned_messages_file() -> Path | None:
-    """Return the first legacy path if available (compatibility fallback)."""
-    candidates = _legacy_canned_messages_candidates()
-    return candidates[0] if candidates else None
-
-
 def _active_canned_messages_file() -> tuple[Path, bool]:
     """Return the file to read and whether it is a custom/persistent override."""
     persistent = _persistent_canned_messages_file()
     if persistent.exists():
         return persistent, True
-
-    legacy = _legacy_canned_messages_file()
-    if legacy:
-        if _migrate_legacy_canned_messages_file(persistent):
-            return persistent, True
-        return legacy, True
 
     return ROOT / "canned-messages.json", False
 
@@ -4264,8 +4147,6 @@ def _claude_process_env() -> dict[str, str]:
     env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
     env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")
     env["CASEOPS_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
-    # 2026-06-06 compatibility alias; remove after deployments have moved to CASEOPS_ENV_FILE.
-    env["CASEOPS_JIRA_ENV_FILE"] = env["CASEOPS_ENV_FILE"]
     if TEMP_ROOT:
         temp_root = Path(TEMP_ROOT)
         claude_tmp = temp_root / "claude-code"
@@ -5323,8 +5204,6 @@ def _do_stream_proc(cmd: list[str], run_key: str) -> int:
         env["COLUMNS"] = "999"  # Prevent terminal wrapping in subprocess output
         env["CASEOPS_JIRA_OUT_DIR"] = str(OUTPUTS / "jira")  # Instance-specific Jira output dir
         env["CASEOPS_ENV_FILE"] = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
-        # 2026-06-06 compatibility alias; remove after deployments have moved to CASEOPS_ENV_FILE.
-        env["CASEOPS_JIRA_ENV_FILE"] = env["CASEOPS_ENV_FILE"]
         if TEMP_ROOT:
             env["CASEOPS_TEMP_DIR"] = str(TEMP_ROOT)
         metadata_dirs = _metadata_workspace_dirs()
@@ -5873,8 +5752,6 @@ def _sync_issue_from_jira_now(key: str, *, timeout: int = 120) -> tuple[bool, st
     ]
     env = os.environ.copy()
     env["CASEOPS_ENV_FILE"] = env_file
-    # 2026-06-06 compatibility alias; remove after deployments have moved to CASEOPS_ENV_FILE.
-    env["CASEOPS_JIRA_ENV_FILE"] = env_file
     try:
         proc = subprocess.run(
             cmd,
@@ -6549,7 +6426,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"- Maintain `${{CASEOPS_METADATA_SANDBOX_WORK_DIR}}/{key}/metadata-workspace.json` with "
         f"attempt number, components touched, baseline path, candidate path, revert status, and confirmed "
         f"package path when applicable.\n"
-        f"- Do not use legacy `.temp/metadata` for new work; it is migration-only historical evidence.\n"
+        f"- Use only the configured CaseOps metadata workspace under `${{CASEOPS_METADATA_WORKSPACES_DIR}}`.\n"
         f"- Sub-agents spawned in Steps 5, 6, and 9 must follow this workspace contract "
         f"(see sub-agent-prompts.md).\n\n"
         f"## Instruction\n"
@@ -7045,36 +6922,12 @@ def _iter_daily_issue_summary_paths() -> list[Path]:
     return paths
 
 
-def _iter_legacy_issue_summary_paths() -> list[Path]:
-    return sorted(
-        (p for p in OUTPUTS.glob("issue-summary-*.md") if _summary_date_from_filename(p.name)),
-        key=lambda p: p.name,
-    )
-
-
 def _latest_issue_summary_path() -> Path | None:
-    """Return the most recently modified issue summary across legacy and daily locations."""
-    candidates = _iter_daily_issue_summary_paths() + _iter_legacy_issue_summary_paths()
+    """Return the most recently modified dated issue summary."""
+    candidates = _iter_daily_issue_summary_paths()
     if not candidates:
         return None
     return max(candidates, key=lambda p: p.stat().st_mtime)
-
-
-def _migrate_legacy_issue_summaries() -> None:
-    """Move legacy root-level summaries into the daily summaries directory when possible."""
-    for legacy in _iter_legacy_issue_summary_paths():
-        summary_date = _summary_date_from_filename(legacy.name)
-        if not summary_date:
-            continue
-        target = _issue_summary_path_for_date(summary_date)
-        if target.exists():
-            continue
-        try:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            legacy.replace(target)
-            print(f"[OK] Migrated legacy summary: {legacy.name} -> {_path_relative_for_prompt(target)}")
-        except OSError as exc:
-            print(f"[WARN] Could not migrate legacy summary {legacy}: {exc}")
 
 
 _ROLLUP_FILENAME = re.compile(r"^(?:summaries/\d{4}-\d{2}-\d{2}/issue-summary-\d{4}-\d{2}-\d{2}\.md|issue-summary-\d{4}-\d{2}-\d{2}\.md)$")
@@ -8853,9 +8706,6 @@ def api_settings_set_canned_messages():
 def api_settings_reset_canned_messages():
     """Reset to default canned messages by deleting custom overrides."""
     messages_files = [_persistent_canned_messages_file()]
-    legacy = _legacy_canned_messages_file()
-    if legacy:
-        messages_files.append(legacy)
 
     try:
         deleted = []
@@ -9343,12 +9193,7 @@ if __name__ == "__main__":
         OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
     _ensure_directory_writable(OUTPUTS, "outputs")
 
-    env_override = (
-        os.environ.get("CASEOPS_ENV_FILE")
-        # 2026-06-06 compatibility alias; remove after deployments have moved to CASEOPS_ENV_FILE.
-        or os.environ.get("CASEOPS_JIRA_ENV_FILE")
-        or ""
-    ).strip()
+    env_override = (os.environ.get("CASEOPS_ENV_FILE") or "").strip()
     if _args.env_file:
         env_file_path = Path(_args.env_file)
         _load_jira_env(env_file_path)
@@ -9360,8 +9205,6 @@ if __name__ == "__main__":
         _load_jira_env(env_file_path)
 
     os.environ["CASEOPS_ENV_FILE"] = str(env_file_path)
-    # 2026-06-06 compatibility alias; remove after deployments have moved to CASEOPS_ENV_FILE.
-    os.environ["CASEOPS_JIRA_ENV_FILE"] = str(env_file_path)
 
     # Initialize instance-specific runtime and metadata workspaces.
     temp_override = (os.environ.get("CASEOPS_TEMP_DIR") or "").strip()
@@ -9382,7 +9225,6 @@ if __name__ == "__main__":
     ]:
         _ensure_directory_writable(OUTPUTS / subdir, f"outputs/{subdir}")
     _ensure_org_knowledge_defaults()
-    _migrate_legacy_issue_summaries()
 
     JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "").rstrip("/")
     app.config["WORKSPACE"] = WORKSPACE
@@ -9413,14 +9255,7 @@ if __name__ == "__main__":
 
     # Validate .env file exists and is readable
     if not env_file_path.exists():
-        legacy_env = env_file_path.parent / (".env" + ".jira")
-        migration_hint = ""
-        if env_file_path.name == ".env" and legacy_env.exists():
-            migration_hint = (
-                f"\nUpgrade note: CaseOps now uses `.env` as the single env file. "
-                f"Rename `{legacy_env.name}` to `.env`, or start with `--env-file` for a custom path."
-            )
-        raise RuntimeError(f".env file does not exist: {env_file_path}{migration_hint}")
+        raise RuntimeError(f".env file does not exist: {env_file_path}")
     if not env_file_path.is_file():
         raise RuntimeError(f".env is not a file: {env_file_path}")
 

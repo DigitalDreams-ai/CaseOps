@@ -6,7 +6,7 @@
 # Variables like SF_PROD_*, SF_SANDBOX_*, CASEOPS_*, etc. are already in the environment.
 # No need to source here as it conflicts with comments containing special characters.
 
-env_file_path="${CASEOPS_ENV_FILE:-${CASEOPS_JIRA_ENV_FILE:-/app/.env}}"
+env_file_path="${CASEOPS_ENV_FILE:-/app/.env}"
 
 load_env_value_if_unset() {
   key="$1"
@@ -58,7 +58,7 @@ while true; do
   echo "========================================"
 
   # Re-load selected runtime secrets in case /app/.env changed before a restart.
-  env_file_path="${CASEOPS_ENV_FILE:-${CASEOPS_JIRA_ENV_FILE:-/app/.env}}"
+  env_file_path="${CASEOPS_ENV_FILE:-/app/.env}"
   load_env_value_if_unset "CLAUDE_CODE_OAUTH_TOKEN"
   load_env_value_if_unset "CASEOPS_LLM_AUTH"
 

@@ -1,9 +1,11 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 import app
+import caseops_paths
 
 
 class GlobalQueueTests(unittest.TestCase):
@@ -249,6 +251,15 @@ class GlobalQueueTests(unittest.TestCase):
             self.assertEqual(payload["primary_tag"], "ready to deploy")
             self.assertEqual(payload["condition_tags"], ["new comments", "generated files"])
             self.assertEqual(payload["tags"], ["ready to deploy", "new comments", "generated files"])
+
+    def test_default_env_file_ignores_removed_jira_env_alias(self):
+        with patch.dict(os.environ, {"CASEOPS_JIRA_ENV_FILE": "/legacy/.env.jira"}, clear=True):
+            self.assertEqual(
+                caseops_paths.default_jira_env_file(),
+                str(caseops_paths.PROJECT_ROOT / ".env"),
+            )
+        with patch.dict(os.environ, {"CASEOPS_ENV_FILE": "/data/.env", "CASEOPS_JIRA_ENV_FILE": "/legacy/.env.jira"}, clear=True):
+            self.assertEqual(caseops_paths.default_jira_env_file(), "/data/.env")
 
 if __name__ == "__main__":
     unittest.main()
