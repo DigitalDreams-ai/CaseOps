@@ -6237,7 +6237,15 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
             _log_emit_line(run_key, "STEP_1 __sync__")
             _log_emit_line(run_key, "CaseOps runtime: running Jira sync in the foreground")
             rc = _do_stream_proc(
-                [sys.executable, "jira_sync.py", "--env-file", env_file, "--out-dir", str(OUTPUTS / "jira")],
+                [
+                    sys.executable,
+                    "jira_sync.py",
+                    "--env-file",
+                    env_file,
+                    "--include-existing-active",
+                    "--out-dir",
+                    str(OUTPUTS / "jira"),
+                ],
                 run_key,
             )
             if rc != 0:

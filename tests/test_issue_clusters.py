@@ -44,8 +44,8 @@ class IssueClusterFixtureTests(unittest.TestCase):
         *,
         status="Open",
         component="Automation",
-        assignee="Sean Operator",
-        email="sean@example.com",
+        assignee="Frodo Operator",
+        email="frodo@example.com",
         updated="2026-06-01T00:00:00Z",
     ):
         self.rows.append(
@@ -130,7 +130,7 @@ class IssueClusterFixtureTests(unittest.TestCase):
             outputs_dir=self.outputs,
             include_closed=True,
             current_user_only=True,
-            current_user="Sean Operator;sean@example.com",
+            current_user="Frodo Operator;frodo@example.com",
             auto_cluster=True,
             candidate_limit=15,
             lookback_days=180,
@@ -165,8 +165,8 @@ class IssueClusterFixtureTests(unittest.TestCase):
             "Flow owned Account.Owned__c exception",
             "Flow Owned failed Account.Owned__c invalid exception.",
             component="OwnedFlow",
-            assignee="Sean Operator",
-            email="sean@example.com",
+            assignee="Frodo Operator",
+            email="frodo@example.com",
         )
         self.add_issue(
             "OTHER-1",
@@ -324,13 +324,13 @@ class IssueClusterFixtureTests(unittest.TestCase):
         unsafe = (
             "force://client:secret@example C:\\Users\\operator\\secret\\file.txt "
             "https://example.invalid/secur/frontdoor.jsp?sid=SESSION_TOKEN "
-            "003000000000000AAA sean@example.com prod-alias"
+            "003000000000000AAA frodo@example.com prod-alias"
         )
         safe = _sanitize_public_summary(unsafe, {"prod-alias"})
         self.assertNotIn("force://", safe)
         self.assertNotIn("C:\\Users", safe)
         self.assertNotIn("token", safe)
-        self.assertNotIn("sean@example.com", safe)
+        self.assertNotIn("frodo@example.com", safe)
         self.assertNotIn("prod-alias", safe)
 
 

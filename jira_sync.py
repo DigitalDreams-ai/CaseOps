@@ -149,6 +149,7 @@ def main() -> int:
         newest_updated = max_jira_datetime(newest_updated, updated)
         newest_created = max_jira_datetime(newest_created, created)
         if sync_status_is_excluded(status):
+            manifest_rows.append(skipped_status_manifest_row(key, issue, old_manifest.get(key, {}), raw_dir, summary_dir))
             print(f"[{i}/{len(keys)}] {key} - skipped; status is {status}", flush=True)
             continue
 
@@ -311,6 +312,41 @@ def existing_active_manifest_keys(
         for key, row in old_manifest.items()
         if key not in excluded and manifest_status_is_active(row.get("Status", ""))
     ]
+
+
+def skipped_status_manifest_row(
+    key: str,
+    issue: dict[str, Any],
+    old_row: dict[str, str],
+    raw_dir: Path,
+    summary_dir: Path,
+) -> dict[str, str]:
+    """Return a lightweight manifest row for an issue excluded from active sync.
+
+    Closed/resolved issues are intentionally not refreshed into raw JSON/markdown
+    during active sync, but their current Jira status must still replace any old
+    active manifest row so CaseOps stops showing them as active.
+    """
+    fields = issue.get("fields", {})
+    pri_raw = fields.get("priority")
+    priority_name = pri_raw.get("name") if isinstance(pri_raw, dict) else ""
+
+    return {
+        "Key": key,
+        "Status": get_nested(issue, ["fields", "status", "name"]) or old_row.get("Status", ""),
+        "Assignee": display_name(fields.get("assignee")) or old_row.get("Assignee", ""),
+        "Summary": fields.get("summary") or old_row.get("Summary", ""),
+        "Updated": fields.get("updated") or old_row.get("Updated", ""),
+        "Due": fields.get("duedate") if isinstance(fields.get("duedate"), str) else old_row.get("Due", ""),
+        "Priority": priority_name or old_row.get("Priority", ""),
+        "RawPath": old_row.get("RawPath") or str(raw_dir / f"{key}.json").replace("\\", "/"),
+        "SummaryPath": old_row.get("SummaryPath") or str(summary_dir / f"{key}.md").replace("\\", "/"),
+        "AttachmentCount": old_row.get("AttachmentCount", "0"),
+        "FormCount": old_row.get("FormCount", "0"),
+        "CommentCount": old_row.get("CommentCount", "0"),
+        "HasNewComments": old_row.get("HasNewComments", "false"),
+        "EscalationReady": old_row.get("EscalationReady", ""),
+    }
 
 
 def resolve_issue_fields(args: argparse.Namespace) -> list[str]:

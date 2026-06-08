@@ -7,10 +7,10 @@ This is the generic Docker setup for someone testing or running CaseOps from a p
 Current image:
 
 ```text
-ghcr.io/sdbingham/caseops:0.1.13
+ghcr.io/digitaldreams-ai/caseops:0.1.15
 ```
 
-You can also use `ghcr.io/sdbingham/caseops:latest`, but a numbered tag is easier to support.
+You can also use `ghcr.io/digitaldreams-ai/caseops:latest`, but a numbered tag is easier to support.
 
 ## Compose File
 
@@ -29,7 +29,7 @@ Example:
 ```yaml
 services:
   caseops:
-    image: ghcr.io/sdbingham/caseops:0.1.13
+    image: ghcr.io/digitaldreams-ai/caseops:0.1.15
     ports:
       - "${CASEOPS_HOST_PORT:-5350}:8080"
     env_file:
@@ -103,8 +103,12 @@ Update to the image tag in your compose file:
 
 ```bash
 docker compose pull
-docker compose up -d
+docker compose up -d --force-recreate
 ```
+
+`latest` is a mutable Docker tag. If you choose to use `ghcr.io/digitaldreams-ai/caseops:latest`,
+run `docker compose pull` before recreating the container. Otherwise Docker may reuse the
+locally cached `latest` image and the running container may stay on an older build.
 
 Confirm the updated image is running:
 
@@ -119,13 +123,13 @@ Then open Settings and confirm the displayed CaseOps version matches the image t
 Switch to a specific version:
 
 ```bash
-CASEOPS_IMAGE=ghcr.io/sdbingham/caseops:0.1.13 docker compose up -d
+CASEOPS_IMAGE=ghcr.io/digitaldreams-ai/caseops:0.1.15 docker compose up -d
 ```
 
 On Windows PowerShell:
 
 ```powershell
-$env:CASEOPS_IMAGE="ghcr.io/sdbingham/caseops:0.1.13"
+$env:CASEOPS_IMAGE="ghcr.io/digitaldreams-ai/caseops:0.1.15"
 docker compose up -d
 ```
 

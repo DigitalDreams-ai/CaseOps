@@ -7,7 +7,7 @@ CaseOps is built for workflows where Salesforce Production must stay read-only a
 ## Status
 
 - Distribution: Docker image
-- Current image: `ghcr.io/sdbingham/caseops:0.1.13`
+- Current image: `ghcr.io/digitaldreams-ai/caseops:0.1.15`
 - Default URL: `http://localhost:5350`
 - Runtime data: Docker-mounted `/data`
 - Production Salesforce: read-only
