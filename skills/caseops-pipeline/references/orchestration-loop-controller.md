@@ -406,7 +406,7 @@ After all issues are processed, generate `outputs/summaries/YYYY-MM-DD/issue-sum
    - Support-resolvable fixes only
 
 5. **Escalated to Engineering**
-   - Table: Issue, Jira Status, Component, Handoff File, Problem, Potential Fix
+   - Table: Issue, Jira Status, Component, Handoff File, Problem, Proposed Solution
    - Unified table (pre-escalated + escalated during processing)
 
 6. **Artifact Index**

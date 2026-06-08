@@ -10,7 +10,7 @@ description: Retrieves, normalizes, and analyzes Jira issues for Salesforce impl
 - The user asks to retrieve or understand Jira issues.
 - Jira issue data needs to be converted into Salesforce implementation requirements.
 - Acceptance criteria, reproduction steps, or missing details need to be extracted.
-- The `jira-salesforce-fix-pipeline` delegates issue analysis as Step 3.
+- The `caseops-pipeline` delegates issue analysis as Step 3.
 
 ## Workflow
 
@@ -20,7 +20,7 @@ description: Retrieves, normalizes, and analyzes Jira issues for Salesforce impl
 4. Identify missing information that blocks Salesforce diagnosis.
 5. Output a structured issue analysis.
    - Standalone: write to `outputs/investigations/<KEY>.md` using `assets/issue-analysis-template.md`.
-   - When invoked by `jira-salesforce-fix-pipeline`: populate the **Issue Understanding** section of `outputs/investigations/<KEY>.md` using `assets/investigation-record-template.md` from the pipeline skill's assets.
+   - When invoked by `caseops-pipeline`: populate the **Issue Understanding** section of `outputs/investigations/<KEY>.md` using `assets/investigation-record-template.md` from the pipeline skill's assets.
 
 ## Available Scripts
 

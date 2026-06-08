@@ -112,7 +112,7 @@ class SkillRegistry:
         """Get cached skill data by name.
 
         Args:
-            skill_name: Name of the skill (e.g., 'jira-salesforce-fix-pipeline')
+            skill_name: Name of the skill (e.g., 'caseops-pipeline')
 
         Returns:
             dict with skill metadata and body, or None if not found.
@@ -143,7 +143,7 @@ class SkillRegistry:
         """Get a bundled guide content by skill name and guide name.
 
         Args:
-            skill_name: Name of the skill (e.g., 'jira-salesforce-fix-pipeline')
+            skill_name: Name of the skill (e.g., 'caseops-pipeline')
             guide_name: Name of the guide without .md extension (e.g., 'workflow')
 
         Returns:

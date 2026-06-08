@@ -2534,8 +2534,8 @@
       }
 
       const prompt = parts.length > 0
-        ? `Process ${key} through the mounted jira-salesforce-fix-pipeline playbook files.\n\n${parts.join('\n\n---\n\n')}`
-        : `Process ${key} through the mounted jira-salesforce-fix-pipeline playbook files.`;
+        ? `Process ${key} through the mounted caseops-pipeline playbook files.\n\n${parts.join('\n\n---\n\n')}`
+        : `Process ${key} through the mounted caseops-pipeline playbook files.`;
 
       await writeClipboardText(prompt);
       logLine('Full Claude prompt copied to clipboard.', 'ok');

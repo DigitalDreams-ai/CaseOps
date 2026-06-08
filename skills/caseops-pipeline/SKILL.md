@@ -1,10 +1,10 @@
 ---
-name: jira-salesforce-fix-pipeline
-description: Runs the CaseOps Jira-to-Salesforce fix pipeline. Use when the user asks to retrieve Jira issues, process and work assigned issues, diagnose Salesforce problems, investigate Production metadata, determine whether to escalate to Engineering, implement fixes and generate proposed solutions in the Sandbox named by CASEOPS_SANDBOX_TARGET_ORG in the active env file, iterate if needed, draft internal notes plus a Jira response, and produce a dated issue summary. Routes Closed/Resolved issues to outputs/closed-resolved/ and pre-escalated issues to outputs/engineering-escalations/ without processing. Both Support-resolvable and Engineering-escalation paths run implementation + testing to include proposed solutions.
+name: caseops-pipeline
+description: Runs the CaseOps pipeline. Use when the user asks to retrieve Jira issues, process assigned issues, diagnose Salesforce problems, investigate Production metadata, determine whether to escalate to Engineering, implement fixes or generate proposed solutions in the Sandbox named by CASEOPS_SANDBOX_TARGET_ORG in the active env file, iterate if needed, draft internal notes plus a Jira response, and produce a dated issue summary. Routes Closed/Resolved issues to outputs/closed-resolved/ and pre-escalated issues to outputs/engineering-escalations/ without processing. Both Support-resolvable and Engineering-escalation paths run implementation + testing to include proposed solutions.
 compatibility: CaseOps repo root, active env file from CASEOPS_ENV_FILE, Python 3 for `jira_sync.py`, Salesforce CLI for Production read-only investigation and Sandbox deploy/test.
 ---
 
-# Jira Salesforce Fix Pipeline
+# CaseOps Pipeline
 
 ## Authoritative workflow
 
@@ -125,7 +125,7 @@ For each active issue:
 
 For each active issue:
 1. **Emit to stdout:** `STEP_4 <ISSUE_KEY>`
-2. From Step 3 summary, synthesize root cause (one sentence) and smallest viable fix. Document in `outputs/hypothesis/<KEY>.md` using `assets/step-4-problem-hypothesis-template.md`.
+2. From Step 3 summary, synthesize root cause (one sentence) and smallest viable fix. Document in `outputs/hypothesis/<KEY>.md` using `assets/problem-hypothesis-template.md`.
 
 **Step 5 — Retrieve metadata (Sub-agent)**
 
@@ -179,10 +179,13 @@ For each active issue:
 
 **For Engineering-escalation path:**
 After messaging, create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with:
-- Problem location (from Step 6)
-- Root cause (from Step 4)
-- Proposed solution (from Step 8–9 test results)
-- Why it requires Engineering
+- `Problem`
+- `Reproduce`
+- `Expected behavior`
+- `Affected record IDs`
+- `Proposed Solution`
+
+Keep the handoff concise and Jira-ready. Do not add internal pipeline sections, metadata dumps, confidence scoring, or long investigation narrative.
 
 **Step 11 — Generate dated summary (Orchestrator)**
 
@@ -215,7 +218,7 @@ Before writing the dated summary, check whether today's `outputs/summaries/YYYY-
    - Support-resolvable fixes only
 
 5. **Escalated to Engineering**
-   - Unified table: Issue, Jira Status, Component, Handoff File, Problem, Potential Fix
+   - Unified table: Issue, Jira Status, Component, Handoff File, Problem, Proposed Solution
    - Pre-escalated at sync + escalated during processing
    - **Must not** appear in Issue Rollup or Sandbox sections
 
@@ -330,8 +333,8 @@ Total runtime: H hours M minutes
 ## Assets
 
 - `assets/investigation-record-template.md` — working record per issue.
-- `assets/step-4-problem-hypothesis-template.md` — Hypothesis worksheet.
-- `assets/engineering-handoff-template.md` — Engineering escalations (includes Engineering Message section).
+- `assets/problem-hypothesis-template.md` — Hypothesis worksheet.
+- `assets/engineering-handoff-template.md` — concise Engineering escalation handoff.
 - `assets/internal-notes-template.md` — internal notes.
 - `assets/jira-message-template.md` — Jira response draft.
 - `assets/issue-summary-template.md` — dated rollup.

@@ -17,11 +17,11 @@
 
 **HARD REQUIREMENT — single writable org**
 
-- The **only** Salesforce org that may receive **deploys, metadata writes, or mutating data/API operations** from the fix pipeline’s deploy/test step is the value of **`CASEOPS_SANDBOX_TARGET_ORG`** in the active env file (username or CLI alias, as configured for this CaseOps instance).
+- The **only** Salesforce org that may receive **deploys, metadata writes, or mutating data/API operations** from the CaseOps pipeline deploy/test step is the value of **`CASEOPS_SANDBOX_TARGET_ORG`** in the active env file (username or CLI alias, as configured for this CaseOps instance).
 - Read that value from the file **before** every deploy or write. The CLI target **must match it exactly**. If it does not match, **STOP** — do not deploy elsewhere, including another sandbox.
 - If **`CASEOPS_SANDBOX_TARGET_ORG`** is unset or empty, **STOP** — do not deploy until the operator sets it.
 - Changing the allowlisted org is done in **Settings** or the active env file, not by choosing a different org in chat.
-- `jira-salesforce-fix-pipeline` invokes **`salesforce-sandbox-deploy-test`** only when there is a deployable metadata/code candidate or a Sandbox-safe configuration change. Existing Production permission assignments, data corrections, and admin/config actions are documented as no-deploy operator actions and must not be executed by CaseOps.
+- `caseops-pipeline` invokes **`salesforce-sandbox-deploy-test`** only when there is a deployable metadata/code candidate or a Sandbox-safe configuration change. Existing Production permission assignments, data corrections, and admin/config actions are documented as no-deploy operator actions and must not be executed by CaseOps.
 - "Run the pipeline" or any general instruction does **not** authorize writes to Production or to any org other than **`CASEOPS_SANDBOX_TARGET_ORG`**.
 - Record all deployment commands and results.
 - Test in the allowlisted Sandbox before claiming the issue is fixed.
@@ -49,7 +49,7 @@ Examples in docs may show org aliases like `sandbox` — your environment’s al
 - Record failed hypotheses and test failures.
 - Ask before destructive operations.
 - Do not implement fixes that require Engineering ownership: Apex/code, flows, approval processes, validation rules, or other business-critical automation.
-- For Engineering-owned fixes, stop after diagnosis and draft a clear handoff under `outputs/engineering-escalations/<KEY>.md` with the issue, root cause, affected metadata, potential fix, evidence, and reproduction details.
+- For Engineering-owned fixes, stop after diagnosis and draft a clear handoff under `outputs/engineering-escalations/<KEY>.md` using the five-section format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
 
 ## Wording: Production vs Sandbox
 

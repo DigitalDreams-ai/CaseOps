@@ -14,7 +14,7 @@ Instructions:
 1. Use the jira-issue-analysis skill.
 2. Read outputs/jira/summary/<KEY>.md as your primary input.
 3. Write the Issue Understanding section of outputs/investigations/<KEY>.md
-   using skills/jira-salesforce-fix-pipeline/assets/investigation-record-template.md.
+   using skills/caseops-pipeline/assets/investigation-record-template.md.
 
 Return a compact summary (max 400 tokens) containing:
 - Observed behavior
@@ -108,7 +108,7 @@ Return a compact summary (max 400 tokens) containing:
 **Before spawning:** Read exported env var **`CASEOPS_SANDBOX_TARGET_ORG`**. If missing or empty, **STOP** and tell the operator to set it in Settings or the active env file. Pass that exact string into the prompt below. Only that org may receive deploys or writes.
 
 ```
-You are deploying and testing a Salesforce fix in Sandbox.
+You are deploying and testing a proposed Salesforce solution in Sandbox.
 
 Issue key: <KEY>
 Allowlisted Sandbox (from exported CASEOPS_SANDBOX_TARGET_ORG): <paste exact value>
@@ -137,7 +137,7 @@ Instructions:
 4. Deploy the fix, test against the Jira acceptance criteria.
 5. If the fix fails or is abandoned, revert Sandbox changes from the attempt baseline before returning Fail.
 6. Write results to outputs/test-reports/<KEY>.md using
-   skills/jira-salesforce-fix-pipeline/assets/test-report-template.md.
+   skills/caseops-pipeline/assets/test-report-template.md.
    Fill the required Validation Verdict block exactly:
    - Validation Status: passed | failed | blocked | not-run
    - Fixed?: yes | no | unknown
@@ -189,7 +189,7 @@ STEP A: DRAFT DOCUMENT 1 (Jira Message — Customer-Facing Only)
 ════════════════════════════════════════════════════════════════════════
 
 AUDIENCE: Issue reporter + stakeholders (public Jira comment)
-TEMPLATE: jira-message-template.md
+TEMPLATE: skills/caseops-pipeline/assets/jira-message-template.md
 OUTPUT FILE: outputs/jira-messages/<KEY>.md
 
 CONTENT RULES:
@@ -285,7 +285,7 @@ STEP C: DRAFT DOCUMENT 2 (Internal Notes — Internal Diagnosis Only)
 ════════════════════════════════════════════════════════════════════════
 
 AUDIENCE: Operator only (internal reference, NOT posted to Jira)
-TEMPLATE: internal-notes-template.md
+TEMPLATE: skills/caseops-pipeline/assets/internal-notes-template.md
 OUTPUT FILE: outputs/internal-notes/<KEY>.md
 
 CONTENT RULES (LEAN — NOT Investigation replay):

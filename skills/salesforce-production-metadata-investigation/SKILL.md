@@ -10,7 +10,7 @@ description: Investigates Salesforce Production metadata read-only to identify o
 - A Jira issue requires Salesforce diagnosis.
 - The likely problem depends on existing Production metadata.
 - The agent needs to retrieve relevant metadata before implementing a fix.
-- The `jira-salesforce-fix-pipeline` delegates metadata investigation as Step 5.
+- The `caseops-pipeline` delegates metadata investigation as Step 5.
 
 ## Do Not Use This Skill When
 

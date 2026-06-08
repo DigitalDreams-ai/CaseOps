@@ -1,13 +1,13 @@
 ---
 name: salesforce-sandbox-deploy-test
-description: Mandatory for jira-salesforce-fix-pipeline after a proposed solution is prepared. Deploys only to the single allowlisted Sandbox from CASEOPS_SANDBOX_TARGET_ORG, tests against Jira acceptance criteria, records results, preserves baseline/candidate/revert metadata, and reverts failed attempts. Refuse any deploy or data write to any other org.
+description: Mandatory for caseops-pipeline after a proposed solution is prepared. Deploys only to the single allowlisted Sandbox from CASEOPS_SANDBOX_TARGET_ORG, tests against Jira acceptance criteria, records results, preserves baseline/candidate/revert metadata, and reverts failed attempts. Refuse any deploy or data write to any other org.
 ---
 
 # Salesforce Sandbox Deploy Test
 
 ## Hard requirements (non-negotiable)
 
-1. **Mandatory** when `jira-salesforce-fix-pipeline` has prepared a proposed solution in Step 8. This applies to Support-owned fixes and Engineering proposal validation.
+1. **Mandatory** when `caseops-pipeline` has prepared a proposed solution in Step 8. This applies to Support-owned fixes and Engineering proposal validation.
 2. **Single writable org:** Read **`CASEOPS_SANDBOX_TARGET_ORG`** from the active env file, preferably `CASEOPS_ENV_FILE`. That value is the **only** Salesforce org (alias or username) that may receive **deploys, metadata writes, or mutating data/API operations** for this skill. Treat it as the org allowlist.
 3. If **`CASEOPS_SANDBOX_TARGET_ORG`** is missing or empty, **STOP** — do not deploy; tell the operator to set it.
 4. Before any deploy or write, confirm the CLI/API target (e.g. `sf` `--target-org`, org picker, or session) **exactly matches** that allowlisted value. If it does not match, **STOP** — do not “pick the closest sandbox” or override in chat.
@@ -15,7 +15,7 @@ description: Mandatory for jira-salesforce-fix-pipeline after a proposed solutio
 
 ## Use This Skill When
 
-- `jira-salesforce-fix-pipeline` Step 8 invokes you after implementation, **or**
+- `caseops-pipeline` Step 8 invokes you after implementation, **or**
 - Another workflow explicitly assigns Sandbox validation with the same allowlist rules.
 
 ## Do Not Use This Skill When
@@ -35,7 +35,7 @@ description: Mandatory for jira-salesforce-fix-pipeline after a proposed solutio
 5. Deploy **only** to the allowlisted Sandbox (target must match step 1). Prefer `python scripts/sf_caseops_helper.py deploy-mdapi ...` for issue-scoped candidate metadata.
 6. Run automated tests when available.
 7. Run manual or data-driven validation against Jira acceptance criteria.
-8. Record results in `outputs/test-reports/<KEY>.md` using `assets/test-report-template.md` (paths per parent pipeline). Fill the required **Validation Verdict** block exactly:
+8. Record results in `outputs/test-reports/<KEY>.md` using the canonical template at `../caseops-pipeline/assets/test-report-template.md` (paths per parent pipeline). Fill the required **Validation Verdict** block exactly:
    - `Validation Status: passed | failed | blocked | not-run`
    - `Fixed?: yes | no | unknown`
    - `Production deploy required: yes | no | n/a | unknown`
@@ -49,7 +49,7 @@ description: Mandatory for jira-salesforce-fix-pipeline after a proposed solutio
 
 ## Assets
 
-- `assets/test-report-template.md`: Sandbox test report format.
+- `../caseops-pipeline/assets/test-report-template.md`: canonical Sandbox test report format.
 
 ## Quality Checks
 

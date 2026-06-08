@@ -20,6 +20,11 @@
     "template": "Hi {{issueReporter}},\n\nThis should now be resolved. Please review when you have a chance and let us know if you still see the issue.\n\n[insert signature]"
   },
   {
+    "id": "engineering-escalation",
+    "name": "Engineering Escalation",
+    "template": "Hi {{issueReporter}},\n\nI found the cause of this issue. It needs Engineering support, so I have escalated it to the Engineering team.\n\nI will keep this ticket updated when there is a confirmed next step.\n\n[insert signature]"
+  },
+  {
     "id": "closing-response",
     "name": "Closing",
     "template": "Hi {{issueReporter}},\n\nI am closing this request for now. If you need anything else or the issue comes back, please reply here and we can reopen or continue from this ticket.\n\n[insert signature]"

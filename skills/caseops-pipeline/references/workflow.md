@@ -1,6 +1,6 @@
-# Jira to Salesforce fix workflow
+# CaseOps Pipeline Workflow
 
-**Authoritative numbered steps for `jira-salesforce-fix-pipeline`.** The orchestrator follows **Steps 1–12** below. Sub-agent copy-paste prompts live in **`references/sub-agent-prompts.md`**. Paths such as `assets/...` are relative to the skill folder `skills/jira-salesforce-fix-pipeline/`.
+**Authoritative numbered steps for `caseops-pipeline`.** The orchestrator follows **Steps 1–12** below. Sub-agent copy-paste prompts live in **`references/sub-agent-prompts.md`**. Paths such as `assets/...` are relative to the skill folder `skills/caseops-pipeline/`.
 
 ## Pipeline at a glance
 
@@ -77,7 +77,7 @@ The orchestrator retains **only** the returned compact summary. Do not read the 
 
 From the Step 3 summary (Issue Understanding), synthesize a Salesforce-specific **problem hypothesis** and define the **smallest viable fix**.
 
-**Output artifact:** Inline notes or `outputs/hypothesis/<KEY>.md` using `assets/step-4-problem-hypothesis-template.md`.
+**Output artifact:** Inline notes or `outputs/hypothesis/<KEY>.md` using `assets/problem-hypothesis-template.md`.
 
 Generated supporting files such as spreadsheets, CSV exports, PDFs, or screenshots must be saved under `outputs/generated-files/<KEY>/`, never directly under `outputs/`.
 
@@ -262,11 +262,13 @@ Spawn a sub-agent using **”Step 10 — Draft internal notes and Jira message�
 **If Support-resolvable:** Drafts are ready for operator-controlled Production action via Gearset, standard change control, or manual admin/data correction. CaseOps does not execute Production writes in normal pipeline runs.
 
 **If Engineering-escalation:** Create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with:
-- Problem location (from Step 6)
-- Root cause (from Step 4)
-- **Proposed solution** (from Step 9 test results: what was deployed in Sandbox and whether tests passed)
-- Why it requires Engineering
-- Sandbox test evidence
+- `Problem`
+- `Reproduce`
+- `Expected behavior`
+- `Affected record IDs`
+- `Proposed Solution`
+
+Keep the handoff concise and Jira-ready. Do not add internal pipeline sections, metadata dumps, confidence scoring, or long investigation narrative.
 
 **Production vs Sandbox in every customer-facing and internal summary:** Drafts must **never** read as if new metadata already exists in **Production** when it was only created or deployed in **Sandbox**. Always include an explicit line: **Production deploy required** (e.g. Gearset) vs **already in Production** vs **N/A** (no metadata change). This pipeline does not promote to Production unless the operator explicitly asks.
 
@@ -308,7 +310,7 @@ Before writing the dated summary, check whether `outputs/summaries/YYYY-MM-DD/is
 - **Closed/Resolved** section: one row per skipped issue.
 - **Issue rollup** table: one row per active issue with Jira status, summary, disposition, **Production deploy?** (Gearset / No / N/A), next step. **Exclude** issues whose Jira status is already “Escalated to Engineering” from this table.
 - **Sandbox deployments / validations** section: Support-owned fixes only. Include **Prod deploy needed?** per row. **Do not** duplicate pre-escalated or Engineering-only rows here.
-- **Escalated to Engineering** section: one unified table (pre-escalated at sync **and** escalated during processing). Columns: Issue, Jira Status, Component, Handoff File, Problem, Potential Fix. **Only place** escalated issues appear together.
+- **Escalated to Engineering** section: one unified table (pre-escalated at sync **and** escalated during processing). Columns: Issue, Jira Status, Component, Handoff File, Problem, Proposed Solution. **Only place** escalated issues appear together.
 - **Artifact index** for Jira summaries, investigations, engineering handoffs, closed/resolved logs, internal notes, Jira messages, and test reports.
 
 ---

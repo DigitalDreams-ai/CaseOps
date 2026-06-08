@@ -1,30 +1,30 @@
 ---
 name: jira-response-drafting
-description: Drafts internal implementation notes, Engineering handoff notes, and concise Jira responses after a Salesforce fix has been validated or escalated. Use when the user needs final notes, status details, handoff text, or text to paste into Jira.
+description: Drafts internal implementation notes, Engineering handoff notes, and concise Jira responses after a Salesforce solution has been validated or escalated. Use when the user needs final notes, status details, handoff text, or text to paste into Jira.
 ---
 
 # Jira Response Drafting
 
 ## Use This Skill When
 
-- The Salesforce fix has been validated in Sandbox.
+- The Salesforce solution has been validated in Sandbox.
 - The issue has been diagnosed and needs Engineering escalation.
 - The user needs internal notes.
 - The user needs a Jira-ready message.
-- The `jira-salesforce-fix-pipeline` delegates notes and message drafting as Step 9.
+- The `caseops-pipeline` delegates notes and message drafting as Step 10.
 
-## Two-Audience Messaging Framework
+## Two-File Messaging Framework
 
-Jira drafts contain **two separate sections**, each with distinct purpose and voice:
+CaseOps drafts two separate files, each with distinct purpose and voice. Do not combine them.
 
-### Suggested reply (customer-facing, for portal)
+### Jira message (customer-facing, for portal)
 - **Audience:** Issue reporter (for example, a product or support stakeholder)
 - **Content:** What you found → what it means for them → next step or question
 - **Tone:** Human, direct, no corporate fluff
 - **Example:** "The validation rule was blocking that update. I fixed it in our test environment and confirmed it works."
 
-### [INTERNAL] (operator internal memo, Jira comment only)
-- **Audience:** Operator/internal reviewer (internal Jira memo, not posted to customer)
+### Internal notes (operator memo)
+- **Audience:** Operator/internal reviewer
 - **Content:** What it's NOT → where the gap is → why the symptom happens → action needed
 - **Length:** Keep short; full investigation evidence stays in Investigation tab
 - **Example:** "NOT a missing field. The validation rule conditions were outdated — didn't account for the new status value. Fixed by adding the new status to the rule condition. Engineering will review."
@@ -54,19 +54,16 @@ Every customer-facing draft must pass **all** of these:
 3. Summarize the fix or Engineering escalation reason.
 4. List changed metadata/code, or affected metadata/code for Engineering.
 5. Summarize Sandbox testing or read-only validation evidence.
-6. **For Engineering escalations:** read the handoff file at `outputs/engineering-escalations/<KEY>.md` created by the pipeline's escalation gate. Use the structure in `assets/engineering-handoff-template.md`:
-   - **Summary & Description** (with root cause)
-   - **Reproduction Steps** (with examples)
-   - **Expected vs. Actual Results** (with evidence)
-   - **Proposed Fix**
-   - **Environment/Version Details**
-   - **Attachments** (logs, screenshots, debug output)
-   - **Open Questions** (clarifications needed for Engineering)
-   - **Investigation Summary** (recap of findings and validation)
+6. **For Engineering escalations:** read the handoff file at `outputs/engineering-escalations/<KEY>.md` created by the pipeline's escalation gate. Use the canonical structure in `../caseops-pipeline/assets/engineering-handoff-template.md`:
+   - **Problem**
+   - **Reproduce**
+   - **Expected behavior**
+   - **Affected record IDs**
+   - **Proposed Solution**
 7. Draft internal notes and append additional details that emerged, but do not recreate the handoff.
 8. **Draft both sections:**
-   - **Suggested reply** (customer message) — apply voice rules checklist
-   - **[INTERNAL]** (operator memo) — lean root-cause memo
+   - `outputs/jira-messages/<KEY>.md` (customer message) — apply voice rules checklist
+   - `outputs/internal-notes/<KEY>.md` (operator memo) — lean root-cause memo
 
 ## Production vs Sandbox (mandatory in drafts)
 
@@ -80,9 +77,9 @@ Never imply Production includes new metadata just because Sandbox validation pas
 
 ## Assets
 
-- `assets/internal-notes-template.md`: Internal notes format.
-- `assets/engineering-handoff-template.md`: Engineering handoff format.
-- `assets/jira-message-template.md`: Jira response format.
+- `../caseops-pipeline/assets/internal-notes-template.md`: canonical internal notes format.
+- `../caseops-pipeline/assets/engineering-handoff-template.md`: canonical Engineering handoff format.
+- `../caseops-pipeline/assets/jira-message-template.md`: canonical Jira response format.
 
 ## Quality Checks
 
@@ -94,14 +91,12 @@ Never imply Production includes new metadata just because Sandbox validation pas
 
 ### Engineering Handoff Checklist (if escalating)
 
-- ✓ **Summary includes clear root cause** — avoid vague language; be specific about the underlying problem
-- ✓ **Reproduction steps are numbered and complete** — include examples that reliably reproduce the issue
-- ✓ **Expected vs. Actual clearly separated** — with supporting evidence (logs, screenshots, error messages)
-- ✓ **Proposed Fix includes implementation details** — specific components/files affected, estimated effort
-- ✓ **Environment details filled in** — version, relevant objects, production vs sandbox state
-- ✓ **Attachments documented** — logs, screenshots, configuration files noted or attached
-- ✓ **Open Questions listed** — clarifications needed from Engineering or product
-- ✓ **Investigation Summary provided** — recap of findings and any Sandbox validation done
+- ✓ **Problem is specific** — identifies exact component/location and failure point.
+- ✓ **Reproduce is numbered and runnable** — includes user role, navigation/action, and observed result.
+- ✓ **Expected behavior is clear** — states the behavior Engineering should restore.
+- ✓ **Affected record IDs are concrete** — includes examples, report/list-view references, or "None confirmed".
+- ✓ **Proposed Solution is actionable** — names the component/element and the change Engineering should make.
+- ✓ **No verbose internal sections** — no metadata dumps, confidence scoring, full investigation replay, or pipeline-only notes.
 
 - The handoff file is created by the pipeline escalation gate, not this skill. Append details if new information emerged during drafting, but do not recreate it.
 - Include any remaining risks or follow-up.
@@ -146,7 +141,7 @@ The steps you provided made it easy to spot. Thanks for that clarity.
 
 ---
 
-### [INTERNAL] Example
+### Internal Notes Example
 
 ```
 NOT a missing field. The validation rule conditions were outdated — didn't account for the new status value. Fixed by adding the new status to the rule condition.

@@ -18,7 +18,8 @@ Verify before treating a run as complete.
 - The Salesforce problem statement is explicit before implementation.
 - The solution plan identifies affected metadata or code.
 - The Engineering escalation gate (Step 7) is evaluated before any implementation or Sandbox deployment.
-- Engineering handoffs include the Engineering Message section: simple problem description and potential fix. Include problem location section with artifact details from Step 6.
+- Engineering handoffs use the concise five-section format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
+- Engineering handoffs do not include internal pipeline sections, metadata dumps, confidence scoring, or long investigation narrative.
 - Engineering handoff notes are stored under `outputs/engineering-escalations/`.
 - Step 9 is **mandatory** for every Support-resolvable issue (after Step 8). It is skipped **only** when Step 7 routes to Engineering escalation.
 - **`CASEOPS_SANDBOX_TARGET_ORG`** from the active env file is the **only** writable deploy target for Step 9; production and other orgs must not receive deploys or writes from this pipeline.

@@ -12,7 +12,7 @@ Last updated: YYYY-MM-DD
 - Sandbox-deployed or sandbox-validated:
 - Operational / data / access follow-up, no metadata deploy:
 
-Engineering escalation rule: if the fix requires Apex/code, a Salesforce Flow, an Approval Process, a Validation Rule, or other Engineering-owned automation, stop after diagnosis and provide an Engineering handoff with a simple problem description, potential fix, root cause, affected metadata, evidence, and reproduction details.
+Engineering escalation rule: if the fix requires Apex/code, a Salesforce Flow, an Approval Process, a Validation Rule, or other Engineering-owned automation, stop after diagnosis and provide an Engineering handoff using the concise format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
 
 Engineering handoffs are organized in `outputs/engineering-escalations/`.
 Closed/Resolved archives are organized in `outputs/closed-resolved/`.
@@ -42,7 +42,7 @@ Support-owned fixes validated in Sandbox. Do not include issues that are in the 
 
 All issues escalated to Engineering, whether pre-escalated in Jira at sync time or escalated during pipeline processing. These issues must not appear in the Issue Rollup or Sandbox Deployments sections.
 
-| Issue | Jira Status | Component | Handoff File | Problem | Potential Fix |
+| Issue | Jira Status | Component | Handoff File | Problem | Proposed Solution |
 | --- | --- | --- | --- | --- | --- |
 
 ## Artifact Index

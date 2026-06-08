@@ -5949,7 +5949,7 @@ def _issue_pipeline_runtime_ready(run_key: str) -> bool:
 
 
 def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force_active: bool = False) -> None:
-    """Run full CaseOps fix pipeline via the mounted jira-salesforce-fix-pipeline playbook.
+    """Run full CaseOps pipeline via the mounted caseops-pipeline playbook.
 
     This invokes Claude Code with direct file-path instructions for Steps 1-12 orchestration.
     Do NOT call deprecated run_pipeline.py — that calls removed agents.
@@ -5960,7 +5960,7 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
     row: dict[str, str] = {}
     try:
         _log_emit_run_start(run_key, key)
-        _log_emit_line(run_key, f"-- Processing {key} via jira-salesforce-fix-pipeline playbook --")
+        _log_emit_line(run_key, f"-- Processing {key} via caseops-pipeline playbook --")
 
         if run_preflight and not _issue_pipeline_runtime_ready(run_key):
             return
@@ -5978,7 +5978,7 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
         should_update_metrics = True
         prompt = _build_claude_prompt(
             key,
-            "Run the full CaseOps fix pipeline for this issue through completion of investigation, "
+            "Run the full CaseOps pipeline for this issue through completion of investigation, "
             "internal notes, and Jira customer message (and any sandbox/escalation steps the playbook "
             "requires for this issue). Read the mounted playbook files directly; do not invoke a slash-skill."
             + (
@@ -6025,7 +6025,7 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
 
 
 def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, force_active: bool = False) -> None:
-    """Reprocess single issue without Jira sync via the mounted jira-salesforce-fix-pipeline playbook.
+    """Reprocess single issue without Jira sync via the mounted caseops-pipeline playbook.
 
     Useful for re-running a single issue that failed or needs investigation updates.
     """
@@ -6035,7 +6035,7 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
     row: dict[str, str] = {}
     try:
         _log_emit_run_start(run_key, f"{key} reprocess")
-        _log_emit_line(run_key, f"-- Reprocessing {key} (no sync) via jira-salesforce-fix-pipeline playbook --")
+        _log_emit_line(run_key, f"-- Reprocessing {key} (no sync) via caseops-pipeline playbook --")
 
         if run_preflight and not _issue_pipeline_runtime_ready(run_key):
             return
@@ -6053,8 +6053,8 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
         should_update_metrics = True
         prompt = _build_claude_prompt(
             key,
-            "Reprocess the CaseOps fix pipeline for this issue without re-syncing from Jira. "
-            "Read the mounted jira-salesforce-fix-pipeline playbook files directly; do not invoke a slash-skill."
+            "Reprocess the CaseOps pipeline for this issue without re-syncing from Jira. "
+            "Read the mounted caseops-pipeline playbook files directly; do not invoke a slash-skill."
             + (
                 " Operator override: ignore the normal pre-escalated Jira-status skip for this issue and process it as active."
                 if force_active else ""
@@ -6415,7 +6415,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
     files_block = "\n".join(existing) if existing else "  - None yet"
     org_knowledge_block = _build_org_knowledge_context_block(key, row)
 
-    skill_md = (ROOT / "skills" / "jira-salesforce-fix-pipeline" / "SKILL.md").resolve()
+    skill_md = (ROOT / "skills" / "caseops-pipeline" / "SKILL.md").resolve()
     skill_line = str(skill_md) if skill_md.is_file() else f"(missing) {skill_md}"
 
     # Configured outputs directory, normally /data/outputs in Docker.
@@ -6432,9 +6432,9 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"{resume_block}\n\n"
         f"{org_knowledge_block}"
         f"## Playbook (mandatory — read first)\n"
-        f"Do not invoke `/jira-salesforce-fix-pipeline` or a Claude Code Skill tool in this subprocess. "
+        f"Do not invoke `/caseops-pipeline` or a Claude Code Skill tool in this subprocess. "
         f"The entrypoint is the mounted file below. Read SKILL.md fully, then read "
-        f"`skills/jira-salesforce-fix-pipeline/references/workflow.md` end-to-end (authoritative steps 1–11), "
+        f"`skills/caseops-pipeline/references/workflow.md` end-to-end (authoritative steps 1–11), "
         f"then execute for issue {key}:\n"
         f"  {skill_line}\n"
         f"Use `references/sub-agent-prompts.md`, `references/safety-policy.md`, `references/quality-checklist.md`, "
@@ -7653,7 +7653,7 @@ def _test_report_confirms_fix(key: str) -> bool:
 
 def _claude_prompt(key: str, summary: str) -> str:
     return (
-        f'Process {key} through the mounted jira-salesforce-fix-pipeline playbook files. Do not invoke a slash-skill.\n\n'
+        f'Process {key} through the mounted caseops-pipeline playbook files. Do not invoke a slash-skill.\n\n'
         f'Issue: {summary}'
     )
 
@@ -7982,10 +7982,10 @@ def api_run():
         ]
     elif action == "reprocess":
         use_global_skill = True
-        instruction = "Run the full CaseOps fix pipeline: reprocess all active issues without re-syncing from Jira. Use the mounted jira-salesforce-fix-pipeline playbook files in reprocess mode; do not invoke a slash-skill."
+        instruction = "Run the full CaseOps pipeline: reprocess all active issues without re-syncing from Jira. Use the mounted caseops-pipeline playbook files in reprocess mode; do not invoke a slash-skill."
     elif action == "full":
         use_global_skill = True
-        instruction = "Run the full CaseOps fix pipeline: sync all issues from Jira and process all active issues through completion. Use the mounted jira-salesforce-fix-pipeline playbook files in full mode; do not invoke a slash-skill."
+        instruction = "Run the full CaseOps pipeline: sync all issues from Jira and process all active issues through completion. Use the mounted caseops-pipeline playbook files in full mode; do not invoke a slash-skill."
     elif action == "full_issue" and key:
         use_full_issue = True
     elif action == "reprocess_issue" and key:
