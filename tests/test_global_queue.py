@@ -577,6 +577,144 @@ class GlobalQueueTests(unittest.TestCase):
             self.assertEqual(payload["test_report_verdict"]["fixed"], "yes")
             self.assertEqual(payload["test_report_verdict"]["production_deploy_required"], "no")
 
+    def test_available_tabs_include_all_generated_markdown_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            for ftype, rel in app.FILE_LOCATIONS.items():
+                path = outputs / rel.format(key="OPEN-1")
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(f"# {ftype}\n", encoding="utf-8")
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "read_issue_cluster_context", return_value={}),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+            ):
+                tabs = app._available_tabs("OPEN-1")
+
+        self.assertEqual(
+            [tab["id"] for tab in tabs],
+            [
+                "jira_summary",
+                "investigation",
+                "hypothesis",
+                "internal_notes",
+                "jira_message",
+                "test_report",
+                "eng_handoff",
+                "closed_resolved",
+            ],
+        )
+
+    def test_no_deploy_operator_report_allows_step10_drafts_without_terminal_tag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            files = {
+                "jira/summary/OPEN-1.md": "# Jira Summary\n",
+                "investigations/OPEN-1.md": (
+                    "## Problem Location\n"
+                    "Specific artifact: PermissionSetAssignment for an existing permission set.\n"
+                    "Failure point: user is missing the existing permission assignment.\n"
+                    "Root cause: missing assignment.\n"
+                    "Support-resolvable classification complete.\n"
+                ),
+                "hypothesis/OPEN-1.md": (
+                    "## Hypothesis\n"
+                    "Problem focus: missing existing permission set assignment.\n"
+                    "Root cause hypothesis: missing existing permission assignment.\n"
+                ),
+                "test-reports/OPEN-1.md": "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: not-run",
+                        "- Fixed?: unknown",
+                        "- Production deploy required: n/a",
+                        "- Evidence: Operator action has not been executed by CaseOps.",
+                    ]
+                ),
+            }
+            for name, text in files.items():
+                path = outputs / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+            prod_org = app._safe_path_component(os.environ.get("CASEOPS_PRODUCTION_READ_ORG") or "production", "production")
+            api_version_raw = os.environ.get("CASEOPS_SALESFORCE_API_VERSION") or os.environ.get("SF_API_VERSION") or "v66.0"
+            api_version = app._safe_path_component(api_version_raw if str(api_version_raw).startswith("v") else f"v{api_version_raw}", "v66.0")
+            raw_metadata = outputs / "metadata-cache" / "production" / prod_org / api_version / "raw" / "OPEN-1" / "fixture.txt"
+            raw_metadata.parent.mkdir(parents=True, exist_ok=True)
+            raw_metadata.write_text("metadata evidence", encoding="utf-8")
+            state = {
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "routing": {"path": "support_resolvable", "confidence": "high"},
+                "deliverable": {
+                    "type": "admin_action",
+                    "production_deploy_required": "n/a",
+                    "no_deploy_reason": "Existing permission set assignment by operator.",
+                },
+                "signatures": {},
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_read_pipeline_state", return_value=state),
+                patch.object(app, "_latest_issue_summary_path", return_value=None),
+                patch.object(app, "_issue_has_similar_issue_context", return_value=False),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+            ):
+                plan = app._build_pipeline_resume_plan("OPEN-1", status="Open")
+                flags = app._pipeline_file_flags("OPEN-1", "Open")
+                contract = app._derive_issue_tag_contract("Open", flags)
+
+        step9 = next(step for step in plan["steps"] if step["step"] == 9)
+        step10 = next(step for step in plan["steps"] if step["step"] == 10)
+        self.assertEqual(step9["status"], "complete")
+        self.assertIn("operator action report", step9["reason"])
+        self.assertEqual(step10["status"], "pending")
+        self.assertEqual(plan["quality_gates"]["step_9_test_report"], "operator_action_pending")
+        self.assertEqual(contract["primary_tag"], "in progress")
+        self.assertIn("partial run", contract["condition_tags"])
+
+    def test_bulk_pipeline_state_repair_repairs_only_stale_states(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            state_dir = outputs / "pipeline-state"
+            state_dir.mkdir(parents=True)
+            (state_dir / "STALE-1.json").write_text(
+                '{"steps":[{"step":9,"name":"Deploy and test in Sandbox","status":"stale"}]}',
+                encoding="utf-8",
+            )
+            (state_dir / "CURRENT-1.json").write_text(
+                '{"steps":[{"step":9,"name":"Deploy and test in Sandbox","status":"complete"}]}',
+                encoding="utf-8",
+            )
+            calls = []
+
+            def repair_key(key, row=None, *, emit_manifest=True):
+                calls.append((key, emit_manifest))
+                return {
+                    "ok": True,
+                    "key": key,
+                    "plan_path": f"pipeline-state/{key}.json",
+                    "next_step": {"step": 10, "name": "Draft internal notes and Jira message"},
+                }
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_read_manifest", return_value=[
+                    {"Key": "STALE-1", "Status": "Open"},
+                    {"Key": "CURRENT-1", "Status": "Open"},
+                ]),
+                patch.object(app, "_repair_pipeline_state_key", side_effect=repair_key),
+                patch.object(app, "manifest_changed") as manifest_changed_mock,
+            ):
+                payload = app.app.test_client().post("/api/pipeline-state/repair-all", json={"scope": "stale"}).get_json()
+
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["repaired_count"], 1)
+        self.assertEqual(payload["skipped_count"], 1)
+        self.assertEqual(calls, [("STALE-1", False)])
+        manifest_changed_mock.assert_called_once_with(["STALE-1"])
+
     def test_legacy_escalated_status_aliases_normalize_to_one_canonical_tag(self):
         for status in ("Escalated to Engineering", "Escalated to Eng", "Jira Escalated"):
             with self.subTest(status=status):

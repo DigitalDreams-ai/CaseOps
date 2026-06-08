@@ -1058,6 +1058,7 @@
                         <div class="button-row">
                             <button type="button" class="button-danger" id="stop-run-btn">Stop Current Run</button>
                             <button type="button" class="button-secondary" id="repair-state-btn">Repair / Rebuild Pipeline State</button>
+                            <button type="button" class="button-secondary" id="repair-stale-state-btn">Repair All Stale Pipeline State</button>
                             <span id="run-control-status" class="field-note"></span>
                         </div>
                         <div class="button-row">
@@ -1639,6 +1640,33 @@
             }
         }
 
+        async function repairAllStalePipelineState() {
+            const btn = document.getElementById('repair-stale-state-btn');
+            const statusEl = document.getElementById('run-control-status');
+            if (!confirm('Rebuild all stale pipeline state files from current artifacts? Active runs will be skipped.')) return;
+
+            btn.disabled = true;
+            statusEl.textContent = 'Repairing stale pipeline state...';
+            try {
+                const resp = await fetch('/api/pipeline-state/repair-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scope: 'stale' }),
+                });
+                const data = await resp.json();
+                if (!resp.ok && !data.error_count) throw new Error(data.error || 'Bulk repair failed');
+                const summary = `Repaired ${data.repaired_count || 0}; skipped ${data.skipped_count || 0}; errors ${data.error_count || 0}.`;
+                statusEl.textContent = summary;
+                showBanner(`Stale pipeline state repair complete. ${summary}`, data.error_count ? 'error' : 'success');
+                await refreshRunControlStatus();
+            } catch (e) {
+                statusEl.textContent = e.message;
+                showBanner('Bulk pipeline state repair failed: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         async function restartService() {
             const btn = document.getElementById('restart-btn');
             const statusDiv = document.getElementById('restart-status');
@@ -1703,6 +1731,7 @@
         document.getElementById('reset-canned-messages').addEventListener('click', resetCannedMessages);
         document.getElementById('stop-run-btn').addEventListener('click', stopCurrentRun);
         document.getElementById('repair-state-btn').addEventListener('click', repairPipelineState);
+        document.getElementById('repair-stale-state-btn').addEventListener('click', repairAllStalePipelineState);
         document.getElementById('refresh-status-btn').addEventListener('click', async () => {
             const btn = document.getElementById('refresh-status-btn');
             btn.disabled = true;

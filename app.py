@@ -2557,6 +2557,7 @@ def _evaluate_transition_contract_step9_to_step10(
     messages_separated: bool,
 ) -> dict[str, Any]:
     missing: list[str] = []
+    artifacts_started = bool(internal_notes or jira_message)
     evidence = {
         "messages_separated": bool(messages_separated),
         "internal_notes_audience": False,
@@ -2564,6 +2565,14 @@ def _evaluate_transition_contract_step9_to_step10(
         "internal_chars": len(internal_notes or ""),
         "jira_chars": len(jira_message or ""),
     }
+    if not artifacts_started:
+        return {
+            "status": "pending",
+            "missing": ["internal_notes", "jira_message"],
+            "observed": evidence,
+            "reason": "Step 10 drafts have not been generated yet.",
+            "required_fields": PIPELINE_TRANSITION_CONTRACTS["step9_to_step10"]["required_fields"],
+        }
     if not internal_notes:
         missing.append("internal_notes")
     if not jira_message:
@@ -2927,6 +2936,13 @@ def _build_pipeline_resume_plan(
     test_incomplete_contract = bool(test_current and test_verdict.get("contract_present") and not test_verdict.get("contract_complete"))
     test_unconfirmed = bool(test_current and not test_passed and not test_failed and not test_blocked and not test_not_run)
     test_needs_rerun = test_failed
+    no_deploy_operator_report_ready = bool(
+        has_no_deploy
+        and test_not_run
+        and test_verdict.get("contract_complete")
+        and not test_failed
+        and not test_blocked
+    )
     context_packet, context_packet_chars = _build_context_packet_for_issue(key)
     metadata_manifest_text = _read_text_for_resume(metadata_manifest)
 
@@ -2939,6 +2955,14 @@ def _build_pipeline_resume_plan(
         jira_message=jira_message,
         messages_separated=messages_separated,
     )
+    if has_no_deploy:
+        step_transition_contracts["step8_to_step9"] = {
+            "status": "pass",
+            "missing": [],
+            "observed": {"no_deploy": True},
+            "reason": "No-deploy path does not require a metadata workspace manifest.",
+            "required_fields": (),
+        }
     step10_artifacts_current = bool(
         artifacts["internal_notes"]["exists"]
         and artifacts["internal_notes"]["size"] > 80
@@ -2973,11 +2997,11 @@ def _build_pipeline_resume_plan(
         step9_complete = bool(
             step8_complete
             and test_current
-            and test_passed
+            and (test_passed or no_deploy_operator_report_ready)
             and (has_no_deploy or (test_signature_stable and metadata_signature_stable) if has_schema else True)
         )
     else:
-        step9_complete = bool(has_no_deploy and step8_complete and test_current and test_passed)
+        step9_complete = bool(has_no_deploy and step8_complete and test_current and (test_passed or no_deploy_operator_report_ready))
 
     step10_complete = bool(step9_complete and step10_artifacts_current and messages_separated)
 
@@ -3071,10 +3095,11 @@ def _build_pipeline_resume_plan(
                 "Deploy and test in Sandbox",
                 "complete" if step9_complete else (
                     "blocked" if routing_on_hold or test_blocked else
-                    "stale" if test_needs_rerun or (step8_complete and test_signature_stable is False and has_schema) else
+                    "stale" if test_needs_rerun or (step8_complete and not has_no_deploy and test_signature_stable is False and has_schema) else
                     "pending"
                 ),
-                "Current test report is passing and aligned with metadata signature." if step9_complete else (
+                "No-deploy operator action report is complete; draft operator-facing instructions in Step 10." if no_deploy_operator_report_ready else (
+                    "Current test report is passing and aligned with metadata signature." if step9_complete else
                     "Test report verdict is blocked; resolve the blocker before rerunning Step 9." if test_blocked else
                     "Test report verdict is not-run; run validation before completing Step 9." if test_not_run else
                     "Test report Validation Verdict is incomplete; update the report with the required verdict fields." if test_incomplete_contract else
@@ -3088,7 +3113,7 @@ def _build_pipeline_resume_plan(
             _resume_step(
                 10,
                 "Draft internal notes and Jira message",
-                "complete" if step10_complete else ("stale" if step9_complete and step10_artifacts_current else ("pending" if not step9_complete else "blocked")),
+                "complete" if step10_complete else ("stale" if step9_complete and step10_artifacts_current else ("pending" if step9_complete else "blocked")),
                 "Draft artifacts are current and separated." if step10_complete else "Draft/update internal notes, Jira message, and engineering handoff if required.",
                 "Emit STEP_10 resume-skip; avoid rewriting drafts if Step 9 is still current." if step10_complete else "Draft/update internal notes and Jira message from latest Step 9 result." ,
                 [artifacts["internal_notes"]["path"], artifacts["jira_message"]["path"], artifacts["eng_handoff"]["path"]],
@@ -3118,7 +3143,8 @@ def _build_pipeline_resume_plan(
     next_step = next((s for s in steps if s["step"] != 12 and s["status"] not in {"complete", "skipped"}), steps[-1] if steps else None)
     quality_gates = {
         "step_6_problem_location": "pass" if step6_complete else "needs_rework" if step5_complete else "pending",
-        "step_9_test_report": "pass" if step9_complete else (
+        "step_9_test_report": "operator_action_pending" if no_deploy_operator_report_ready else (
+            "pass" if step9_complete else
             "failed" if test_failed else
             "blocked" if test_blocked else
             "needs_rework" if test_incomplete_contract or test_unconfirmed else
@@ -3249,10 +3275,14 @@ def _apply_loop_state_to_plan(
     step10 = _build_step(plan, 10)
     status6 = step6.get("status") if step6 else "pending"
     status9 = step9.get("status") if step9 else "pending"
+    prior_step9_gate = ""
+    if plan.get("quality_gates") and isinstance(plan.get("quality_gates"), dict):
+        prior_step9_gate = str(plan["quality_gates"].get("step_9_test_report") or "")
 
     quality_gates = {
         "step_6_problem_location": "pass" if status6 == "complete" else ("blocked" if status6 == "blocked" else "needs_rework" if status6 in {"stale", "pending"} else "pending"),
         "step_9_test_report": (
+            "operator_action_pending" if prior_step9_gate == "operator_action_pending" else
             "blocked" if status9 in {"blocked"} else
             "pass" if status9 == "complete" else
             "needs_rework" if status9 == "stale" else "pending"
@@ -6871,12 +6901,11 @@ def _is_jira_escalated_any(status: str = "") -> bool:
 
 def _available_tabs(key: str) -> list[dict[str, str]]:
     tabs = []
-    internal_only = {"hypothesis"}
     cluster_context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
     if cluster_context.get("cluster_id"):
         tabs.append({"id": "similar_issues", "label": "Similar Issues"})
     for ftype, rel in FILE_LOCATIONS.items():
-        if ftype == "attachments" or ftype in internal_only:
+        if ftype == "attachments":
             continue
         path = OUTPUTS / rel.format(key=key)
         if path.exists():
@@ -8124,11 +8153,20 @@ def api_pipeline_state_repair():
         if key in _active_keys:
             return jsonify({"error": f"{key} is currently running; stop it before repairing state."}), 409
 
-    row = _find_manifest_row(key)
+    result = _repair_pipeline_state_key(key)
+    if result.get("ok") is False:
+        return jsonify(result), 500
+    return jsonify(result)
+
+
+def _repair_pipeline_state_key(key: str, row: dict[str, str] | None = None, *, emit_manifest: bool = True) -> dict[str, Any]:
+    row = row or _find_manifest_row(key)
+    status = row.get("Status", "") if isinstance(row, dict) else ""
+    updated = row.get("Updated", "") if isinstance(row, dict) else ""
     plan = _build_pipeline_resume_plan(
         key,
-        row.get("Status", ""),
-        row.get("Updated", ""),
+        status,
+        updated,
         rebuild_from_artifacts=True,
     )
     plan["repair"] = {
@@ -8139,9 +8177,10 @@ def api_pipeline_state_repair():
     plan_path = _write_pipeline_resume_plan(plan)
     _invalidate_jira_summary_cache(key)
     investigation_cache.pop(key, None)
-    manifest_changed([key])
+    if emit_manifest:
+        manifest_changed([key])
     next_step = plan.get("next_step") or {}
-    return jsonify({
+    return {
         "ok": True,
         "key": key,
         "plan_path": _path_relative_for_prompt(plan_path),
@@ -8156,7 +8195,62 @@ def api_pipeline_state_repair():
             }
             for step in (plan.get("steps") or [])
         ],
-    })
+    }
+
+
+@app.post("/api/pipeline-state/repair-all")
+def api_pipeline_state_repair_all():
+    data = request.get_json(silent=True) or {}
+    scope = str(data.get("scope") or "stale").strip().lower()
+    if scope not in {"stale", "all"}:
+        return jsonify({"error": "scope must be 'stale' or 'all'"}), 400
+
+    with _state_lock:
+        active_keys = set(_active_keys)
+
+    rows_by_key: dict[str, dict[str, str]] = {}
+    for row in _read_manifest():
+        key = str(row.get("Key") or "").strip()
+        if key:
+            rows_by_key[key] = row
+
+    state_keys = {path.stem for path in (OUTPUTS / "pipeline-state").glob("*.json")}
+    keys = sorted(set(rows_by_key) | state_keys)
+    repaired: list[dict[str, Any]] = []
+    skipped: list[dict[str, str]] = []
+    errors: list[dict[str, str]] = []
+
+    for key in keys:
+        if key in active_keys:
+            skipped.append({"key": key, "reason": "active run"})
+            continue
+        if scope == "stale" and not _pipeline_state_has_stale_step(_read_pipeline_state(key)):
+            skipped.append({"key": key, "reason": "not stale"})
+            continue
+        try:
+            result = _repair_pipeline_state_key(key, rows_by_key.get(key), emit_manifest=False)
+            next_step = result.get("next_step") or {}
+            repaired.append({
+                "key": key,
+                "next_step": next_step,
+                "plan_path": result.get("plan_path", ""),
+            })
+        except Exception as exc:
+            errors.append({"key": key, "error": str(exc)[:300]})
+
+    if repaired:
+        manifest_changed([item["key"] for item in repaired])
+
+    return jsonify({
+        "ok": not errors,
+        "scope": scope,
+        "repaired_count": len(repaired),
+        "skipped_count": len(skipped),
+        "error_count": len(errors),
+        "repaired": repaired[:100],
+        "skipped": skipped[:100],
+        "errors": errors[:100],
+    }), 207 if errors else 200
 
 
 @app.get("/health")
