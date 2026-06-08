@@ -2347,10 +2347,26 @@ def _infer_deliverable_state(
 def _deliverable_is_data_only(deliverable: dict[str, Any], *, legacy_detected: bool = False) -> bool:
     """Return true when durable state or legacy artifacts identify a no-deploy data/admin fix."""
     deploy_required = str(deliverable.get("production_deploy_required") or "unknown").strip().lower()
-    if deploy_required in {"no", "n/a"}:
-        return True
+    deliverable_type = re.sub(r"[-\s]+", "_", str(deliverable.get("type") or "").strip().lower())
+    no_deploy_reason = str(deliverable.get("no_deploy_reason") or "").strip()
+    data_admin_types = {
+        "admin_action",
+        "data_action",
+        "data_only",
+        "data_record_update",
+        "data_record_creation",
+        "permission_assignment",
+        "support_admin_action",
+        "support_data_action",
+    }
     if deploy_required == "yes":
         return False
+    if deploy_required in {"no", "n/a"}:
+        return bool(
+            deliverable_type in data_admin_types
+            or _text_has_data_or_admin_action(no_deploy_reason)
+            or legacy_detected
+        )
     return bool(legacy_detected)
 
 
@@ -2903,9 +2919,14 @@ def _build_pipeline_resume_plan(
     )
 
     test_current = artifacts["test_report"]["exists"] and artifacts["test_report"]["size"] > 80
+    test_verdict = _parse_test_report_verdict_text(test_report) if test_current else _empty_test_report_verdict()
     test_passed = _test_report_confirms_fix(key)
-    test_failed = bool(test_current and not test_passed and re.search(r"(?is)\bfail(?:ed|ing)?\b|not fixed|revert|required: yes|blocked", test_report))
-    test_needs_rerun = not test_passed and test_current
+    test_failed = bool(test_current and not test_passed and _structured_validation_verdict_failed(test_report))
+    test_blocked = bool(test_current and test_verdict.get("validation_status") == "blocked")
+    test_not_run = bool(test_current and test_verdict.get("validation_status") == "not-run")
+    test_incomplete_contract = bool(test_current and test_verdict.get("contract_present") and not test_verdict.get("contract_complete"))
+    test_unconfirmed = bool(test_current and not test_passed and not test_failed and not test_blocked and not test_not_run)
+    test_needs_rerun = test_failed
     context_packet, context_packet_chars = _build_context_packet_for_issue(key)
     metadata_manifest_text = _read_text_for_resume(metadata_manifest)
 
@@ -3049,11 +3070,16 @@ def _build_pipeline_resume_plan(
                 9,
                 "Deploy and test in Sandbox",
                 "complete" if step9_complete else (
+                    "blocked" if routing_on_hold or test_blocked else
                     "stale" if test_needs_rerun or (step8_complete and test_signature_stable is False and has_schema) else
-                    ("blocked" if routing_on_hold else "pending")
+                    "pending"
                 ),
                 "Current test report is passing and aligned with metadata signature." if step9_complete else (
-                    "Test report indicates a failed validation; rerun Step 8/9 with updated candidate." if test_needs_rerun else
+                    "Test report verdict is blocked; resolve the blocker before rerunning Step 9." if test_blocked else
+                    "Test report verdict is not-run; run validation before completing Step 9." if test_not_run else
+                    "Test report Validation Verdict is incomplete; update the report with the required verdict fields." if test_incomplete_contract else
+                    "Test report indicates failed validation; rerun Step 8/9 with an updated candidate." if test_needs_rerun else
+                    "Test report is present but does not confirm a fix; update Step 9 validation." if test_unconfirmed else
                     "Deploy + test run needed." if step8_complete else "Step 8 completion required before testing."
                 ),
                 "Emit STEP_9 resume-skip if validation is still current." if step9_complete else "Run Step 9 deploy/test against the allowlisted Sandbox.",
@@ -3092,7 +3118,12 @@ def _build_pipeline_resume_plan(
     next_step = next((s for s in steps if s["step"] != 12 and s["status"] not in {"complete", "skipped"}), steps[-1] if steps else None)
     quality_gates = {
         "step_6_problem_location": "pass" if step6_complete else "needs_rework" if step5_complete else "pending",
-        "step_9_test_report": "pass" if step9_complete else ("failed" if test_needs_rerun else "pending"),
+        "step_9_test_report": "pass" if step9_complete else (
+            "failed" if test_failed else
+            "blocked" if test_blocked else
+            "needs_rework" if test_incomplete_contract or test_unconfirmed else
+            "pending"
+        ),
         "step_10_message_separation": "pass" if step10_complete else ("needs_rework" if step10_artifacts_current else "pending"),
         "step_4_to_5_transition": step_transition_contracts.get("step4_to_step5", {}).get("status", "pending"),
         "step_5_to_6_transition": step_transition_contracts.get("step5_to_step6", {}).get("status", "pending"),
@@ -6950,6 +6981,180 @@ def _pipeline_state_has_stale_step(state: dict[str, Any]) -> bool:
     return any(str(step.get("status") or "").strip().lower() == "stale" for step in steps if isinstance(step, dict))
 
 
+_FAILED_VALIDATION_VERDICT_RE = re.compile(
+    r"""(?imx)
+    ^\s*(?:[-*]\s*)?
+    (?:\*\*)?
+    (?:
+        validation\s+(?:status|result|outcome)|
+        sandbox\s+validation|
+        test\s+(?:status|result|outcome)|
+        fixed\??
+    )
+    (?:\*\*)?
+    \s*[:|=-]\s*
+    (?:\*\*)?
+    \s*
+    (?P<value>failed|failure|fail|no|false|not\s+fixed|unfixed)
+    (?:\*\*)?
+    \s*$
+    """
+)
+
+
+def _markdown_section_after_heading(text: str, heading_pattern: str, *, max_lines: int = 8) -> list[str]:
+    match = re.search(heading_pattern, text, flags=re.IGNORECASE | re.MULTILINE)
+    if not match:
+        return []
+    after = text[match.end() :]
+    lines: list[str] = []
+    for raw in after.splitlines():
+        if re.match(r"^\s*##\s+", raw):
+            break
+        stripped = raw.strip()
+        if not stripped or re.fullmatch(r"[-*_`#\s]+", stripped):
+            continue
+        lines.append(stripped)
+        if len(lines) >= max_lines:
+            break
+    return lines
+
+
+def _markdown_section_text_after_heading(text: str, heading_pattern: str) -> str:
+    match = re.search(heading_pattern, text, flags=re.IGNORECASE | re.MULTILINE)
+    if not match:
+        return ""
+    after = text[match.end() :]
+    lines: list[str] = []
+    for raw in after.splitlines():
+        if re.match(r"^\s*##\s+", raw):
+            break
+        lines.append(raw)
+    return "\n".join(lines).strip()
+
+
+def _normalize_verdict_value(value: str, allowed: set[str], default: str = "unknown") -> str:
+    normalized = re.sub(r"\s+", "-", str(value or "").strip().lower())
+    aliases = {
+        "pass": "passed",
+        "fail": "failed",
+        "failure": "failed",
+        "blocked": "blocked",
+        "notrun": "not-run",
+        "not-run": "not-run",
+        "n/a": "n/a",
+        "na": "n/a",
+        "none": "n/a",
+        "true": "yes",
+        "false": "no",
+        "y": "yes",
+        "n": "no",
+        "not-fixed": "no",
+        "unfixed": "no",
+    }
+    normalized = aliases.get(normalized, normalized)
+    return normalized if normalized in allowed else default
+
+
+def _verdict_raw_value_is_valid(value: str | None, allowed: set[str]) -> bool:
+    return bool(value and _normalize_verdict_value(value, allowed, default="__invalid__") != "__invalid__")
+
+
+def _extract_report_field(text: str, label: str) -> str | None:
+    pattern = re.compile(
+        rf"(?im)^\s*(?:[-*]\s*)?(?:\*\*)?{re.escape(label)}(?:\*\*)?\s*[:|=-]\s*(?:\*\*)?\s*(?P<value>[^*\n\r]+?)(?:\*\*)?\s*$"
+    )
+    match = pattern.search(text)
+    return match.group("value").strip() if match else None
+
+
+def _empty_test_report_verdict() -> dict[str, Any]:
+    return {
+        "schema": "validation_verdict_v1",
+        "validation_status": "unknown",
+        "fixed": "unknown",
+        "production_deploy_required": "unknown",
+        "contract_present": False,
+        "has_contract": False,
+        "contract_complete": False,
+    }
+
+
+def _parse_test_report_verdict_text(text: str) -> dict[str, Any]:
+    """Parse the canonical Validation Verdict contract from a test report."""
+    verdict_block = _markdown_section_text_after_heading(text, r"^\s*##\s*Validation Verdict\s*$")
+    if not verdict_block:
+        return _empty_test_report_verdict()
+
+    raw_validation_status = _extract_report_field(verdict_block, "Validation Status")
+    raw_fixed = _extract_report_field(verdict_block, "Fixed?")
+    raw_production_deploy_required = _extract_report_field(verdict_block, "Production deploy required")
+    validation_allowed = {"passed", "failed", "blocked", "not-run"}
+    fixed_allowed = {"yes", "no", "unknown"}
+    production_deploy_allowed = {"yes", "no", "n/a", "unknown"}
+    validation_status = _normalize_verdict_value(
+        raw_validation_status or "",
+        validation_allowed,
+    )
+    fixed = _normalize_verdict_value(
+        raw_fixed or "",
+        fixed_allowed,
+    )
+    production_deploy_required = _normalize_verdict_value(
+        raw_production_deploy_required or "",
+        production_deploy_allowed,
+    )
+    contract_complete = bool(
+        _verdict_raw_value_is_valid(raw_validation_status, validation_allowed)
+        and _verdict_raw_value_is_valid(raw_fixed, fixed_allowed)
+        and _verdict_raw_value_is_valid(raw_production_deploy_required, production_deploy_allowed)
+    )
+
+    return {
+        "schema": "validation_verdict_v1",
+        "validation_status": validation_status,
+        "fixed": fixed,
+        "production_deploy_required": production_deploy_required,
+        "contract_present": True,
+        "has_contract": contract_complete,
+        "contract_complete": contract_complete,
+    }
+
+
+def _test_report_verdict(key: str) -> dict[str, Any]:
+    path = OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)
+    if not path.is_file():
+        return _empty_test_report_verdict()
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")[:50000]
+    except OSError:
+        return _empty_test_report_verdict()
+    return _parse_test_report_verdict_text(text)
+
+
+def _structured_validation_verdict_failed(text: str) -> bool:
+    """Return True only when a test report has an explicit failed verdict field."""
+    verdict = _parse_test_report_verdict_text(text)
+    if verdict["contract_present"]:
+        return verdict["validation_status"] == "failed" or verdict["fixed"] == "no"
+
+    if _FAILED_VALIDATION_VERDICT_RE.search(text):
+        return True
+
+    for heading_pattern in (
+        r"^\s*##\s*Fixed\?\s*$",
+        r"^\s*##\s*(?:Validation|Test|Sandbox Validation)\s+(?:Status|Result|Outcome)\s*$",
+    ):
+        lines = _markdown_section_after_heading(text, heading_pattern)
+        if not lines:
+            continue
+        first = lines[0].lower().lstrip("-*[]xX ").strip()
+        if re.fullmatch(r"(?:no|false|failed|failure|fail|not\s+fixed|unfixed)[.!]?", first):
+            return True
+
+    return bool(re.search(r"(?im)^\s*[-*]\s*\[[xX]\]\s*failed validation\s*$", text))
+
+
 def _test_report_indicates_failed_validation(key: str) -> bool:
     path = OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)
     if not path.is_file():
@@ -6960,12 +7165,7 @@ def _test_report_indicates_failed_validation(key: str) -> bool:
         return False
     if _test_report_confirms_fix(key):
         return False
-    return bool(
-        re.search(
-            r"(?is)\b(failed validation|validation failed|not fixed|unresolved|revert(?:ed)?|do not proceed|test(?:s)? failed)\b",
-            text,
-        )
-    )
+    return _structured_validation_verdict_failed(text)
 
 
 def _issue_needs_customer_reply(key: str) -> bool:
@@ -7029,12 +7229,30 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         has_test_report=has_test_report and (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).is_file(),
     )
     deliverable = _infer_deliverable_state(state_payload, is_data_only_legacy=has_data_only_legacy)
-    production_deploy_required = str(deliverable.get("production_deploy_required") or "unknown").strip().lower()
-    is_blocked = routing["path"] == "on_hold" or (not has_schema and _investigation_indicates_blocked(key))
-    is_data_only = _deliverable_is_data_only(deliverable, legacy_detected=has_data_only_legacy)
+    test_report_verdict = _test_report_verdict(key)
+    verdict_production_deploy_required = str(test_report_verdict.get("production_deploy_required") or "unknown").strip().lower()
+    production_deploy_required = (
+        verdict_production_deploy_required
+        if verdict_production_deploy_required != "unknown"
+        else str(deliverable.get("production_deploy_required") or "unknown").strip().lower()
+    )
+    is_blocked = (
+        routing["path"] == "on_hold"
+        or test_report_verdict.get("validation_status") == "blocked"
+        or (not has_schema and _investigation_indicates_blocked(key))
+    )
+    is_data_admin_action = _deliverable_is_data_only(deliverable, legacy_detected=has_data_only_legacy)
     has_confirmed_solution = _test_report_confirms_fix(key)
     has_failed_validation = _test_report_indicates_failed_validation(key)
     pipeline_state = _calculate_pipeline_state(key, status).value
+    verdict_passed = test_report_verdict.get("validation_status") == "passed"
+    verdict_fixed = test_report_verdict.get("fixed") == "yes"
+    verdict_contract_present = bool(test_report_verdict.get("contract_present"))
+    validation_confirmed = bool(
+        has_confirmed_solution
+        and (not verdict_contract_present or (verdict_passed and verdict_fixed))
+    )
+    is_data_only = bool(is_data_admin_action and has_confirmed_solution)
     has_generated_files = bool(_generated_files_for_issue(key))
     has_similar_issues = _issue_has_similar_issue_context(key)
     needs_customer_reply = _issue_needs_customer_reply(key)
@@ -7044,12 +7262,21 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         (has_schema and routing["path"] == "engineering_required")
         or (not has_schema and has_eng_handoff)
     ) and not is_jira_escalated_any
+    is_complete_no_deploy = bool(
+        pipeline_state == PipelineState.VALIDATED.value
+        and validation_confirmed
+        and production_deploy_required in {"no", "n/a"}
+        and not is_blocked
+        and not is_data_admin_action
+        and not needs_escalation
+        and not is_jira_escalated_any
+    )
     is_ready_to_deploy = bool(
         pipeline_state == PipelineState.VALIDATED.value
-        and has_confirmed_solution
+        and validation_confirmed
         and production_deploy_required == "yes"
         and not is_blocked
-        and not is_data_only
+        and not is_data_admin_action
         and not needs_escalation
         and not is_jira_escalated_any
     )
@@ -7064,18 +7291,21 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         "has_eng_handoff": has_eng_handoff,
         "has_confirmed_solution": has_confirmed_solution,
         "has_failed_validation": has_failed_validation,
+        "test_report_verdict": test_report_verdict,
         "has_solution": has_solution,
         "needs_escalation": needs_escalation,
         "is_jira_escalated": is_jira_escalated,
         "is_jira_escalated_any": is_jira_escalated_any,
         "production_deploy_required": production_deploy_required,
         "is_ready_to_deploy": is_ready_to_deploy,
+        "is_complete_no_deploy": is_complete_no_deploy,
 
         # Pipeline state machine (authoritative status first, file-only fallback)
         "pipeline_state": pipeline_state,
         "is_escalation_path": routing["path"] == "engineering_required",  # Source of truth: routing state
         "is_blocked": is_blocked,
         "is_data_only": is_data_only,
+        "is_data_admin_action": is_data_admin_action,
         "has_generated_files": has_generated_files,
         "has_similar_issues": has_similar_issues,
         "needs_customer_reply": needs_customer_reply,
@@ -7105,8 +7335,10 @@ def _derive_issue_tag_contract(status: str, flags: dict[str, Any], *, has_new_co
         primary = "data only"
     elif flags.get("is_ready_to_deploy"):
         primary = "ready to deploy"
-    elif pipeline_state == PipelineState.VALIDATED.value:
+    elif flags.get("is_complete_no_deploy"):
         primary = "complete no deploy"
+    elif pipeline_state == PipelineState.VALIDATED.value:
+        primary = "in progress"
     elif pipeline_state == PipelineState.ANALYZED.value:
         primary = "analyzed"
     elif pipeline_state == PipelineState.INVESTIGATING.value:
@@ -7117,7 +7349,10 @@ def _derive_issue_tag_contract(status: str, flags: dict[str, Any], *, has_new_co
     conditions: list[str] = []
     if has_new_comments:
         conditions.append("new comments")
-    if pipeline_state in {PipelineState.INVESTIGATING.value, PipelineState.ANALYZED.value}:
+    if pipeline_state in {PipelineState.INVESTIGATING.value, PipelineState.ANALYZED.value} or (
+        pipeline_state == PipelineState.VALIDATED.value
+        and primary == "in progress"
+    ):
         conditions.append("partial run")
     if flags.get("has_stale_pipeline_step"):
         conditions.append("stale")
@@ -7353,6 +7588,9 @@ def _test_report_confirms_fix(key: str) -> bool:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return False
+    verdict = _parse_test_report_verdict_text(text)
+    if verdict["contract_present"]:
+        return verdict["validation_status"] == "passed" and verdict["fixed"] == "yes"
     if re.search(
         r"(?is)(resolution type:\*\*\s*no-deploy|fix type:\*\*\s*(?:data record creation|data-only|no-deploy)|##\s*No-Deploy Rationale|sandbox deploy required:\*\*\s*no|production metadata deploy required\s*[:|]\s*\*\*?no|production deploy required:\s*\*\*?n/?a)",
         text,
@@ -7557,6 +7795,8 @@ def api_file(key: str, ftype: str):
         return jsonify({"html": "<p class='empty'>File not yet generated.</p>"})
     text = path.read_text(encoding="utf-8", errors="replace")
     result = {"html": render_md(text), "raw": text}
+    if ftype == "test_report":
+        result["test_report_verdict"] = _parse_test_report_verdict_text(text)
 
     # Add blocker reason if investigation file
     if ftype == "investigation":
@@ -8250,7 +8490,7 @@ def api_confidence_flag(key: str):
 
 @app.get("/api/issue/<key>/deployment-status")
 def api_deployment_status(key: str):
-    """Return deployment validation status for an issue.
+    """Return operator-controlled Production promotion status for an issue.
 
     Returns {"status": "validated"|"pending"|"failed"|"none"}
     """
@@ -8264,7 +8504,7 @@ def api_deployment_status(key: str):
 
 @app.post("/api/issue/<key>/deployment-status")
 def set_deployment_status(key: str):
-    """Set deployment validation status for an issue.
+    """Set operator-controlled Production promotion status for an issue.
 
     Expects JSON: {"status": "validated"|"pending"|"failed"}
     """

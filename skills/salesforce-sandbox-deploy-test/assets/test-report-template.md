@@ -1,5 +1,12 @@
 # Sandbox Test Report
 
+## Validation Verdict
+
+- Validation Status: passed | failed | blocked | not-run
+- Fixed?: yes | no | unknown
+- Production deploy required: yes | no | n/a | unknown
+- Evidence:
+
 ## Jira Issue
 
 - Key:
@@ -31,8 +38,6 @@
 | --- | --- | --- | --- |
 
 ## Evidence
-
-## Fixed?
 
 ## Production deployment state (required)
 

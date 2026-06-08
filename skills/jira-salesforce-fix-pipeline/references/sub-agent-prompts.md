@@ -138,6 +138,14 @@ Instructions:
 5. If the fix fails or is abandoned, revert Sandbox changes from the attempt baseline before returning Fail.
 6. Write results to outputs/test-reports/<KEY>.md using
    skills/jira-salesforce-fix-pipeline/assets/test-report-template.md.
+   Fill the required Validation Verdict block exactly:
+   - Validation Status: passed | failed | blocked | not-run
+   - Fixed?: yes | no | unknown
+   - Production deploy required: yes | no | n/a | unknown
+   - Evidence: one concise sentence or artifact path supporting the verdict.
+   For operator/admin/data actions that CaseOps did not execute and verify, use
+   Validation Status: not-run, Fixed?: unknown, and Production deploy required: n/a.
+   Use passed/yes only when actual post-action validation evidence exists.
    Fill **Production deployment state** (Sandbox vs Production; Gearset required Y/N/N/A).
 7. Use selected org knowledge first. Prefer `python scripts/sf_caseops_helper.py deploy-mdapi ...` for candidate metadata and deterministic MDAPI deploy patterns where source tracking is known to cause `NothingToDeploy`.
 8. Deploy with modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.

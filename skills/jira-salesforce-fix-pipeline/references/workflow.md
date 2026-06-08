@@ -230,10 +230,22 @@ Update **`Solution Plan` → Production vs sandbox deployment state** in the inv
 Spawn this sub-agent after Step 8 only when there is a metadata/code candidate to deploy or a Sandbox-safe configuration change to test. Sandbox testing validates proposed metadata/code solutions so Engineering receives evidence-backed handoffs, not just hypotheses.
 
 For no-deploy Support actions, do **not** spawn the deploy/test sub-agent. Create `outputs/test-reports/<KEY>.md` directly with:
+- The required **Validation Verdict** block using exact values:
+  - `Validation Status: passed | failed | blocked | not-run`
+  - `Fixed?: yes | no | unknown`
+  - `Production deploy required: yes | no | n/a | unknown`
+  - `Evidence:` one concise sentence or artifact path supporting the verdict.
 - Root cause evidence from Production read-only checks.
 - Exact admin/data action to perform, explicitly marked as **operator action not executed by CaseOps**.
 - Validation steps after the operator applies the action.
 - Production deploy required: **N/A**.
+
+If CaseOps did not execute and verify the action, the verdict must be:
+- `Validation Status: not-run`
+- `Fixed?: unknown`
+- `Production deploy required: n/a`
+
+Use `Validation Status: passed` and `Fixed?: yes` only when actual post-action validation evidence exists in the report.
 
 **Allowlist:** Read exported env var **`CASEOPS_SANDBOX_TARGET_ORG`**. If missing or empty, **STOP**. Only that org may receive deploys or mutating operations. See **`references/sub-agent-prompts.md`** — **”Step 9 — Deploy, test, and iterate”** for the full prompt and failure-loop behavior.
 

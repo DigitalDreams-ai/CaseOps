@@ -162,7 +162,7 @@ For all active issues (both Support-resolvable and Engineering-required):
 
 For each active issue:
 1. **Emit to stdout:** `STEP_9 <ISSUE_KEY>`
-2. If there is no deployable metadata/code candidate because the fix is an existing permission assignment/data/config action, write `outputs/test-reports/<KEY>.md` directly as a no-deploy validation plan and skip the deploy/test sub-agent. Mark the fix as an operator/admin action not executed by CaseOps.
+2. If there is no deployable metadata/code candidate because the fix is an existing permission assignment/data/config action, write `outputs/test-reports/<KEY>.md` directly as a no-deploy validation plan and skip the deploy/test sub-agent. Mark the fix as an operator/admin action not executed by CaseOps. If CaseOps did not execute and verify the action, the **Validation Verdict** must be `Validation Status: not-run`, `Fixed?: unknown`, and `Production deploy required: n/a`. Use `passed`/`yes` only when actual post-action validation evidence exists.
 3. Otherwise, spawn `salesforce-sandbox-deploy-test` with the Step 9 prompt from `references/sub-agent-prompts.md`.
 4. Ensure the sub-agent captures `baseline-sandbox/`, deploys `candidate/`, tests acceptance criteria, and writes `outputs/test-reports/<KEY>.md`.
 

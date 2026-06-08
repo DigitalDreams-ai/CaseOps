@@ -2,6 +2,13 @@
 
 **Reference:** See `outputs/internal-notes/<KEY>.md` for solution details and implementation changes.
 
+## Validation Verdict
+
+- Validation Status: passed | failed | blocked | not-run
+- Fixed?: yes | no | unknown
+- Production deploy required: yes | no | n/a | unknown
+- Evidence:
+
 ## Test Environment
 
 - Sandbox: 
@@ -68,4 +75,4 @@
 
 - Tested by: (CaseOps AI agent + operator verification)
 - Date:
-- Ready for Production promotion: ✓ Yes / ✗ No (blockers: [list])
+- Production promotion note: (mirror `Production deploy required` from Validation Verdict; include blockers if any)

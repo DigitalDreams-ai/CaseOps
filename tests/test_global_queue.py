@@ -136,7 +136,7 @@ class GlobalQueueTests(unittest.TestCase):
             ("Open", {**base, "needs_escalation": True}, "needs engineering"),
             ("Open", {**base, "is_data_only": True}, "data only"),
             ("Open", {**base, "pipeline_state": app.PipelineState.VALIDATED.value, "is_ready_to_deploy": True}, "ready to deploy"),
-            ("Open", {**base, "pipeline_state": app.PipelineState.VALIDATED.value}, "complete no deploy"),
+            ("Open", {**base, "pipeline_state": app.PipelineState.VALIDATED.value, "is_complete_no_deploy": True}, "complete no deploy"),
             ("Open", {**base, "pipeline_state": app.PipelineState.ANALYZED.value}, "analyzed"),
             ("Open", {**base, "pipeline_state": app.PipelineState.INVESTIGATING.value}, "in progress"),
             ("Open", {**base}, "not triaged"),
@@ -192,6 +192,390 @@ class GlobalQueueTests(unittest.TestCase):
             "escalated to eng",
         }
         self.assertFalse(legacy_tags.intersection(contract["tags"]))
+
+    def test_failed_validation_tag_ignores_historical_or_explanatory_language(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            test_dir = Path(tmp) / "test-reports"
+            test_dir.mkdir(parents=True)
+            (test_dir / "OPEN-1.md").write_text(
+                "\n".join(
+                    [
+                        "## Validation Notes",
+                        "Previous attempts were not fixed and were reverted.",
+                        "This report explains why those tests failed before the current run.",
+                        "No explicit failed verdict has been recorded for this run.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with patch.object(app, "OUTPUTS", Path(tmp)):
+                self.assertFalse(app._test_report_indicates_failed_validation("OPEN-1"))
+
+    def test_failed_validation_tag_uses_structured_report_verdicts(self):
+        cases = {
+            "FIELD-1": "Validation Status: failed\n",
+            "FIELD-2": "Test Result: not fixed\n",
+            "FIELD-3": "**Validation Status:** failed\n",
+            "SECTION-1": "## Fixed?\nNo\n",
+            "SECTION-2": "## Validation Result\nfailed\n",
+            "TASK-1": "- [x] failed validation\n",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            test_dir = Path(tmp) / "test-reports"
+            test_dir.mkdir(parents=True)
+            for key, text in cases.items():
+                (test_dir / f"{key}.md").write_text(text, encoding="utf-8")
+
+            with patch.object(app, "OUTPUTS", Path(tmp)):
+                for key in cases:
+                    with self.subTest(key=key):
+                        self.assertTrue(app._test_report_indicates_failed_validation(key))
+
+    def test_confirmed_fix_wins_over_failed_validation_history(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            test_dir = Path(tmp) / "test-reports"
+            test_dir.mkdir(parents=True)
+            (test_dir / "OPEN-1.md").write_text(
+                "\n".join(
+                    [
+                        "## Fixed?",
+                        "Yes, confirmed in Sandbox.",
+                        "",
+                        "## Notes",
+                        "An earlier validation failed and was not fixed.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with patch.object(app, "OUTPUTS", Path(tmp)):
+                self.assertTrue(app._test_report_confirms_fix("OPEN-1"))
+                self.assertFalse(app._test_report_indicates_failed_validation("OPEN-1"))
+
+    def test_canonical_validation_verdict_contract_controls_test_report_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            test_dir = Path(tmp) / "test-reports"
+            test_dir.mkdir(parents=True)
+            (test_dir / "PASS-1.md").write_text(
+                "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: passed",
+                        "- Fixed?: yes",
+                        "- Production deploy required: yes",
+                        "- Evidence: Sandbox validation run passed.",
+                        "",
+                        "Historical note: an earlier attempt failed validation.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (test_dir / "FAIL-1.md").write_text(
+                "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: failed",
+                        "- Fixed?: no",
+                        "- Production deploy required: unknown",
+                        "- Evidence: Acceptance criterion 2 did not pass.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (test_dir / "PARTIAL-1.md").write_text(
+                "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: passed",
+                        "- Fixed?: unknown",
+                        "- Production deploy required: yes",
+                        "- Evidence: Validation passed but fix confirmation is pending.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with patch.object(app, "OUTPUTS", Path(tmp)):
+                self.assertTrue(app._test_report_confirms_fix("PASS-1"))
+                self.assertFalse(app._test_report_indicates_failed_validation("PASS-1"))
+                self.assertFalse(app._test_report_confirms_fix("FAIL-1"))
+                self.assertTrue(app._test_report_indicates_failed_validation("FAIL-1"))
+                self.assertFalse(app._test_report_confirms_fix("PARTIAL-1"))
+                self.assertFalse(app._test_report_indicates_failed_validation("PARTIAL-1"))
+
+    def test_blocked_validation_verdict_maps_to_blocked_primary_tag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            test_dir = Path(tmp) / "test-reports"
+            test_dir.mkdir(parents=True)
+            (test_dir / "BLOCK-1.md").write_text(
+                "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: blocked",
+                        "- Fixed?: unknown",
+                        "- Production deploy required: unknown",
+                        "- Evidence: Sandbox org permission is missing.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with (
+                patch.object(app, "OUTPUTS", Path(tmp)),
+                patch.object(app, "_read_pipeline_state", return_value={}),
+                patch.object(app, "_test_report_is_data_only", return_value=False),
+                patch.object(app, "_calculate_pipeline_state", return_value=app.PipelineState.VALIDATED),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+                patch.object(app, "_issue_has_similar_issue_context", return_value=False),
+                patch.object(app, "_issue_needs_customer_reply", return_value=False),
+                patch.object(app, "_investigation_indicates_blocked", return_value=False),
+            ):
+                flags = app._pipeline_file_flags("BLOCK-1", "Open")
+                contract = app._derive_issue_tag_contract("Open", flags)
+
+            self.assertTrue(flags["is_blocked"])
+            self.assertEqual(flags["test_report_verdict"]["validation_status"], "blocked")
+            self.assertEqual(contract["primary_tag"], "blocked")
+
+    def test_ready_to_deploy_uses_validation_verdict_deploy_required(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            test_dir = Path(tmp) / "test-reports"
+            test_dir.mkdir(parents=True)
+            (test_dir / "DEPLOY-1.md").write_text(
+                "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: passed",
+                        "- Fixed?: yes",
+                        "- Production deploy required: yes",
+                        "- Evidence: Sandbox validation passed.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with (
+                patch.object(app, "OUTPUTS", Path(tmp)),
+                patch.object(app, "_read_pipeline_state", return_value={}),
+                patch.object(app, "_test_report_is_data_only", return_value=False),
+                patch.object(app, "_calculate_pipeline_state", return_value=app.PipelineState.VALIDATED),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+                patch.object(app, "_issue_has_similar_issue_context", return_value=False),
+                patch.object(app, "_issue_needs_customer_reply", return_value=False),
+                patch.object(app, "_investigation_indicates_blocked", return_value=False),
+            ):
+                flags = app._pipeline_file_flags("DEPLOY-1", "Open")
+                contract = app._derive_issue_tag_contract("Open", flags)
+
+            self.assertEqual(flags["production_deploy_required"], "yes")
+            self.assertTrue(flags["is_ready_to_deploy"])
+            self.assertEqual(contract["primary_tag"], "ready to deploy")
+
+    def test_failed_verdict_does_not_become_complete_no_deploy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            test_dir = Path(tmp) / "test-reports"
+            test_dir.mkdir(parents=True)
+            (test_dir / "FAIL-1.md").write_text(
+                "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: failed",
+                        "- Fixed?: no",
+                        "- Production deploy required: no",
+                        "- Evidence: Acceptance criterion failed.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with (
+                patch.object(app, "OUTPUTS", Path(tmp)),
+                patch.object(app, "_read_pipeline_state", return_value={}),
+                patch.object(app, "_test_report_is_data_only", return_value=False),
+                patch.object(app, "_calculate_pipeline_state", return_value=app.PipelineState.VALIDATED),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+                patch.object(app, "_issue_has_similar_issue_context", return_value=False),
+                patch.object(app, "_issue_needs_customer_reply", return_value=False),
+                patch.object(app, "_investigation_indicates_blocked", return_value=False),
+            ):
+                flags = app._pipeline_file_flags("FAIL-1", "Open")
+                contract = app._derive_issue_tag_contract("Open", flags)
+
+            self.assertFalse(flags["is_complete_no_deploy"])
+            self.assertTrue(flags["has_failed_validation"])
+            self.assertEqual(contract["primary_tag"], "in progress")
+            self.assertEqual(contract["condition_tags"], ["partial run", "failed validation"])
+
+    def test_incomplete_contract_does_not_fall_through_to_legacy_failure_text(self):
+        text = "\n".join(
+            [
+                "## Validation Verdict",
+                "- Validation Status: not-run",
+                "- Evidence: This action has not been executed.",
+                "",
+                "## Historical Notes",
+                "Previous testing failed validation and was not fixed.",
+                "- [x] failed validation",
+            ]
+        )
+
+        verdict = app._parse_test_report_verdict_text(text)
+
+        self.assertTrue(verdict["contract_present"])
+        self.assertFalse(verdict["contract_complete"])
+        self.assertFalse(app._structured_validation_verdict_failed(text))
+
+    def test_complete_no_deploy_requires_confirmed_no_deploy_verdict_not_data_admin(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            test_dir = Path(tmp) / "test-reports"
+            test_dir.mkdir(parents=True)
+            (test_dir / "NODEPLOY-1.md").write_text(
+                "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: passed",
+                        "- Fixed?: yes",
+                        "- Production deploy required: no",
+                        "- Evidence: Existing Production metadata already covers the fix.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            state = {
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "routing": {"path": "support_resolvable"},
+                "deliverable": {"type": "metadata_candidate", "production_deploy_required": "no"},
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", Path(tmp)),
+                patch.object(app, "_read_pipeline_state", return_value=state),
+                patch.object(app, "_test_report_is_data_only", return_value=False),
+                patch.object(app, "_calculate_pipeline_state", return_value=app.PipelineState.VALIDATED),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+                patch.object(app, "_issue_has_similar_issue_context", return_value=False),
+                patch.object(app, "_issue_needs_customer_reply", return_value=False),
+                patch.object(app, "_investigation_indicates_blocked", return_value=False),
+            ):
+                flags = app._pipeline_file_flags("NODEPLOY-1", "Open")
+                contract = app._derive_issue_tag_contract("Open", flags)
+
+            self.assertFalse(flags["is_data_only"])
+            self.assertTrue(flags["is_complete_no_deploy"])
+            self.assertEqual(contract["primary_tag"], "complete no deploy")
+
+    def test_data_only_requires_data_or_admin_action_evidence_and_confirmed_verdict(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            test_dir = Path(tmp) / "test-reports"
+            test_dir.mkdir(parents=True)
+            (test_dir / "DATA-1.md").write_text(
+                "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: passed",
+                        "- Fixed?: yes",
+                        "- Production deploy required: n/a",
+                        "- Evidence: Operator completed and verified the data correction.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            state = {
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "routing": {"path": "support_resolvable"},
+                "deliverable": {
+                    "type": "admin_action",
+                    "production_deploy_required": "n/a",
+                    "no_deploy_reason": "Existing permission set assignment.",
+                },
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", Path(tmp)),
+                patch.object(app, "_read_pipeline_state", return_value=state),
+                patch.object(app, "_test_report_is_data_only", return_value=False),
+                patch.object(app, "_calculate_pipeline_state", return_value=app.PipelineState.VALIDATED),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+                patch.object(app, "_issue_has_similar_issue_context", return_value=False),
+                patch.object(app, "_issue_needs_customer_reply", return_value=False),
+                patch.object(app, "_investigation_indicates_blocked", return_value=False),
+            ):
+                flags = app._pipeline_file_flags("DATA-1", "Open")
+                contract = app._derive_issue_tag_contract("Open", flags)
+
+            self.assertTrue(flags["is_data_only"])
+            self.assertFalse(flags["is_complete_no_deploy"])
+            self.assertEqual(contract["primary_tag"], "data only")
+
+    def test_unexecuted_operator_action_verdict_stays_in_progress_not_data_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            test_dir = Path(tmp) / "test-reports"
+            test_dir.mkdir(parents=True)
+            (test_dir / "TODO-1.md").write_text(
+                "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: not-run",
+                        "- Fixed?: unknown",
+                        "- Production deploy required: n/a",
+                        "- Evidence: Operator action has not been executed by CaseOps.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            state = {
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "routing": {"path": "support_resolvable"},
+                "deliverable": {
+                    "type": "admin_action",
+                    "production_deploy_required": "n/a",
+                    "no_deploy_reason": "Operator action not executed.",
+                },
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", Path(tmp)),
+                patch.object(app, "_read_pipeline_state", return_value=state),
+                patch.object(app, "_test_report_is_data_only", return_value=False),
+                patch.object(app, "_calculate_pipeline_state", return_value=app.PipelineState.VALIDATED),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+                patch.object(app, "_issue_has_similar_issue_context", return_value=False),
+                patch.object(app, "_issue_needs_customer_reply", return_value=False),
+                patch.object(app, "_investigation_indicates_blocked", return_value=False),
+            ):
+                flags = app._pipeline_file_flags("TODO-1", "Open")
+                contract = app._derive_issue_tag_contract("Open", flags)
+
+            self.assertFalse(flags["is_data_only"])
+            self.assertFalse(flags["is_complete_no_deploy"])
+            self.assertEqual(contract["primary_tag"], "in progress")
+
+    def test_test_report_file_api_returns_parsed_validation_verdict(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            test_dir = Path(tmp) / "test-reports"
+            test_dir.mkdir(parents=True)
+            (test_dir / "OPEN-1.md").write_text(
+                "\n".join(
+                    [
+                        "# Test Report",
+                        "",
+                        "## Validation Verdict",
+                        "- Validation Status: passed",
+                        "- Fixed?: yes",
+                        "- Production deploy required: no",
+                        "- Evidence: Acceptance criteria passed in Sandbox.",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with patch.object(app, "OUTPUTS", Path(tmp)):
+                payload = app.app.test_client().get("/api/issue/OPEN-1/file/test_report").get_json()
+
+            self.assertEqual(payload["test_report_verdict"]["validation_status"], "passed")
+            self.assertEqual(payload["test_report_verdict"]["fixed"], "yes")
+            self.assertEqual(payload["test_report_verdict"]["production_deploy_required"], "no")
 
     def test_legacy_escalated_status_aliases_normalize_to_one_canonical_tag(self):
         for status in ("Escalated to Engineering", "Escalated to Eng", "Jira Escalated"):

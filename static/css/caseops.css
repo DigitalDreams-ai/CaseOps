@@ -1119,6 +1119,55 @@ select.desktop-only {
   width: 100%;
 }
 
+.test-verdict {
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: var(--color-surface);
+  padding: 12px;
+  margin: 0 0 14px;
+}
+
+.test-verdict-title {
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.test-verdict-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.test-verdict-items span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.test-verdict-items strong {
+  display: block;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.test-verdict-passed {
+  border-left-color: var(--color-success);
+}
+
+.test-verdict-failed {
+  border-left-color: var(--color-danger);
+}
+
+.test-verdict-blocked {
+  border-left-color: var(--color-warn);
+}
+
+.test-verdict-unknown {
+  border-left-color: var(--color-border);
+}
+
 #issue-body th,
 #issue-body td {
   border: 1px solid var(--color-border);

@@ -31,12 +31,12 @@ Each issue has exactly one primary tag:
 | Primary tag | Criteria |
 | --- | --- |
 | `not triaged` | Active Jira issue with no CaseOps investigation state yet |
-| `in progress` | Pipeline investigation has started but has not reached analysis |
+| `in progress` | Pipeline work has started but has not reached a terminal outcome |
 | `analyzed` | Analysis/draft work exists, but Sandbox validation is not complete |
 | `blocked` | CaseOps found an explicit blocker or on-hold state |
-| `data only` | Pipeline completed with a no-deploy data/admin action |
-| `ready to deploy` | Sandbox validation is current and Production deployment is required |
-| `complete no deploy` | Pipeline completed and no Production deployment is required |
+| `data only` | Test Report confirms a completed no-deploy data/admin action |
+| `ready to deploy` | Test Report confirms the fix and says Production deployment is required |
+| `complete no deploy` | Test Report confirms the fix and says Production deployment is not required for a non-data/admin outcome |
 | `needs engineering` | CaseOps determined Engineering ownership is required |
 | `escalated to engineering` | Jira status is escalated to Engineering |
 | `closed` | Jira issue is closed, resolved, or canceled |
@@ -46,9 +46,9 @@ Issues may also have independent condition tags:
 | Condition tag | Criteria |
 | --- | --- |
 | `new comments` | Jira has comments newer than the last CaseOps viewed marker |
-| `partial run` | Pipeline state is `in progress` or `analyzed` |
+| `partial run` | Pipeline has started but has not reached a confirmed terminal outcome |
 | `stale` | Persisted resume state has a stale step |
-| `failed validation` | Test report indicates failed validation or not fixed |
+| `failed validation` | Test report `Validation Verdict` says `Validation Status: failed` or `Fixed?: no` |
 | `similar issues` | Similar-issue clustering found related open or closed issues |
 | `generated files` | Issue-specific generated files exist |
 | `customer reply needed` | Drafts or notes ask the requester to confirm or verify |
@@ -73,7 +73,20 @@ Run pipeline actions only on approved issues.
 
 The final queue summary includes the stop reason, such as all queued issues complete, stalled/no progress, max passes reached, or stop requested. Incomplete issue lines include the reason CaseOps stopped retrying that issue, and grouped counts summarize repeated blockers by step and status.
 
-`Ready to Deploy` means Sandbox validation is current, the solution is confirmed, and the persisted deliverable state says a Production deployment is required. This is the tag to use when looking for issues ready for your Production deployment process.
+`Ready to Deploy` means Sandbox validation is current, the solution is confirmed, and the Test Report verdict says a Production deployment is required. Legacy reports fall back to the persisted deliverable state only when they do not contain a `Validation Verdict` section. This is the tag to use when looking for issues ready for your Production deployment process.
+
+Test Reports use a required verdict contract so CaseOps does not infer status from incidental prose:
+
+```md
+## Validation Verdict
+
+- Validation Status: passed | failed | blocked | not-run
+- Fixed?: yes | no | unknown
+- Production deploy required: yes | no | n/a | unknown
+- Evidence:
+```
+
+CaseOps treats `Validation Status: passed` plus `Fixed?: yes` as a confirmed fix. It treats `Validation Status: failed` or `Fixed?: no` as failed validation. It treats `Validation Status: blocked` as a blocked issue. If a report contains a `Validation Verdict` section, historical notes elsewhere in the report do not drive tags.
 
 `partial run` finds issues where CaseOps started the pipeline but has not reached a terminal outcome yet. `needs engineering` means CaseOps determined the work is not support-resolvable and needs Engineering instead of a Support-owned deployment.
 

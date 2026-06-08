@@ -1156,16 +1156,16 @@
         })
         .catch(() => { /* non-fatal: badge simply won't appear */ });
 
-      // Load deployment validation status and show badge
+      // Load operator-controlled Production promotion status and show badge
       fetch(`/api/issue/${key}/deployment-status`)
         .then(r => r.json())
         .then(ds => {
           if (ds.status !== 'none') {
             const badge = document.createElement('span');
             const statusConfig = {
-              validated: { text: '✓ Validated', css: 'background:#28a745;color:#fff;', title: 'Deployed to Production & customer confirmed fixed' },
-              pending: { text: '⏳ Pending', css: 'background:#17a2b8;color:#fff;', title: 'Sandbox tested, awaiting Production promotion' },
-              failed: { text: '✗ Failed', css: 'background:#dc3545;color:#fff;', title: 'Failed testing; marked for re-investigation' }
+              validated: { text: '✓ Prod Confirmed', css: 'background:#28a745;color:#fff;', title: 'Production promotion completed and customer confirmed fixed' },
+              pending: { text: '⏳ Awaiting Prod', css: 'background:#17a2b8;color:#fff;', title: 'Sandbox tested, awaiting operator-controlled Production promotion' },
+              failed: { text: '✗ Prod Issue', css: 'background:#dc3545;color:#fff;', title: 'Production promotion or post-promotion check failed' }
             };
             const config = statusConfig[ds.status] || { text: ds.status, css: '', title: '' };
             badge.className = `detail-badge deployment-${ds.status}`;
@@ -1395,6 +1395,32 @@
     }
   }
 
+  function renderTestReportVerdict(verdict) {
+    if (!verdict) return '';
+    const status = String(verdict.validation_status || 'unknown');
+    const fixed = String(verdict.fixed || 'unknown');
+    const deploy = String(verdict.production_deploy_required || 'unknown');
+    const contractPresent = Boolean(verdict.contract_present);
+    const contractComplete = Boolean(verdict.contract_complete || verdict.has_contract);
+    const tone =
+      status === 'passed' && fixed === 'yes' ? 'passed' :
+      status === 'failed' || fixed === 'no' ? 'failed' :
+      status === 'blocked' ? 'blocked' :
+      'unknown';
+    const contractText = contractComplete ? 'Contract complete' : (contractPresent ? 'Contract incomplete' : 'Legacy or missing contract');
+    return `
+      <div class="test-verdict test-verdict-${tone}">
+        <div class="test-verdict-title">Validation Verdict</div>
+        <div class="test-verdict-items">
+          <span><strong>Status</strong> ${escHtml(status)}</span>
+          <span><strong>Fixed?</strong> ${escHtml(fixed)}</span>
+          <span><strong>Production deploy</strong> ${escHtml(deploy)}</span>
+          <span><strong>Source</strong> ${escHtml(contractText)}</span>
+        </div>
+      </div>
+    `;
+  }
+
   async function selectTab(key, ftype, tabEl) {
     const seq = ++selectTabSeq;
     activeTab = ftype;
@@ -1433,6 +1459,9 @@
         </div>
       `;
       content = blockerAlert + content;
+    }
+    if (ftype === 'test_report') {
+      content = renderTestReportVerdict(data.test_report_verdict) + content;
     }
     area.innerHTML = content;
 
@@ -2566,9 +2595,9 @@
 
   function showDeploymentStatusDialog(key, currentStatus) {
     const statuses = [
-      { value: 'validated', label: '✓ Validated — Deployed to Production & customer confirmed fixed' },
-      { value: 'pending', label: '⏳ Pending — Sandbox tested, awaiting Production promotion' },
-      { value: 'failed', label: '✗ Failed — Failed testing; marked for re-investigation' }
+      { value: 'validated', label: '✓ Prod Confirmed — Production promotion completed and customer confirmed fixed' },
+      { value: 'pending', label: '⏳ Awaiting Prod — Sandbox tested, awaiting operator-controlled Production promotion' },
+      { value: 'failed', label: '✗ Prod Issue — Production promotion or post-promotion check failed' }
     ];
 
     const message = `Current status: ${currentStatus || 'none'}\n\nSelect new status:`;
