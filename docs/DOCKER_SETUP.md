@@ -7,7 +7,7 @@ This is the generic Docker setup for someone testing or running CaseOps from a p
 Current image:
 
 ```text
-ghcr.io/sdbingham/caseops:0.1.10
+ghcr.io/sdbingham/caseops:0.1.11
 ```
 
 You can also use `ghcr.io/sdbingham/caseops:latest`, but a numbered tag is easier to support.
@@ -29,7 +29,7 @@ Example:
 ```yaml
 services:
   caseops:
-    image: ghcr.io/sdbingham/caseops:0.1.10
+    image: ghcr.io/sdbingham/caseops:0.1.11
     ports:
       - "${CASEOPS_HOST_PORT:-5350}:8080"
     env_file:
@@ -119,13 +119,13 @@ Then open Settings and confirm the displayed CaseOps version matches the image t
 Switch to a specific version:
 
 ```bash
-CASEOPS_IMAGE=ghcr.io/sdbingham/caseops:0.1.10 docker compose up -d
+CASEOPS_IMAGE=ghcr.io/sdbingham/caseops:0.1.11 docker compose up -d
 ```
 
 On Windows PowerShell:
 
 ```powershell
-$env:CASEOPS_IMAGE="ghcr.io/sdbingham/caseops:0.1.10"
+$env:CASEOPS_IMAGE="ghcr.io/sdbingham/caseops:0.1.11"
 docker compose up -d
 ```
 
