@@ -886,6 +886,7 @@
     const searchable = [
       issue.key || '',
       issue.summary || '',
+      issue.jira_summary_search_text || '',
       issue.status || '',
       issueSearchTags(issue),
     ].join(' ').toLowerCase();

@@ -1054,6 +1054,13 @@ def _read_small_text(path: Path, max_chars: int) -> str:
     return text[:max_chars]
 
 
+def _jira_summary_search_text(key: str) -> str:
+    if not key:
+        return ""
+    path = OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key)
+    return _compact_text(_read_small_text(path, 12000), 12000)
+
+
 def _estimate_token_count(text: str) -> int:
     """Simple token estimate used for planning context budgets."""
     if not text:
@@ -7752,6 +7759,7 @@ def api_issues():
             "status": status,
             "assignee": row.get("Assignee", ""),
             "summary": row.get("Summary", ""),
+            "jira_summary_search_text": _jira_summary_search_text(key),
             "disposition": _disposition(status),
             "updated": row.get("Updated", ""),
             "due": due,

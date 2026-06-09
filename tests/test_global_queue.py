@@ -623,6 +623,36 @@ class GlobalQueueTests(unittest.TestCase):
             ],
         )
 
+    def test_api_issues_includes_jira_summary_search_text_for_filtering(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            summary_path = outputs / app.FILE_LOCATIONS["jira_summary"].format(key="OPEN-1")
+            summary_path.parent.mkdir(parents=True, exist_ok=True)
+            summary_path.write_text(
+                "# Jira Summary\n\nHidden filter keyword: practitioner billing address mismatch.\n",
+                encoding="utf-8",
+            )
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(
+                    app,
+                    "_read_manifest",
+                    return_value=[
+                        {
+                            "Key": "OPEN-1",
+                            "Status": "Open",
+                            "Summary": "Visible issue summary",
+                            "Assignee": "CaseOps User",
+                        }
+                    ],
+                ),
+            ):
+                payload = app.app.test_client().get("/api/issues").get_json()
+
+        self.assertEqual(len(payload), 1)
+        self.assertIn("practitioner billing address mismatch", payload[0]["jira_summary_search_text"])
+
     def test_no_deploy_operator_report_allows_step10_drafts_without_terminal_tag(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
