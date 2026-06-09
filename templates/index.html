@@ -871,6 +871,10 @@
     return `<span class="badge ${cls}" title="${escHtml(title || label)}">${escHtml(label)}</span>`;
   }
 
+  function normalizedIssueTagText(value) {
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
   function issueSearchTags(issue) {
     const tags = Array.isArray(issue.tags) ? issue.tags : [];
     return tags.filter(Boolean).join(' ').toLowerCase();
@@ -1019,7 +1023,9 @@
       let stateBadge = '';
       let secondaryBadges = '';
 
-      stateBadge = issueTagBadge(issue.primary_tag);
+      const statusText = normalizedIssueTagText(issue.status);
+      const primaryTag = normalizedIssueTagText(issue.primary_tag);
+      stateBadge = statusText && statusText === primaryTag ? '' : issueTagBadge(issue.primary_tag);
       const conditionTags = Array.isArray(issue.condition_tags) ? issue.condition_tags : [];
       secondaryBadges = conditionTags.map(tag => issueTagBadge(tag)).join('');
 

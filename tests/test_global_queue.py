@@ -101,6 +101,7 @@ class GlobalQueueTests(unittest.TestCase):
                 "needs_escalation": False,
                 "is_jira_escalated_any": False,
                 "has_stale_pipeline_step": True,
+                "has_partial_pipeline_run": True,
             },
         )
         engineering = app._derive_issue_tag_contract(
@@ -119,6 +120,22 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertEqual(partial["condition_tags"], ["partial run", "stale"])
         self.assertEqual(engineering["primary_tag"], "needs engineering")
         self.assertNotIn("needs escalation", engineering["tags"])
+
+    def test_partial_run_requires_mixed_issue_step_state(self):
+        self.assertFalse(app._pipeline_state_has_partial_issue_run({}))
+        self.assertFalse(app._pipeline_state_has_partial_issue_run({"steps": [{"step": 12, "status": "pending"}]}))
+        self.assertFalse(app._pipeline_state_has_partial_issue_run({"steps": [{"step": 3, "status": "complete"}]}))
+        self.assertTrue(
+            app._pipeline_state_has_partial_issue_run(
+                {
+                    "steps": [
+                        {"step": 3, "status": "complete"},
+                        {"step": 4, "status": "pending"},
+                        {"step": 12, "status": "pending"},
+                    ]
+                }
+            )
+        )
 
     def test_issue_tag_contract_primary_tags_are_exclusive_and_complete(self):
         base = {
@@ -157,6 +174,7 @@ class GlobalQueueTests(unittest.TestCase):
             "needs_escalation": False,
             "is_jira_escalated_any": False,
             "has_stale_pipeline_step": True,
+            "has_partial_pipeline_run": True,
             "has_failed_validation": True,
             "has_similar_issues": True,
             "has_generated_files": True,
@@ -170,7 +188,6 @@ class GlobalQueueTests(unittest.TestCase):
             contract["condition_tags"],
             [
                 "new comments",
-                "partial run",
                 "stale",
                 "failed validation",
                 "similar issues",
@@ -405,7 +422,7 @@ class GlobalQueueTests(unittest.TestCase):
             self.assertFalse(flags["is_complete_no_deploy"])
             self.assertTrue(flags["has_failed_validation"])
             self.assertEqual(contract["primary_tag"], "in progress")
-            self.assertEqual(contract["condition_tags"], ["partial run", "failed validation"])
+            self.assertEqual(contract["condition_tags"], ["failed validation"])
 
     def test_incomplete_contract_does_not_fall_through_to_legacy_failure_text(self):
         text = "\n".join(
@@ -672,7 +689,7 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertEqual(step10["status"], "pending")
         self.assertEqual(plan["quality_gates"]["step_9_test_report"], "operator_action_pending")
         self.assertEqual(contract["primary_tag"], "in progress")
-        self.assertIn("partial run", contract["condition_tags"])
+        self.assertNotIn("partial run", contract["condition_tags"])
 
     def test_bulk_pipeline_state_repair_repairs_only_stale_states(self):
         with tempfile.TemporaryDirectory() as tmp:

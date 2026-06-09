@@ -7018,6 +7018,31 @@ def _pipeline_state_has_stale_step(state: dict[str, Any]) -> bool:
     return any(str(step.get("status") or "").strip().lower() == "stale" for step in steps if isinstance(step, dict))
 
 
+def _pipeline_state_has_partial_issue_run(state: dict[str, Any]) -> bool:
+    """True when persisted issue work started but did not reach completion.
+
+    Summary/notification bookkeeping steps are intentionally ignored; a run is
+    only "partial" when issue-processing steps 2-10 have mixed complete and
+    incomplete state.
+    """
+    steps = state.get("steps") if isinstance(state.get("steps"), list) else []
+    issue_steps = [
+        step
+        for step in steps
+        if isinstance(step, dict)
+        and isinstance(step.get("step"), int)
+        and step.get("step") not in {11, 12}
+    ]
+    if not issue_steps:
+        return False
+
+    statuses = {str(step.get("status") or "").strip().lower() for step in issue_steps}
+    completed = {"complete", "skipped"}
+    has_completed = any(status in completed for status in statuses)
+    has_incomplete = any(status and status not in completed for status in statuses)
+    return has_completed and has_incomplete
+
+
 _FAILED_VALIDATION_VERDICT_RE = re.compile(
     r"""(?imx)
     ^\s*(?:[-*]\s*)?
@@ -7294,6 +7319,7 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
     has_similar_issues = _issue_has_similar_issue_context(key)
     needs_customer_reply = _issue_needs_customer_reply(key)
     has_stale_pipeline_step = _pipeline_state_has_stale_step(state_payload)
+    has_partial_pipeline_run = _pipeline_state_has_partial_issue_run(state_payload)
 
     needs_escalation = (
         (has_schema and routing["path"] == "engineering_required")
@@ -7347,6 +7373,7 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         "has_similar_issues": has_similar_issues,
         "needs_customer_reply": needs_customer_reply,
         "has_stale_pipeline_step": has_stale_pipeline_step,
+        "has_partial_pipeline_run": has_partial_pipeline_run,
     }
 
 
@@ -7386,10 +7413,7 @@ def _derive_issue_tag_contract(status: str, flags: dict[str, Any], *, has_new_co
     conditions: list[str] = []
     if has_new_comments:
         conditions.append("new comments")
-    if pipeline_state in {PipelineState.INVESTIGATING.value, PipelineState.ANALYZED.value} or (
-        pipeline_state == PipelineState.VALIDATED.value
-        and primary == "in progress"
-    ):
+    if flags.get("has_partial_pipeline_run") and not flags.get("has_failed_validation"):
         conditions.append("partial run")
     if flags.get("has_stale_pipeline_step"):
         conditions.append("stale")
