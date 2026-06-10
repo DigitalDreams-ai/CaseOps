@@ -21,6 +21,7 @@ description: Retrieves, normalizes, and analyzes Jira issues for Salesforce impl
 5. Output a structured issue analysis.
    - Standalone: write to `outputs/investigations/<KEY>.md` using `assets/issue-analysis-template.md`.
    - When invoked by `caseops-pipeline`: populate the **Issue Understanding** section of `outputs/investigations/<KEY>.md` using `assets/investigation-record-template.md` from the pipeline skill's assets.
+6. Follow `../caseops-pipeline/references/markdown-output-rules.md` for generated Markdown.
 
 ## Available Scripts
 
@@ -39,3 +40,4 @@ description: Retrieves, normalizes, and analyzes Jira issues for Salesforce impl
 - Do not infer acceptance criteria if the issue contradicts itself.
 - Mark assumptions clearly.
 - Preserve issue keys and links exactly.
+- Markdown output follows the canonical CaseOps Markdown rules.

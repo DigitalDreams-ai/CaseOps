@@ -3,6 +3,8 @@
 Generated: YYYY-MM-DD
 Last updated: YYYY-MM-DD
 
+<!-- Follow Markdown formatting rules in ../references/markdown-output-rules.md. -->
+
 ## Executive Summary
 
 - Total issues in scope:

@@ -1,5 +1,7 @@
 # Sandbox Test Report
 
+<!-- Follow Markdown formatting rules in ../references/markdown-output-rules.md. -->
+
 ## Validation Verdict
 
 - Validation Status: passed | failed | blocked | not-run

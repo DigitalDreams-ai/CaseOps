@@ -41,6 +41,7 @@ description: Mandatory for caseops-pipeline after a proposed solution is prepare
    - `Production deploy required: yes | no | n/a | unknown`
    - `Evidence:` one concise sentence or artifact path supporting the verdict.
    Fill **Production deployment state** (Sandbox vs Production; whether **Gearset** or other promote is required).
+   Follow `../caseops-pipeline/references/markdown-output-rules.md` for Markdown table formatting.
 9. If the issue is not fixed, revert the attempt from the captured baseline, verify the revert, record failure evidence, and return control to the pipeline for another iteration.
 
 ## References

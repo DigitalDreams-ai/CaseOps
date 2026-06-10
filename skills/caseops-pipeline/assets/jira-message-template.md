@@ -5,6 +5,7 @@ Customer-facing only. Output should be conversational, friendly, direct, human,
 and non-technical. Do not include internal diagnosis notes, metadata dumps,
 file paths, pipeline details, or private IDs unless the reporter specifically
 asked for technical detail.
+Follow Markdown formatting rules in ../references/markdown-output-rules.md.
 -->
 
 Hi [Name],

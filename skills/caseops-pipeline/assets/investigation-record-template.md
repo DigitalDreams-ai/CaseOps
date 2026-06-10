@@ -1,5 +1,7 @@
 # Investigation Record
 
+<!-- Follow Markdown formatting rules in ../references/markdown-output-rules.md. -->
+
 ## Jira Issue
 
 - Key:

@@ -2,6 +2,8 @@
 
 Copy the block for the active step into the Agent tool. Replace placeholders (`<KEY>`, pasted hypotheses, etc.) with real values. Each prompt must stay **fully self-contained** (the sub-agent has no orchestrator context).
 
+All Markdown artifacts must follow `skills/caseops-pipeline/references/markdown-output-rules.md`.
+
 ## Step 3 — Analyze the issue
 
 ```

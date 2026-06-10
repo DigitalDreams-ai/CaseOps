@@ -271,40 +271,67 @@ try:
     import markdown as md_lib
     import re
 
+    _TABLE_SEPARATOR_CELL_RE = re.compile(r"^\s*:?-{3,}:?\s*$")
+    _SINGLE_LINE_TABLE_ROW_SPLIT_RE = re.compile(r"\s*\|\s*\|\s*")
+
+
+    def _markdown_table_cells(row: str) -> list[str]:
+        row = row.strip()
+        if row.startswith("|"):
+            row = row[1:]
+        if row.endswith("|"):
+            row = row[:-1]
+        return [cell.strip() for cell in row.split("|")]
+
+
+    def _is_markdown_table_separator(cells: list[str]) -> bool:
+        return bool(cells) and all(_TABLE_SEPARATOR_CELL_RE.match(cell or "") for cell in cells)
+
+
+    def _format_markdown_table_row(cells: list[str]) -> str:
+        escaped = [cell.replace("|", r"\|").replace("\n", "<br>") for cell in cells]
+        return "| " + " | ".join(escaped) + " |"
+
+
     def _fix_single_line_tables(text: str) -> str:
         """Convert single-line markdown tables to multi-line format."""
-        # Pattern: | col1 | col2 | | --- | --- | | val1 | val2 |
-        # Convert to proper multi-line table
+        # Common malformed model output:
+        #   | Col 1 | Col 2 | | --- | --- | | A | B |
+        # Convert it to a normal multi-line GFM table before markdown rendering.
         lines = text.split('\n')
         result = []
         for line in lines:
-            # Check if line contains table pipes but is clearly single-line table
-            if '|' in line and ' | --- |' in line:
-                # Split by pipe, filter empty, reconstruct as rows
-                parts = [p.strip() for p in line.split('|')]
-                parts = [p for p in parts if p]  # Remove empty parts
-
-                # Find separator row (contains dashes)
-                sep_idx = next((i for i, p in enumerate(parts) if all(c in '-:' for c in p.strip())), -1)
-                if sep_idx > 0:
-                    # Split into header, separator, and data rows
-                    header = parts[:sep_idx]
-                    separator = parts[sep_idx]
-                    data_rows = parts[sep_idx+1:]
-
-                    # Reconstruct as proper markdown table
-                    result.append('| ' + ' | '.join(header) + ' |')
-                    result.append('| ' + ' | '.join(['---'] * len(header)) + ' |')
-
-                    # Add data rows (every len(header) items is one row)
-                    for i in range(0, len(data_rows), len(header)):
-                        row = data_rows[i:i+len(header)]
-                        if len(row) == len(header):
-                            result.append('| ' + ' | '.join(row) + ' |')
-                else:
-                    result.append(line)
-            else:
+            if "|" not in line or "---" not in line:
                 result.append(line)
+                continue
+
+            row_chunks = [
+                chunk.strip()
+                for chunk in _SINGLE_LINE_TABLE_ROW_SPLIT_RE.split(line.strip())
+                if chunk.strip()
+            ]
+            if len(row_chunks) < 2:
+                result.append(line)
+                continue
+
+            rows = [_markdown_table_cells(chunk) for chunk in row_chunks]
+            sep_idx = next((idx for idx, cells in enumerate(rows) if _is_markdown_table_separator(cells)), -1)
+            if sep_idx <= 0:
+                result.append(line)
+                continue
+
+            column_count = len(rows[sep_idx])
+            if column_count == 0 or len(rows[sep_idx - 1]) != column_count:
+                result.append(line)
+                continue
+
+            result.append(_format_markdown_table_row(rows[sep_idx - 1]))
+            result.append(_format_markdown_table_row(["---"] * column_count))
+            for row in rows[sep_idx + 1:]:
+                if len(row) > column_count:
+                    row = row[:column_count - 1] + [" | ".join(row[column_count - 1:])]
+                padded = (row + [""] * column_count)[:column_count]
+                result.append(_format_markdown_table_row(padded))
         return '\n'.join(result)
 
     def render_md(text: str) -> str:
@@ -4049,11 +4076,13 @@ def _update_pipeline_run_metrics(
 
 # -- run state ---------------------------------------------------------------
 # Multiple issue-specific runs are allowed in parallel.
-# Global actions block each other and block new issue runs.
-# Issue runs are blocked only while a global action is active.
+# Global pipeline actions block each other and block new issue runs.
+# Jira sync is a global file refresh, but manual issue instructions may proceed
+# during sync so browser-scheduled syncs do not block operator work.
 
 _state_lock = threading.Lock()
 _active_keys: set[str] = set()          # currently running run keys
+_active_run_actions: dict[str, str] = {}
 _active_run_controls: dict[str, dict[str, Any]] = {}
 _log_q: queue.Queue[str] = queue.Queue()  # tagged messages: "key|line" or "__done__|key"
 _manifest_q: queue.Queue[str] = queue.Queue()  # manifest change notifications
@@ -4069,6 +4098,16 @@ _TOKEN_USAGE_LOG_RE = re.compile(
     r"Token usage:\s*total=([\d,]+),\s*input=([\d,]+),\s*output=([\d,]+)(?:,\s*cache_create=([\d,]+))?(?:,\s*cache_read=([\d,]+))?",
     re.IGNORECASE,
 )
+
+
+def _mark_run_active_locked(run_key: str, action: str) -> None:
+    _active_keys.add(run_key)
+    _active_run_actions[run_key] = action
+
+
+def _mark_run_inactive_locked(run_key: str) -> None:
+    _active_keys.discard(run_key)
+    _active_run_actions.pop(run_key, None)
 
 
 def _popen_process_group_kwargs() -> dict[str, Any]:
@@ -5788,7 +5827,7 @@ def _stream_proc(cmd: list[str], run_key: str) -> None:
             )
     finally:
         with _state_lock:
-            _active_keys.discard(run_key)
+            _mark_run_inactive_locked(run_key)
         _finish_run_control(run_key)
         # Invalidate jira_summary caches after operations
         # - Global operations: clear all caches so fresh data is fetched from disk
@@ -5910,7 +5949,7 @@ def _stream_claude_proc(prompt: str, run_key: str, issue_key: str | None = None)
         _do_stream_claude(prompt, run_key, issue_key)
     finally:
         with _state_lock:
-            _active_keys.discard(run_key)
+            _mark_run_inactive_locked(run_key)
         _finish_run_control(run_key)
         # Phase 2: invalidate caches when pipeline completes so stale flags aren't served
         if issue_key:
@@ -6025,7 +6064,7 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
             except Exception as exc:
                 _log_emit_line(run_key, f"WARNING: failed to persist run metrics: {exc}")
         with _state_lock:
-            _active_keys.discard(run_key)
+            _mark_run_inactive_locked(run_key)
         _finish_run_control(run_key)
         # Phase 2: invalidate caches for this issue when full-issue run completes
         _invalidate_jira_summary_cache(key)
@@ -6099,7 +6138,7 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
             except Exception as exc:
                 _log_emit_line(run_key, f"WARNING: failed to persist run metrics: {exc}")
         with _state_lock:
-            _active_keys.discard(run_key)
+            _mark_run_inactive_locked(run_key)
         _finish_run_control(run_key)
         _invalidate_jira_summary_cache(key)
         investigation_cache.pop(key, None)
@@ -6213,7 +6252,7 @@ def _run_global_issue_worker(key: str, index: int, total: int, *, reprocess: boo
     with _state_lock:
         if key in _active_keys:
             return key, False, "already running"
-        _active_keys.add(key)
+        _mark_run_active_locked(key, "global_worker")
 
     _log_emit_line(_GLOBAL_KEY, f"Queue: starting {key} ({index}/{total})")
     try:
@@ -6407,7 +6446,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
         manifest_changed()
     finally:
         with _state_lock:
-            _active_keys.discard(run_key)
+            _mark_run_inactive_locked(run_key)
         _finish_run_control(run_key)
         _log_emit_line(run_key, f"Done: {run_key}")
         _log_emit_done(run_key)
@@ -8134,7 +8173,7 @@ def api_run():
             _log_emit_line(run_key, "ERROR: '/app/run_pipeline.py' is no longer supported. "
                                     "Use the updated sync/pipeline actions.")
             with _state_lock:
-                _active_keys.discard(run_key)
+                _mark_run_inactive_locked(run_key)
             _finish_run_control(run_key)
             return jsonify({
                 "error": "Legacy run_pipeline workflow removed. Use sync/reprocess/full actions from UI.",
@@ -8145,9 +8184,11 @@ def api_run():
         if run_key in _active_keys:
             label = "A global run" if run_key == _GLOBAL_KEY else run_key
             return jsonify({"error": f"{label} is already running."}), 409
-        if not is_global and _GLOBAL_KEY in _active_keys:
-            return jsonify({"error": "A global sync is in progress — please wait."}), 409
-        _active_keys.add(run_key)
+        active_global_action = _active_run_actions.get(_GLOBAL_KEY) if _GLOBAL_KEY in _active_keys else ""
+        if not is_global and active_global_action:
+            if not (action == "claude_instruction" and active_global_action in {"sync", "sync_new"}):
+                return jsonify({"error": "A global run is in progress — please wait."}), 409
+        _mark_run_active_locked(run_key, action)
 
     if use_full_issue:
         t = threading.Thread(target=_stream_full_issue, args=(key, run_key), daemon=True)
@@ -8230,6 +8271,7 @@ def api_status():
             }
         return jsonify({
             "active_keys": list(_active_keys),
+            "active_run_actions": dict(_active_run_actions),
             "count": len(_active_keys),
             "run_controls": run_controls,
             "caseops_llm_auth": (
@@ -8942,12 +8984,57 @@ def api_magic_links():
     })
 
 
+def _salesforce_host_from_url(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    parsed = urllib.parse.urlparse(raw if "://" in raw else f"https://{raw}")
+    return (parsed.netloc or parsed.path).split("/", 1)[0].strip().lower()
+
+
+def _lightning_host_from_instance_url(value: str) -> str:
+    host = _salesforce_host_from_url(value)
+    if not host or host in {"login.salesforce.com", "test.salesforce.com"}:
+        return ""
+    if host.endswith(".lightning.force.com"):
+        return host
+    if host.endswith(".my.salesforce.com"):
+        return f"{host[:-len('.my.salesforce.com')]}.lightning.force.com"
+    return ""
+
+
+def _lightning_host_from_alias(alias: str, *, sandbox: bool = False) -> str:
+    host = _salesforce_host_from_url(alias)
+    if not host:
+        return ""
+    if host.endswith(".lightning.force.com"):
+        return host
+    if host.endswith(".my.salesforce.com"):
+        return _lightning_host_from_instance_url(host)
+    prefix = host
+    if sandbox and "--" in prefix and ".sandbox" not in prefix:
+        prefix = f"{prefix}.sandbox"
+    return f"{prefix}.lightning.force.com"
+
+
 @app.route("/api/orgs", methods=["GET"])
 def api_orgs():
     """Return Salesforce org identifiers from .env for URL construction."""
+    prod_alias = os.environ.get("CASEOPS_PRODUCTION_READ_ORG", "")
+    sandbox_alias = os.environ.get("CASEOPS_SANDBOX_TARGET_ORG", "")
+    prod_lightning_host = (
+        _lightning_host_from_alias(prod_alias)
+        or _lightning_host_from_instance_url(os.environ.get("CASEOPS_PRODUCTION_INSTANCE_URL", ""))
+    )
+    sandbox_lightning_host = (
+        _lightning_host_from_alias(sandbox_alias, sandbox=True)
+        or _lightning_host_from_instance_url(os.environ.get("CASEOPS_SANDBOX_INSTANCE_URL", ""))
+    )
     return jsonify({
-        "prod": os.environ.get("CASEOPS_PRODUCTION_READ_ORG", ""),
-        "sandbox": os.environ.get("CASEOPS_SANDBOX_TARGET_ORG", ""),
+        "prod": prod_alias,
+        "sandbox": sandbox_alias,
+        "prod_lightning_host": prod_lightning_host,
+        "sandbox_lightning_host": sandbox_lightning_host,
     })
 
 

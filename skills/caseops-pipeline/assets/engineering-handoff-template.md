@@ -1,5 +1,6 @@
 <!--
 Engineering handoff format. Output should start at "Problem".
+Follow Markdown formatting rules in ../references/markdown-output-rules.md.
 Keep this concise and Jira-ready. Do not include internal pipeline sections,
 metadata dumps, confidence scoring, long investigation narrative, tokens,
 private URLs, or internal filesystem paths.

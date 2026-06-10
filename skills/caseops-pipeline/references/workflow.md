@@ -293,6 +293,8 @@ Do **not** conflate “fix confirmed in Sandbox” with “Production is fixed�
 
 Create or update the dated summary directly in the active Claude Code run after active issues complete Steps 3-10. Do not call deprecated Python orchestration paths.
 
+Follow `references/markdown-output-rules.md` for all generated Markdown. This is especially important for the dated summary tables.
+
 Before writing the dated summary, check whether `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` already exists. If it exists, Read it and then Edit it. Use Write only when the dated summary file does not already exist.
 
 ---

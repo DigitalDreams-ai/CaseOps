@@ -1,5 +1,7 @@
 # Problem Hypothesis and Solution
 
+<!-- Follow Markdown formatting rules in ../references/markdown-output-rules.md. -->
+
 **Issue:** `<KEY>`
 **Date:** `<YYYY-MM-DD>`
 

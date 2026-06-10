@@ -27,6 +27,7 @@ description: Investigates Salesforce Production metadata read-only to identify o
 6. Record why each metadata item was retrieved.
 7. Summarize findings and likely implementation surface.
 8. Stop before making changes.
+9. Follow `../caseops-pipeline/references/markdown-output-rules.md` for generated Markdown.
 
 ## References
 
@@ -44,3 +45,4 @@ description: Investigates Salesforce Production metadata read-only to identify o
 - Raw metadata is stored under `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`.
 - Known mechanics use CaseOps helpers before repeated manual query variants.
 - Findings separate facts from hypotheses.
+- Markdown output follows the canonical CaseOps Markdown rules.

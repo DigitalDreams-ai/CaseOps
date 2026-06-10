@@ -3,6 +3,7 @@
 <!--
 Operator-facing only. Do not post this file to Jira. Keep it concise.
 Investigation remains the source of truth for detailed evidence and metadata.
+Follow Markdown formatting rules in ../references/markdown-output-rules.md.
 -->
 
 Problem

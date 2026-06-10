@@ -337,7 +337,10 @@
   function resetMainToOverview() {
     activeKey = null;
     activeIssueData = null;
-    document.querySelectorAll('.issue-item').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.issue-item').forEach(el => {
+      el.classList.remove('selected', 'loading');
+      el.removeAttribute('aria-current');
+    });
     const dash = document.getElementById('dashboard');
     const issueBody = document.getElementById('issue-body');
     const header = document.getElementById('detail-header');
@@ -627,8 +630,10 @@
         issuesEventSource = null;
       }
     } else {
-      initStream();
-      initIssuesSSE();
+      recoverActiveRuns().finally(() => {
+        initStream();
+        initIssuesSSE();
+      });
     }
   });
 
@@ -987,6 +992,16 @@
       if (!res.ok) return;
       const data = await res.json();
       const keys = data.active_keys || [];
+      const serverActive = new Set(keys);
+      for (const key of Array.from(activeRuns)) {
+        if (!serverActive.has(key)) {
+          activeRuns.delete(key);
+          setIssueRunning(key, false);
+          if (key !== '__global__' && pipelineProgress[key]?.status !== 'failed') {
+            clearStepIndicator(key);
+          }
+        }
+      }
       for (const key of keys) {
         activeRuns.add(key);
         setIssueRunning(key, true);
@@ -1018,6 +1033,9 @@
       const item = document.createElement('div');
       item.className = 'issue-item' + (issue.key === activeKey ? ' selected' : '');
       item.dataset.key = issue.key;
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
+      item.setAttribute('aria-label', `Open issue ${issue.key}`);
       const isChecked = selectedIssues.has(issue.key);
 
       // Canonical tag display: one primary tag plus independent conditions.
@@ -1055,8 +1073,6 @@
         toggleBulkSelection(issue.key);
         updateBulkActionBar();
       });
-      // Issue item click: select issue (not checkbox)
-      item.addEventListener('click', () => selectIssue(issue.key));
       itemsContainer.appendChild(item);
     });
 
@@ -1072,8 +1088,56 @@
 
   // ── Issue detail ───────────────────────────────────────────
 
+  function issueListEventIsInteractive(event) {
+    return !!event.target.closest('input, button, a, select, textarea, label, .group-label');
+  }
+
+  function openIssueFromListItem(item) {
+    const key = item?.dataset?.key;
+    if (!key) return;
+    selectIssue(key);
+  }
+
+  function initIssueListInteractions() {
+    const issueList = document.getElementById('issue-list');
+    if (!issueList || issueList.dataset.bound === 'true') return;
+    issueList.dataset.bound = 'true';
+
+    issueList.addEventListener('click', event => {
+      if (issueListEventIsInteractive(event)) return;
+      const item = event.target.closest('.issue-item[data-key]');
+      if (!item || !issueList.contains(item)) return;
+      openIssueFromListItem(item);
+    });
+
+    issueList.addEventListener('keydown', event => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      if (issueListEventIsInteractive(event)) return;
+      const item = event.target.closest('.issue-item[data-key]');
+      if (!item || !issueList.contains(item)) return;
+      event.preventDefault();
+      openIssueFromListItem(item);
+    });
+  }
+
   async function selectIssue(key) {
     const seq = ++selectIssueSeq;
+
+    document.querySelectorAll('.issue-item').forEach(el => {
+      const isSelected = el.dataset.key === key;
+      el.classList.toggle('selected', isSelected);
+      el.classList.toggle('loading', isSelected);
+      if (isSelected) {
+        el.setAttribute('aria-current', 'true');
+      } else {
+        el.removeAttribute('aria-current');
+      }
+    });
+
+    const titleEl = document.getElementById('detail-title');
+    const headerEl = document.getElementById('detail-header');
+    if (titleEl) titleEl.textContent = `${key} — Loading...`;
+    if (headerEl) headerEl.style.display = 'block';
 
     // Close sidebar on mobile after selecting issue
     if (window.innerWidth <= 768) closeSidebar();
@@ -1086,10 +1150,20 @@
     fetch(`/api/issue/${key}/mark-viewed`, { method: 'POST' })
       .catch(() => { /* non-fatal */ });
 
-    const res = await fetch(`/api/issue/${key}`);
-    if (seq !== selectIssueSeq) return;
-
-    const issue = await res.json();
+    let res;
+    let issue;
+    try {
+      res = await fetch(`/api/issue/${key}`);
+      if (seq !== selectIssueSeq) return;
+      issue = await res.json();
+    } catch (err) {
+      if (seq !== selectIssueSeq) return;
+      activeIssueData = null;
+      logLine(`Issue ${key} could not be loaded: ${err.message || err}`, 'err', '__global__');
+      resetMainToOverview();
+      renderLogForKey('__global__');
+      return;
+    }
     if (seq !== selectIssueSeq) return;
 
     if (!res.ok || !issue.key) {
@@ -1119,13 +1193,18 @@
     // highlight sidebar
     document.querySelectorAll('.issue-item').forEach(el => {
       el.classList.toggle('selected', el.dataset.key === key);
+      el.classList.remove('loading');
+      if (el.dataset.key === key) {
+        el.setAttribute('aria-current', 'true');
+      } else {
+        el.removeAttribute('aria-current');
+      }
     });
 
     const dash = document.getElementById('dashboard');
     const issueBody = document.getElementById('issue-body');
     if (dash) dash.style.display = 'none';
     if (issueBody) issueBody.style.display = 'block';
-    const titleEl = document.getElementById('detail-title');
     if (titleEl) {
       titleEl.textContent = `${issue.key} — ${issue.summary}`;
     }
@@ -1193,7 +1272,6 @@
     }
     updateForceReprocessVisibility(issue);
 
-    const headerEl = document.getElementById('detail-header');
     if (headerEl) headerEl.style.display = 'block';
 
     // Mobile: hide badges but show meta (status)
@@ -1255,17 +1333,15 @@
   }
 
   async function linkifySalesforceArtifacts(element) {
-    // Link Salesforce 15/18-char IDs directly using .env org hosts:
-    // https://[CASEOPS_PRODUCTION_READ_ORG].lightning.force.com/[Id]
-    // https://[CASEOPS_SANDBOX_TARGET_ORG].lightning.force.com/[Id]
+    // Link Salesforce 15/18-char IDs directly using backend-derived Lightning hosts.
     // Also resolve sf://Type/ApiName patterns to IDs via /api/resolve-artifact
     if (!element) return;
 
     try {
       const response = await fetch('/api/orgs');
       const orgs = await response.json();
-      const prodHost = String(orgs.prod || '').trim();
-      const sandboxHost = String(orgs.sandbox || '').trim();
+      const prodHost = String(orgs.prod_lightning_host || '').trim();
+      const sandboxHost = String(orgs.sandbox_lightning_host || '').trim();
       const primaryHost = prodHost || sandboxHost;
       if (!primaryHost && !sandboxHost) return;
 
@@ -1291,7 +1367,7 @@
         const path = objectApiName
           ? `/lightning/r/${encodeURIComponent(objectApiName)}/${encodeURIComponent(id)}/view`
           : `/lightning/r/${encodeURIComponent(id)}/view`;
-        return `https://${host}.lightning.force.com${path}`;
+        return `https://${host}${path}`;
       };
       const salesforceIdPrefixPattern = '(?:00N|00O|00P|00X|01t|02s|09D|0PS|300|301|500|801|006|005|001|a[0-9A-Za-z]{2})';
       const salesforceIdRe = new RegExp(`\\b${salesforceIdPrefixPattern}[a-zA-Z0-9]{12}(?:[a-zA-Z0-9]{3})?\\b`, 'g');
@@ -2252,7 +2328,7 @@
 
     if (activeRuns.has(runKey)) {
       logLine(`Already running: ${runKey === '__global__' ? 'global action' : runKey}`, 'err', runKey);
-      return;
+      return false;
     }
 
     logLine(`Starting: ${action}${key ? ' ' + key : ''}...`, 'info', runKey);
@@ -2268,7 +2344,7 @@
     const data = await res.json();
     if (!res.ok) {
       logLine(data.error || 'Failed to start.', 'err', runKey);
-      return;
+      return false;
     }
 
     activeRuns.add(runKey);
@@ -2283,6 +2359,7 @@
     }
     updateStatus();
     setIssueRunning(runKey, true);
+    return true;
   }
 
   // ── Scheduled Jira sync ───────────────────────────────────
@@ -2355,6 +2432,8 @@
   // Per-key log buffers. Key is run_key (issue key or '__global__').
   const logBuffers = {};
   const LOG_BUFFER_CAP = 500;
+  const LOG_STICKY_BOTTOM_PX = 32;
+  let renderedLogKey = null;
 
   function _logBuf(key) {
     if (!logBuffers[key]) logBuffers[key] = {lines: [], truncated: false};
@@ -2443,9 +2522,17 @@
     } catch (_) {}
   }
 
-  function _appendLogDOM(entry) {
+  function logIsNearBottom(el) {
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight <= LOG_STICKY_BOTTOM_PX;
+  }
+
+  function _appendLogDOM(entry, options = {}) {
     const el = document.getElementById('log-output');
     if (!el) return;
+    const shouldStick = options.forceScroll === true || (
+      options.preserveScroll !== true && logIsNearBottom(el)
+    );
     const line = document.createElement('div');
     const cls = entry && entry.cls;
     const normalizedCls = cls === 'err' ? 'error' : cls;
@@ -2453,7 +2540,7 @@
     line.className = normalizedCls ? `log-line ${normalizedCls}` : 'log-line';
     line.textContent = text;
     el.appendChild(line);
-    el.scrollTop = el.scrollHeight;
+    if (shouldStick) el.scrollTop = el.scrollHeight;
   }
 
   function logLine(text, cls, forKey) {
@@ -2472,6 +2559,9 @@
 
   function renderLogForKey(key) {
     const el = document.getElementById('log-output');
+    const sameLog = renderedLogKey === key;
+    const wasNearBottom = logIsNearBottom(el);
+    const previousScrollTop = el.scrollTop;
     el.innerHTML = '';
     const buf = _logBuf(key);
     if (buf.truncated) {
@@ -2480,7 +2570,13 @@
       notice.textContent = '... (earlier logs truncated, scroll to see latest)';
       el.appendChild(notice);
     }
-    buf.lines.forEach((entry) => _appendLogDOM(entry));
+    buf.lines.forEach((entry) => _appendLogDOM(entry, { preserveScroll: true }));
+    if (sameLog && !wasNearBottom) {
+      el.scrollTop = previousScrollTop;
+    } else {
+      el.scrollTop = el.scrollHeight;
+    }
+    renderedLogKey = key;
   }
 
   async function clearLog() {
@@ -2657,8 +2753,9 @@
     }
     if (!activeKey) return;
     const key = activeKey;
-    await runAction('claude_instruction', key, instruction);
-    // Clear the textarea after sending
+    const started = await runAction('claude_instruction', key, instruction);
+    if (!started) return;
+    // Clear the textarea after the request actually starts.
     document.getElementById('instruction-input').value = '';
     // Refresh tabs to show newly acquired files
     if (activeKey === key) {
@@ -2853,6 +2950,7 @@
 
   loadIssues()
     .then(async () => {
+      initIssueListInteractions();
       await recoverActiveRuns();
       await loadPipelineHistory('__global__');
       await restoreIssueFromSession();
@@ -2862,6 +2960,7 @@
       loadAutoSyncSettings();
     })
     .catch(() => {
+      initIssueListInteractions();
       initStream();
       initIssuesSSE();
       loadAutoSyncSettings();

@@ -719,19 +719,32 @@ select.desktop-only {
   gap: 8px;
   position: relative;
   padding: 12px;
+  min-height: 64px;
   border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   transition: background 0.15s;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: rgba(31, 111, 235, 0.18);
 }
 
 .issue-item:hover {
   background: rgba(31, 111, 235, 0.05);
 }
 
+.issue-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
 .issue-item.selected {
   background: rgba(31, 111, 235, 0.1);
   border-left: 3px solid var(--color-primary);
   padding-left: 9px;
+}
+
+.issue-item.loading {
+  background: rgba(31, 111, 235, 0.14);
 }
 
 .issue-checkbox {
@@ -751,6 +764,7 @@ select.desktop-only {
   position: relative;
   min-width: 0;
   padding-right: 58px;
+  pointer-events: none;
 }
 
 .issue-indicator {
@@ -1003,7 +1017,7 @@ select.desktop-only {
   border-radius: 4px;
   font-size: 12px;
   font-family: inherit;
-  resize: none;
+  resize: vertical;
   min-height: 40px;
   max-height: 300px;
 }
@@ -1933,6 +1947,7 @@ select.desktop-only {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  pointer-events: none;
 }
 
 .new-comments-indicator::after {

@@ -64,6 +64,7 @@ Every customer-facing draft must pass **all** of these:
 8. **Draft both sections:**
    - `outputs/jira-messages/<KEY>.md` (customer message) — apply voice rules checklist
    - `outputs/internal-notes/<KEY>.md` (operator memo) — lean root-cause memo
+9. Follow `../caseops-pipeline/references/markdown-output-rules.md` for generated Markdown.
 
 ## Production vs Sandbox (mandatory in drafts)
 
@@ -84,6 +85,7 @@ Never imply Production includes new metadata just because Sandbox validation pas
 ## Quality Checks
 
 - Keep the Jira message concise and factual.
+- Follow the canonical Markdown output rules, especially when adding any table to internal notes or handoffs.
 - Do not claim Production deployment unless the operator **explicitly** performed or confirmed it.
 - Always separate **Sandbox-validated** work from **Production state**: say **Gearset (or deploy) required** vs **no Production metadata deploy** vs **N/A**.
 - Avoid phrasing that sounds like a component “is in Production” when it was only created/deployed in Sandbox.

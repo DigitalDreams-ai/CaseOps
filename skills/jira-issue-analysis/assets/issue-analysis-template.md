@@ -1,5 +1,7 @@
 # Jira Issue Analysis
 
+<!-- Follow Markdown formatting rules in ../../caseops-pipeline/references/markdown-output-rules.md. -->
+
 ## Issue
 
 - Key:

@@ -10,6 +10,78 @@ import caseops_paths
 
 
 class GlobalQueueTests(unittest.TestCase):
+    def tearDown(self):
+        with app._state_lock:
+            app._active_keys.clear()
+            app._active_run_actions.clear()
+            app._active_run_controls.clear()
+
+    def test_jira_sync_does_not_block_manual_send_request(self):
+        class FakeThread:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def start(self):
+                pass
+
+        with app._state_lock:
+            app._mark_run_active_locked(app._GLOBAL_KEY, "sync")
+
+        with (
+            patch.object(app, "_build_claude_prompt", return_value="prompt"),
+            patch.object(app.threading, "Thread", FakeThread),
+        ):
+            client = app.app.test_client()
+            allowed = client.post(
+                "/api/run",
+                json={"action": "claude_instruction", "key": "OPEN-1", "instruction": "check this"},
+            )
+            blocked = client.post(
+                "/api/run",
+                json={"action": "full_issue", "key": "OPEN-2"},
+            )
+
+        self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(allowed.get_json()["run_key"], "OPEN-1")
+        self.assertEqual(blocked.status_code, 409)
+        self.assertIn("global run", blocked.get_json()["error"].lower())
+
+    def test_lightning_hosts_are_derived_from_salesforce_alias_fields(self):
+        with patch.dict(
+            os.environ,
+            {
+                "CASEOPS_PRODUCTION_READ_ORG": "10xhealth",
+                "CASEOPS_SANDBOX_TARGET_ORG": "10xhealth--sean",
+                "CASEOPS_PRODUCTION_INSTANCE_URL": "https://login.salesforce.com",
+                "CASEOPS_SANDBOX_INSTANCE_URL": "https://test.salesforce.com",
+            },
+            clear=False,
+        ):
+            payload = app.app.test_client().get("/api/orgs").get_json()
+
+        self.assertEqual(payload["prod_lightning_host"], "10xhealth.lightning.force.com")
+        self.assertEqual(payload["sandbox_lightning_host"], "10xhealth--sean.sandbox.lightning.force.com")
+
+    def test_sandbox_lightning_host_alias_fallback_keeps_sandbox_segment(self):
+        self.assertEqual(
+            app._lightning_host_from_alias("10xhealth--sean", sandbox=True),
+            "10xhealth--sean.sandbox.lightning.force.com",
+        )
+
+    def test_single_line_markdown_table_is_repaired_before_rendering(self):
+        html = app.render_md("| Issue | Status | | --- | --- | | HEAL-1 | Ready |")
+
+        self.assertIn("<table>", html)
+        self.assertIn("<th>Issue</th>", html)
+        self.assertIn("<td>HEAL-1</td>", html)
+
+    def test_markdown_table_cells_escape_raw_pipes_when_repaired(self):
+        repaired = app._fix_single_line_tables(
+            "| Field | Notes | | --- | --- | | Status | Use A | B carefully |"
+        )
+
+        self.assertIn(r"Use A \| B carefully", repaired)
+
     def test_global_queue_skips_escalated_to_engineering(self):
         rows = [
             {"Key": "OPEN-1", "Status": "Open"},

@@ -1,5 +1,7 @@
 # Closed / Resolved / Canceled Archive — [KEY]
 
+<!-- Follow Markdown formatting rules in ../references/markdown-output-rules.md. -->
+
 - Key:
 - Jira status: [JIRA_STATUS]
 - Summary:
