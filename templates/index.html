@@ -1539,7 +1539,8 @@
     }
 
     if (tabSeq !== selectTabSeq || activeKey !== key) return;
-    if (!data || !data.cluster_id) {
+    const candidateMatches = Array.isArray(data?.candidate_matches) ? data.candidate_matches : [];
+    if (!data || (!data.cluster_id && !candidateMatches.length)) {
       issueBody.innerHTML = '<p class="empty">No similar-issue context available.</p>';
       return;
     }
@@ -1547,6 +1548,8 @@
     const canonicalIssue = data.cluster && data.cluster.canonical_issue ? String(data.cluster.canonical_issue) : '';
     const openMatches = Array.isArray(data.open_matches) ? data.open_matches : [];
     const closedMatches = Array.isArray(data.closed_matches) ? data.closed_matches : [];
+    const candidateOpenMatches = Array.isArray(data.candidate_open_matches) ? data.candidate_open_matches : candidateMatches.filter(item => item && item.is_open);
+    const candidateClosedMatches = Array.isArray(data.candidate_closed_matches) ? data.candidate_closed_matches : candidateMatches.filter(item => item && !item.is_open);
     const corrections = Array.isArray(data.corrections_applied) ? data.corrections_applied : [];
 
     const summaryUrl = (data.summary_url || '').trim();
@@ -1558,33 +1561,36 @@
       : '';
 
     const actionStatusEl = `<div id="similarity-action-status" class="sim-action-status" style="display:none;"></div>`;
-    const clusterActions = [
-      `<button class="btn" type="button" data-cluster-action="detach_from_cluster" data-target="${escHtml(key)}">Detach From Cluster</button>`,
-    ];
-    if (key !== canonicalIssue) {
+    const clusterActions = [];
+    if (data.cluster_id) {
+      clusterActions.push(`<button class="btn" type="button" data-cluster-action="detach_from_cluster" data-target="${escHtml(key)}">Detach From Cluster</button>`);
+    }
+    if (data.cluster_id && key !== canonicalIssue) {
       clusterActions.push(`<button class="btn" type="button" data-cluster-action="make_canonical" data-target="${escHtml(key)}">Make Current Canonical</button>`);
     }
 
     const sectionHeader = `<div class="sim-overview">
-      <div><strong>Cluster:</strong> <span class="monospace">${escHtml(data.cluster_id)}</span></div>
+      <div><strong>Confirmed Cluster:</strong> ${data.cluster_id ? `<span class="monospace">${escHtml(data.cluster_id)}</span>` : 'none'}</div>
       <div><strong>Canonical Issue:</strong> ${canonicalIssue ? escHtml(canonicalIssue) : 'not set'}</div>
-      <div><strong>Cluster Type:</strong> ${escHtml(data.cluster_type || data.classification || 'related_context_only')}</div>
-      <div><strong>State:</strong> ${escHtml(data.cluster_state || 'active')}</div>
+      <div><strong>Cluster Type:</strong> ${escHtml(data.cluster_type || data.classification || 'candidate_context')}</div>
+      <div><strong>State:</strong> ${escHtml(data.cluster_state || (data.cluster_id ? 'active' : 'candidate-only'))}</div>
       <div><strong>Classifications Applied:</strong> ${(corrections.length ? escHtml(corrections.join(', ')) : 'none')}</div>
-      <div class="sim-actions sim-cluster-actions">${clusterActions.join('')}</div>
+      ${clusterActions.length ? `<div class="sim-actions sim-cluster-actions">${clusterActions.join('')}</div>` : ''}
     </div>`;
 
-    const renderMatch = (item) => {
+    const renderMatch = (item, options = {}) => {
       const matchKey = String(item.key || '');
       if (!matchKey) return '';
+      const isCandidate = options.candidate === true;
       const isStale = item.is_stale ? 'stale' : 'current';
       const status = item.status || (item.is_open ? 'open' : 'closed');
       const statusClass = item.is_open ? 'sim-match-status-open' : 'sim-match-status-closed';
       const classification = escHtml(item.classification || 'related_context_only');
-      const confidence = item.confidence !== undefined && item.confidence !== null ? String(item.confidence) : '';
+      const confidence = item.confidence !== undefined && item.confidence !== null ? String(item.confidence) : (item.score !== undefined && item.score !== null ? String(item.score) : '');
       const adjudication = item.adjudication && typeof item.adjudication === 'object' ? item.adjudication : null;
       const reasons = Array.isArray(item.reasons) ? item.reasons.map(v => escHtml(String(v))).filter(Boolean).slice(0, 4) : [];
       const evidenceTerms = Array.isArray(item.evidence_terms) ? item.evidence_terms.map(v => escHtml(String(v))).filter(Boolean).slice(0, 6) : [];
+      const rejectionReasons = Array.isArray(item.rejection_reasons) ? item.rejection_reasons.map(v => escHtml(String(v).replace(/_/g, ' '))).filter(Boolean).slice(0, 4) : [];
       const evidenceAgainst = adjudication && Array.isArray(adjudication.evidence_against)
         ? adjudication.evidence_against.map(v => escHtml(String(v))).filter(Boolean).slice(0, 4)
         : [];
@@ -1594,20 +1600,23 @@
       const isCurrentIssue = matchKey === key;
 
       const actionButtons = [];
-      actionButtons.push(`<button class="btn primary" type="button" data-action="mark_same_root_cause" data-target="${escHtml(matchKey)}">Mark Same Root Cause</button>`);
-      actionButtons.push(`<button class="btn" type="button" data-action="mark_not_related" data-target="${escHtml(matchKey)}">Mark Not Related</button>`);
-      if (isCurrentIssue) {
-        actionButtons.push(`<button class="btn" type="button" data-action="detach_from_cluster" data-target="${escHtml(matchKey)}">Detach From Cluster</button>`);
-      }
-      if (matchKey !== canonicalIssue) {
-        actionButtons.push(`<button class="btn" type="button" data-action="make_canonical" data-target="${escHtml(matchKey)}">Make Canonical</button>`);
-      } else {
-        actionButtons.push('<span class="sim-badge sim-badge-canonical">Current canonical</span>');
+      if (!isCandidate && data.cluster_id) {
+        actionButtons.push(`<button class="btn primary" type="button" data-action="mark_same_root_cause" data-target="${escHtml(matchKey)}">Mark Same Root Cause</button>`);
+        actionButtons.push(`<button class="btn" type="button" data-action="mark_not_related" data-target="${escHtml(matchKey)}">Mark Not Related</button>`);
+        if (isCurrentIssue) {
+          actionButtons.push(`<button class="btn" type="button" data-action="detach_from_cluster" data-target="${escHtml(matchKey)}">Detach From Cluster</button>`);
+        }
+        if (matchKey !== canonicalIssue) {
+          actionButtons.push(`<button class="btn" type="button" data-action="make_canonical" data-target="${escHtml(matchKey)}">Make Canonical</button>`);
+        } else {
+          actionButtons.push('<span class="sim-badge sim-badge-canonical">Current canonical</span>');
+        }
       }
 
       const reasonsHtml = reasons.length ? `<div><strong>Reasons:</strong> ${reasons.map(v => `<span class="sim-reason">${v}</span>`).join(' ')}</div>` : '';
       const evidenceHtml = evidenceTerms.length ? `<div><strong>Evidence:</strong> ${evidenceTerms.join(', ')}</div>` : '';
-      const confidenceHtml = confidence ? `<div><strong>Confidence:</strong> ${escHtml(confidence)}</div>` : '';
+      const confidenceHtml = confidence ? `<div><strong>${isCandidate ? 'Candidate Score' : 'Confidence'}:</strong> ${escHtml(confidence)}</div>` : '';
+      const rejectionHtml = rejectionReasons.length ? `<div><strong>Not Confirmed Because:</strong> ${rejectionReasons.join(', ')}</div>` : '';
       const againstHtml = evidenceAgainst.length ? `<div><strong>Difference Warnings:</strong> ${evidenceAgainst.join(', ')}</div>` : '';
       const validationHtml = requiredValidation.length ? `<div><strong>Required Validation:</strong> ${requiredValidation.join(', ')}</div>` : '';
       const actionsHtml = actionButtons.length ? `<div class="sim-actions" data-target="${escHtml(matchKey)}">${actionButtons.join('')}</div>` : '';
@@ -1623,17 +1632,18 @@
         ${confidenceHtml}
         ${reasonsHtml}
         ${evidenceHtml}
+        ${rejectionHtml}
         ${againstHtml}
         ${validationHtml}
         ${actionsHtml}
       </div>`;
     };
 
-    const renderSection = (title, items) => {
+    const renderSection = (title, items, options = {}) => {
       if (!items.length) {
         return `<h3>${title}</h3><p class="empty">No ${title.toLowerCase()} matches.</p>`;
       }
-      return `<h3>${title}</h3><div class="sim-grid">${items.map(renderMatch).join('')}</div>`;
+      return `<h3>${title}</h3><div class="sim-grid">${items.map(item => renderMatch(item, options)).join('')}</div>`;
     };
 
     issueBody.innerHTML = `<div class="sim-issue-wrap">
@@ -1641,8 +1651,10 @@
       ${actionStatusEl}
       ${sectionHeader}
       ${summaryBlock ? `<div class="sim-summary">${summaryBlock}</div>` : ''}
-      ${renderSection('Open Matches', openMatches)}
-      ${renderSection('Closed/Resolved Matches', closedMatches)}
+      ${data.cluster_id ? renderSection('Confirmed Open Matches', openMatches) : ''}
+      ${data.cluster_id ? renderSection('Confirmed Closed/Resolved Matches', closedMatches) : ''}
+      ${renderSection('Candidate Open Matches', candidateOpenMatches, {candidate: true})}
+      ${renderSection('Candidate Closed/Resolved Matches', candidateClosedMatches, {candidate: true})}
     </div>`;
 
       issueBody.querySelectorAll('.sim-actions button[data-action]').forEach((btn) => {

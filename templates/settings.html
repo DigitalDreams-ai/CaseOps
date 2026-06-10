@@ -313,6 +313,40 @@
             font-size: 13px;
         }
 
+        .health-metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .health-metric {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            padding: 10px;
+            min-width: 0;
+        }
+
+        .health-metric strong {
+            display: block;
+            font-size: 20px;
+            line-height: 1.1;
+        }
+
+        .health-metric span {
+            color: var(--color-text-secondary);
+            font-size: 12px;
+        }
+
+        .health-list {
+            display: grid;
+            gap: 6px;
+            margin-top: 10px;
+            color: var(--color-text-secondary);
+            font-size: 12px;
+        }
+
         .status-badge {
             display: inline-flex;
             align-items: center;
@@ -610,7 +644,8 @@
             }
 
             .settings-grid,
-            .status-grid {
+            .status-grid,
+            .health-metric-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -660,6 +695,7 @@
                 <a href="#claude-section">Claude</a>
                 <a href="#salesforce-section">Salesforce</a>
                 <a href="#runtime-tuning-section">Runtime Tuning</a>
+                <a href="#similarity-section">Similar Issues</a>
                 <a href="#content-section">Content</a>
                 <a href="#instance-section">Instance</a>
                 <a href="#system-section">System</a>
@@ -984,6 +1020,99 @@
                         </div>
                     </section>
 
+                    <section class="settings-section" id="similarity-section">
+                        <div class="section-header">
+                            <div>
+                                <h2>Similar Issues</h2>
+                                <p>Candidate matches are visible for awareness. Confirmed clusters remain strict and pipeline context stays separate.</p>
+                            </div>
+                            <button type="button" class="button-secondary" id="refresh-similarity-health-btn">Refresh health</button>
+                        </div>
+
+                        <div id="similarity-health-panel">
+                            <div class="field-note">Loading similarity health...</div>
+                        </div>
+
+                        <div class="settings-grid">
+                            <div class="settings-field">
+                                <label for="similar-enabled">Similarity Indexing</label>
+                                <select id="similar-enabled" name="CASEOPS_SIMILAR_ISSUES_ENABLED">
+                                    <option value="true">Enabled</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                                <div class="field-note">Builds the Similar Issues index after startup and Jira sync.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="similar-include-closed">Include Closed/Resolved</label>
+                                <select id="similar-include-closed" name="CASEOPS_SIMILAR_ISSUES_INCLUDE_CLOSED">
+                                    <option value="true">Enabled</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                                <div class="field-note">Closed issues can provide useful prior context but are not active queue work.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="similar-current-user-only">Current User Only</label>
+                                <select id="similar-current-user-only" name="CASEOPS_SIMILAR_ISSUES_CURRENT_USER_ONLY">
+                                    <option value="true">Enabled</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                                <div class="field-note">Default scope: only issues assigned to the configured current user.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="similar-current-user">Current User Identifier</label>
+                                <input id="similar-current-user" name="CASEOPS_SIMILAR_ISSUES_CURRENT_USER" type="text" placeholder="Display name or email" autocomplete="off" />
+                                <div class="field-note">If blank, CaseOps falls back to Jira email/default assignee when available.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="similar-auto-cluster">Confirmed Auto-Clustering</label>
+                                <select id="similar-auto-cluster" name="CASEOPS_SIMILAR_ISSUES_AUTO_CLUSTER">
+                                    <option value="true">Enabled</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                                <div class="field-note">Uses strict evidence gates. Candidate matches still display separately.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="similar-pipeline-context">Pipeline Context Injection</label>
+                                <select id="similar-pipeline-context" name="CASEOPS_SIMILAR_ISSUES_PIPELINE_CONTEXT">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                                <div class="field-note">Keep disabled until confirmed clusters and safety gates are trusted.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="similar-candidate-limit">Candidate Limit</label>
+                                <input id="similar-candidate-limit" name="CASEOPS_SIMILAR_ISSUES_CANDIDATE_LIMIT" type="number" min="1" max="200" step="1" />
+                                <div class="field-note">Maximum candidate matches stored per issue.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="similar-lookback-days">Lookback Days</label>
+                                <input id="similar-lookback-days" name="CASEOPS_SIMILAR_ISSUES_LOOKBACK_DAYS" type="number" min="1" max="3650" step="1" />
+                                <div class="field-note">Recent updates score slightly higher inside this window.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="similar-public-summaries">Public-Safe Cluster Summaries</label>
+                                <select id="similar-public-summaries" name="CASEOPS_SIMILAR_ISSUES_PUBLIC_SAFE_SUMMARIES">
+                                    <option value="true">Enabled</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                            </div>
+                            <div class="settings-field">
+                                <label for="similar-model-adjudication">Model Adjudication</label>
+                                <select id="similar-model-adjudication" name="CASEOPS_SIMILAR_ISSUES_MODEL_ADJUDICATION">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                            </div>
+                            <div class="settings-field">
+                                <label for="similar-delta-mode">Delta Validation Mode</label>
+                                <select id="similar-delta-mode" name="CASEOPS_SIMILAR_ISSUES_DELTA_MODE">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
                     <section class="settings-section" id="content-section">
                         <div class="section-header">
                             <div>
@@ -1248,6 +1377,55 @@
             }
             const instanceLabel = paths.instance_dir ? paths.instance_dir.split(/[\\/]/).pop() : '';
             if (instanceLabel) document.title = `CaseOps (${instanceLabel})`;
+        }
+
+        async function refreshSimilarityHealth() {
+            const panel = document.getElementById('similarity-health-panel');
+            if (!panel) return;
+            try {
+                const resp = await fetch('/api/settings/similarity-health');
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                renderSimilarityHealth(await resp.json());
+            } catch (e) {
+                panel.innerHTML = `<div class="field-note">Similarity health unavailable: ${escapeHtml(e.message || String(e))}</div>`;
+            }
+        }
+
+        function renderSimilarityHealth(health) {
+            const panel = document.getElementById('similarity-health-panel');
+            if (!panel) return;
+            const boolBadge = (value, labelTrue = 'Enabled', labelFalse = 'Disabled') => (
+                value
+                    ? `<span class="status-badge ok">${escapeHtml(labelTrue)}</span>`
+                    : `<span class="status-badge warn">${escapeHtml(labelFalse)}</span>`
+            );
+            const rejections = Array.isArray(health.top_rejection_reasons) ? health.top_rejection_reasons : [];
+            const rejectionHtml = rejections.length
+                ? rejections.map(item => `<div>${escapeHtml(String(item.reason || '').replace(/_/g, ' '))}: ${escapeHtml(String(item.count || 0))}</div>`).join('')
+                : '<div>none recorded</div>';
+            const userState = health.current_user_only
+                ? (health.current_user_present ? `current user from ${health.current_user_source || 'settings'}` : 'current user missing')
+                : 'all assigned users included';
+            panel.innerHTML = `
+                <div class="health-metric-grid">
+                    <div class="health-metric"><strong>${escapeHtml(String(health.fingerprints_indexed || 0))}</strong><span>Fingerprints indexed</span></div>
+                    <div class="health-metric"><strong>${escapeHtml(String(health.candidate_links || 0))}</strong><span>Candidate links</span></div>
+                    <div class="health-metric"><strong>${escapeHtml(String(health.issues_with_candidates || 0))}</strong><span>Issues with candidates</span></div>
+                    <div class="health-metric"><strong>${escapeHtml(String(health.confirmed_clusters || 0))}</strong><span>Confirmed clusters</span></div>
+                </div>
+                <div class="status-row" style="margin-bottom:10px;">
+                    ${boolBadge(health.enabled, 'Indexing enabled', 'Indexing disabled')}
+                    ${boolBadge(health.pipeline_context, 'Pipeline context enabled', 'Pipeline context disabled')}
+                    ${boolBadge(health.index_exists, 'Index present', 'Index missing')}
+                    <span class="status-badge ${health.current_user_only && !health.current_user_present ? 'warn' : ''}">${escapeHtml(userState)}</span>
+                </div>
+                <div class="health-list">
+                    <div><strong>Last rebuild:</strong> ${escapeHtml(health.last_rebuild || 'not yet rebuilt')}</div>
+                    <div><strong>Candidate settings:</strong> limit ${escapeHtml(String(health.candidate_limit || 0))}, lookback ${escapeHtml(String(health.lookback_days || 0))} days, include closed ${health.include_closed ? 'yes' : 'no'}</div>
+                    <div><strong>Rejected candidate links:</strong> ${escapeHtml(String(health.rejected_links || 0))}; promoted links: ${escapeHtml(String(health.promoted_links || 0))}</div>
+                    <div><strong>Top rejection reasons:</strong>${rejectionHtml}</div>
+                </div>
+            `;
         }
 
         function hideAuthenticatedOrgs() {
@@ -1732,6 +1910,7 @@
         document.getElementById('stop-run-btn').addEventListener('click', stopCurrentRun);
         document.getElementById('repair-state-btn').addEventListener('click', repairPipelineState);
         document.getElementById('repair-stale-state-btn').addEventListener('click', repairAllStalePipelineState);
+        document.getElementById('refresh-similarity-health-btn').addEventListener('click', refreshSimilarityHealth);
         document.getElementById('refresh-status-btn').addEventListener('click', async () => {
             const btn = document.getElementById('refresh-status-btn');
             btn.disabled = true;
@@ -1778,6 +1957,7 @@
 
         loadSettings();
         refreshStatusPanels();
+        refreshSimilarityHealth();
         refreshRunControlStatus();
         loadDisplayLabel();
         loadCannedMessages();

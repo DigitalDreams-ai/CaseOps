@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 import unittest
@@ -652,6 +653,150 @@ class GlobalQueueTests(unittest.TestCase):
 
         self.assertEqual(len(payload), 1)
         self.assertIn("practitioner billing address mismatch", payload[0]["jira_summary_search_text"])
+
+    def test_available_tabs_includes_similar_issues_for_candidate_only_context(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            cluster_root = outputs / app.CLUSTER_DIR_NAME
+            cluster_root.mkdir(parents=True, exist_ok=True)
+            row = {
+                "key": "OPEN-1",
+                "status": "Open",
+                "cluster_id": "",
+                "cluster_type": "same_problem_needs_record_validation",
+                "candidate_matches": [
+                    {
+                        "key": "OPEN-2",
+                        "status": "Open",
+                        "classification": "same_problem_needs_record_validation",
+                        "score": 0.64,
+                        "reasons": ["shared_error_term"],
+                        "evidence_terms": ["permission"],
+                        "rejection_reasons": ["below_confirmed_cluster_threshold"],
+                    }
+                ],
+            }
+            (cluster_root / app.ISSUE_INDEX_FILE).write_text(json.dumps(row) + "\n", encoding="utf-8")
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+            ):
+                tabs = app._available_tabs("OPEN-1")
+
+        self.assertEqual(tabs[0], {"id": "similar_issues", "label": "Similar Issues"})
+
+    def test_similarity_health_reports_candidate_and_cluster_counts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            cluster_root = outputs / app.CLUSTER_DIR_NAME
+            cluster_root.mkdir(parents=True, exist_ok=True)
+            (cluster_root / app.CLUSTER_INDEX_FILE).write_text(
+                json.dumps(
+                    {
+                        "generated_at": "2026-06-09T00:00:00+00:00",
+                        "clusters": [{"cluster_id": "cluster-open-1"}],
+                        "candidate_summary": {
+                            "candidate_links": 4,
+                            "promoted_links": 1,
+                            "rejected_links": 3,
+                            "top_rejection_reasons": [
+                                {"reason": "below_confirmed_cluster_threshold", "count": 3}
+                            ],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            rows = [
+                {"key": "OPEN-1", "candidate_matches": [{"key": "OPEN-2"}]},
+                {"key": "OPEN-2", "candidate_matches": []},
+            ]
+            (cluster_root / app.ISSUE_INDEX_FILE).write_text(
+                "\n".join(json.dumps(row) for row in rows) + "\n",
+                encoding="utf-8",
+            )
+
+            with patch.object(app, "OUTPUTS", outputs):
+                health = app._similarity_health_summary(
+                    {
+                        "CASEOPS_SIMILAR_ISSUES_ENABLED": "true",
+                        "CASEOPS_SIMILAR_ISSUES_CURRENT_USER_ONLY": "true",
+                        "CASEOPS_SIMILAR_ISSUES_CURRENT_USER": "CaseOps User",
+                        "CASEOPS_SIMILAR_ISSUES_PIPELINE_CONTEXT": "false",
+                    }
+                )
+
+        self.assertTrue(health["enabled"])
+        self.assertFalse(health["pipeline_context"])
+        self.assertEqual(health["fingerprints_indexed"], 2)
+        self.assertEqual(health["issues_with_candidates"], 1)
+        self.assertEqual(health["candidate_links"], 4)
+        self.assertEqual(health["confirmed_clusters"], 1)
+
+    def test_candidate_only_issue_api_has_tab_without_confirmed_similar_tag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            cluster_root = outputs / app.CLUSTER_DIR_NAME
+            cluster_root.mkdir(parents=True, exist_ok=True)
+            row = {
+                "key": "OPEN-1",
+                "status": "Open",
+                "cluster_id": "",
+                "candidate_matches": [
+                    {
+                        "key": "OPEN-2",
+                        "status": "Open",
+                        "classification": "same_problem_needs_record_validation",
+                        "score": 0.64,
+                        "reasons": ["shared_error_term"],
+                        "rejection_reasons": ["below_confirmed_cluster_threshold"],
+                    }
+                ],
+            }
+            (cluster_root / app.ISSUE_INDEX_FILE).write_text(json.dumps(row) + "\n", encoding="utf-8")
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(
+                    app,
+                    "_read_manifest",
+                    return_value=[
+                        {
+                            "Key": "OPEN-1",
+                            "Status": "Open",
+                            "Summary": "Visible issue summary",
+                            "Assignee": "CaseOps User",
+                        }
+                    ],
+                ),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+                patch.object(app, "_read_pipeline_state", return_value={}),
+            ):
+                payload = app.app.test_client().get("/api/issue/OPEN-1").get_json()
+
+        self.assertIn("similar_issues", [tab["id"] for tab in payload["tabs"]])
+        self.assertTrue(payload["similar_issue_cluster"]["candidate_matches"])
+        self.assertFalse(payload["has_similar_issues"])
+        self.assertNotIn("similar issues", payload["tags"])
+
+    def test_similarity_health_uses_default_assignee_as_current_user_fallback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            (outputs / app.CLUSTER_DIR_NAME).mkdir(parents=True, exist_ok=True)
+            with patch.object(app, "OUTPUTS", outputs):
+                health = app._similarity_health_summary(
+                    {
+                        "CASEOPS_SIMILAR_ISSUES_ENABLED": "true",
+                        "CASEOPS_SIMILAR_ISSUES_CURRENT_USER_ONLY": "true",
+                        "CASEOPS_DEFAULT_ASSIGNEE": "Fallback User",
+                        "JIRA_EMAIL": "fallback@example.com",
+                    }
+                )
+
+        self.assertTrue(health["current_user_present"])
+        self.assertEqual(health["current_user"], "Fallback User")
+        self.assertEqual(health["current_user_source"], "CASEOPS_DEFAULT_ASSIGNEE")
 
     def test_no_deploy_operator_report_allows_step10_drafts_without_terminal_tag(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 import re
+from collections import Counter
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
@@ -78,15 +79,48 @@ CORRECTION_ACTIONS = {
 }
 
 _STOP_WORDS = {
-    "a", "an", "and", "are", "at", "be", "by", "case", "customer", "error", "for",
-    "from", "has", "have", "if", "in", "is", "it", "issue", "issues", "of", "on",
-    "or", "request", "resolved", "salesforce", "status", "support", "summary", "system",
-    "team", "the", "to", "unable", "user", "using", "when", "with", "your",
+    "a", "an", "and", "are", "at", "be", "by", "case", "com", "customfield",
+    "customer", "description", "error", "feature", "field", "fields", "for",
+    "from", "has", "have", "home", "http", "https", "if", "in", "is", "it",
+    "issue", "issues", "link", "of", "on", "or", "page", "portal", "reporter",
+    "request", "resolved", "salesforce", "source", "status", "support", "summary",
+    "system", "team", "the", "to", "unable", "url", "user", "using", "view",
+    "when", "with", "www", "your",
+}
+
+_REQUEST_FAMILY_TERMS = {
+    "template",
+    "templates",
+    "letter",
+    "letters",
+    "form",
+    "forms",
+    "document",
+    "documents",
+    "report",
+    "reports",
+    "dashboard",
+    "dashboards",
+    "permission",
+    "permissions",
+    "queue",
+    "queues",
+    "notification",
+    "notifications",
+    "email",
+    "emails",
 }
 
 
 def _safe_text(value: Any) -> str:
     return ("" if value is None else str(value)).strip()
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _safe_filename(value: str) -> str:
@@ -110,6 +144,24 @@ def _parse_iso_ts(raw: str) -> float:
         return datetime.fromisoformat(_safe_text(raw).replace("Z", "+00:00")).timestamp()
     except Exception:
         return 0.0
+
+
+def _request_type_name(value: Any) -> str:
+    """Extract a stable request type label from Jira Service Management payloads."""
+    if isinstance(value, dict):
+        direct = value.get("name") or value.get("defaultName") or value.get("description")
+        if direct:
+            return _safe_text(direct)
+        nested = value.get("requestType")
+        if isinstance(nested, dict):
+            return _safe_text(nested.get("name") or nested.get("defaultName") or nested.get("description"))
+        return ""
+    return _safe_text(value)
+
+
+def _is_system_reporter(value: str) -> bool:
+    normalized = _safe_text(value).lower()
+    return normalized in {"salesforce integration", "jira automation", "automation for jira", "jira system"}
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -475,6 +527,7 @@ class IssueFingerprint:
     assignee_email: str
     reporter: str
     request_type: str
+    created: str
     updated: str
     summary: str
     summary_tokens: list[str]
@@ -502,9 +555,7 @@ class IssueFingerprint:
         reporter = fields.get("reporter", {})
         terms = _extract_terms(raw, row)
         summary = _safe_text(row.get("Summary") or fields.get("summary", ""))
-        request_type = fields.get("customfield_10010", "")
-        if not isinstance(request_type, str):
-            request_type = _safe_text(request_type)
+        request_type = _request_type_name(fields.get("customfield_10010", ""))
 
         assignee_name = ""
         assignee_email = ""
@@ -527,6 +578,7 @@ class IssueFingerprint:
             assignee_email=assignee_email,
             reporter=reporter_name,
             request_type=request_type,
+            created=_safe_text(row.get("Created") or fields.get("created", "")),
             updated=_safe_text(row.get("Updated") or fields.get("updated", "")),
             summary=summary,
             summary_tokens=sorted(terms["summary_tokens"]),
@@ -593,6 +645,18 @@ def _score_pair(base: IssueFingerprint, other: IssueFingerprint, *, lookback_day
     score = 0.0
     reasons: list[str] = []
     evidence: set[str] = set()
+    base_request_type = base.request_type.lower()
+    other_request_type = other.request_type.lower()
+    same_request_type = bool(base_request_type and base_request_type == other_request_type)
+    same_reporter = bool(
+        base.reporter
+        and other.reporter
+        and not _is_system_reporter(base.reporter)
+        and base.reporter.lower() == other.reporter.lower()
+    )
+    base_family_terms = (set(base.summary_tokens) | set(base.feature_tokens)) & _REQUEST_FAMILY_TERMS
+    other_family_terms = (set(other.summary_tokens) | set(other.feature_tokens)) & _REQUEST_FAMILY_TERMS
+    shared_family_terms = base_family_terms & other_family_terms
 
     shared_obj, obj_ratio = _overlap_ratio(set(base.object_field_pairs), set(other.object_field_pairs))
     if shared_obj:
@@ -645,9 +709,19 @@ def _score_pair(base: IssueFingerprint, other: IssueFingerprint, *, lookback_day
         score += 0.04
         reasons.append("assignee_match")
 
-    if base.request_type and other.request_type and base.request_type.lower() == other.request_type.lower():
-        score += 0.03
+    if same_reporter:
+        score += 0.08
+        reasons.append("reporter_match")
+
+    if same_request_type:
+        score += 0.08
         reasons.append("request_type_match")
+
+    family_context = same_request_type and shared_family_terms and (same_reporter or bool(base.assignee and other.assignee))
+    if family_context:
+        score += min(0.18, 0.10 + 0.03 * min(len(shared_family_terms), 3))
+        reasons.append("same_service_request_family")
+        evidence.update(sorted(shared_family_terms)[:6])
 
     base_ts = _parse_iso_ts(base.updated)
     other_ts = _parse_iso_ts(other.updated)
@@ -657,6 +731,14 @@ def _score_pair(base: IssueFingerprint, other: IssueFingerprint, *, lookback_day
         if delta <= lookback_seconds:
             score += 0.03 if delta <= (lookback_seconds * 0.5) else 0.015
             reasons.append("recent_update_window")
+
+    base_created_ts = _parse_iso_ts(base.created)
+    other_created_ts = _parse_iso_ts(other.created)
+    if family_context and base_created_ts and other_created_ts:
+        created_delta = abs(base_created_ts - other_created_ts)
+        if created_delta <= min(lookback_days * 86400.0, 7 * 86400.0):
+            score += 0.08 if created_delta <= (2 * 86400.0) else 0.04
+            reasons.append("same_request_creation_burst")
 
     if comp_ratio > 0.7:
         reasons.append("component_pattern_match")
@@ -676,6 +758,9 @@ def _score_pair(base: IssueFingerprint, other: IssueFingerprint, *, lookback_day
         classification = "related_context_only"
     else:
         classification = "related_context_only"
+
+    if classification == "related_context_only":
+        score = min(score, 0.78)
 
     return CandidateMatch(
         key=other.key,
@@ -745,6 +830,17 @@ def _has_auto_cluster_evidence(match: CandidateMatch) -> bool:
     if "shared_jira_component_or_label" in reasons and "shared_error_term" in reasons:
         return True
     return False
+
+
+def _auto_cluster_rejection_reasons(match: CandidateMatch) -> list[str]:
+    reasons: list[str] = []
+    if match.score < MIN_AUTO_CLUSTER_SCORE:
+        reasons.append("below_confirmed_cluster_threshold")
+    if match.classification not in {"same_problem_same_fix", "same_problem_needs_record_validation"}:
+        reasons.append("classification_not_confirmed_cluster_eligible")
+    if not _has_auto_cluster_evidence(match):
+        reasons.append("insufficient_confirmed_cluster_evidence")
+    return reasons
 
 
 def similarity_adjudication_json_schema() -> dict[str, Any]:
@@ -1591,6 +1687,12 @@ def rebuild_issue_clusters(
                 "generated_at": generated_at,
                 "clusters": [],
                 "generated_summary": "0 cluster(s) built from 0 issue fingerprints",
+                "candidate_summary": {
+                    "candidate_links": 0,
+                    "promoted_links": 0,
+                    "rejected_links": 0,
+                    "top_rejection_reasons": [],
+                },
             }, indent=2),
             encoding="utf-8",
         )
@@ -1609,20 +1711,27 @@ def rebuild_issue_clusters(
         candidate_limit=candidate_limit,
         lookback_days=lookback_days,
     )
+    total_candidate_links = sum(len(matches) for matches in candidates.values())
+    candidate_rejections: Counter[str] = Counter()
 
     # Build deterministic cluster edges.
     edges: list[tuple[str, str, CandidateMatch]] = []
     for key, hits in candidates.items():
         for match in hits:
-            if match.score < MIN_AUTO_CLUSTER_SCORE:
-                continue
-            if match.classification not in {"same_problem_same_fix", "same_problem_needs_record_validation"}:
-                continue
-            if not _has_auto_cluster_evidence(match):
+            rejection_reasons = _auto_cluster_rejection_reasons(match)
+            if rejection_reasons:
+                candidate_rejections.update(rejection_reasons)
                 continue
             left, right = sorted((key, match.key))
             edges.append((left, right, match))
     edges.sort(key=lambda item: (-item[2].score, item[0], item[1]))
+    promoted_pairs = {tuple(sorted((left, right))) for left, right, _match in edges} if auto_cluster else set()
+    promoted_candidate_links = sum(
+        1
+        for key, hits in candidates.items()
+        for match in hits
+        if tuple(sorted((key, match.key))) in promoted_pairs
+    )
 
     clusters_map = _build_dsu(edges, all_keys) if auto_cluster else {_key: [_key] for _key in all_keys}
     best_edge_per_member: dict[str, CandidateMatch] = {}
@@ -1680,6 +1789,15 @@ def rebuild_issue_clusters(
         "generated_at": generated_at,
         "clusters": cluster_payloads,
         "generated_summary": f"{len(cluster_payloads)} cluster(s) built from {len(fingerprints)} issue fingerprints",
+        "candidate_summary": {
+            "candidate_links": total_candidate_links,
+            "promoted_links": promoted_candidate_links,
+            "rejected_links": max(0, total_candidate_links - promoted_candidate_links),
+            "top_rejection_reasons": [
+                {"reason": reason, "count": count}
+                for reason, count in candidate_rejections.most_common(8)
+            ],
+        },
         "settings": {
             "candidate_limit": candidate_limit,
             "lookback_days": lookback_days,
@@ -1697,14 +1815,37 @@ def rebuild_issue_clusters(
         issue_cluster = _safe_cluster_id(key)
         if auto_cluster:
             issue_cluster = member_cluster_id.get(key, issue_cluster)
+        candidate_matches: list[dict[str, Any]] = []
+        for match in candidates.get(key, []):
+            candidate_fp = by_key.get(match.key)
+            pair = tuple(sorted((key, match.key)))
+            rejection_reasons = [] if pair in promoted_pairs else _auto_cluster_rejection_reasons(match)
+            candidate_matches.append({
+                "key": match.key,
+                "status": candidate_fp.status if candidate_fp else "",
+                "relationship": "confirmed_cluster_member" if pair in promoted_pairs else "candidate",
+                "classification": match.classification,
+                "score": match.score,
+                "reasons": match.reasons[:8],
+                "evidence_terms": match.terms[:12],
+                "jira_updated": candidate_fp.updated if candidate_fp else "",
+                "artifact_signature": candidate_fp.artifact_signature if candidate_fp else "",
+                "source_signature": candidate_fp.source_signature if candidate_fp else "",
+                "promoted_to_cluster": pair in promoted_pairs,
+                "rejection_reasons": rejection_reasons,
+            })
         row = {
             "key": key,
             "status": fp.status,
             "assignee": fp.assignee,
+            "reporter": fp.reporter,
+            "request_type": fp.request_type,
+            "created": fp.created,
             "updated": fp.updated,
             "summary": fp.summary[:300],
             "cluster_id": issue_cluster if issue_cluster in active_clusters else "",
             "cluster_type": best_edge_per_member.get(key, CandidateMatch(key, 1.0, "canonical", ["self"], [])).classification,
+            "candidate_matches": candidate_matches,
             "fingerprint": {
                 "summary_tokens": fp.summary_tokens,
                 "feature_tokens": fp.feature_tokens[:80],
@@ -1726,12 +1867,23 @@ def rebuild_issue_clusters(
         encoding="utf-8",
     )
 
+    top_rejections = ", ".join(
+        f"{reason}={count}" for reason, count in candidate_rejections.most_common(3)
+    ) or "none"
     log(
-        f"Similarity clusters rebuilt: {len(cluster_payloads)} cluster(s), {len(fingerprints)} issue fingerprint(s), {len(active_clusters)} active cluster file(s)."
+        "Similarity clusters rebuilt: "
+        f"{len(cluster_payloads)} confirmed cluster(s), "
+        f"{total_candidate_links} candidate link(s), "
+        f"{promoted_candidate_links} promoted link(s), "
+        f"{len(fingerprints)} issue fingerprint(s), "
+        f"top rejection reasons: {top_rejections}."
     )
     return {
         "clusters": len(cluster_payloads),
         "issues": len(fingerprints),
+        "candidate_links": total_candidate_links,
+        "promoted_links": promoted_candidate_links,
+        "rejection_reasons": dict(candidate_rejections),
         "generated_at": generated_at,
         "cluster_root": str(cluster_root),
         "cluster_index": str(cluster_root / CLUSTER_INDEX_FILE),
@@ -1777,6 +1929,32 @@ def read_issue_cluster_context(*, outputs_dir: Path, issue_key: str) -> dict[str
         }
         return result
 
+    def _candidate_block(candidate: dict[str, Any]) -> dict[str, Any]:
+        candidate_key = _safe_text(candidate.get("key", ""))
+        if not candidate_key:
+            return {}
+        current_status = _safe_text(issue_rows.get(candidate_key, {}).get("status") or candidate.get("status", "")).lower()
+        current_sig = _artifact_signature(outputs_dir, candidate_key)
+        stored_sig = _safe_text(candidate.get("artifact_signature", ""))
+        stale = bool(stored_sig and current_sig and stored_sig != current_sig)
+        return {
+            "key": candidate_key,
+            "status": current_status,
+            "relationship": _safe_text(candidate.get("relationship", "candidate")) or "candidate",
+            "classification": _safe_text(candidate.get("classification", "related_context_only")),
+            "score": _safe_float(candidate.get("score")),
+            "confidence": _safe_float(candidate.get("score")),
+            "evidence_terms": _ensure_str_list(candidate.get("evidence_terms"))[:10],
+            "reasons": _ensure_str_list(candidate.get("reasons"))[:8],
+            "rejection_reasons": _ensure_str_list(candidate.get("rejection_reasons"))[:8],
+            "jira_updated": _safe_text(candidate.get("jira_updated", "")),
+            "artifact_signature": stored_sig,
+            "source_signature": _safe_text(candidate.get("source_signature", "")),
+            "is_open": _is_open_status(current_status),
+            "is_stale": stale,
+            "promoted_to_cluster": bool(candidate.get("promoted_to_cluster")),
+        }
+
     issue_rows: dict[str, dict[str, Any]] = {}
     issue_index = root / ISSUE_INDEX_FILE
     if issue_index.exists():
@@ -1793,6 +1971,19 @@ def read_issue_cluster_context(*, outputs_dir: Path, issue_key: str) -> dict[str
     issue_row = issue_rows.get(_safe_text(issue_key), {})
     if not issue_row:
         return {"issue": issue_key, "cluster_id": ""}
+    candidate_matches = [
+        candidate
+        for candidate in (_candidate_block(item) for item in issue_row.get("candidate_matches", []))
+        if candidate
+    ]
+    issue_key_norm = _safe_text(issue_key).lower()
+    candidate_matches = [
+        item for item in candidate_matches
+        if _safe_text(item.get("key")).lower() != issue_key_norm
+    ]
+    candidate_matches.sort(key=lambda item: (not item.get("is_open"), -_safe_float(item.get("score")), item["key"]))
+    candidate_open_matches = [item for item in candidate_matches if item.get("is_open")]
+    candidate_closed_matches = [item for item in candidate_matches if not item.get("is_open")]
 
     cluster_id = _safe_text(issue_row.get("cluster_id", ""))
     if not cluster_id:
@@ -1804,6 +1995,9 @@ def read_issue_cluster_context(*, outputs_dir: Path, issue_key: str) -> dict[str
             "members": [],
             "open_matches": [],
             "closed_matches": [],
+            "candidate_matches": candidate_matches,
+            "candidate_open_matches": candidate_open_matches,
+            "candidate_closed_matches": candidate_closed_matches,
             "status": issue_row.get("status", ""),
             "corrections_applied": [],
         }
@@ -1818,6 +2012,9 @@ def read_issue_cluster_context(*, outputs_dir: Path, issue_key: str) -> dict[str
             "members": [],
             "open_matches": [],
             "closed_matches": [],
+            "candidate_matches": candidate_matches,
+            "candidate_open_matches": candidate_open_matches,
+            "candidate_closed_matches": candidate_closed_matches,
             "status": issue_row.get("status", ""),
             "corrections_applied": [],
         }
@@ -1833,6 +2030,9 @@ def read_issue_cluster_context(*, outputs_dir: Path, issue_key: str) -> dict[str
             "members": [],
             "open_matches": [],
             "closed_matches": [],
+            "candidate_matches": candidate_matches,
+            "candidate_open_matches": candidate_open_matches,
+            "candidate_closed_matches": candidate_closed_matches,
             "status": issue_row.get("status", ""),
             "corrections_applied": [],
         }
@@ -1854,6 +2054,9 @@ def read_issue_cluster_context(*, outputs_dir: Path, issue_key: str) -> dict[str
             "members": [],
             "open_matches": [],
             "closed_matches": [],
+            "candidate_matches": candidate_matches,
+            "candidate_open_matches": candidate_open_matches,
+            "candidate_closed_matches": candidate_closed_matches,
             "status": issue_row.get("status", ""),
             "cluster_state": "detached",
             "summary_url": f"/files/issue-clusters/{detached_summary_file}" if detached_summary_file else "",
@@ -1901,6 +2104,9 @@ def read_issue_cluster_context(*, outputs_dir: Path, issue_key: str) -> dict[str
         "members": members,
         "open_matches": open_matches,
         "closed_matches": closed_matches,
+        "candidate_matches": candidate_matches,
+        "candidate_open_matches": candidate_open_matches,
+        "candidate_closed_matches": candidate_closed_matches,
         "status": issue_row.get("status", ""),
         "summary_url": summary_url,
         "summary_preview": summary_preview,

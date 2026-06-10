@@ -46,6 +46,9 @@ class IssueClusterFixtureTests(unittest.TestCase):
         component="Automation",
         assignee="Frodo Operator",
         email="frodo@example.com",
+        reporter="Fixture Reporter",
+        request_type="Support Request",
+        created="2026-06-01T00:00:00Z",
         updated="2026-06-01T00:00:00Z",
     ):
         self.rows.append(
@@ -53,6 +56,7 @@ class IssueClusterFixtureTests(unittest.TestCase):
                 "Key": key,
                 "Summary": summary,
                 "Status": status,
+                "Created": created,
                 "Updated": updated,
                 "Assignee": assignee,
             }
@@ -65,9 +69,10 @@ class IssueClusterFixtureTests(unittest.TestCase):
                     "description": description,
                     "components": [{"name": component}] if component else [],
                     "labels": [component.lower()] if component else [],
-                    "customfield_10010": "Support Request",
+                    "customfield_10010": request_type,
                     "assignee": {"displayName": assignee, "emailAddress": email},
-                    "reporter": {"displayName": "Fixture Reporter"},
+                    "reporter": {"displayName": reporter},
+                    "created": created,
                     "updated": updated,
                 }
             }
@@ -82,7 +87,7 @@ class IssueClusterFixtureTests(unittest.TestCase):
     def write_manifest(self):
         path = self.outputs / "jira" / "manifest.csv"
         with path.open("w", encoding="utf-8", newline="") as handle:
-            writer = csv.DictWriter(handle, fieldnames=["Key", "Summary", "Status", "Updated", "Assignee"])
+            writer = csv.DictWriter(handle, fieldnames=["Key", "Summary", "Status", "Created", "Updated", "Assignee"])
             writer.writeheader()
             writer.writerows(self.rows)
 
@@ -126,22 +131,26 @@ class IssueClusterFixtureTests(unittest.TestCase):
         self.write_manifest()
 
     def rebuild(self, **kwargs):
+        options = {
+            "include_closed": True,
+            "current_user_only": True,
+            "current_user": "Frodo Operator;frodo@example.com",
+            "auto_cluster": True,
+            "candidate_limit": 15,
+            "lookback_days": 180,
+            "log": lambda _msg: None,
+        }
+        options.update(kwargs)
         return rebuild_issue_clusters(
             outputs_dir=self.outputs,
-            include_closed=True,
-            current_user_only=True,
-            current_user="Frodo Operator;frodo@example.com",
-            auto_cluster=True,
-            candidate_limit=15,
-            lookback_days=180,
-            log=lambda _msg: None,
-            **kwargs,
+            **options,
         )
 
     def test_fixture_matrix_clusters_same_root_and_blocks_false_positives(self):
         self.build_matrix()
         result = self.rebuild()
         self.assertGreaterEqual(result["clusters"], 5)
+        self.assertGreater(result["candidate_links"], result["clusters"])
 
         same_root = read_issue_cluster_context(outputs_dir=self.outputs, issue_key="ROOT-1-1")
         self.assertTrue(same_root["cluster_id"])
@@ -153,6 +162,9 @@ class IssueClusterFixtureTests(unittest.TestCase):
 
         symptom_only = read_issue_cluster_context(outputs_dir=self.outputs, issue_key="SYM-1-A")
         self.assertFalse(symptom_only.get("cluster_id"))
+        self.assertTrue(symptom_only.get("candidate_matches"))
+        self.assertTrue(symptom_only.get("candidate_open_matches"))
+        self.assertFalse(any(item.get("promoted_to_cluster") for item in symptom_only["candidate_matches"]))
         title_only = read_issue_cluster_context(outputs_dir=self.outputs, issue_key="TITLE-1-A")
         self.assertFalse(title_only.get("cluster_id"))
 
@@ -181,6 +193,101 @@ class IssueClusterFixtureTests(unittest.TestCase):
         self.assertEqual(result["issues"], 1)
         rows = (self.outputs / "jira" / "manifest.csv").read_text(encoding="utf-8")
         self.assertIn("OTHER-1", rows)
+
+    def test_template_request_family_scores_as_candidate_without_auto_cluster(self):
+        request_type = {"requestType": {"name": "Suggest a new feature"}}
+        common_kwargs = {
+            "component": "",
+            "assignee": "Frodo Operator",
+            "email": "frodo@example.com",
+            "reporter": "Salesforce Integration",
+            "request_type": request_type,
+        }
+        self.add_issue(
+            "SUP-54",
+            "Letter Enclosing Payment for Mediation Template Request",
+            "Reporter Angie Archer asked for a new letter template for enclosing payment for mediation.",
+            created="2026-06-01T09:00:00Z",
+            updated="2026-06-01T09:10:00Z",
+            **common_kwargs,
+        )
+        self.add_issue(
+            "SUP-55",
+            "Letter Defendant enclosing Plaintiff Transcript and Errata sheet",
+            "Reporter Angie Archer asked for a new letter template for enclosing transcript and errata sheet.",
+            created="2026-06-01T09:12:00Z",
+            updated="2026-06-01T09:22:00Z",
+            **common_kwargs,
+        )
+        self.add_issue(
+            "SUP-58",
+            "Letter Requesting Union Records Template Request",
+            "Reporter Angie Archer asked for a new letter template for requesting union records.",
+            created="2026-06-01T09:24:00Z",
+            updated="2026-06-01T09:34:00Z",
+            **common_kwargs,
+        )
+        self.write_manifest()
+
+        result = self.rebuild()
+
+        self.assertEqual(result["clusters"], 0)
+        ctx = read_issue_cluster_context(outputs_dir=self.outputs, issue_key="SUP-54")
+        candidate_scores = {item["key"]: item["score"] for item in ctx["candidate_matches"]}
+        self.assertGreaterEqual(candidate_scores["SUP-55"], 0.45)
+        self.assertGreaterEqual(candidate_scores["SUP-58"], 0.45)
+        self.assertFalse(any(item.get("promoted_to_cluster") for item in ctx["candidate_matches"]))
+        reasons = {reason for item in ctx["candidate_matches"] for reason in item.get("reasons", [])}
+        self.assertIn("same_service_request_family", reasons)
+        self.assertIn("same_request_creation_burst", reasons)
+
+    def test_auto_cluster_disabled_keeps_candidate_matches_unpromoted(self):
+        self.add_issue(
+            "ROOT-A",
+            "Same flow failure Account.Shared_Field__c exception",
+            "Flow Shared_Flow failed with invalid exception on Account.Shared_Field__c.",
+            component="SharedFlow",
+        )
+        self.add_issue(
+            "ROOT-B",
+            "Same flow failure Account.Shared_Field__c exception",
+            "Flow Shared_Flow failed with invalid exception on Account.Shared_Field__c.",
+            component="SharedFlow",
+        )
+        self.write_manifest()
+        result = self.rebuild(auto_cluster=False)
+
+        self.assertEqual(result["clusters"], 0)
+        self.assertEqual(result["promoted_links"], 0)
+        ctx = read_issue_cluster_context(outputs_dir=self.outputs, issue_key="ROOT-A")
+        self.assertFalse(ctx["cluster_id"])
+        self.assertTrue(ctx["candidate_matches"])
+        self.assertFalse(any(item.get("promoted_to_cluster") for item in ctx["candidate_matches"]))
+        self.assertNotIn("confirmed_cluster_member", {item.get("relationship") for item in ctx["candidate_matches"]})
+
+    def test_malformed_candidate_score_does_not_break_context_read(self):
+        root = self.outputs / "issue-clusters"
+        root.mkdir(parents=True, exist_ok=True)
+        row = {
+            "key": "OPEN-1",
+            "status": "Open",
+            "cluster_id": "",
+            "candidate_matches": [
+                {
+                    "key": "OPEN-2",
+                    "status": "Open",
+                    "classification": "related_context_only",
+                    "score": "not-a-number",
+                    "reasons": ["shared_feature_terms"],
+                }
+            ],
+        }
+        (root / "issue-index.jsonl").write_text(json.dumps(row) + "\n", encoding="utf-8")
+
+        ctx = read_issue_cluster_context(outputs_dir=self.outputs, issue_key="OPEN-1")
+
+        self.assertFalse(ctx["cluster_id"])
+        self.assertEqual(ctx["candidate_matches"][0]["score"], 0.0)
 
     def test_operator_corrections_and_artifact_drift(self):
         self.build_matrix()

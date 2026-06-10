@@ -41,6 +41,9 @@ from flask import Flask, Response, jsonify, render_template, request, send_file,
 
 from caseops_paths import default_jira_dir
 from issue_clusters import (
+    CLUSTER_DIR_NAME,
+    CLUSTER_INDEX_FILE,
+    ISSUE_INDEX_FILE,
     build_delta_validation_plan,
     read_issue_cluster_context,
     rebuild_issue_clusters,
@@ -6607,9 +6610,7 @@ def _read_similarity_settings(settings: dict[str, str] | None = None) -> dict[st
         default=True,
         settings=settings,
     )
-    current_user = (settings.get("CASEOPS_SIMILAR_ISSUES_CURRENT_USER") or "").strip()
-    if not current_user:
-        current_user = (os.environ.get("CASEOPS_SIMILAR_ISSUES_CURRENT_USER") or "").strip()
+    current_user, _current_user_source = _similarity_current_user_source(settings)
 
     return {
         "enabled": _env_flag_from_map("CASEOPS_SIMILAR_ISSUES_ENABLED", default=True, settings=settings),
@@ -6636,7 +6637,7 @@ def _read_similarity_settings(settings: dict[str, str] | None = None) -> dict[st
             max_value=3650,
             settings=settings,
         ),
-        "pipeline_context": _env_flag_from_map("CASEOPS_SIMILAR_ISSUES_PIPELINE_CONTEXT", default=False, settings=settings),
+        "pipeline_context": _env_flag_from_map("CASEOPS_SIMILAR_ISSUES_PIPELINE_CONTEXT", default=True, settings=settings),
         "model_adjudication": _env_flag_from_map("CASEOPS_SIMILAR_ISSUES_MODEL_ADJUDICATION", default=False, settings=settings),
         "delta_mode": _env_flag_from_map("CASEOPS_SIMILAR_ISSUES_DELTA_MODE", default=False, settings=settings),
         "org_aliases": {
@@ -6644,6 +6645,23 @@ def _read_similarity_settings(settings: dict[str, str] | None = None) -> dict[st
             str(settings.get("CASEOPS_SANDBOX_TARGET_ORG") or os.environ.get("CASEOPS_SANDBOX_TARGET_ORG") or "").strip().lower(),
         },
     }
+
+
+def _similarity_current_user_source(settings: dict[str, str] | None = None) -> tuple[str, str]:
+    settings = settings or {}
+    sources = [
+        ("CASEOPS_SIMILAR_ISSUES_CURRENT_USER", settings.get("CASEOPS_SIMILAR_ISSUES_CURRENT_USER")),
+        ("CASEOPS_SIMILAR_ISSUES_CURRENT_USER", os.environ.get("CASEOPS_SIMILAR_ISSUES_CURRENT_USER")),
+        ("CASEOPS_DEFAULT_ASSIGNEE", settings.get("CASEOPS_DEFAULT_ASSIGNEE")),
+        ("CASEOPS_DEFAULT_ASSIGNEE", os.environ.get("CASEOPS_DEFAULT_ASSIGNEE")),
+        ("JIRA_EMAIL", settings.get("JIRA_EMAIL")),
+        ("JIRA_EMAIL", os.environ.get("JIRA_EMAIL")),
+    ]
+    for source, value in sources:
+        text = str(value or "").strip()
+        if text:
+            return text, source
+    return "", ""
 
 
 def _rebuild_similarity_clusters_if_enabled(
@@ -6686,6 +6704,75 @@ def _rebuild_similarity_clusters_if_enabled(
 
 def _safe_cluster_text(value: Any) -> str:
     return "" if value is None else str(value).strip()
+
+
+def _similarity_health_summary(settings: dict[str, str] | None = None) -> dict[str, Any]:
+    similarity_settings = _read_similarity_settings(settings)
+    root = OUTPUTS / CLUSTER_DIR_NAME
+    cluster_index_path = root / CLUSTER_INDEX_FILE
+    issue_index_path = root / ISSUE_INDEX_FILE
+    cluster_index: dict[str, Any] = {}
+    if cluster_index_path.exists():
+        try:
+            loaded = json.loads(cluster_index_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                cluster_index = loaded
+        except (OSError, json.JSONDecodeError):
+            cluster_index = {}
+
+    issue_rows = 0
+    issue_rows_with_candidates = 0
+    candidate_links_from_rows = 0
+    if issue_index_path.exists():
+        try:
+            with issue_index_path.open(encoding="utf-8") as handle:
+                for line in handle:
+                    if not line.strip():
+                        continue
+                    issue_rows += 1
+                    try:
+                        payload = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    matches = payload.get("candidate_matches") if isinstance(payload, dict) else None
+                    if isinstance(matches, list) and matches:
+                        issue_rows_with_candidates += 1
+                        candidate_links_from_rows += len(matches)
+        except OSError:
+            pass
+
+    clusters = cluster_index.get("clusters") if isinstance(cluster_index.get("clusters"), list) else []
+    candidate_summary = cluster_index.get("candidate_summary") if isinstance(cluster_index.get("candidate_summary"), dict) else {}
+    top_rejections = candidate_summary.get("top_rejection_reasons")
+    if not isinstance(top_rejections, list):
+        top_rejections = []
+
+    current_user, current_user_source = _similarity_current_user_source(settings)
+    return {
+        "enabled": bool(similarity_settings.get("enabled")),
+        "include_closed": bool(similarity_settings.get("include_closed")),
+        "current_user_only": bool(similarity_settings.get("current_user_only")),
+        "current_user_present": bool(current_user),
+        "current_user": current_user,
+        "current_user_source": current_user_source,
+        "auto_cluster": bool(similarity_settings.get("auto_cluster")),
+        "pipeline_context": bool(similarity_settings.get("pipeline_context")),
+        "model_adjudication": bool(similarity_settings.get("model_adjudication")),
+        "delta_mode": bool(similarity_settings.get("delta_mode")),
+        "candidate_limit": int(similarity_settings.get("candidate_limit") or 0),
+        "lookback_days": int(similarity_settings.get("lookback_days") or 0),
+        "index_exists": cluster_index_path.exists() and issue_index_path.exists(),
+        "last_rebuild": str(cluster_index.get("generated_at") or ""),
+        "fingerprints_indexed": issue_rows,
+        "confirmed_clusters": len(clusters),
+        "candidate_links": int(candidate_summary.get("candidate_links") or candidate_links_from_rows or 0),
+        "promoted_links": int(candidate_summary.get("promoted_links") or 0),
+        "rejected_links": int(candidate_summary.get("rejected_links") or 0),
+        "issues_with_candidates": issue_rows_with_candidates,
+        "top_rejection_reasons": top_rejections[:8],
+        "cluster_index": str(cluster_index_path),
+        "issue_index": str(issue_index_path),
+    }
 
 
 def _build_similarity_lookup_for_plan(
@@ -6917,7 +7004,7 @@ def _is_jira_escalated_any(status: str = "") -> bool:
 def _available_tabs(key: str) -> list[dict[str, str]]:
     tabs = []
     cluster_context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
-    if cluster_context.get("cluster_id"):
+    if cluster_context.get("cluster_id") or cluster_context.get("candidate_matches"):
         tabs.append({"id": "similar_issues", "label": "Similar Issues"})
     for ftype, rel in FILE_LOCATIONS.items():
         if ftype == "attachments":
@@ -8922,7 +9009,7 @@ def api_get_settings():
         "CASEOPS_SIMILAR_ISSUES_CURRENT_USER_ONLY": "true",
         "CASEOPS_SIMILAR_ISSUES_AUTO_CLUSTER": "true",
         "CASEOPS_SIMILAR_ISSUES_PUBLIC_SAFE_SUMMARIES": "true",
-        "CASEOPS_SIMILAR_ISSUES_PIPELINE_CONTEXT": "false",
+        "CASEOPS_SIMILAR_ISSUES_PIPELINE_CONTEXT": "true",
         "CASEOPS_SIMILAR_ISSUES_MODEL_ADJUDICATION": "false",
         "CASEOPS_SIMILAR_ISSUES_DELTA_MODE": "false",
         "CASEOPS_SIMILAR_ISSUES_CANDIDATE_LIMIT": "15",
@@ -8945,6 +9032,13 @@ def api_get_settings():
             response[key] = value
 
     return jsonify(response)
+
+
+@app.route("/api/settings/similarity-health", methods=["GET"])
+def api_settings_similarity_health():
+    env_file_path = app.config.get("ENV_FILE_PATH")
+    settings = _read_env_file(Path(env_file_path) if env_file_path else None)
+    return jsonify(_similarity_health_summary(settings))
 
 
 @app.route("/api/settings", methods=["POST"])
