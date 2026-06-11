@@ -1,7 +1,7 @@
 FROM node:20-slim
 
 WORKDIR /app
-ENV CASEOPS_VERSION=0.1.21
+ENV CASEOPS_VERSION=0.1.22
 
 # Install system deps + Python runtime.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -63,7 +63,7 @@ RUN mkdir -p /home/caseops/.claude && \
 
 # Claude Code auth is provided at runtime with CLAUDE_CODE_OAUTH_TOKEN.
 
-RUN chmod +x /app/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 
 # Run as non-root user
 USER caseops
