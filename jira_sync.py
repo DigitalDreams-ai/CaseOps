@@ -77,9 +77,11 @@ def main() -> int:
     raw_dir = out_dir / "raw"
     summary_dir = out_dir / "summary"
     attachment_dir = out_dir / "attachments"
+    not_assigned_dir = out_dir.parent / "not-assigned"
     raw_dir.mkdir(parents=True, exist_ok=True)
     summary_dir.mkdir(parents=True, exist_ok=True)
     attachment_dir.mkdir(parents=True, exist_ok=True)
+    not_assigned_dir.mkdir(parents=True, exist_ok=True)
 
     state_path = out_dir / "state.json"
     state = read_json_file(state_path, default={})
@@ -135,6 +137,9 @@ def main() -> int:
     newest_updated = state.get("newestUpdated")
     newest_created = state.get("newestCreated")
     manifest_rows = []
+    remove_manifest_keys: set[str] = set()
+    skipped_closed_count = 0
+    skipped_not_assigned_count = 0
 
     print(f"Found {len(keys)} issue(s). Syncing...")
     for i, key in enumerate(keys, 1):
@@ -149,8 +154,25 @@ def main() -> int:
         newest_updated = max_jira_datetime(newest_updated, updated)
         newest_created = max_jira_datetime(newest_created, created)
         if sync_status_is_excluded(status):
+            skipped_closed_count += 1
             manifest_rows.append(skipped_status_manifest_row(key, issue, old_manifest.get(key, {}), raw_dir, summary_dir))
             print(f"[{i}/{len(keys)}] {key} - skipped; status is {status}", flush=True)
+            continue
+
+        if should_exclude_not_assigned(args, issue):
+            skipped_not_assigned_count += 1
+            archive_not_assigned_issue(
+                key=key,
+                issue=issue,
+                old_row=old_manifest.get(key, {}),
+                archive_dir=not_assigned_dir,
+            )
+            remove_manifest_keys.add(key)
+            current_assignee = display_name(issue.get("fields", {}).get("assignee")) or "Unassigned"
+            print(
+                f"[{i}/{len(keys)}] {key} - removed from active manifest; assigned to {current_assignee}",
+                flush=True,
+            )
             continue
 
         print(f"[{i}/{len(keys)}] {key} - fetching comments, changelog, worklogs...", flush=True)
@@ -219,7 +241,7 @@ def main() -> int:
             }
         )
 
-    write_manifest(out_dir / "manifest.csv", manifest_rows)
+    write_manifest(out_dir / "manifest.csv", manifest_rows, remove_keys=remove_manifest_keys)
     write_json(
         state_path,
         {
@@ -231,10 +253,11 @@ def main() -> int:
         },
     )
 
-    skipped_count = len(keys) - len(manifest_rows)
     print(f"Synced {len(manifest_rows)} issue(s) into {out_dir}")
-    if skipped_count:
-        print(f"Skipped {skipped_count} closed/resolved/canceled issue(s).")
+    if skipped_closed_count:
+        print(f"Skipped {skipped_closed_count} closed/resolved/canceled issue(s).")
+    if skipped_not_assigned_count:
+        print(f"Removed {skipped_not_assigned_count} issue(s) no longer assigned to the configured user.")
     return 0
 
 
@@ -270,8 +293,81 @@ def default_assignee() -> str:
     return os.environ.get("CASEOPS_DEFAULT_ASSIGNEE") or os.environ.get("JIRA_ASSIGNEE") or DEFAULT_ASSIGNEE
 
 
+def configured_default_assignee() -> str:
+    """Return the operator-configured Jira assignee, without the placeholder fallback."""
+    return (os.environ.get("CASEOPS_DEFAULT_ASSIGNEE") or os.environ.get("JIRA_ASSIGNEE") or "").strip()
+
+
 def default_jql() -> str:
     return f'assignee = "{default_assignee()}" AND statusCategory != Done ORDER BY created ASC'
+
+
+def normalize_identity(value: Any) -> str:
+    return " ".join(str(value or "").strip().lower().split())
+
+
+def issue_assignee_identities(issue: dict[str, Any]) -> set[str]:
+    assignee = issue.get("fields", {}).get("assignee")
+    if not isinstance(assignee, dict):
+        return set()
+    identities = {
+        normalize_identity(assignee.get("displayName")),
+        normalize_identity(assignee.get("emailAddress")),
+        normalize_identity(assignee.get("accountId")),
+        normalize_identity(assignee.get("name")),
+        normalize_identity(assignee.get("key")),
+    }
+    return {value for value in identities if value}
+
+
+def issue_matches_configured_assignee(issue: dict[str, Any]) -> bool:
+    configured = normalize_identity(configured_default_assignee())
+    if not configured:
+        return True
+    return configured in issue_assignee_identities(issue)
+
+
+def should_exclude_not_assigned(args: argparse.Namespace, issue: dict[str, Any]) -> bool:
+    """True when a default-queue sync sees an active issue assigned elsewhere.
+
+    Custom JQL is intentionally exempt because custom queues may be team-scoped
+    or intentionally unassigned. The normal CaseOps queue and explicit
+    Sync This Issue calls should both keep the active manifest owned by the
+    configured assignee.
+    """
+    if args.jql:
+        return False
+    if not configured_default_assignee():
+        return False
+    return not issue_matches_configured_assignee(issue)
+
+
+def archive_not_assigned_issue(
+    *,
+    key: str,
+    issue: dict[str, Any],
+    old_row: dict[str, str],
+    archive_dir: Path,
+) -> None:
+    fields = issue.get("fields", {})
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    assignee = display_name(fields.get("assignee")) or "Unassigned"
+    configured = configured_default_assignee()
+    lines = [
+        f"# Not Assigned Archive - {key}",
+        "",
+        "- Reason: issue is no longer assigned to the configured CaseOps user.",
+        f"- Configured assignee: {configured}",
+        f"- Current Jira assignee: {assignee}",
+        f"- Jira status: {get_nested(fields, ['status', 'name']) or old_row.get('Status', '')}",
+        f"- Summary: {fields.get('summary') or old_row.get('Summary', '')}",
+        f"- Last updated (Jira): {fields.get('updated') or old_row.get('Updated', '')}",
+        f"- Archived at: {now_iso()}",
+        "",
+        "Existing CaseOps artifacts were left in place for audit/history, but the issue was removed from `outputs/jira/manifest.csv` so it no longer appears in the active CaseOps issue list.",
+        "",
+    ]
+    (archive_dir / f"{key}.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 DONE_MANIFEST_STATUSES = {
@@ -937,18 +1033,22 @@ MANIFEST_FIELDNAMES = [
 NUMERIC_COUNT_FIELDS = {"AttachmentCount", "FormCount", "CommentCount"}
 
 
-def write_manifest(path: Path, rows: list[dict[str, str]]) -> None:
+def write_manifest(path: Path, rows: list[dict[str, str]], *, remove_keys: set[str] | None = None) -> None:
     fieldnames = MANIFEST_FIELDNAMES
     # Merge: preserve existing rows for keys not in the new batch.
+    removed = remove_keys or set()
     existing: dict[str, dict[str, str]] = {}
     if path.exists():
         with path.open(encoding="utf-8", newline="") as fh:
             for row in csv.DictReader(fh):
                 key = row.get("Key", "")
-                if key:
+                if key and key not in removed:
                     existing[key] = {fn: (row.get(fn, "") or ("0" if fn in NUMERIC_COUNT_FIELDS else "")) for fn in fieldnames}
     for row in rows:
-        existing[row["Key"]] = {fn: (row.get(fn, "") or ("0" if fn in NUMERIC_COUNT_FIELDS else "")) for fn in fieldnames}
+        key = row["Key"]
+        if key in removed:
+            continue
+        existing[key] = {fn: (row.get(fn, "") or ("0" if fn in NUMERIC_COUNT_FIELDS else "")) for fn in fieldnames}
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()

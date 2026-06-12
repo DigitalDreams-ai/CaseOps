@@ -1,7 +1,9 @@
 import csv
+import argparse
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import jira_sync
 
@@ -59,6 +61,90 @@ class JiraSyncManifestTests(unittest.TestCase):
             self.assertEqual(rows[0]["RawPath"], old_row["RawPath"])
             self.assertEqual(rows[0]["CommentCount"], "5")
             self.assertFalse(jira_sync.manifest_status_is_active(rows[0]["Status"]))
+
+    def test_manifest_removes_issue_that_is_no_longer_assigned(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest_path = Path(tmp) / "manifest.csv"
+            old_row = {
+                "Key": "ISSUE-1",
+                "Status": "In Progress",
+                "Assignee": "Sean",
+                "Summary": "Old summary",
+                "Updated": "2026-06-08T18:07:04.871-0400",
+                "Due": "",
+                "Priority": "Medium",
+                "RawPath": "/data/outputs/jira/raw/ISSUE-1.json",
+                "SummaryPath": "/data/outputs/jira/summary/ISSUE-1.md",
+                "AttachmentCount": "2",
+                "FormCount": "1",
+                "CommentCount": "5",
+                "HasNewComments": "false",
+                "EscalationReady": "",
+            }
+            jira_sync.write_manifest(manifest_path, [old_row])
+
+            jira_sync.write_manifest(manifest_path, [], remove_keys={"ISSUE-1"})
+
+            rows = list(csv.DictReader(manifest_path.read_text(encoding="utf-8").splitlines()))
+            self.assertEqual(rows, [])
+
+    def test_not_assigned_exclusion_applies_to_default_queue_only(self):
+        issue = {
+            "fields": {
+                "assignee": {
+                    "displayName": "Other Person",
+                    "emailAddress": "other@example.com",
+                    "accountId": "other-account",
+                }
+            }
+        }
+        with patch.dict("os.environ", {"CASEOPS_DEFAULT_ASSIGNEE": "sean@example.com"}, clear=False):
+            default_args = argparse.Namespace(jql=None)
+            custom_args = argparse.Namespace(jql='assignee = "Other Person"')
+
+            self.assertTrue(jira_sync.should_exclude_not_assigned(default_args, issue))
+            self.assertFalse(jira_sync.should_exclude_not_assigned(custom_args, issue))
+
+    def test_not_assigned_exclusion_accepts_email_display_name_or_account_id(self):
+        args = argparse.Namespace(jql=None)
+        issue = {
+            "fields": {
+                "assignee": {
+                    "displayName": "Sean Bingham",
+                    "emailAddress": "sean@example.com",
+                    "accountId": "abc123",
+                }
+            }
+        }
+
+        for configured in ["sean@example.com", "Sean Bingham", "abc123"]:
+            with self.subTest(configured=configured):
+                with patch.dict("os.environ", {"CASEOPS_DEFAULT_ASSIGNEE": configured}, clear=False):
+                    self.assertFalse(jira_sync.should_exclude_not_assigned(args, issue))
+
+    def test_not_assigned_archive_is_written_outside_active_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            archive_dir = Path(tmp) / "not-assigned"
+            issue = {
+                "fields": {
+                    "status": {"name": "In Progress"},
+                    "assignee": {"displayName": "Other Person"},
+                    "summary": "Moved to another operator",
+                    "updated": "2026-06-08T19:00:00.000-0400",
+                }
+            }
+            with patch.dict("os.environ", {"CASEOPS_DEFAULT_ASSIGNEE": "Sean Bingham"}, clear=False):
+                jira_sync.archive_not_assigned_issue(
+                    key="ISSUE-1",
+                    issue=issue,
+                    old_row={},
+                    archive_dir=archive_dir,
+                )
+
+            archive_text = (archive_dir / "ISSUE-1.md").read_text(encoding="utf-8")
+            self.assertIn("Not Assigned Archive - ISSUE-1", archive_text)
+            self.assertIn("Current Jira assignee: Other Person", archive_text)
+            self.assertIn("removed from `outputs/jira/manifest.csv`", archive_text)
 
 
 if __name__ == "__main__":
