@@ -174,12 +174,12 @@ For each active issue:
 
 For each active issue:
 1. **Emit to stdout:** `STEP_10 <ISSUE_KEY>`
-2. Spawn jira-response-drafting sub-agent using **Step 10 prompt** from `references/sub-agent-prompts.md`. Pass routing info (support vs. escalation). Creates `outputs/jira-messages/<KEY>.md` (customer-facing only) and `outputs/internal-notes/<KEY>.md` (internal diagnosis only).
+2. Spawn jira-response-drafting sub-agent using **Step 10 prompt** from `references/sub-agent-prompts.md`. Pass routing info (support vs. escalation). Creates `outputs/issue-briefs/<KEY>.md` (concise issue summary for every processed issue), `outputs/jira-messages/<KEY>.md` (customer-facing only), and `outputs/internal-notes/<KEY>.md` (internal diagnosis only).
 
 **Validation checkpoint:** Verify file separation (no [INTERNAL] sections in jira-messages; no customer greetings in internal-notes).
 
 **For Engineering-escalation path:**
-After messaging, create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with:
+After messaging, also create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with:
 - `Problem`
 - `Reproduce`
 - `Expected behavior`
@@ -224,7 +224,7 @@ Before writing the dated summary, check whether today's `outputs/summaries/YYYY-
    - **Must not** appear in Issue Rollup or Sandbox sections
 
 6. **Artifact Index**
-   - Links to: `outputs/jira/summary/`, `outputs/investigations/`, `outputs/engineering-escalations/`, `outputs/closed-resolved/`, `outputs/internal-notes/`, `outputs/jira-messages/`, `outputs/test-reports/`
+   - Links to: `outputs/jira/summary/`, `outputs/investigations/`, `outputs/issue-briefs/`, `outputs/engineering-escalations/`, `outputs/closed-resolved/`, `outputs/internal-notes/`, `outputs/jira-messages/`, `outputs/test-reports/`
 
 **Progress tracking:** Log each issue's final disposition in `outputs/pipeline-logs/<RUN_DATE>.log` as: `END <KEY> disposition=<fixed|escalated|on-hold>`
 
@@ -335,6 +335,7 @@ Total runtime: H hours M minutes
 
 - `assets/investigation-record-template.md` — working record per issue.
 - `assets/problem-hypothesis-template.md` — Hypothesis worksheet.
+- `assets/issue-brief-template.md` — concise issue brief for every processed issue.
 - `assets/engineering-handoff-template.md` — concise Engineering escalation handoff.
 - `assets/internal-notes-template.md` — internal notes.
 - `assets/jira-message-template.md` — Jira response draft.

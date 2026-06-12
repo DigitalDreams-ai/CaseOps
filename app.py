@@ -246,12 +246,31 @@ PIPELINE_TRANSITION_CONTRACTS = {
         "transition_to": 10,
         "restart_step": 10,
         "required_fields": (
+            "issue_brief",
             "messages_separated",
             "internal_notes_audience",
             "customer_message_audience",
         ),
     },
 }
+ISSUE_BRIEF_REQUIRED_SECTIONS = (
+    "Problem",
+    "Reproduce",
+    "Expected behavior",
+    "Affected record IDs",
+    "Proposed Solution",
+)
+BRIEF_FORBIDDEN_FORMAT_RE = re.compile(
+    r"(?is)"
+    r"(\[[^\]]+\]\([^)]+\))|"  # Markdown links
+    r"(sf://)|"
+    r"(\bSB\b)|"
+    r"(\b0Af[A-Za-z0-9]{12,18}\b)|"
+    r"(confirmed package)|"
+    r"(/data/outputs/)|"
+    r"([A-Za-z]:\\)|"
+    r"(/volume\d+/)"
+)
 PIPELINE_CONTEXT_LIMITS = {
     "org_knowledge_total_chars": 12_000,
     "org_knowledge_max_file_chars": 1_200,
@@ -1162,6 +1181,7 @@ def _build_context_packet_for_issue(key: str) -> tuple[dict[str, Any], int]:
         "test_report": "test_report",
         "internal_notes": "internal_notes",
         "jira_message": "jira_message",
+        "issue_brief": "issue_brief",
     }
     artifact_summaries: list[dict[str, Any]] = []
     for label, key_name in artifact_fields.items():
@@ -1918,6 +1938,7 @@ FILE_LOCATIONS: dict[str, str] = {
     "hypothesis":         "hypothesis/{key}.md",
     "internal_notes":     "internal-notes/{key}.md",
     "jira_message":       "jira-messages/{key}.md",
+    "issue_brief":        "issue-briefs/{key}.md",
     "test_report":        "test-reports/{key}.md",
     "eng_handoff":        "engineering-escalations/{key}.md",
     "closed_resolved":    "closed-resolved/{key}.md",
@@ -1929,6 +1950,7 @@ FILE_LABELS: dict[str, str] = {
     "hypothesis":      "Hypothesis",
     "internal_notes":  "Internal Notes",
     "jira_message":    "Jira Message",
+    "issue_brief":     "Issue Brief",
     "test_report":     "Test Report",
     "eng_handoff":     "Needs Engineering",
     "closed_resolved": "Closed / Resolved / Canceled",
@@ -2589,27 +2611,36 @@ def _evaluate_transition_contract_step8_to_step9(metadata_manifest_text: str) ->
 
 
 def _evaluate_transition_contract_step9_to_step10(
+    issue_brief: str,
     internal_notes: str,
     jira_message: str,
     messages_separated: bool,
 ) -> dict[str, Any]:
     missing: list[str] = []
-    artifacts_started = bool(internal_notes or jira_message)
+    artifacts_started = bool(issue_brief or internal_notes or jira_message)
+    issue_brief_valid = _issue_brief_has_required_sections(issue_brief)
     evidence = {
+        "issue_brief": bool(issue_brief),
+        "issue_brief_required_sections": issue_brief_valid,
         "messages_separated": bool(messages_separated),
         "internal_notes_audience": False,
         "customer_message_audience": True,
+        "issue_brief_chars": len(issue_brief or ""),
         "internal_chars": len(internal_notes or ""),
         "jira_chars": len(jira_message or ""),
     }
     if not artifacts_started:
         return {
             "status": "pending",
-            "missing": ["internal_notes", "jira_message"],
+            "missing": ["issue_brief", "internal_notes", "jira_message"],
             "observed": evidence,
             "reason": "Step 10 drafts have not been generated yet.",
             "required_fields": PIPELINE_TRANSITION_CONTRACTS["step9_to_step10"]["required_fields"],
         }
+    if not issue_brief:
+        missing.append("issue_brief")
+    elif not issue_brief_valid:
+        missing.append("issue_brief_required_sections")
     if not internal_notes:
         missing.append("internal_notes")
     if not jira_message:
@@ -2640,11 +2671,35 @@ def _evaluate_transition_contract_step9_to_step10(
     }
 
 
+def _issue_brief_has_required_sections(text: str) -> bool:
+    return _brief_template_has_required_format(text)
+
+
+def _engineering_handoff_has_required_sections(text: str) -> bool:
+    return _brief_template_has_required_format(text)
+
+
+def _brief_template_has_required_format(text: str) -> bool:
+    lines = [line.strip() for line in (text or "").splitlines() if line.strip()]
+    if not lines:
+        return False
+    if lines[0].rstrip(":").lower() != "problem":
+        return False
+    if BRIEF_FORBIDDEN_FORMAT_RE.search(text or ""):
+        return False
+    for section in ISSUE_BRIEF_REQUIRED_SECTIONS:
+        pattern = rf"(?im)^\s*(?:#+\s*)?{re.escape(section)}:?\s*$"
+        if not re.search(pattern, text or ""):
+            return False
+    return True
+
+
 def _evaluate_transition_contracts(
     *,
     hypothesis: str,
     investigation: str,
     metadata_manifest_text: str,
+    issue_brief: str,
     internal_notes: str,
     jira_message: str,
     messages_separated: bool,
@@ -2653,7 +2708,7 @@ def _evaluate_transition_contracts(
         "step4_to_step5": _evaluate_transition_contract_step4_to_step5(hypothesis),
         "step5_to_step6": _evaluate_transition_contract_step5_to_step6(investigation),
         "step8_to_step9": _evaluate_transition_contract_step8_to_step9(metadata_manifest_text),
-        "step9_to_step10": _evaluate_transition_contract_step9_to_step10(internal_notes, jira_message, messages_separated),
+        "step9_to_step10": _evaluate_transition_contract_step9_to_step10(issue_brief, internal_notes, jira_message, messages_separated),
     }
     return contracts
 
@@ -2885,6 +2940,7 @@ def _build_pipeline_resume_plan(
         "test_report": OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key),
         "internal_notes": OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key),
         "jira_message": OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key),
+        "issue_brief": OUTPUTS / FILE_LOCATIONS["issue_brief"].format(key=key),
         "eng_handoff": OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key),
         "closed_resolved": OUTPUTS / FILE_LOCATIONS["closed_resolved"].format(key=key),
     }
@@ -2895,9 +2951,10 @@ def _build_pipeline_resume_plan(
     test_report = _read_text_for_resume(paths["test_report"])
     internal_notes = _read_text_for_resume(paths["internal_notes"])
     jira_message = _read_text_for_resume(paths["jira_message"])
+    issue_brief = _read_text_for_resume(paths["issue_brief"])
     eng_handoff = _read_text_for_resume(paths["eng_handoff"])
     recent_evidence = _recent_pipeline_evidence(key)
-    diagnosis_text = "\n".join([investigation, hypothesis, internal_notes, eng_handoff])
+    diagnosis_text = "\n".join([investigation, hypothesis, internal_notes, issue_brief, eng_handoff])
     recent_evidence_text = "\n".join(recent_evidence)
     diagnosis_and_recent_text = "\n".join([diagnosis_text, recent_evidence_text])
 
@@ -2988,6 +3045,7 @@ def _build_pipeline_resume_plan(
         hypothesis=hypothesis,
         investigation=investigation,
         metadata_manifest_text=metadata_manifest_text,
+        issue_brief=issue_brief,
         internal_notes=internal_notes,
         jira_message=jira_message,
         messages_separated=messages_separated,
@@ -3000,11 +3058,21 @@ def _build_pipeline_resume_plan(
             "reason": "No-deploy path does not require a metadata workspace manifest.",
             "required_fields": (),
         }
+    engineering_handoff_required = routing["path"] == "engineering_required"
+    engineering_handoff_current = bool(
+        artifacts["eng_handoff"]["exists"]
+        and artifacts["eng_handoff"]["size"] > 80
+        and _engineering_handoff_has_required_sections(eng_handoff)
+    )
     step10_artifacts_current = bool(
         artifacts["internal_notes"]["exists"]
         and artifacts["internal_notes"]["size"] > 80
         and artifacts["jira_message"]["exists"]
         and artifacts["jira_message"]["size"] > 80
+        and artifacts["issue_brief"]["exists"]
+        and artifacts["issue_brief"]["size"] > 80
+        and _issue_brief_has_required_sections(issue_brief)
+        and (not engineering_handoff_required or engineering_handoff_current)
     )
 
     if has_schema and has_stored_signatures:
@@ -3149,11 +3217,11 @@ def _build_pipeline_resume_plan(
             ),
             _resume_step(
                 10,
-                "Draft internal notes and Jira message",
+                "Draft issue brief, internal notes, and Jira message",
                 "complete" if step10_complete else ("stale" if step9_complete and step10_artifacts_current else ("pending" if step9_complete else "blocked")),
-                "Draft artifacts are current and separated." if step10_complete else "Draft/update internal notes, Jira message, and engineering handoff if required.",
-                "Emit STEP_10 resume-skip; avoid rewriting drafts if Step 9 is still current." if step10_complete else "Draft/update internal notes and Jira message from latest Step 9 result." ,
-                [artifacts["internal_notes"]["path"], artifacts["jira_message"]["path"], artifacts["eng_handoff"]["path"]],
+                "Draft artifacts are current and separated." if step10_complete else "Draft/update issue brief, internal notes, Jira message, and engineering handoff if required.",
+                "Emit STEP_10 resume-skip; avoid rewriting drafts if Step 9 is still current." if step10_complete else "Draft/update issue brief, internal notes, and Jira message from latest Step 9 result." ,
+                [artifacts["issue_brief"]["path"], artifacts["internal_notes"]["path"], artifacts["jira_message"]["path"], artifacts["eng_handoff"]["path"]],
             ),
         ])
 
@@ -6582,10 +6650,11 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"| File | Purpose | When to Update |\n"
         f"|------|---------|----------------|\n"
         f"| `{outputs_dir_relative}/investigations/{key}.md` | Investigation record (issue understanding, Salesforce problem, similar items analysis) | After diagnosis, before drafting notes |\n"
+        f"| `{outputs_dir_relative}/issue-briefs/{key}.md` | Concise five-section issue brief for every processed issue | During Step 10 after testing/validation evidence exists |\n"
         f"| `{outputs_dir_relative}/internal-notes/{key}.md` | Internal notes for operator (root cause, escalation decision, fix notes) | When you've diagnosed the issue |\n"
         f"| `{outputs_dir_relative}/jira-messages/{key}.md` | Customer-facing Jira message (confirmed fix OR engineering escalation) | When ready to respond to customer |\n"
         f"| `{outputs_dir_relative}/test-reports/{key}.md` | Test cases, results, and fix validation | After testing the fix in Sandbox |\n"
-        f"| `{outputs_dir_relative}/engineering-escalations/{key}.md` | Engineering handoff (if escalating) | When escalating to Engineering team |\n"
+        f"| `{outputs_dir_relative}/engineering-escalations/{key}.md` | Engineering handoff only for issues routed to Engineering | When escalating to Engineering team |\n"
         f"| `{outputs_dir_relative}/generated-files/{key}/` | Issue-specific generated files such as spreadsheets, exports, CSVs, or supporting documents | Whenever a run creates non-markdown files |\n"
         f"\n"
         f"**Update guidance:**\n"
@@ -7411,6 +7480,7 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         _cache_evict(investigation_cache)
 
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
+    has_issue_brief = (OUTPUTS / FILE_LOCATIONS["issue_brief"].format(key=key)).exists()
     has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
     has_test_report = (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists()
     is_jira_escalated = _is_jira_engineering_escalated(status)
@@ -7482,6 +7552,7 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         "has_jira_summary": (OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key)).exists(),
         "has_investigation": has_investigation,
         "has_internal_notes": has_internal_notes,
+        "has_issue_brief": has_issue_brief,
         "has_jira_message": (OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key)).exists(),
         "has_test_report": (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists(),
         "has_eng_handoff": has_eng_handoff,
@@ -9773,10 +9844,10 @@ if __name__ == "__main__":
 
     # Pre-create all pipeline output subdirectories so Claude Code doesn't need write permissions to create them
     for subdir in [
-        "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
+        "jira", "investigations", "internal-notes", "jira-messages", "issue-briefs", "test-reports",
         "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
         "issue-clusters",
-        "closed-resolved", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces", "summaries"
+        "closed-resolved", "not-assigned", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces", "summaries"
     ]:
         _ensure_directory_writable(OUTPUTS / subdir, f"outputs/{subdir}")
     _ensure_org_knowledge_defaults()
@@ -9822,10 +9893,10 @@ if __name__ == "__main__":
 
     # Validate all required subdirectories exist
     required_subdirs = [
-        "jira", "investigations", "internal-notes", "jira-messages", "test-reports",
+        "jira", "investigations", "internal-notes", "jira-messages", "issue-briefs", "test-reports",
         "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
         "issue-clusters",
-        "closed-resolved", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces",
+        "closed-resolved", "not-assigned", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces",
         _SUMMARY_DIR
     ]
     for subdir in required_subdirs:

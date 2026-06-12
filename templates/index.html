@@ -2635,7 +2635,7 @@
 
   async function copyFullPrompt(key) {
     try {
-      const files = ['investigation', 'internal_notes', 'jira_message'];
+      const files = ['investigation', 'issue_brief', 'internal_notes', 'jira_message'];
       const parts = [];
 
       for (const ftype of files) {
@@ -2675,6 +2675,7 @@
       { id: 'jira_summary',   label: 'Synced',           group: 'done'    },
       { id: 'investigation',  label: 'Investigated',      group: 'done'    },
       { id: 'test_report',    label: 'Tested',            group: 'done'    },
+      { id: 'issue_brief',    label: 'Brief drafted',     group: 'done'    },
       { id: 'internal_notes', label: 'Notes drafted',     group: 'done'    },
       { id: 'jira_message',   label: 'Jira message',      group: 'done'    },
       { id: 'eng_handoff',    label: 'Eng escalation',    group: 'done'    },

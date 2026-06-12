@@ -166,9 +166,9 @@ Return a compact summary (max 400 tokens) containing:
 
 If the sub-agent returns **Fail:** confirm the failed attempt was reverted in Sandbox, update the hypothesis in Step 4, spawn a new Step 5 sub-agent if more metadata is needed (and Step 6 if drilling refinement needed), re-implement in Step 8, spawn a new Step 9 sub-agent using the next attempt number. Record each failed iteration in `outputs/investigations/<KEY>.md`.
 
-## Step 10 — Draft internal notes and Jira message
+## Step 10 — Draft issue brief, internal notes, and Jira message
 
-**CRITICAL: This is the bulletproof Step 10 rewrite (v2) with mandatory file separation and validation checkpoints.**
+**CRITICAL: This Step 10 contract requires three separate files with separate audiences and meanings.**
 
 See also: `references/orchestration-loop-controller.md` for orchestrator-level Step 10 file validation that runs after this sub-agent completes.
 
@@ -180,15 +180,56 @@ Fix or escalation: <Support fix description from Step 8, or "Escalated to Engine
 Test result: <from Step 9 summary>
 Investigation record: outputs/investigations/<KEY>.md
 
-═══════════════════════════════════════════════════════════════════════
-TASK: Draft and save TWO completely separate documents for TWO audiences
-═══════════════════════════════════════════════════════════════════════
+TASK: Draft and save THREE completely separate documents:
 
-⚠️  FATAL IF COMBINED: If both documents are in one file, customer sees internal diagnosis. This is a STOP rule.
+1. Issue Brief: concise problem/solution summary for every processed issue.
+2. Jira Message: customer-facing response only.
+3. Internal Notes: operator-only diagnosis memo.
 
-════════════════════════════════════════════════════════════════════════
-STEP A: DRAFT DOCUMENT 1 (Jira Message — Customer-Facing Only)
-════════════════════════════════════════════════════════════════════════
+STOP RULE: Do not combine documents. Do not use the Engineering handoff path unless the issue is actually routed to Engineering.
+
+STEP A: DRAFT DOCUMENT 1 (Issue Brief — Neutral Summary)
+
+AUDIENCE: Operator, reviewer, and Engineering if the issue is routed there.
+TEMPLATE: skills/caseops-pipeline/assets/issue-brief-template.md
+OUTPUT FILE: outputs/issue-briefs/<KEY>.md
+
+CONTENT RULES:
+- Always create this file for every processed issue.
+- Use exactly these top-level sections, with no extra headings before them:
+  - Problem
+  - Reproduce
+  - Expected behavior
+  - Affected record IDs
+  - Proposed Solution
+- Keep it concise and Jira-ready.
+- Include concrete components, records, reports, users, or "None confirmed" where applicable.
+- Use sub-bullets for exact component names and related record IDs instead of long sentences.
+- Use natural, human language. Avoid bot-like phrases, duplicated facts, and labels such as "Business impact:".
+- State Production deploy/action requirement only if it changes the proposed action. Do not include deploy IDs, package paths, version IDs, or test result summaries.
+- This file is informational only. It must not claim the issue is escalated unless routing is Engineering-required.
+
+FORBIDDEN IN THIS FILE:
+- Internal pipeline sections.
+- Metadata dumps.
+- Confidence scoring.
+- Long investigation narrative.
+- Markdown links, Salesforce `sf://` links, Jira links, report links, or clickable record links.
+- Sandbox suffixes or personal markers such as `SB`.
+- Operator initials or names unless the issue is explicitly about that user.
+- Deploy IDs, confirmed package paths, local paths, NAS paths, or metadata workspace paths.
+- Tokens, private URLs, NAS paths, local repo paths, or raw filesystem paths.
+
+SAVE DOCUMENT 1 TO DISK:
+
+File: outputs/issue-briefs/<KEY>.md
+Content: ONLY the issue brief from Step A.
+Do not save customer-facing prose here.
+Do not save internal-only diagnosis notes here.
+
+CHECKPOINT: Is outputs/issue-briefs/<KEY>.md saved and does it start at "Problem"? YES or STOP.
+
+STEP B: DRAFT DOCUMENT 2 (Jira Message — Customer-Facing Only)
 
 AUDIENCE: Issue reporter + stakeholders (public Jira comment)
 TEMPLATE: skills/caseops-pipeline/assets/jira-message-template.md
@@ -270,21 +311,17 @@ VALIDATION BEFORE SAVING:
    - ✓ No unnecessary jargon or admin terms? YES or STOP and simplify.
 6. Only after validation, save to outputs/jira-messages/<KEY>.md
 
-════════════════════════════════════════════════════════════════════════
-STEP B: SAVE DOCUMENT 1 TO DISK
-════════════════════════════════════════════════════════════════════════
+SAVE DOCUMENT 2 TO DISK
 
 File: outputs/jira-messages/<KEY>.md
-Content: ONLY the customer-facing draft from Step A
-Do NOT save Document 2 content here
-Do NOT include headers, separators, or sections from Document 2
-Do NOT reuse any content when drafting Document 2 (start fresh)
+Content: ONLY the customer-facing draft from Step B.
+Do NOT save Document 1 or Document 3 content here.
+Do NOT include headers, separators, or sections from the other documents.
+Do NOT reuse issue brief bullets as customer-facing prose without rewriting them for the reporter.
 
 CHECKPOINT: Is outputs/jira-messages/<KEY>.md now saved and contains ZERO internal keywords? YES or STOP.
 
-════════════════════════════════════════════════════════════════════════
-STEP C: DRAFT DOCUMENT 2 (Internal Notes — Internal Diagnosis Only)
-════════════════════════════════════════════════════════════════════════
+STEP C: DRAFT DOCUMENT 3 (Internal Notes — Internal Diagnosis Only)
 
 AUDIENCE: Operator only (internal reference, NOT posted to Jira)
 TEMPLATE: skills/caseops-pipeline/assets/internal-notes-template.md
@@ -319,34 +356,49 @@ VALIDATION BEFORE SAVING:
    - ✓ Total length under 500 words? YES or trim.
 5. Only after validation, save to outputs/internal-notes/<KEY>.md
 
-════════════════════════════════════════════════════════════════════════
-STEP D: SAVE DOCUMENT 2 TO DISK
-════════════════════════════════════════════════════════════════════════
+SAVE DOCUMENT 3 TO DISK
 
 File: outputs/internal-notes/<KEY>.md
 Content: ONLY the internal diagnosis draft from Step C
-Do NOT save Document 1 content here
+Do NOT save Document 1 or Document 2 content here
 Do NOT reuse customer-facing greeting or tone
 
-════════════════════════════════════════════════════════════════════════
-FINAL CHECKPOINT (MANDATORY)
-════════════════════════════════════════════════════════════════════════
+ENGINEERING HANDOFF COPY (ONLY IF ROUTED TO ENGINEERING)
 
-After saving both files, verify:
-1. outputs/jira-messages/<KEY>.md EXISTS and contains customer-facing message only
-2. outputs/jira-messages/<KEY>.md contains ZERO [INTERNAL] sections
-3. outputs/jira-messages/<KEY>.md contains ZERO internal diagnosis keywords
-4. outputs/internal-notes/<KEY>.md EXISTS and contains root cause diagnosis
-5. outputs/internal-notes/<KEY>.md does NOT contain "Hi [Name]," greeting
+If and only if the routing state is Engineering-required, also write:
+
+File: outputs/engineering-escalations/<KEY>.md
+Template: skills/caseops-pipeline/assets/engineering-handoff-template.md
+
+Use the same five-section shape as the Issue Brief:
+- Problem
+- Reproduce
+- Expected behavior
+- Affected record IDs
+- Proposed Solution
+
+The Engineering handoff may be identical to the Issue Brief if it already satisfies Engineering handoff rules. Do not create this file for Support-resolvable, no-deploy, data/admin, customer-reply, or closed/resolved issues.
+The Engineering handoff follows the same formatting rules as the Issue Brief: no Markdown links, no `sf://` links, no `SB` suffixes, no deploy IDs, no package paths, no duplicate facts, and no test-result narration unless the test result changes the proposed solution.
+
+FINAL CHECKPOINT (MANDATORY)
+
+After saving files, verify:
+1. outputs/issue-briefs/<KEY>.md EXISTS and starts at "Problem".
+2. outputs/issue-briefs/<KEY>.md contains all five required sections.
+3. outputs/jira-messages/<KEY>.md EXISTS and contains customer-facing message only.
+4. outputs/jira-messages/<KEY>.md contains ZERO [INTERNAL] sections.
+5. outputs/jira-messages/<KEY>.md contains ZERO internal diagnosis keywords.
+6. outputs/internal-notes/<KEY>.md EXISTS and contains root cause diagnosis.
+7. outputs/internal-notes/<KEY>.md does NOT contain "Hi [Name]," greeting.
+8. outputs/engineering-escalations/<KEY>.md exists only when routing is Engineering-required.
 
 If any checkpoint fails, STOP and fix before returning.
 
-════════════════════════════════════════════════════════════════════════
-
 Return summary (max 300 tokens):
 - Outcome (fixed/escalated)
-- DOCUMENT 1 summary (jira-message file, customer-facing tone check)
-- DOCUMENT 2 summary (internal-notes file, decision and action summary)
+- DOCUMENT 1 summary (issue-brief file, five-section check)
+- DOCUMENT 2 summary (jira-message file, customer-facing tone check)
+- DOCUMENT 3 summary (internal-notes file, decision and action summary)
 - Production deploy? (Gearset / No / N/A)
-- Paths: outputs/jira-messages/<KEY>.md | outputs/internal-notes/<KEY>.md
+- Paths: outputs/issue-briefs/<KEY>.md | outputs/jira-messages/<KEY>.md | outputs/internal-notes/<KEY>.md
 ```

@@ -14,7 +14,7 @@ This document describes the loop logic for processing active issues through Step
    - Step 7 decision: Branch to Support or Engineering path
    - Support path: Steps 8–10 (implement → deploy/test → draft messages)
    - Engineering path: Skip 8–9, go directly to Step 10 (draft escalation message)
-   - Step 10: Message drafting (customer-facing + internal)
+   - Step 10: Issue brief + message drafting (neutral brief + customer-facing + internal)
    - After Step 10: Log outcome in dated summary
 
 **Output:** Dated summary file `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` with all issues rolled up
@@ -38,7 +38,7 @@ Create a progress log file at start: `outputs/pipeline-logs/YYYYMMDD-HHMMSS.log`
 - `STEP_8 <KEY> ✓ implemented` — Sandbox changes documented (Support path only)
 - `STEP_9 <KEY> ✓ passed` or `STEP_9 <KEY> ✗ failed` — Deploy/test result
 - `STEP_9_LOOP <KEY> iteration=1 — Revised hypothesis, looping back to Step 5` — Retry iteration
-- `STEP_10 <KEY> ✓ messages drafted` — Internal notes + Jira message created
+- `STEP_10 <KEY> ✓ messages drafted` — Issue brief + internal notes + Jira message created
 - `END <KEY> disposition=<fixed|escalated|on-hold>` — Complete and log outcome
 
 ### Issue-Specific Progress File (Optional)
@@ -235,7 +235,7 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
         
         step_10_result = spawn_sub_agent(
             tool="jira-response-drafting",
-            prompt_template="Step 10 — Draft internal notes and Jira message",
+            prompt_template="Step 10 — Draft issue brief, internal notes, and Jira message",
             inputs={
                 "issue_key": issue_key,
                 "root_cause": hypothesis,
@@ -246,18 +246,20 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
         )
         
         # Validate file separation
+        issue_brief_file = f"outputs/issue-briefs/{issue_key}.md"
         jira_msg_file = f"outputs/jira-messages/{issue_key}.md"
         internal_file = f"outputs/internal-notes/{issue_key}.md"
-        IF NOT file_exists(jira_msg_file) OR NOT file_exists(internal_file):
+        IF NOT file_exists(issue_brief_file) OR NOT file_exists(jira_msg_file) OR NOT file_exists(internal_file):
             log(f"STEP_10 {issue_key} ✗ VALIDATION FAILED: Missing output files")
             log(f"END {issue_key} disposition=on-hold (Step 10 validation failure)")
             ADD_TO_SUMMARY(issue_key, disposition="on-hold", reason="Message drafting failed")
             CONTINUE
         
+        issue_brief_content = read_file(issue_brief_file)
         jira_msg_content = read_file(jira_msg_file)
         internal_content = read_file(internal_file)
         
-        IF jira_msg_content CONTAINS "[INTERNAL]" OR internal_content CONTAINS "Hi [":
+        IF NOT issue_brief_content STARTS WITH "Problem" OR jira_msg_content CONTAINS "[INTERNAL]" OR internal_content CONTAINS "Hi [":
             log(f"STEP_10 {issue_key} ✗ VALIDATION FAILED: Files are mixed (customer/internal)")
             log(f"END {issue_key} disposition=on-hold (Step 10 file separation failure)")
             ADD_TO_SUMMARY(issue_key, disposition="on-hold", reason="Step 10 file mixing")
@@ -278,6 +280,7 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
             prod_deploy_needed=determine_prod_deploy(escalation_decision, test_result),
             sandbox_org=CASEOPS_SANDBOX_TARGET_ORG,
             test_report_path=f"outputs/test-reports/{issue_key}.md" IF disposition == "fixed" ELSE "N/A",
+            issue_brief_path=f"outputs/issue-briefs/{issue_key}.md",
             internal_notes_path=f"outputs/internal-notes/{issue_key}.md",
             jira_message_path=f"outputs/jira-messages/{issue_key}.md"
         )

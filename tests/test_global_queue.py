@@ -690,11 +690,48 @@ class GlobalQueueTests(unittest.TestCase):
                 "hypothesis",
                 "internal_notes",
                 "jira_message",
+                "issue_brief",
                 "test_report",
                 "eng_handoff",
                 "closed_resolved",
             ],
         )
+
+    def test_issue_brief_contract_requires_problem_first_and_five_sections(self):
+        valid = "\n".join(
+            [
+                "Problem",
+                "",
+                "- Failure point.",
+                "",
+                "Reproduce",
+                "",
+                "1. Step.",
+                "",
+                "Expected behavior",
+                "",
+                "- Expected result.",
+                "",
+                "Affected record IDs",
+                "",
+                "- None confirmed.",
+                "",
+                "Proposed Solution",
+                "",
+                "- Fix it.",
+            ]
+        )
+        invalid = "# Issue Brief\n\nProblem\n\nReproduce\n\nExpected behavior\n\nAffected record IDs\n\nProposed Solution\n"
+        noisy = valid.replace(
+            "Fix it.",
+            "Fix it in [Flow: Example](sf://300000000000000AAA). Deploy ID: 0AfEa00000aMT53KAG SB.",
+        )
+
+        self.assertTrue(app._issue_brief_has_required_sections(valid))
+        self.assertTrue(app._engineering_handoff_has_required_sections(valid))
+        self.assertFalse(app._issue_brief_has_required_sections(invalid))
+        self.assertFalse(app._issue_brief_has_required_sections(noisy))
+        self.assertFalse(app._engineering_handoff_has_required_sections(noisy))
 
     def test_api_issues_includes_jira_summary_search_text_for_filtering(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -959,7 +996,7 @@ class GlobalQueueTests(unittest.TestCase):
                     "ok": True,
                     "key": key,
                     "plan_path": f"pipeline-state/{key}.json",
-                    "next_step": {"step": 10, "name": "Draft internal notes and Jira message"},
+                    "next_step": {"step": 10, "name": "Draft issue brief, internal notes, and Jira message"},
                 }
 
             with (

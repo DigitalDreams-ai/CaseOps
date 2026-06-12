@@ -18,9 +18,14 @@ Verify before treating a run as complete.
 - The Salesforce problem statement is explicit before implementation.
 - The solution plan identifies affected metadata or code.
 - The Engineering escalation gate (Step 7) is evaluated before any implementation or Sandbox deployment.
+- Issue briefs are created for every processed issue under `outputs/issue-briefs/<KEY>.md`.
+- Issue briefs use the concise five-section format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
+- Issue briefs are informational only and do not imply Engineering escalation.
+- Issue briefs and Engineering handoffs contain no Markdown links, `sf://` links, `SB` suffixes, deploy IDs, package paths, local paths, NAS paths, metadata workspace paths, or duplicated facts.
+- Issue briefs and Engineering handoffs use sub-bullets for related component names and related record IDs.
 - Engineering handoffs use the concise five-section format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
 - Engineering handoffs do not include internal pipeline sections, metadata dumps, confidence scoring, or long investigation narrative.
-- Engineering handoff notes are stored under `outputs/engineering-escalations/`.
+- Engineering handoff notes are stored under `outputs/engineering-escalations/` only for issues routed to Engineering.
 - Step 9 is **mandatory** for every Support-resolvable issue (after Step 8). It is skipped **only** when Step 7 routes to Engineering escalation.
 - **`CASEOPS_SANDBOX_TARGET_ORG`** from the active env file is the **only** writable deploy target for Step 9; production and other orgs must not receive deploys or writes from this pipeline.
 - The target Sandbox is explicit in the Step 9 sub-agent prompt and matches `CASEOPS_SANDBOX_TARGET_ORG` before deployment.

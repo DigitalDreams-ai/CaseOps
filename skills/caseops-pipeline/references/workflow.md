@@ -255,20 +255,34 @@ Before returning Fail, the Step 9 sub-agent must revert non-viable Sandbox chang
 
 ---
 
-## Step 10 — Draft internal notes, Jira message, and escalation handoff (if needed) [SUB-AGENT]
+## Step 10 — Draft issue brief, internal notes, Jira message, and escalation handoff (if needed) [SUB-AGENT]
 
-Spawn a sub-agent using **”Step 10 — Draft internal notes and Jira message”** in **`references/sub-agent-prompts.md`**. Pass the test results from Step 9, or the no-deploy test report for Support admin/data actions.
+Spawn a sub-agent using **”Step 10 — Draft issue brief, internal notes, and Jira message”** in **`references/sub-agent-prompts.md`**. Pass the test results from Step 9, or the no-deploy test report for Support admin/data actions.
 
-**If Support-resolvable:** Drafts are ready for operator-controlled Production action via Gearset, standard change control, or manual admin/data correction. CaseOps does not execute Production writes in normal pipeline runs.
-
-**If Engineering-escalation:** Create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with:
+For **every processed issue**, create `outputs/issue-briefs/<KEY>.md` using `assets/issue-brief-template.md` with:
 - `Problem`
 - `Reproduce`
 - `Expected behavior`
 - `Affected record IDs`
 - `Proposed Solution`
 
-Keep the handoff concise and Jira-ready. Do not add internal pipeline sections, metadata dumps, confidence scoring, or long investigation narrative.
+The Issue Brief is an informational summary. It must not affect routing, tags, or escalation state.
+Format it like a clean handoff note, not an investigation dump:
+- No Markdown links, `sf://` links, Jira links, or clickable record/report links.
+- No `SB` suffixes, deploy IDs, package paths, local paths, NAS paths, or metadata workspace paths.
+- Use sub-bullets for related component names and related record IDs.
+- Use natural language and do not repeat the same fact in multiple sections.
+
+**If Support-resolvable:** Drafts are ready for operator-controlled Production action via Gearset, standard change control, or manual admin/data correction. CaseOps does not execute Production writes in normal pipeline runs.
+
+**If Engineering-escalation:** Also create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with:
+- `Problem`
+- `Reproduce`
+- `Expected behavior`
+- `Affected record IDs`
+- `Proposed Solution`
+
+Keep the issue brief and handoff concise and Jira-ready. Do not add internal pipeline sections, metadata dumps, confidence scoring, or long investigation narrative.
 
 **Production vs Sandbox in every customer-facing and internal summary:** Drafts must **never** read as if new metadata already exists in **Production** when it was only created or deployed in **Sandbox**. Always include an explicit line: **Production deploy required** (e.g. Gearset) vs **already in Production** vs **N/A** (no metadata change). This pipeline does not promote to Production unless the operator explicitly asks.
 
@@ -313,7 +327,7 @@ Before writing the dated summary, check whether `outputs/summaries/YYYY-MM-DD/is
 - **Issue rollup** table: one row per active issue with Jira status, summary, disposition, **Production deploy?** (Gearset / No / N/A), next step. **Exclude** issues whose Jira status is already “Escalated to Engineering” from this table.
 - **Sandbox deployments / validations** section: Support-owned fixes only. Include **Prod deploy needed?** per row. **Do not** duplicate pre-escalated or Engineering-only rows here.
 - **Escalated to Engineering** section: one unified table (pre-escalated at sync **and** escalated during processing). Columns: Issue, Jira Status, Component, Handoff File, Problem, Proposed Solution. **Only place** escalated issues appear together.
-- **Artifact index** for Jira summaries, investigations, engineering handoffs, closed/resolved logs, internal notes, Jira messages, and test reports.
+- **Artifact index** for Jira summaries, investigations, issue briefs, engineering handoffs, closed/resolved logs, internal notes, Jira messages, and test reports.
 
 ---
 
@@ -339,7 +353,7 @@ Report is generated inline during skill execution. Reference the dated summary f
 - **Sandbox target** (if applicable; reference CASEOPS_SANDBOX_TARGET_ORG)
 - **Tests run and outcome** (from Step 9 test report)
 - **Open risks or follow-up** (known issues, test gaps, manual verification needed)
-- **Paths:** Internal notes (`outputs/internal-notes/<KEY>.md`), Jira message draft (`outputs/jira-messages/<KEY>.md`), dated summary (`outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md`)
+- **Paths:** Issue brief (`outputs/issue-briefs/<KEY>.md`), internal notes (`outputs/internal-notes/<KEY>.md`), Jira message draft (`outputs/jira-messages/<KEY>.md`), dated summary (`outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md`)
 
 ---
 

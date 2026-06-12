@@ -49,7 +49,8 @@ Examples in docs may show org aliases like `sandbox` — your environment’s al
 - Record failed hypotheses and test failures.
 - Ask before destructive operations.
 - Do not implement fixes that require Engineering ownership: Apex/code, flows, approval processes, validation rules, or other business-critical automation.
-- For Engineering-owned fixes, stop after diagnosis and draft a clear handoff under `outputs/engineering-escalations/<KEY>.md` using the five-section format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
+- For every processed issue, draft a clear issue brief under `outputs/issue-briefs/<KEY>.md` using the five-section format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
+- For Engineering-owned fixes, also draft a clear handoff under `outputs/engineering-escalations/<KEY>.md` using the same five-section format. Do not create an Engineering handoff for Support-resolvable, no-deploy, data/admin, customer-reply, or closed/resolved issues.
 
 ## Wording: Production vs Sandbox
 

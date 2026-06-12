@@ -11,12 +11,14 @@ Last updated: YYYY-MM-DD
 - Escalated to Engineering (Jira status):
 - Active issues processed:
 - Engineering handoffs raised during processing:
+- Issue briefs created:
 - Sandbox-deployed or sandbox-validated:
 - Operational / data / access follow-up, no metadata deploy:
 
 Engineering escalation rule: if the fix requires Apex/code, a Salesforce Flow, an Approval Process, a Validation Rule, or other Engineering-owned automation, stop after diagnosis and provide an Engineering handoff using the concise format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
 
-Engineering handoffs are organized in `outputs/engineering-escalations/`.
+Issue briefs are organized in `outputs/issue-briefs/`.
+Engineering handoffs are organized in `outputs/engineering-escalations/` only for issues routed to Engineering.
 Closed/Resolved archives are organized in `outputs/closed-resolved/`.
 
 ## Closed / Resolved (Skipped)
@@ -32,6 +34,13 @@ Active issues that entered the pipeline. Issues with Jira status "Escalated to E
 
 | Issue | Jira Status At Sync | Summary | Disposition | Prod deploy? (Gearset / No / N/A) | Next Step |
 | --- | --- | --- | --- | --- | --- |
+
+## Issue Briefs
+
+Concise problem and solution briefs created for every processed issue. These are informational and do not imply Engineering escalation.
+
+| Issue | Brief File | Problem | Proposed Solution |
+| --- | --- | --- | --- |
 
 ## Sandbox Deployments / Validations
 
@@ -51,6 +60,7 @@ All issues escalated to Engineering, whether pre-escalated in Jira at sync time 
 
 - Jira summaries: `outputs/jira/summary/`
 - Investigations: `outputs/investigations/`
+- Issue briefs: `outputs/issue-briefs/`
 - Engineering handoffs: `outputs/engineering-escalations/`
 - Closed/Resolved archives: `outputs/closed-resolved/`
 - Internal notes: `outputs/internal-notes/`
