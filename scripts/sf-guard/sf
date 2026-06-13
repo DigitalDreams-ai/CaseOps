@@ -13,6 +13,7 @@ prod_aliases=()
 [[ -n "${CASEOPS_PRODUCTION_ORG:-}" ]] && prod_aliases+=("$CASEOPS_PRODUCTION_ORG")
 
 target_org=""
+request_method=""
 args=("$@")
 for ((i=0; i<${#args[@]}; i++)); do
   case "${args[$i]}" in
@@ -23,6 +24,14 @@ for ((i=0; i<${#args[@]}; i++)); do
       ;;
     --target-org=*|--targetusername=*)
       target_org="${args[$i]#*=}"
+      ;;
+    --method)
+      if (( i + 1 < ${#args[@]} )); then
+        request_method="${args[$((i+1))]}"
+      fi
+      ;;
+    --method=*)
+      request_method="${args[$i]#*=}"
       ;;
   esac
 done
@@ -43,6 +52,15 @@ case "$first $second $third" in
     is_mutating=1
     ;;
 esac
+
+if [[ "$first $second $third" == "api request rest" ]]; then
+  method_upper="${request_method^^}"
+  case "$method_upper" in
+    POST|PATCH|PUT|DELETE)
+      is_mutating=1
+      ;;
+  esac
+fi
 
 case "$first" in
   force:data:*:create|force:data:*:update|force:data:*:delete|force:source:deploy|force:mdapi:deploy|force:apex:execute|force:user:permset:assign)
