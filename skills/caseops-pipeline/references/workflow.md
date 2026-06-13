@@ -204,7 +204,7 @@ Using the Step 6 problem location (exact artifact + failure point), classify:
 
 **Permission-set assignment hard stop:** If the fix is assigning an existing permission set that comparable users already have, and that permission set supplies the missing object/field access, stop there. Do not perform additional Apex class access checks unless the issue text, flow fault, or debug evidence explicitly names Apex/class access as the failure.
 
-**Production write hard stop:** Normal pipeline runs must never execute Production data writes, permission-set assignments, deletes, Apex anonymous execution, or deploys. For Support-resolvable no-deploy actions, document the exact operator/admin action and validation plan only. Do not run `sf data create`, `sf data update`, `sf data delete`, or assignment commands against Production unless the operator explicitly starts a separate approved Production-write workflow.
+**Production write hard stop:** Normal pipeline runs must never execute Production data writes, permission-set assignments, deletes, Apex anonymous execution, or deploys. For Support-resolvable no-deploy actions, document the exact operator/admin action and validation plan only. Do not run `sf data create`, `sf data update`, `sf data delete`, or assignment commands against Production unless the operator explicitly starts a separate approved Production-write workflow with the configured approval phrase, such as `@prod_approval`, or `PRODUCTION_APPROVAL=<secret>` in a manual single-issue instruction.
 
 **Routing:**
 - Support-resolvable metadata changes continue to Steps 8-9 for Sandbox validation.

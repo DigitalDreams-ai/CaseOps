@@ -27,7 +27,7 @@ Supporting references (load when doing the step they support):
 
 - The user only wants a general explanation.
 - The task does not involve Jira or Salesforce.
-- The user asks for direct Production changes.
+- The user asks for direct Production changes but has not started the separate approved Production-write workflow described in `references/safety-policy.md`.
 - Required Jira or Salesforce access is unavailable and the user has not provided issue or metadata exports.
 
 ## Required Inputs

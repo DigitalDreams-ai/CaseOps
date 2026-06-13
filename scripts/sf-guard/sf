@@ -57,7 +57,64 @@ if [[ "$is_mutating" == "1" ]]; then
   fi
   for prod in "${prod_aliases[@]}"; do
     if [[ -n "$prod" && "$target_org" == "$prod" ]]; then
-      echo "CaseOps sf guard: blocked mutating sf command against Production alias '$target_org'. Production is read-only in normal pipeline runs." >&2
+      now="$(date +%s)"
+      approved="${CASEOPS_PRODUCTION_WRITE_APPROVED:-}"
+      issue_key="${CASEOPS_PRODUCTION_WRITE_ISSUE_KEY:-}"
+      expires_at="${CASEOPS_PRODUCTION_WRITE_EXPIRES_AT:-0}"
+      approval_file="${CASEOPS_PRODUCTION_WRITE_APPROVAL_FILE:-}"
+      audit_log="${CASEOPS_PRODUCTION_WRITE_AUDIT_LOG:-}"
+      request_hash="${CASEOPS_PRODUCTION_WRITE_REQUEST_HASH:-}"
+      if [[ "$approved" == "1" && -n "$issue_key" && "$expires_at" =~ ^[0-9]+$ && "$now" -le "$expires_at" ]]; then
+        if [[ -z "$approval_file" || ! -f "$approval_file" ]]; then
+          echo "CaseOps sf guard: blocked Production mutation; approval marker is missing." >&2
+          exit 64
+        fi
+        if ! python3 - "$approval_file" "$issue_key" "$request_hash" <<'PY'
+import json
+import sys
+import time
+
+path, issue_key, request_hash = sys.argv[1:4]
+try:
+    with open(path, "r", encoding="utf-8") as handle:
+        marker = json.load(handle)
+except Exception as exc:
+    print(f"CaseOps sf guard: blocked Production mutation; approval marker is unreadable: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+if marker.get("status") != "active":
+    print("CaseOps sf guard: blocked Production mutation; approval marker is not active.", file=sys.stderr)
+    sys.exit(1)
+if marker.get("issue_key") != issue_key:
+    print("CaseOps sf guard: blocked Production mutation; approval marker issue mismatch.", file=sys.stderr)
+    sys.exit(1)
+if request_hash and marker.get("request_hash") != request_hash:
+    print("CaseOps sf guard: blocked Production mutation; approval request hash mismatch.", file=sys.stderr)
+    sys.exit(1)
+try:
+    expires_at = int(marker.get("expires_at_epoch") or 0)
+except (TypeError, ValueError):
+    expires_at = 0
+if int(time.time()) > expires_at:
+    print("CaseOps sf guard: blocked Production mutation; approval marker expired.", file=sys.stderr)
+    sys.exit(1)
+PY
+        then
+          exit 64
+        fi
+        if [[ -z "$audit_log" ]]; then
+          echo "CaseOps sf guard: blocked Production mutation; audit log path is missing." >&2
+          exit 64
+        fi
+        {
+          printf '%s issue=%s target=%s command=' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$issue_key" "$target_org"
+          printf '%q ' "$@"
+          printf '\n'
+        } >> "$audit_log"
+        echo "CaseOps sf guard: temporary Production write approval active for $issue_key; allowing explicit Production target '$target_org'." >&2
+        break
+      fi
+      echo "CaseOps sf guard: blocked mutating sf command against Production alias '$target_org'. Production is read-only unless a valid one-run Production approval is active." >&2
       exit 64
     fi
   done

@@ -1,0 +1,2 @@
+*.sh text eol=lf
+scripts/sf-guard/* text eol=lf

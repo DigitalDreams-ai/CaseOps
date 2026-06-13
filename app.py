@@ -14,6 +14,7 @@ import csv
 import html
 import json
 import hashlib
+import hmac
 import mimetypes
 import os
 import queue
@@ -4290,6 +4291,102 @@ def _apply_caseops_sf_guard_env(env: dict[str, str]) -> None:
     env["PATH"] = f"{guard_dir}{os.pathsep}{path}" if path else str(guard_dir)
 
 
+PRODUCTION_APPROVAL_RE = re.compile(
+    r"(?im)(?:^|\s)(?:PRODUCTION_APPROVAL|CASEOPS_PRODUCTION_APPROVAL)\s*[:=]\s*([^\s]+)"
+)
+DEFAULT_PRODUCTION_APPROVAL_PHRASE = "@prod_approval"
+
+
+def _extract_production_write_approval(instruction: str, issue_key: str) -> tuple[str, dict[str, str] | None, str | None]:
+    """Return sanitized instruction, one-run Production approval metadata, and error.
+
+    Approval is deliberately env-backed and one-run scoped:
+    - the approval token/phrase never goes into the Claude prompt;
+    - the approval flag is passed only to this subprocess;
+    - the sf guard enforces explicit Production target + expiry.
+    """
+    text = instruction or ""
+    match = PRODUCTION_APPROVAL_RE.search(text)
+    configured_secret = (os.environ.get("CASEOPS_PRODUCTION_WRITE_APPROVAL_SECRET") or "").strip()
+    configured_phrase = (os.environ.get("CASEOPS_PRODUCTION_WRITE_APPROVAL_PHRASE") or "").strip()
+    approval_found = False
+    sanitized = text
+
+    if match:
+        approval_found = True
+        supplied = (match.group(1) or "").strip()
+        sanitized = PRODUCTION_APPROVAL_RE.sub(" ", sanitized).strip()
+        if not configured_secret:
+            return sanitized, None, "Production approval token supplied, but CASEOPS_PRODUCTION_WRITE_APPROVAL_SECRET is not configured."
+        if not hmac.compare_digest(supplied, configured_secret):
+            return sanitized, None, "Invalid Production approval token."
+
+    if configured_phrase:
+        phrase_re = re.compile(rf"(?<!\S){re.escape(configured_phrase)}(?!\S)")
+        if phrase_re.search(sanitized):
+            approval_found = True
+            sanitized = phrase_re.sub(" ", sanitized).strip()
+    elif re.search(rf"(?<!\S){re.escape(DEFAULT_PRODUCTION_APPROVAL_PHRASE)}(?!\S)", sanitized):
+        sanitized = re.sub(rf"(?<!\S){re.escape(DEFAULT_PRODUCTION_APPROVAL_PHRASE)}(?!\S)", " ", sanitized).strip()
+        return sanitized, None, (
+            "Production approval phrase supplied, but CASEOPS_PRODUCTION_WRITE_APPROVAL_PHRASE "
+            f"is not configured. Set it to {DEFAULT_PRODUCTION_APPROVAL_PHRASE} or another explicit phrase."
+        )
+
+    if not approval_found:
+        return instruction, None, None
+    if not issue_key:
+        return sanitized, None, "Production approval is only allowed for a single issue run."
+
+    ttl_seconds = _env_int("CASEOPS_PRODUCTION_WRITE_APPROVAL_TTL_SECONDS", 900, min_value=60, max_value=3600)
+    expires_at = int(time.time()) + ttl_seconds
+    request_summary = re.sub(r"\s+", " ", sanitized).strip()[:500]
+    request_hash = hashlib.sha256(request_summary.encode("utf-8")).hexdigest()
+    return sanitized, {
+        "CASEOPS_PRODUCTION_WRITE_APPROVED": "1",
+        "CASEOPS_PRODUCTION_WRITE_ISSUE_KEY": issue_key,
+        "CASEOPS_PRODUCTION_WRITE_EXPIRES_AT": str(expires_at),
+        "CASEOPS_PRODUCTION_WRITE_REQUEST": request_summary,
+        "CASEOPS_PRODUCTION_WRITE_REQUEST_HASH": request_hash,
+    }, None
+
+
+def _write_production_write_approval_marker(issue_key: str, approval: dict[str, str]) -> dict[str, str]:
+    """Persist an issue-scoped Production approval marker and audit log path."""
+    safe_key = _safe_path_component(issue_key, "issue")
+    approval_dir = OUTPUTS / "production-approvals"
+    _validate_instance_path(approval_dir, "mkdir")
+    approval_dir.mkdir(parents=True, exist_ok=True)
+
+    marker_path = approval_dir / f"{safe_key}.json"
+    audit_path = approval_dir / f"{safe_key}.audit.log"
+    _validate_instance_path(marker_path, "write")
+    _validate_instance_path(audit_path, "write")
+
+    approved_at_epoch = int(time.time())
+    expires_at_epoch = int(approval.get("CASEOPS_PRODUCTION_WRITE_EXPIRES_AT") or "0")
+    marker = {
+        "schema_version": 1,
+        "status": "active",
+        "issue_key": issue_key,
+        "approved_at": datetime.fromtimestamp(approved_at_epoch, tz=timezone.utc).isoformat(),
+        "approved_at_epoch": approved_at_epoch,
+        "expires_at": datetime.fromtimestamp(expires_at_epoch, tz=timezone.utc).isoformat(),
+        "expires_at_epoch": expires_at_epoch,
+        "request_hash": approval.get("CASEOPS_PRODUCTION_WRITE_REQUEST_HASH", ""),
+        "requested_action": approval.get("CASEOPS_PRODUCTION_WRITE_REQUEST", ""),
+        "approved_by": os.environ.get("CASEOPS_DEFAULT_ACTOR") or "operator",
+    }
+    marker_path.write_text(json.dumps(marker, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if not audit_path.exists():
+        audit_path.write_text("", encoding="utf-8")
+
+    updated = dict(approval)
+    updated["CASEOPS_PRODUCTION_WRITE_APPROVAL_FILE"] = str(marker_path)
+    updated["CASEOPS_PRODUCTION_WRITE_AUDIT_LOG"] = str(audit_path)
+    return updated
+
+
 def _claude_process_env() -> dict[str, str]:
     """Environment for Claude Code CLI subprocess.
 
@@ -5576,7 +5673,12 @@ Analyze the issue. Draft both formats. If you don't have enough info for a solid
         return False
 
 
-def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None = None) -> bool:
+def _do_stream_claude_code_cli(
+    prompt: str,
+    run_key: str,
+    issue_key: str | None = None,
+    production_approval: dict[str, str] | None = None,
+) -> bool:
     """Run Claude Code CLI non-interactively, parsing stream-json output.
 
     If issue_key is provided, parse output for Suggested reply and [INTERNAL] sections
@@ -5612,6 +5714,13 @@ def _do_stream_claude_code_cli(prompt: str, run_key: str, issue_key: str | None 
                 _log_emit_line(run_key, "Open Settings > Claude and paste output from `claude setup-token`.")
 
         env = _claude_process_env()
+        if production_approval:
+            env.update(production_approval)
+            _log_emit_line(
+                run_key,
+                "Production write approval: enabled for this issue run only. "
+                "The sf guard will require explicit Production target, matching issue scope, and unexpired approval.",
+            )
         env["CASEOPS_OUTPUTS_DIR"] = str(OUTPUTS)
         if env.get("CLAUDE_CODE_TMPDIR"):
             _log_emit_line(run_key, f"Claude temp dir: {env['CLAUDE_CODE_TMPDIR']}")
@@ -5872,14 +5981,19 @@ def _fallback_launch_claude_window(issue_key: str | None, prompt: str, run_key: 
         _log_emit_line(run_key, f"ERROR: Fallback launch failed: {exc}")
 
 
-def _do_stream_claude(prompt: str, run_key: str, issue_key: str | None = None) -> bool:
+def _do_stream_claude(
+    prompt: str,
+    run_key: str,
+    issue_key: str | None = None,
+    production_approval: dict[str, str] | None = None,
+) -> bool:
     """LLM entry: API Messages when ``api_key`` auth; else Claude Code CLI.
 
     If issue_key is provided, parse Suggested reply and [INTERNAL] output into separate files.
     """
     if caseops_llm_auth_uses_anthropic_api_key():
         return _do_stream_anthropic_messages_api(prompt, run_key, issue_key)
-    return _do_stream_claude_code_cli(prompt, run_key, issue_key)
+    return _do_stream_claude_code_cli(prompt, run_key, issue_key, production_approval)
 
 
 def _stream_proc(cmd: list[str], run_key: str) -> None:
@@ -6008,13 +6122,18 @@ def _save_claude_output(content: str, key: str) -> None:
             path.write_text(internal_text, encoding="utf-8")
 
 
-def _stream_claude_proc(prompt: str, run_key: str, issue_key: str | None = None) -> None:
+def _stream_claude_proc(
+    prompt: str,
+    run_key: str,
+    issue_key: str | None = None,
+    production_approval: dict[str, str] | None = None,
+) -> None:
     try:
         if issue_key:
             _log_emit_run_start(run_key, issue_key)
         if not _emit_runtime_preflight_or_stop(run_key):
             return
-        _do_stream_claude(prompt, run_key, issue_key)
+        _do_stream_claude(prompt, run_key, issue_key, production_approval)
     finally:
         with _state_lock:
             _mark_run_inactive_locked(run_key)
@@ -6520,7 +6639,12 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
         _log_emit_done(run_key)
 
 
-def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = None) -> str:
+def _build_claude_prompt(
+    key: str,
+    instruction: str,
+    resume_block: str | None = None,
+    production_approval: dict[str, str] | None = None,
+) -> str:
     """Build a context-rich prompt for CaseOps LLM runs (API or Claude Code CLI)."""
     issues = _read_manifest()
     row = next((r for r in issues if r.get("Key") == key), {})
@@ -6549,6 +6673,27 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
     # Configured env file, normally /data/.env in Docker.
     env_file_path = app.config.get("ENV_FILE_PATH", str(ROOT / ".env"))
     env_file_relative = Path(env_file_path).relative_to(ROOT).as_posix() if Path(env_file_path).is_relative_to(ROOT) else env_file_path
+    production_write_block = ""
+    if production_approval:
+        expires_at_raw = production_approval.get("CASEOPS_PRODUCTION_WRITE_EXPIRES_AT") or "0"
+        try:
+            expires_at_text = datetime.fromtimestamp(int(expires_at_raw), tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        except (TypeError, ValueError, OSError):
+            expires_at_text = "soon"
+        production_write_block = (
+            "## Temporary Production Write Approval\n"
+            f"- The operator supplied a valid one-run Production approval for issue `{key}`.\n"
+            f"- Approval expires at `{expires_at_text}` and applies only to the specific operator instruction below.\n"
+            f"- Approval marker: `{production_approval.get('CASEOPS_PRODUCTION_WRITE_APPROVAL_FILE', '')}`.\n"
+            f"- Command audit log: `{production_approval.get('CASEOPS_PRODUCTION_WRITE_AUDIT_LOG', '')}`.\n"
+            "- This does not authorize broad Production deploys, destructive cleanup, unrelated records, or changes outside the request.\n"
+            "- Before every Production mutation, print a concise line starting with "
+            f"`PRODUCTION_WRITE_APPROVED {key}` and state the exact action and target alias.\n"
+            "- Every mutating `sf` command must use an explicit `--target-org \"$CASEOPS_PRODUCTION_READ_ORG\"` or equivalent explicit Production alias.\n"
+            "- The CaseOps `sf` guard will independently validate the approval marker and append allowed Production commands to the audit log.\n"
+            "- Run read-only verification first whenever possible, make the smallest necessary change, then run read-only validation after.\n"
+            "- If the requested change is ambiguous, broad, destructive, or not clearly tied to this issue, STOP and ask for clarification instead of acting.\n\n"
+        )
 
     core = (
         f"Issue: {key} — {summary}\n"
@@ -6616,6 +6761,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"- Sub-agents spawned in Steps 5, 6, and 9 must follow this workspace contract "
         f"(see sub-agent-prompts.md).\n\n"
         f"## Instruction\n"
+        f"{production_write_block}"
         f"{instruction}\n\n"
         f"## Live Progress Requirement\n"
         f"- Execute the pipeline in this Claude Code process. Do not start background work and say you will be notified later.\n"
@@ -6641,7 +6787,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"   - UI clicks (when automation can't use CLI, e.g., custom buttons, flow runs)\n"
         f"   - Human-readable confirmation\n"
         f"5. If `sf` reports no authenticated orgs, treat that as a CaseOps/container auth configuration blocker. Do **not** test frontdoor SIDs with `curl` and do not conclude Salesforce API is unreachable from frontdoor 401s.\n"
-        f"6. **Production is read-only in normal pipeline runs.** Do not run `sf data create`, `sf data update`, `sf data delete`, permission-set assignment commands, Apex anonymous execution, deploys, or any other mutating command against Production. For Support-resolvable Production data/config/permission fixes, document the exact operator action and validation plan only.\n"
+        f"6. **Production is read-only in normal pipeline runs.** Do not run `sf data create`, `sf data update`, `sf data delete`, permission-set assignment commands, Apex anonymous execution, deploys, or any other mutating command against Production unless this prompt includes a valid **Temporary Production Write Approval** section. For Support-resolvable Production data/config/permission fixes without that approval, document the exact operator action and validation plan only.\n"
         f"\n{_salesforce_browser_prompt_section()}"
         f"## CaseOps Output Files (update these when your task is complete)\n"
         f"You can read and write these files directly for issue {key}:\n"
@@ -6673,7 +6819,7 @@ def _build_claude_prompt(key: str, instruction: str, resume_block: str | None = 
         f"already exist for {key} in `{outputs_dir_relative}/`.\n"
         f"- Create or update artifacts in `{outputs_dir_relative}/` that this issue needs (paths as shown above).\n"
         f"- Never save issue-generated spreadsheets, CSVs, PDFs, images, or other supporting files directly in `{outputs_dir_relative}/`; save them under `{outputs_dir_relative}/generated-files/{key}/`.\n"
-        f"- If direct evidence confirms a no-deploy Support action such as assigning an existing permission set or making a data/config correction, stop deep investigation, skip Sandbox deploy, write a no-deploy test report, and proceed to internal notes/Jira message. Do **not** execute the Production action; leave it as an operator/admin action unless the operator explicitly starts an approved Production-write workflow.\n"
+        f"- If direct evidence confirms a no-deploy Support action such as assigning an existing permission set or making a data/config correction, stop deep investigation, skip Sandbox deploy, write a no-deploy test report, and proceed to internal notes/Jira message. Do **not** execute the Production action; leave it as an operator/admin action unless this run has a valid Temporary Production Write Approval section.\n"
         f"- Hard stop for permission-set assignment fixes: once an existing permission set is identified as the missing access package, do not run further Apex/class/Flow-access checks unless the issue text or Salesforce error explicitly names Apex/class access as the failure.\n"
         f"- In every confirmed solution, state **Production vs Sandbox** clearly: what Production has (read-only verification), "
         f"what is **Sandbox-only**, and whether **Production metadata deploy** is required (**Yes — e.g. Gearset** / **No** / **N/A**). "
@@ -8191,6 +8337,7 @@ def api_run():
     use_full_issue = False
     use_reprocess_issue = False
     use_force_reprocess_issue = False
+    production_approval: dict[str, str] | None = None
     use_global_skill = False
     cmd: list[str] | None = None
 
@@ -8233,8 +8380,13 @@ def api_run():
         instruction = data.get("instruction", "").strip()
         if not instruction:
             return jsonify({"error": "No instruction provided."}), 400
+        instruction, production_approval, approval_error = _extract_production_write_approval(instruction, key)
+        if approval_error:
+            return jsonify({"error": approval_error}), 403
+        if production_approval:
+            production_approval = _write_production_write_approval_marker(key, production_approval)
         use_claude_cli = True
-        prompt = _build_claude_prompt(key, instruction)
+        prompt = _build_claude_prompt(key, instruction, production_approval=production_approval)
     else:
         return jsonify({"error": "unknown action"}), 400
 
@@ -8270,7 +8422,7 @@ def api_run():
     elif use_global_skill:
         t = threading.Thread(target=_stream_global_skill, args=(instruction, run_key), daemon=True)
     elif use_claude_cli:
-        t = threading.Thread(target=_stream_claude_proc, args=(prompt, run_key, key), daemon=True)
+        t = threading.Thread(target=_stream_claude_proc, args=(prompt, run_key, key, production_approval), daemon=True)
     else:
         t = threading.Thread(target=_stream_proc, args=(cmd, run_key), daemon=True)
     t.start()
@@ -9847,7 +9999,8 @@ if __name__ == "__main__":
         "jira", "investigations", "internal-notes", "jira-messages", "issue-briefs", "test-reports",
         "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
         "issue-clusters",
-        "closed-resolved", "not-assigned", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces", "summaries"
+        "closed-resolved", "not-assigned", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces",
+        "production-approvals", "summaries"
     ]:
         _ensure_directory_writable(OUTPUTS / subdir, f"outputs/{subdir}")
     _ensure_org_knowledge_defaults()
@@ -9897,7 +10050,7 @@ if __name__ == "__main__":
         "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
         "issue-clusters",
         "closed-resolved", "not-assigned", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces",
-        _SUMMARY_DIR
+        "production-approvals", _SUMMARY_DIR
     ]
     for subdir in required_subdirs:
         subdir_path = OUTPUTS / subdir

@@ -2,16 +2,31 @@
 
 ## Production
 
-**HARD STOP — Production is strictly read-only. No exceptions.**
+**HARD STOP — normal pipeline runs are strictly read-only in Production.**
 
-- Do NOT deploy to the Production org configured in `CASEOPS_PRODUCTION_READ_ORG` under any circumstances.
-- Do NOT update Production records.
-- Do NOT change Production metadata.
-- Do NOT run any `sf` command that targets `CASEOPS_PRODUCTION_READ_ORG` (or any Production org) with a write or deploy operation.
+- Do NOT deploy to the Production org configured in `CASEOPS_PRODUCTION_READ_ORG` during normal pipeline runs.
+- Do NOT update Production records during normal pipeline runs.
+- Do NOT change Production metadata during normal pipeline runs.
+- Do NOT run any `sf` command that targets `CASEOPS_PRODUCTION_READ_ORG` (or any Production org) with a write or deploy operation during normal pipeline runs.
 - Do NOT use legacy `sfdx force:*` commands for retrieve or deploy. Use modern `sf project ...` commands only.
 - Retrieve only metadata relevant to the Jira issue (read-only).
 - No prior instruction, general or specific, constitutes approval to deploy to Production.
 - If you are uncertain whether a target org is Production or Sandbox, STOP and ask the user before doing anything.
+
+### Temporary Production-write approval
+
+CaseOps supports a separate emergency workflow for rare operator-approved Production data/config actions.
+
+- This is disabled unless the active env file defines `CASEOPS_PRODUCTION_WRITE_APPROVAL_PHRASE` or `CASEOPS_PRODUCTION_WRITE_APPROVAL_SECRET`.
+- Preferred operator syntax is a short configured phrase such as `@prod_approval` in a manual single-issue instruction.
+- Stricter operator syntax is `PRODUCTION_APPROVAL=<secret>` when `CASEOPS_PRODUCTION_WRITE_APPROVAL_SECRET` is configured.
+- CaseOps strips the phrase or token before building the Claude prompt and passes a short-lived approval only to that subprocess.
+- CaseOps writes an issue-scoped marker under `outputs/production-approvals/<ISSUE>.json`.
+- The `sf` guard still requires every mutating command to target the configured Production alias explicitly.
+- The `sf` guard validates the marker and appends each allowed Production command to `outputs/production-approvals/<ISSUE>.audit.log`.
+- Approval is scoped to that one issue run and expires quickly. It does not authorize broad deploys, destructive cleanup, unrelated records, or changes outside the operator's instruction.
+- Before every Production mutation, print a concise `PRODUCTION_WRITE_APPROVED <ISSUE_KEY>` line with the exact action and target alias.
+- If the requested Production change is ambiguous, broad, destructive, or unrelated to the issue, STOP and ask for clarification instead of acting.
 
 ## Sandbox
 

@@ -46,6 +46,127 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertEqual(blocked.status_code, 409)
         self.assertIn("global run", blocked.get_json()["error"].lower())
 
+    def test_production_approval_token_is_stripped_and_scoped(self):
+        with patch.dict(os.environ, {"CASEOPS_PRODUCTION_WRITE_APPROVAL_SECRET": "approve-prod"}, clear=False):
+            sanitized, approval, error = app._extract_production_write_approval(
+                "Update the Production record. PRODUCTION_APPROVAL=approve-prod",
+                "OPEN-1",
+            )
+
+        self.assertIsNone(error)
+        self.assertEqual(sanitized, "Update the Production record.")
+        self.assertIsNotNone(approval)
+        self.assertEqual(approval["CASEOPS_PRODUCTION_WRITE_APPROVED"], "1")
+        self.assertEqual(approval["CASEOPS_PRODUCTION_WRITE_ISSUE_KEY"], "OPEN-1")
+        self.assertNotIn("approve-prod", approval["CASEOPS_PRODUCTION_WRITE_REQUEST"])
+
+    def test_production_approval_rejects_invalid_token(self):
+        with patch.dict(os.environ, {"CASEOPS_PRODUCTION_WRITE_APPROVAL_SECRET": "approve-prod"}, clear=False):
+            sanitized, approval, error = app._extract_production_write_approval(
+                "Update Production. PRODUCTION_APPROVAL=wrong",
+                "OPEN-1",
+            )
+
+        self.assertEqual(sanitized, "Update Production.")
+        self.assertIsNone(approval)
+        self.assertIn("Invalid", error)
+
+    def test_production_approval_accepts_configured_phrase(self):
+        with patch.dict(os.environ, {"CASEOPS_PRODUCTION_WRITE_APPROVAL_PHRASE": "@prod_approval"}, clear=False):
+            sanitized, approval, error = app._extract_production_write_approval(
+                "Deploy this permission set to Production. @prod_approval",
+                "OPEN-1",
+            )
+
+        self.assertIsNone(error)
+        self.assertEqual(sanitized, "Deploy this permission set to Production.")
+        self.assertIsNotNone(approval)
+        self.assertEqual(approval["CASEOPS_PRODUCTION_WRITE_APPROVED"], "1")
+        self.assertEqual(approval["CASEOPS_PRODUCTION_WRITE_ISSUE_KEY"], "OPEN-1")
+        self.assertNotIn("@prod_approval", approval["CASEOPS_PRODUCTION_WRITE_REQUEST"])
+
+    def test_production_approval_marker_is_issue_scoped_and_auditable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            outputs.mkdir()
+            approval = {
+                "CASEOPS_PRODUCTION_WRITE_APPROVED": "1",
+                "CASEOPS_PRODUCTION_WRITE_ISSUE_KEY": "OPEN-1",
+                "CASEOPS_PRODUCTION_WRITE_EXPIRES_AT": "4102444800",
+                "CASEOPS_PRODUCTION_WRITE_REQUEST": "Deploy a specific permission set.",
+                "CASEOPS_PRODUCTION_WRITE_REQUEST_HASH": "abc123",
+            }
+
+            with patch.object(app, "OUTPUTS", outputs):
+                updated = app._write_production_write_approval_marker("OPEN-1", approval)
+
+            marker_path = Path(updated["CASEOPS_PRODUCTION_WRITE_APPROVAL_FILE"])
+            audit_path = Path(updated["CASEOPS_PRODUCTION_WRITE_AUDIT_LOG"])
+            marker = json.loads(marker_path.read_text(encoding="utf-8"))
+            marker_path_text = str(marker_path)
+            audit_exists = audit_path.exists()
+
+        self.assertEqual(marker["issue_key"], "OPEN-1")
+        self.assertEqual(marker["status"], "active")
+        self.assertEqual(marker["request_hash"], "abc123")
+        self.assertTrue(marker_path_text.endswith("production-approvals\\OPEN-1.json") or marker_path_text.endswith("production-approvals/OPEN-1.json"))
+        self.assertTrue(audit_exists)
+
+    def test_default_production_approval_phrase_requires_env_configuration(self):
+        with patch.dict(os.environ, {"CASEOPS_PRODUCTION_WRITE_APPROVAL_PHRASE": ""}, clear=False):
+            sanitized, approval, error = app._extract_production_write_approval(
+                "Deploy this permission set to Production. @prod_approval",
+                "OPEN-1",
+            )
+
+        self.assertEqual(sanitized, "Deploy this permission set to Production.")
+        self.assertIsNone(approval)
+        self.assertIn("CASEOPS_PRODUCTION_WRITE_APPROVAL_PHRASE", error)
+
+    def test_manual_instruction_passes_valid_production_approval_to_runner_without_secret(self):
+        captured = {}
+
+        class FakeThread:
+            def __init__(self, target=None, args=(), kwargs=None, daemon=None):
+                captured["target"] = target
+                captured["args"] = args
+
+            def start(self):
+                pass
+
+        def fake_prompt(key, instruction, resume_block=None, production_approval=None):
+            captured["key"] = key
+            captured["instruction"] = instruction
+            captured["production_approval"] = production_approval
+            return "prompt"
+
+        def fake_marker(key, approval):
+            updated = dict(approval)
+            updated["CASEOPS_PRODUCTION_WRITE_APPROVAL_FILE"] = f"/tmp/{key}.json"
+            updated["CASEOPS_PRODUCTION_WRITE_AUDIT_LOG"] = f"/tmp/{key}.audit.log"
+            return updated
+
+        with (
+            patch.dict(os.environ, {"CASEOPS_PRODUCTION_WRITE_APPROVAL_SECRET": "approve-prod"}, clear=False),
+            patch.object(app, "_build_claude_prompt", side_effect=fake_prompt),
+            patch.object(app, "_write_production_write_approval_marker", side_effect=fake_marker),
+            patch.object(app.threading, "Thread", FakeThread),
+        ):
+            response = app.app.test_client().post(
+                "/api/run",
+                json={
+                    "action": "claude_instruction",
+                    "key": "OPEN-1",
+                    "instruction": "Assign the existing permission set in Production. PRODUCTION_APPROVAL=approve-prod",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(captured["instruction"], "Assign the existing permission set in Production.")
+        self.assertNotIn("approve-prod", captured["instruction"])
+        self.assertEqual(captured["production_approval"]["CASEOPS_PRODUCTION_WRITE_ISSUE_KEY"], "OPEN-1")
+        self.assertEqual(captured["args"][3]["CASEOPS_PRODUCTION_WRITE_APPROVED"], "1")
+
     def test_lightning_hosts_are_derived_from_salesforce_alias_fields(self):
         with patch.dict(
             os.environ,
