@@ -58,6 +58,7 @@ Do not apply these stricter formatting rules to Jira messages, internal notes, i
 - Use natural language. Avoid LLM phrases such as "business impact", "confirmed package", "regression passed", "metadata verify passed", and "sandbox-validated" unless that exact phrase is needed for the action.
 - Do not use em dashes. Do not use hyphens as clause punctuation.
 - Do not include Markdown links, Salesforce `sf://` links, Jira links, report links, or clickable record links. Use plain text names and IDs only.
+- Do not use inline code backticks or fenced code blocks in these two outputs. Record IDs, API names, endpoint paths, field names, class names, flow names, object names, commands, and payload fragments must be plain text.
 - Do not include Sandbox suffixes or personal markers such as `SB`, operator initials, deploy IDs, confirmed package paths, local paths, NAS paths, or metadata workspace paths.
 - Prefer names people recognize over API names. Use API names only when the exact implementation target requires them.
 - Group related details under a main bullet with sub-bullets instead of long link-heavy sentences.
@@ -72,3 +73,4 @@ Do not apply these stricter formatting rules to Jira messages, internal notes, i
 - Use inline backticks for short commands, file names, field names, API names, and identifiers.
 - Use fenced code blocks for multi-line commands, logs, JSON, SOQL, Apex, XML, or diffs.
 - Do not place fenced code blocks inside table cells.
+- Exception: do not use inline backticks or fenced code blocks in issue briefs or engineering handoffs. Those two outputs are copied into Jira and must remain plain text.
