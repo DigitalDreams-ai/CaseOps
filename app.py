@@ -9000,9 +9000,14 @@ def api_knowledge_helper_work_item(candidate_id: str):
 
 @app.post("/api/knowledge/guardrail-check")
 def api_knowledge_guardrail_check():
-    body = request.get_json(silent=True) or {}
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify({"ok": False, "error": "JSON body is required"}), 400
+    command = str(body.get("command") or "").strip()
+    if not command:
+        return jsonify({"ok": False, "error": "command is required"}), 400
     result = knowledge_service.classify_guardrail_command(
-        str(body.get("command") or ""),
+        command,
         production_approved=bool(body.get("production_approved")),
     )
     return jsonify({"ok": True, "result": result})

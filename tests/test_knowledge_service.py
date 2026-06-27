@@ -274,6 +274,14 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.get_json()["result"]["ok"])
 
+        missing = app.app.test_client().post(
+            "/api/knowledge/guardrail-check",
+            json={"command": ""},
+        )
+
+        self.assertEqual(missing.status_code, 400)
+        self.assertFalse(missing.get_json()["ok"])
+
     def test_pipeline_failure_artifact_writes_knowledge_signal(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
