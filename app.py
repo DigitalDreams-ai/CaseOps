@@ -439,9 +439,15 @@ _issues_api_metrics: dict[str, Any] = {
     "row_cache_hits": 0,
     "row_cache_misses": 0,
     "invalidations": 0,
+    "warmup_runs": 0,
+    "warmup_failures": 0,
     "last_cache_hit": False,
     "last_row_cache_hits": 0,
     "last_row_cache_misses": 0,
+    "last_warmup_seconds": None,
+    "last_warmup_issue_count": 0,
+    "last_warmup_error": "",
+    "last_warmup_at": None,
     "last_build_seconds": None,
     "last_total_seconds": None,
     "last_issue_count": 0,
@@ -469,6 +475,10 @@ try:
     )
 except ValueError:
     _ISSUE_LIST_SUMMARY_SEARCH_CHARS = 3000
+_ISSUES_API_PREWARM_ENABLED = (
+    os.environ.get("CASEOPS_ISSUES_API_PREWARM_ENABLED", "true").strip().lower()
+    not in {"0", "false", "no", "off"}
+)
 
 # Skill registry: loads all skills once at startup, reuses cached data
 skill_registry = SkillRegistry()
@@ -3532,6 +3542,44 @@ def _issue_list_row_from_cache(row: dict[str, str]) -> tuple[dict[str, Any], boo
             for stale_key in list(_ISSUE_LIST_ROW_CACHE.keys())[:100]:
                 _ISSUE_LIST_ROW_CACHE.pop(stale_key, None)
     return payload, False
+
+
+def _warm_issue_list_row_cache(*, reason: str = "startup") -> None:
+    started = time.perf_counter()
+    issue_count = 0
+    try:
+        for row in _read_manifest():
+            _issue_list_row_from_cache(row)
+            issue_count += 1
+        elapsed = time.perf_counter() - started
+        with _ISSUES_API_METRICS_LOCK:
+            _issues_api_metrics["warmup_runs"] = int(_issues_api_metrics.get("warmup_runs") or 0) + 1
+            _issues_api_metrics["last_warmup_seconds"] = round(elapsed, 4)
+            _issues_api_metrics["last_warmup_issue_count"] = issue_count
+            _issues_api_metrics["last_warmup_error"] = ""
+            _issues_api_metrics["last_warmup_at"] = datetime.now(timezone.utc).isoformat()
+        print(f"[OK] Issue list row cache warmed: {issue_count} issues in {elapsed:.3f}s ({reason})")
+    except Exception as exc:
+        elapsed = time.perf_counter() - started
+        with _ISSUES_API_METRICS_LOCK:
+            _issues_api_metrics["warmup_failures"] = int(_issues_api_metrics.get("warmup_failures") or 0) + 1
+            _issues_api_metrics["last_warmup_seconds"] = round(elapsed, 4)
+            _issues_api_metrics["last_warmup_issue_count"] = issue_count
+            _issues_api_metrics["last_warmup_error"] = f"{type(exc).__name__}: {exc}"
+            _issues_api_metrics["last_warmup_at"] = datetime.now(timezone.utc).isoformat()
+        app.logger.warning("Issue list row cache warmup failed: %s", exc)
+
+
+def _start_issue_list_row_cache_warmup_if_needed(*, reason: str = "startup") -> None:
+    if not _ISSUES_API_PREWARM_ENABLED:
+        return
+    thread = threading.Thread(
+        target=_warm_issue_list_row_cache,
+        kwargs={"reason": reason},
+        daemon=True,
+        name="caseops-issues-api-row-cache-warmup",
+    )
+    thread.start()
 
 
 def _issues_api_cache_signature() -> dict[str, Any]:
@@ -10610,6 +10658,7 @@ if __name__ == "__main__":
     print(f"[OK] Temp directory: {TEMP_ROOT}")
     print(f"[OK] Metadata workspace: {_metadata_workspace_dirs()['root']}")
     print(f"[OK] Metadata cache: {_metadata_workspace_dirs()['cache_root']}")
+    _start_issue_list_row_cache_warmup_if_needed(reason="startup")
 
     # use_reloader=False prevents the dev reloader from killing SSE streams
     app.run(
