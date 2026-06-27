@@ -117,24 +117,34 @@ Each issue with Sandbox work must maintain `${CASEOPS_METADATA_SANDBOX_WORK_DIR}
 
 ---
 
-## Org knowledge progressive disclosure
+## CaseOps knowledge progressive disclosure
 
-CaseOps maintains reusable org knowledge under the instance output directory:
+CaseOps maintains reusable source-controlled core knowledge plus runtime org knowledge under the instance output directory:
 
 ```text
+skills/caseops-pipeline/knowledge/core/
+
 outputs/org-knowledge/
   index.json
+  org-profile/
+  local-gotchas/
+  accepted-lessons/
+  pending-lessons/
+  rejected-lessons/
+  helper-work-items/
+  signals/
   run-rules.md
   query-patterns/
   deploy-patterns/
-  lessons-learned.md
 ```
 
-The orchestrator reads `index.json`, selects only files relevant to the active issue, and injects a capped **Org Knowledge Context** into the run prompt. Do not read every file under `org-knowledge/`.
+The orchestrator reads `index.json`, selects only files relevant to the active issue, and injects a capped **CaseOps Knowledge Context** into the run prompt. Do not read every file under `org-knowledge/`.
 
 Before spawning Step 5, Step 6, Step 8, or Step 9 sub-agents, include the relevant selected org-knowledge bullets in the sub-agent prompt. Sub-agents start with isolated context and do not automatically know what the orchestrator read.
 
 Use org knowledge to avoid relearning Salesforce CLI behavior. If a selected pattern fails twice, stop and replan; do not try many small variants of the same failed command.
+
+Normal pipeline runs must not activate lessons or edit source-controlled core knowledge. When a durable reusable lesson or repeated failure pattern appears, write or rely on a structured knowledge signal under `outputs/org-knowledge/signals/`; the manual knowledge auditor converts repeated signals into pending lesson/helper candidates later.
 
 For known Salesforce mechanics, use the CaseOps helper before improvising:
 
@@ -142,14 +152,30 @@ For known Salesforce mechanics, use the CaseOps helper before improvising:
 python scripts/sf_caseops_helper.py --help
 ```
 
-The helper is the preferred path for custom field/picklist summaries, layout placement, FLS checks, and deterministic MDAPI candidate deploys. It writes compact JSON summaries in the issue workspace and keeps noisy CLI progress out of the pipeline log.
+The helper is the preferred path for custom field/picklist summaries, layout placement, FLS checks, targeted metadata retrieval, field/Flow verification, SOQL queries that need classified failures, workspace initialization, deploys, and deploy reports. It writes compact JSON summaries in the issue workspace and keeps noisy CLI progress out of the pipeline log.
+
+Use these helper operations before trying equivalent raw `sf` commands:
+
+```bash
+python scripts/sf_caseops_helper.py workspace-init --issue-key "<KEY>" --attempt attempt-001
+python scripts/sf_caseops_helper.py retrieve-metadata --org "$ORG" --metadata "Flow:Flow_API_Name" --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
+python scripts/sf_caseops_helper.py query-data --org "$ORG" --soql "SELECT Id FROM Account LIMIT 1" --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
+python scripts/sf_caseops_helper.py query-tooling --org "$ORG" --soql "SELECT Id, DeveloperName FROM FlowDefinition LIMIT 1" --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
+python scripts/sf_caseops_helper.py verify-field --org "$ORG" --sobject Case --field Field_Name__c --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
+python scripts/sf_caseops_helper.py verify-flow --org "$ORG" --flow Flow_API_Name --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
+python scripts/sf_caseops_helper.py deploy-source --sandbox-org "$CASEOPS_SANDBOX_TARGET_ORG" --source-dir "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-001/candidate/force-app" --attempt "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-001"
+python scripts/sf_caseops_helper.py deploy-mdapi --sandbox-org "$CASEOPS_SANDBOX_TARGET_ORG" --candidate "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-001/candidate" --attempt "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-001"
+python scripts/sf_caseops_helper.py deploy-report --org "$CASEOPS_SANDBOX_TARGET_ORG" --deploy-id "<DEPLOY_ID>" --out-dir "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-001"
+```
+
+Every helper returns JSON with `ok`, `failure_class`, `retryable`, and `next_action` on failures. If `retryable` is false, stop and replan instead of trying small variants of the same command.
 
 Retrieve/deploy command contract:
 
 - Use modern `sf` CLI commands only.
 - Do not use legacy `sfdx force:*` commands.
 - Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy.
-- Prefer `sf project retrieve start --metadata`, `sf project retrieve start --source-dir`, `sf project deploy start --source-dir`, and `sf project deploy start --metadata-dir`.
+- Prefer the helper operations above. If a helper does not cover the case, use `sf project retrieve start --metadata`, `sf project retrieve start --source-dir`, `sf project deploy start --source-dir`, or `sf project deploy start --metadata-dir`.
 
 If a run discovers a durable, verified, reusable org fact, update the most specific selected topic file with one short bullet. Do not store secrets, raw access tokens, frontdoor links, or customer-private narrative.
 

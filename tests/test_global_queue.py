@@ -210,22 +210,220 @@ class GlobalQueueTests(unittest.TestCase):
             {"Key": "DONE-1", "Status": "Open"},
         ]
 
-        def detail_for(key):
+        def snapshot_for(row):
+            key = row["Key"]
             if key == "DONE-1":
-                return True, "complete"
-            return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)"
+                return True, "complete", f"fp-{key}", {"key": key, "mode": "active", "next_step": {"step": 12}}
+            if key == "ENG-1":
+                return False, "incomplete; next STEP_2 (Triage pre-escalated issue, pending)", f"fp-{key}", {
+                    "key": key,
+                    "mode": "escalated",
+                    "status": "Escalated to Engineering",
+                    "next_step": {"step": 2, "name": "Triage pre-escalated issue", "status": "pending"},
+                    "steps": [{"step": 2, "name": "Triage pre-escalated issue", "status": "pending"}],
+                }
+            return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", f"fp-{key}", {
+                "key": key,
+                "mode": "active",
+                "next_step": {"step": 5, "name": "Retrieve relevant Production metadata", "status": "pending"},
+                "steps": [{"step": 5, "name": "Retrieve relevant Production metadata", "status": "pending"}],
+            }
 
         messages = []
+        dispositions = []
         with (
             patch.object(app, "_read_manifest", return_value=rows),
-            patch.object(app, "_global_issue_queue_detail", side_effect=lambda key: detail_for(key)),
+            patch.object(app, "_global_issue_queue_snapshot_from_row", side_effect=snapshot_for),
+            patch.object(app, "_write_queue_disposition", side_effect=lambda key, payload: dispositions.append((key, payload["disposition"]))),
             patch.object(app, "_log_emit_line", side_effect=lambda _run_key, msg: messages.append(msg)),
         ):
             queued = app._select_global_issue_queue("__global__")
 
         self.assertEqual(queued, ["OPEN-1"])
-        self.assertTrue(any("skipped 1 issue(s) already Escalated to Engineering" in msg for msg in messages))
-        self.assertTrue(any("1 escalated skipped" in msg for msg in messages))
+        self.assertIn(("ENG-1", "skip_escalated_to_engineering"), dispositions)
+        self.assertIn(("DONE-1", "skip_unchanged_success"), dispositions)
+        self.assertTrue(any("escalated to engineering=1" in msg for msg in messages))
+        self.assertTrue(any("already current=1" in msg for msg in messages))
+
+    def test_queue_disposition_skips_prior_unchanged_failure(self):
+        row = {"Key": "FAIL-1", "Status": "Open", "Updated": "2026-06-08T00:00:00.000+0000"}
+        signatures = {
+            "jira_source": "same",
+            "investigation": "same",
+            "hypothesis": "same",
+            "test_report": "same",
+            "metadata_workspace": "same",
+        }
+        plan = {
+            "key": "FAIL-1",
+            "mode": "active",
+            "signatures": signatures,
+            "next_step": {"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"},
+            "steps": [{"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"}],
+        }
+        state = {
+            "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+            "signatures": signatures,
+            "run_metrics": {"latest": {"status": "failed"}},
+        }
+
+        with patch.object(app, "_read_pipeline_state", return_value=state):
+            disposition = app._queue_disposition_for_plan(
+                row,
+                plan,
+                "incomplete; next STEP_9 (Deploy and test in Sandbox, stale)",
+                "fp-current",
+            )
+
+        self.assertEqual(disposition["disposition"], "skip_unchanged_failure")
+        self.assertIn("unchanged", disposition["reason"])
+
+    def test_queue_disposition_prior_stale_state_skip_requires_same_fingerprint(self):
+        row = {"Key": "STALE-1", "Status": "Open"}
+        plan = {
+            "key": "STALE-1",
+            "mode": "active",
+            "next_step": {"step": 3, "name": "Analyze issue", "status": "stale"},
+            "steps": [{"step": 3, "name": "Analyze issue", "status": "stale"}],
+        }
+        state = {
+            "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+            "queue_disposition": {
+                "disposition": "stale_state_needs_repair",
+                "fingerprint": "fp-same",
+                "reason": "stalled/no progress",
+            },
+        }
+
+        with patch.object(app, "_read_pipeline_state", return_value=state):
+            same = app._queue_disposition_for_plan(
+                row,
+                plan,
+                "incomplete; next STEP_3 (Analyze issue, stale)",
+                "fp-same",
+            )
+            changed = app._queue_disposition_for_plan(
+                row,
+                plan,
+                "incomplete; next STEP_3 (Analyze issue, stale)",
+                "fp-changed",
+            )
+
+        self.assertEqual(same["disposition"], "stale_state_needs_repair")
+        self.assertEqual(changed["disposition"], "ready_to_process")
+
+    def test_pipeline_failure_artifact_records_timeout_context(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            log_dir = outputs / "pipeline-logs"
+            log_dir.mkdir(parents=True)
+            log_path = log_dir / "ISSUE-1.jsonl"
+            log_path.write_text(
+                "\n".join([
+                    json.dumps({"ts": "2026-06-26T12:00:00+00:00", "text": "STEP_8 ISSUE-1"}),
+                    json.dumps({"ts": "2026-06-26T12:01:00+00:00", "text": "STEP_9 ISSUE-1"}),
+                    json.dumps({"ts": "2026-06-26T12:02:00+00:00", "text": "[Bash] sf project deploy start --source-dir candidate --target-org sandbox --json"}),
+                    json.dumps({"ts": "2026-06-26T12:03:00+00:00", "text": "ERROR: Claude process exceeded total timeout of 1200s — killing subprocess"}),
+                ])
+                + "\n",
+                encoding="utf-8",
+            )
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "OUTPUTS_PIPELINE_LOGS", log_dir),
+                patch.object(app, "_log_emit_line"),
+            ):
+                artifact = app._write_pipeline_failure_artifact(
+                    "ISSUE-1",
+                    "ISSUE-1",
+                    failure_class="timeout_total",
+                    reason="total timeout",
+                    retryable=False,
+                    next_action="repair then rerun",
+                    run_started=app._parse_iso_ts("2026-06-26T12:00:00+00:00"),
+                    run_ended=app._parse_iso_ts("2026-06-26T12:03:10+00:00"),
+                )
+
+            path = outputs / "pipeline-failures" / "ISSUE-1.json"
+            state_path = outputs / "pipeline-state" / "ISSUE-1.json"
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(artifact["failure_class"], "timeout_total")
+        self.assertEqual(saved["failed_step"], 9)
+        self.assertEqual(saved["last_successful_checkpoint"], 8)
+        self.assertEqual(saved["last_command_family"], "sf-project-deploy")
+        self.assertFalse(saved["retry_safe"])
+        self.assertEqual(state["latest_failure"]["failure_class"], "timeout_total")
+
+    def test_resume_plan_blocks_step9_after_timeout_failure_artifact(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            jira_summary = outputs / "jira" / "summary" / "ISSUE-1.md"
+            investigation = outputs / "investigations" / "ISSUE-1.md"
+            hypothesis = outputs / "hypothesis" / "ISSUE-1.md"
+            workspace_manifest = outputs / "metadata-workspaces" / "ISSUE-1" / "metadata-workspace.json"
+            failure_path = outputs / "pipeline-failures" / "ISSUE-1.json"
+            for path, text in (
+                (jira_summary, "summary"),
+                (investigation, "## Problem Location\nRoot cause and failure point are known."),
+                (hypothesis, "## Hypothesis\nCandidate solution exists."),
+                (workspace_manifest, json.dumps({"candidate": "ready"})),
+                (failure_path, json.dumps({
+                    "key": "ISSUE-1",
+                    "run_key": "ISSUE-1",
+                    "failure_class": "timeout_total",
+                    "failed_step": 9,
+                    "last_successful_checkpoint": 8,
+                    "retry_safe": False,
+                    "next_action": "Inspect timeout artifact before rerun.",
+                })),
+            ):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+
+            with patch.object(app, "OUTPUTS", outputs):
+                plan = app._build_pipeline_resume_plan("ISSUE-1", "Open", "2026-06-26T00:00:00.000+0000")
+
+        step9 = next(step for step in plan["steps"] if step["step"] == 9)
+        self.assertEqual(step9["status"], "blocked")
+        self.assertIn("timeout_total", step9["reason"])
+        self.assertEqual(plan["latest_failure"]["failure_class"], "timeout_total")
+
+    def test_resume_plan_ignores_old_failure_after_completed_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            failure = {
+                "key": "ISSUE-1",
+                "run_key": "ISSUE-1",
+                "failure_class": "timeout_total",
+                "failed_step": 9,
+                "last_successful_checkpoint": 8,
+                "retry_safe": False,
+                "next_action": "Inspect timeout artifact before rerun.",
+            }
+            state = {
+                "key": "ISSUE-1",
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "latest_failure": failure,
+                "run_metrics": {"latest": {"status": "completed"}},
+            }
+            for path, text in (
+                (outputs / "jira" / "summary" / "ISSUE-1.md", "summary"),
+                (outputs / "investigations" / "ISSUE-1.md", "## Problem Location\nRoot cause and failure point are known."),
+                (outputs / "hypothesis" / "ISSUE-1.md", "## Hypothesis\nCandidate solution exists."),
+                (outputs / "metadata-workspaces" / "ISSUE-1" / "metadata-workspace.json", json.dumps({"candidate": "ready"})),
+                (outputs / "pipeline-failures" / "ISSUE-1.json", json.dumps(failure)),
+            ):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+
+            with patch.object(app, "OUTPUTS", outputs), patch.object(app, "_read_pipeline_state", return_value=state):
+                plan = app._build_pipeline_resume_plan("ISSUE-1", "Open", "2026-06-26T00:00:00.000+0000")
+
+        step9 = next(step for step in plan["steps"] if step["step"] == 9)
+        self.assertEqual(plan["latest_failure"], {})
+        self.assertNotEqual(step9["status"], "blocked")
 
     def test_queue_incomplete_summary_bucket_groups_next_steps(self):
         detail = "stalled/no progress in pass 3; incomplete; next STEP_9 (Deploy and test in Sandbox, stale)"

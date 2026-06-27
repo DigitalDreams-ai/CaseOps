@@ -69,6 +69,88 @@ def _json_from_stdout(stdout: str) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _json_parse_error(stdout: str) -> str | None:
+    text = (stdout or "").strip()
+    if not text:
+        return None
+    if not text.startswith("{"):
+        idx = text.find("{")
+        if idx >= 0:
+            text = text[idx:]
+    try:
+        json.loads(text)
+    except json.JSONDecodeError as exc:
+        return str(exc)
+    return None
+
+
+def _classify_failure(text: str, *, returncode: int | None = None, operation: str = "") -> tuple[str | None, bool, str]:
+    lower = (text or "").lower()
+    if "invalidprojectworkspaceerror" in lower or "does not contain a valid salesforce dx project" in lower:
+        return "invalid_project_workspace", False, "Run workspace-init or execute the command from an issue-scoped Salesforce DX project."
+    if "permission denied" in lower and ("/app" in lower or "\\app" in lower):
+        return "permission_denied_app_path", False, "Use /data or the configured CaseOps metadata workspace, not /app."
+    if "invalid_field" in lower or "no such column" in lower or "didn't understand relationship" in lower:
+        return "invalid_field", False, "Verify the field with verify-field or sobject-fields before retrying the query."
+    if "nothingtodeploy" in lower or "nothing to deploy" in lower:
+        return "nothing_to_deploy", False, "Verify the candidate directory and use deploy-mdapi for deterministic issue-scoped metadata."
+    if "--source-dir" in lower and "--metadata" in lower:
+        return "bad_cli_flag_combo", False, "Use either --source-dir or --metadata, not both."
+    if "specify exactly one" in lower or "mutually exclusive" in lower:
+        return "bad_cli_flag_combo", False, "Use one deploy/retrieve selector at a time."
+    if operation == "metadata-convert" or "metadata conversion" in lower or "project convert source" in lower:
+        return "metadata_conversion_failed", False, "Fix the source-format candidate package before retrying deploy."
+    if "timed out" in lower or returncode == 124:
+        return "timeout", True, "Retry once with a narrower operation or longer timeout; do not repeat identical broad commands."
+    if returncode not in (None, 0):
+        return "sf_cli_error", True, "Inspect the structured error and retry only after changing the command or scope."
+    return None, False, ""
+
+
+def _command_result(
+    *,
+    kind: str,
+    proc: subprocess.CompletedProcess[str],
+    command: list[str],
+    operation: str = "",
+    include_result: bool = True,
+) -> dict[str, Any]:
+    parsed = _json_from_stdout(proc.stdout)
+    parse_error = _json_parse_error(proc.stdout) if proc.returncode == 0 and proc.stdout and not parsed else None
+    combined = "\n".join(part for part in (proc.stderr, proc.stdout, parse_error or "") if part)
+    failure_class, retryable, next_action = _classify_failure(combined, returncode=proc.returncode, operation=operation)
+    ok = proc.returncode == 0 and parse_error is None
+    result: dict[str, Any] = {
+        "kind": kind,
+        "ok": ok,
+        "returncode": proc.returncode,
+        "command": _redact(" ".join(command)),
+        "failure_class": None if ok else (failure_class or "unknown"),
+        "retryable": False if ok else retryable,
+        "next_action": "" if ok else next_action,
+        "stdoutTail": _redact(proc.stdout)[-4000:],
+        "stderrTail": _redact(proc.stderr)[-4000:],
+    }
+    if parse_error:
+        result["failure_class"] = "json_parse_failed"
+        result["retryable"] = False
+        result["next_action"] = "The CLI returned non-JSON output. Capture stderr/stdout and re-run with --json only after fixing the command."
+        result["json_parse_error"] = parse_error
+    if include_result and parsed:
+        result["sf"] = parsed
+    return result
+
+
+def _safe_name(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("_") or "salesforce"
+
+
+def _write_output(out_dir: str | None, filename: str, data: dict[str, Any]) -> None:
+    if not out_dir:
+        return
+    _write_json(Path(out_dir) / filename, data)
+
+
 def _query(org: str, soql: str, *, tooling: bool = False, timeout: int = 90) -> dict[str, Any]:
     cmd = [
         "sf",
@@ -85,11 +167,26 @@ def _query(org: str, soql: str, *, tooling: bool = False, timeout: int = 90) -> 
     proc = _run(cmd, timeout=timeout)
     data = _json_from_stdout(proc.stdout)
     if proc.returncode != 0:
+        failure_class, retryable, next_action = _classify_failure(proc.stderr or proc.stdout, returncode=proc.returncode)
         return {
             "ok": False,
             "returncode": proc.returncode,
             "error": _redact(proc.stderr or proc.stdout),
             "query": soql,
+            "failure_class": failure_class or "sf_cli_error",
+            "retryable": retryable,
+            "next_action": next_action,
+        }
+    parse_error = _json_parse_error(proc.stdout) if proc.stdout and not data else None
+    if parse_error:
+        return {
+            "ok": False,
+            "returncode": proc.returncode,
+            "error": parse_error,
+            "query": soql,
+            "failure_class": "json_parse_failed",
+            "retryable": False,
+            "next_action": "The CLI returned non-JSON output. Re-run only after fixing command shape or environment noise.",
         }
     return {
         "ok": True,
@@ -112,11 +209,26 @@ def _describe_sobject(org: str, sobject: str, *, timeout: int = 90) -> dict[str,
     ], timeout=timeout)
     data = _json_from_stdout(proc.stdout)
     if proc.returncode != 0:
+        failure_class, retryable, next_action = _classify_failure(proc.stderr or proc.stdout, returncode=proc.returncode)
         return {
             "ok": False,
             "returncode": proc.returncode,
             "error": _redact(proc.stderr or proc.stdout),
             "sobject": sobject,
+            "failure_class": failure_class or "sf_cli_error",
+            "retryable": retryable,
+            "next_action": next_action,
+        }
+    parse_error = _json_parse_error(proc.stdout) if proc.stdout and not data else None
+    if parse_error:
+        return {
+            "ok": False,
+            "returncode": proc.returncode,
+            "error": parse_error,
+            "sobject": sobject,
+            "failure_class": "json_parse_failed",
+            "retryable": False,
+            "next_action": "The CLI returned non-JSON output. Re-run only after fixing command shape or environment noise.",
         }
     result = data.get("result", {}) if isinstance(data, dict) else {}
     return {
@@ -338,6 +450,220 @@ def sobject_fields(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def workspace_init(args: argparse.Namespace) -> int:
+    root = Path(args.root or os.environ.get("CASEOPS_METADATA_SANDBOX_WORK_DIR") or ".").resolve()
+    attempt_name = args.attempt or "attempt-001"
+    issue_dir = root / args.issue_key
+    attempt_dir = issue_dir / attempt_name
+    paths = {
+        "issueDir": issue_dir,
+        "attemptDir": attempt_dir,
+        "baselineSandbox": attempt_dir / "baseline-sandbox",
+        "candidate": attempt_dir / "candidate",
+        "revert": attempt_dir / "revert",
+    }
+    for path in paths.values():
+        path.mkdir(parents=True, exist_ok=True)
+
+    manifest_path = issue_dir / "metadata-workspace.json"
+    existing: dict[str, Any] = {}
+    if manifest_path.exists():
+        try:
+            existing = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            existing = {}
+    manifest = {
+        **existing,
+        "kind": "metadata-workspace",
+        "issueKey": args.issue_key,
+        "activeAttempt": attempt_name,
+        "paths": {name: str(path) for name, path in paths.items()},
+    }
+    _write_json(manifest_path, manifest)
+    result = {
+        "kind": "workspace-init",
+        "ok": True,
+        "issueKey": args.issue_key,
+        "attempt": attempt_name,
+        "manifest": str(manifest_path),
+        "paths": manifest["paths"],
+    }
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
+
+def query_data(args: argparse.Namespace) -> int:
+    result = _query(args.org, args.soql, tooling=False, timeout=args.timeout)
+    result["kind"] = "query-data"
+    result["org"] = args.org
+    _write_output(args.out_dir, f"{_safe_name(args.name or 'query-data')}.json", result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
+def query_tooling(args: argparse.Namespace) -> int:
+    result = _query(args.org, args.soql, tooling=True, timeout=args.timeout)
+    result["kind"] = "query-tooling"
+    result["org"] = args.org
+    _write_output(args.out_dir, f"{_safe_name(args.name or 'query-tooling')}.json", result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
+def retrieve_metadata(args: argparse.Namespace) -> int:
+    out_dir = Path(args.out_dir).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    metadata = args.metadata or []
+    source_dirs = args.source_dir or []
+    result: dict[str, Any] = {
+        "kind": "retrieve-metadata",
+        "org": args.org,
+        "outDir": str(out_dir),
+        "metadata": metadata,
+        "sourceDir": source_dirs,
+        "ok": False,
+    }
+    if bool(metadata) == bool(source_dirs):
+        result.update({
+            "failure_class": "bad_cli_flag_combo",
+            "retryable": False,
+            "next_action": "Provide metadata selectors or source-dir selectors, but not both.",
+        })
+        _write_output(str(out_dir), "retrieve-metadata-summary.json", result)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 1
+
+    cmd = ["sf", "project", "retrieve", "start", "--target-org", args.org, "--output-dir", str(out_dir), "--json"]
+    for item in metadata:
+        cmd.extend(["--metadata", item])
+    for item in source_dirs:
+        cmd.extend(["--source-dir", item])
+    proc = _run(cmd, timeout=args.timeout)
+    result["retrieve"] = _command_result(kind="retrieve-metadata-command", proc=proc, command=cmd)
+    result["ok"] = bool(result["retrieve"].get("ok"))
+    if not result["ok"]:
+        result["failure_class"] = result["retrieve"].get("failure_class")
+        result["retryable"] = result["retrieve"].get("retryable")
+        result["next_action"] = result["retrieve"].get("next_action")
+    _write_output(str(out_dir), "retrieve-metadata-summary.json", result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result["ok"] else 1
+
+
+def deploy_source(args: argparse.Namespace) -> int:
+    source_dir = Path(args.source_dir).resolve()
+    attempt = Path(args.attempt).resolve() if args.attempt else source_dir.parent
+    summary_path = attempt / "deploy-source-summary.json"
+    result: dict[str, Any] = {
+        "kind": "deploy-source",
+        "sandboxOrg": args.sandbox_org,
+        "sourceDir": str(source_dir),
+        "attempt": str(attempt),
+        "ok": False,
+    }
+    cmd = [
+        "sf",
+        "project",
+        "deploy",
+        "start",
+        "--source-dir",
+        str(source_dir),
+        "--target-org",
+        args.sandbox_org,
+        "--json",
+    ]
+    if args.test_level:
+        cmd.extend(["--test-level", args.test_level])
+    for test_name in args.tests or []:
+        cmd.extend(["--tests", test_name])
+    proc = _run(cmd, timeout=args.timeout)
+    result["deploy"] = _command_result(kind="deploy-source-command", proc=proc, command=cmd)
+    result["ok"] = bool(result["deploy"].get("ok"))
+    if not result["ok"]:
+        result["failure_class"] = result["deploy"].get("failure_class")
+        result["retryable"] = result["deploy"].get("retryable")
+        result["next_action"] = result["deploy"].get("next_action")
+    _write_json(summary_path, result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result["ok"] else 1
+
+
+def deploy_report(args: argparse.Namespace) -> int:
+    cmd = ["sf", "project", "deploy", "report", "--target-org", args.org, "--job-id", args.deploy_id, "--json"]
+    proc = _run(cmd, timeout=args.timeout)
+    result = _command_result(kind="deploy-report", proc=proc, command=cmd)
+    result["org"] = args.org
+    result["deployId"] = args.deploy_id
+    _write_output(args.out_dir, f"deploy-report-{_safe_name(args.deploy_id)}.json", result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
+def verify_field(args: argparse.Namespace) -> int:
+    describe = _describe_sobject(args.org, args.sobject, timeout=args.timeout)
+    fields = describe.get("fields", []) if describe.get("ok") else []
+    field = next((item for item in fields if str(item.get("name") or "").lower() == args.field.lower()), None)
+    result = {
+        "kind": "verify-field",
+        "ok": bool(describe.get("ok") and field),
+        "org": args.org,
+        "sobject": args.sobject,
+        "field": args.field,
+        "exists": bool(field),
+        "fieldDefinition": field,
+    }
+    if not describe.get("ok"):
+        result["describe"] = describe
+        result["failure_class"] = describe.get("failure_class") or "sf_cli_error"
+        result["retryable"] = describe.get("retryable", True)
+        result["next_action"] = describe.get("next_action") or "Verify the sObject name and org alias."
+    elif not field:
+        result["failure_class"] = "invalid_field"
+        result["retryable"] = False
+        result["next_action"] = "Use sobject-fields to discover the correct API field name before retrying SOQL or metadata work."
+    _write_output(args.out_dir, f"{_safe_name(args.sobject)}.{_safe_name(args.field)}.verify-field.json", result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
+def verify_flow(args: argparse.Namespace) -> int:
+    developer_name = args.flow
+    query = (
+        "SELECT Id, DeveloperName, ActiveVersionId, LatestVersionId "
+        f"FROM FlowDefinition WHERE DeveloperName = '{developer_name}'"
+    )
+    definition = _query(args.org, query, tooling=True, timeout=args.timeout)
+    records = definition.get("records", []) if definition.get("ok") else []
+    result: dict[str, Any] = {
+        "kind": "verify-flow",
+        "ok": bool(definition.get("ok") and records),
+        "org": args.org,
+        "flow": developer_name,
+        "exists": bool(records),
+        "definition": definition,
+    }
+    if records:
+        rec = records[0]
+        active_version_id = rec.get("ActiveVersionId")
+        latest_version_id = rec.get("LatestVersionId")
+        result["activeVersionId"] = active_version_id
+        result["latestVersionId"] = latest_version_id
+        if active_version_id:
+            result["activeVersion"] = _query(
+                args.org,
+                f"SELECT Id, VersionNumber, Status, ProcessType FROM Flow WHERE Id = '{active_version_id}'",
+                tooling=True,
+                timeout=args.timeout,
+            )
+    if not result["ok"]:
+        result["failure_class"] = definition.get("failure_class") or ("missing_flow" if definition.get("ok") else "sf_cli_error")
+        result["retryable"] = bool(definition.get("retryable", False))
+        result["next_action"] = definition.get("next_action") or "Verify the Flow DeveloperName before retrieving or deploying Flow metadata."
+    _write_output(args.out_dir, f"{_safe_name(developer_name)}.verify-flow.json", result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
 def deploy_mdapi(args: argparse.Namespace) -> int:
     candidate = Path(args.candidate).resolve()
     attempt = Path(args.attempt).resolve()
@@ -370,6 +696,14 @@ def deploy_mdapi(args: argparse.Namespace) -> int:
             "stderr": _redact(convert.stderr)[-2000:],
         }
         if convert.returncode != 0:
+            failure_class, retryable, next_action = _classify_failure(
+                convert.stderr or convert.stdout,
+                returncode=convert.returncode,
+                operation="metadata-convert",
+            )
+            result["failure_class"] = failure_class or "metadata_conversion_failed"
+            result["retryable"] = retryable
+            result["next_action"] = next_action
             _write_json(summary_path, result)
             print(json.dumps(result, indent=2, ensure_ascii=False))
             return 1
@@ -393,15 +727,28 @@ def deploy_mdapi(args: argparse.Namespace) -> int:
     deploy_json = _json_from_stdout(deploy.stdout)
     deploy_result = deploy_json.get("result", {}) if isinstance(deploy_json, dict) else {}
     result["deploy"] = {
-        "returncode": deploy.returncode,
+        **_command_result(kind="deploy-mdapi-command", proc=deploy, command=[
+            "sf",
+            "project",
+            "deploy",
+            "start",
+            "--metadata-dir",
+            str(mdapi_dir),
+            "--single-package",
+            "--target-org",
+            args.sandbox_org,
+            "--json",
+        ]),
         "id": deploy_result.get("id") or deploy_result.get("deployId"),
         "status": deploy_result.get("status"),
         "success": deploy_result.get("success"),
         "details": deploy_result.get("details", {}),
-        "stdoutTail": _redact(deploy.stdout)[-4000:],
-        "stderrTail": _redact(deploy.stderr)[-4000:],
     }
-    result["ok"] = deploy.returncode == 0
+    result["ok"] = bool(result["deploy"].get("ok"))
+    if not result["ok"]:
+        result["failure_class"] = result["deploy"].get("failure_class")
+        result["retryable"] = result["deploy"].get("retryable")
+        result["next_action"] = result["deploy"].get("next_action")
     _write_json(summary_path, result)
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0 if result["ok"] else 1
@@ -440,6 +787,67 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--contains")
     p.add_argument("--out-dir")
     p.set_defaults(func=sobject_fields)
+
+    p = sub.add_parser("workspace-init", help="Create an issue-scoped metadata attempt workspace")
+    p.add_argument("--issue-key", required=True)
+    p.add_argument("--attempt", default="attempt-001")
+    p.add_argument("--root")
+    p.set_defaults(func=workspace_init)
+
+    p = sub.add_parser("query-data", help="Run a data SOQL query and return structured JSON")
+    p.add_argument("--org", required=True)
+    p.add_argument("--soql", required=True)
+    p.add_argument("--name")
+    p.add_argument("--out-dir")
+    p.add_argument("--timeout", type=int, default=90)
+    p.set_defaults(func=query_data)
+
+    p = sub.add_parser("query-tooling", help="Run a Tooling API SOQL query and return structured JSON")
+    p.add_argument("--org", required=True)
+    p.add_argument("--soql", required=True)
+    p.add_argument("--name")
+    p.add_argument("--out-dir")
+    p.add_argument("--timeout", type=int, default=90)
+    p.set_defaults(func=query_tooling)
+
+    p = sub.add_parser("retrieve-metadata", help="Retrieve targeted metadata to an issue-scoped output directory")
+    p.add_argument("--org", required=True)
+    p.add_argument("--metadata", action="append")
+    p.add_argument("--source-dir", action="append")
+    p.add_argument("--out-dir", required=True)
+    p.add_argument("--timeout", type=int, default=180)
+    p.set_defaults(func=retrieve_metadata)
+
+    p = sub.add_parser("deploy-source", help="Deploy a source-format directory to the allowlisted sandbox")
+    p.add_argument("--sandbox-org", required=True)
+    p.add_argument("--source-dir", required=True)
+    p.add_argument("--attempt")
+    p.add_argument("--test-level")
+    p.add_argument("--tests", action="append")
+    p.add_argument("--timeout", type=int, default=600)
+    p.set_defaults(func=deploy_source)
+
+    p = sub.add_parser("deploy-report", help="Fetch a structured Salesforce deploy report")
+    p.add_argument("--org", required=True)
+    p.add_argument("--deploy-id", required=True)
+    p.add_argument("--out-dir")
+    p.add_argument("--timeout", type=int, default=120)
+    p.set_defaults(func=deploy_report)
+
+    p = sub.add_parser("verify-field", help="Verify an sObject field exists before SOQL or metadata work")
+    p.add_argument("--org", required=True)
+    p.add_argument("--sobject", required=True)
+    p.add_argument("--field", required=True)
+    p.add_argument("--out-dir")
+    p.add_argument("--timeout", type=int, default=90)
+    p.set_defaults(func=verify_field)
+
+    p = sub.add_parser("verify-flow", help="Verify a Flow definition and active version by DeveloperName")
+    p.add_argument("--org", required=True)
+    p.add_argument("--flow", required=True)
+    p.add_argument("--out-dir")
+    p.add_argument("--timeout", type=int, default=90)
+    p.set_defaults(func=verify_flow)
 
     p = sub.add_parser("deploy-mdapi", help="Deploy candidate metadata through deterministic MDAPI path")
     p.add_argument("--sandbox-org", required=True)

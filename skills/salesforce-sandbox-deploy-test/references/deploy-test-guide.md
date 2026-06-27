@@ -19,14 +19,33 @@
 - Review the local diff between `baseline-sandbox/` and `candidate/`.
 - Confirm the deployment scope.
 - Identify tests to run.
-- Deploy with modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
-- For issue-scoped candidate metadata, prefer the deterministic helper before trying source-tracking variants:
+- Use `python scripts/sf_caseops_helper.py ...` helpers before equivalent raw `sf` commands. Helper failures return `failure_class`, `retryable`, and `next_action`; if `retryable=false`, stop and replan instead of trying small variants.
+- Initialize missing attempt directories and metadata-workspace state with:
+
+```bash
+python scripts/sf_caseops_helper.py workspace-init --issue-key "<KEY>" --attempt attempt-N
+```
+
+- For source-format candidate metadata, use:
+
+```bash
+python scripts/sf_caseops_helper.py deploy-source --sandbox-org "$CASEOPS_SANDBOX_TARGET_ORG" --source-dir "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/candidate/force-app" --attempt "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N"
+```
+
+- For deterministic metadata-dir deploys or when source tracking causes `NothingToDeploy`, use:
 
 ```bash
 python scripts/sf_caseops_helper.py deploy-mdapi --sandbox-org "$CASEOPS_SANDBOX_TARGET_ORG" --candidate "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/candidate" --attempt "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N"
 ```
 
-- If the helper or deploy pattern fails twice, stop and summarize the blocker. Do not inspect `.sf` internals or try many small deploy variants.
+- For deploy follow-up, use:
+
+```bash
+python scripts/sf_caseops_helper.py deploy-report --org "$CASEOPS_SANDBOX_TARGET_ORG" --deploy-id "<DEPLOY_ID>" --out-dir "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N"
+```
+
+- If the helper or deploy pattern fails with `retryable=false`, stop and summarize the blocker. Do not inspect `.sf` internals or try many small deploy variants.
+- If no helper covers the case, deploy with modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
 
 After deploying:
 

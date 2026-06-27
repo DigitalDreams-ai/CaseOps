@@ -28,6 +28,7 @@ tests/*
 !tests/test_issue_clusters.py
 !tests/test_global_queue.py
 !tests/test_jira_sync.py
+!tests/test_knowledge_service.py
 caseops/__pycache__/
 caseops/**/__pycache__/
 caseops/**/*.pyc
@@ -81,6 +82,7 @@ sandbox-deploy/
 
 # Logs
 logs/
+.caseops-diagnostics/
 *.log
 npm-debug.log*
 yarn-debug.log*

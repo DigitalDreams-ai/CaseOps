@@ -21,8 +21,8 @@ description: Investigates Salesforce Production metadata read-only to identify o
 
 1. Start from the Jira issue analysis and problem hypothesis.
 2. Identify the smallest relevant metadata set.
-3. For custom field, picklist, layout, and FLS questions, run `python scripts/sf_caseops_helper.py ...` before writing ad hoc SOQL.
-4. Retrieve metadata from Production read-only using modern `sf project retrieve start --metadata` or `--source-dir` and `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`, or inspect provided metadata exports.
+3. For custom field, picklist, layout, FLS, field/Flow verification, SOQL, and targeted metadata retrieval, run `python scripts/sf_caseops_helper.py ...` before writing equivalent ad hoc SOQL or retrieve commands.
+4. Retrieve metadata from Production read-only using `python scripts/sf_caseops_helper.py retrieve-metadata ...` or, when the helper does not cover the case, modern `sf project retrieve start --metadata` or `--source-dir` and `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`.
 5. Treat retrieved Production files as read-only evidence.
 6. Record why each metadata item was retrieved.
 7. Summarize findings and likely implementation surface.
@@ -43,6 +43,7 @@ description: Investigates Salesforce Production metadata read-only to identify o
 - Retrieval is targeted to the issue.
 - Retrieval uses modern `sf` CLI only. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
 - Raw metadata is stored under `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`.
-- Known mechanics use CaseOps helpers before repeated manual query variants.
+- Known mechanics use CaseOps helpers before repeated manual query/retrieve variants.
+- Helper failures with `retryable=false` stop the attempt and trigger replanning instead of repeated command variants.
 - Findings separate facts from hypotheses.
 - Markdown output follows the canonical CaseOps Markdown rules.
