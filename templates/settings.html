@@ -606,6 +606,37 @@
             min-height: 300px;
         }
 
+        .knowledge-review-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .knowledge-review-card {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 12px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .knowledge-review-card h3 {
+            margin: 0;
+            font-size: 13px;
+            color: var(--color-text);
+        }
+
+        .knowledge-review-meta {
+            color: var(--color-text-secondary);
+            font-size: 12px;
+        }
+
+        .knowledge-review-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
         .error-box {
             display: none;
             margin-top: 8px;
@@ -696,6 +727,7 @@
                 <a href="#salesforce-section">Salesforce</a>
                 <a href="#runtime-tuning-section">Runtime Tuning</a>
                 <a href="#similarity-section">Similar Issues</a>
+                <a href="#knowledge-section">Knowledge</a>
                 <a href="#content-section">Content</a>
                 <a href="#instance-section">Instance</a>
                 <a href="#system-section">System</a>
@@ -1113,6 +1145,46 @@
                         </div>
                     </section>
 
+                    <section class="settings-section" id="knowledge-section">
+                        <div class="section-header">
+                            <div>
+                                <h2>Knowledge Review</h2>
+                                <p>Review pending lessons from local signals. Nothing here writes to Jira, Salesforce, or Production.</p>
+                            </div>
+                            <button type="button" class="button-secondary" id="refresh-knowledge-btn">Refresh</button>
+                        </div>
+
+                        <div class="settings-grid">
+                            <div class="settings-field">
+                                <label for="knowledge-auditor-enabled">Scheduled Knowledge Auditor</label>
+                                <select id="knowledge-auditor-enabled" name="CASEOPS_KNOWLEDGE_AUDITOR_ENABLED">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                                <div class="field-note">Manual audit is available below. Keep scheduling disabled until candidate quality is proven.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="knowledge-auditor-minutes">Auditor Interval Minutes</label>
+                                <input id="knowledge-auditor-minutes" name="CASEOPS_KNOWLEDGE_AUDITOR_INTERVAL_MINUTES" type="number" min="0" step="1" />
+                                <div class="field-note">0 disables scheduled audits.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="knowledge-auditor-min-recurrence">Minimum Recurrence</label>
+                                <input id="knowledge-auditor-min-recurrence" name="CASEOPS_KNOWLEDGE_AUDITOR_MIN_RECURRENCE" type="number" min="1" max="25" step="1" />
+                                <div class="field-note">Number of matching signals required before creating a pending lesson.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label>&nbsp;</label>
+                                <button type="button" class="button-primary" id="run-knowledge-audit-btn">Run Manual Audit</button>
+                                <div id="knowledge-audit-status" class="field-note"></div>
+                            </div>
+                        </div>
+
+                        <div id="knowledge-review-panel" style="margin-top:14px;">
+                            <div class="field-note">Loading knowledge review...</div>
+                        </div>
+                    </section>
+
                     <section class="settings-section" id="content-section">
                         <div class="section-header">
                             <div>
@@ -1426,6 +1498,132 @@
                     <div><strong>Top rejection reasons:</strong>${rejectionHtml}</div>
                 </div>
             `;
+        }
+
+        async function refreshKnowledgeReview() {
+            const panel = document.getElementById('knowledge-review-panel');
+            if (!panel) return;
+            try {
+                const resp = await fetch('/api/knowledge/review');
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+                renderKnowledgeReview(data.items || {});
+            } catch (e) {
+                panel.innerHTML = `<div class="field-note">Knowledge review unavailable: ${escapeHtml(e.message || String(e))}</div>`;
+            }
+        }
+
+        function renderKnowledgeReview(items) {
+            const panel = document.getElementById('knowledge-review-panel');
+            if (!panel) return;
+            const pending = Array.isArray(items.pending_lessons) ? items.pending_lessons : [];
+            const accepted = Array.isArray(items.accepted_lessons) ? items.accepted_lessons : [];
+            const helpers = Array.isArray(items.helper_work_items) ? items.helper_work_items : [];
+            const signals = Array.isArray(items.signals) ? items.signals : [];
+            const metric = (count, label) => `<div class="health-metric"><strong>${escapeHtml(String(count))}</strong><span>${escapeHtml(label)}</span></div>`;
+            const pendingHtml = pending.length ? pending.map(renderPendingLessonCard).join('') : '<div class="field-note">No pending lessons.</div>';
+            const acceptedHtml = accepted.length ? accepted.slice(0, 8).map(renderAcceptedLessonCard).join('') : '<div class="field-note">No accepted lessons.</div>';
+            const helperHtml = helpers.length ? helpers.slice(0, 8).map(item => `
+                <div class="knowledge-review-card">
+                    <h3>${escapeHtml(item.work_item_id || item.source_candidate_id || 'helper work item')}</h3>
+                    <div>${escapeHtml(item.summary || '')}</div>
+                    <div class="knowledge-review-meta">status: ${escapeHtml(item.status || 'pending')} · topic: ${escapeHtml(item.topic || '')}</div>
+                </div>
+            `).join('') : '<div class="field-note">No helper work items.</div>';
+            panel.innerHTML = `
+                <div class="health-metric-grid">
+                    ${metric(pending.length, 'Pending lessons')}
+                    ${metric(accepted.length, 'Accepted lessons')}
+                    ${metric(helpers.length, 'Helper work items')}
+                    ${metric(signals.length, 'Recent signals')}
+                </div>
+                <h3 style="margin: 14px 0 8px;">Pending Lessons</h3>
+                <div class="knowledge-review-list">${pendingHtml}</div>
+                <h3 style="margin: 14px 0 8px;">Accepted Lessons</h3>
+                <div class="knowledge-review-list">${acceptedHtml}</div>
+                <h3 style="margin: 14px 0 8px;">Helper Work Items</h3>
+                <div class="knowledge-review-list">${helperHtml}</div>
+            `;
+        }
+
+        function renderPendingLessonCard(item) {
+            const id = escapeHtml(item.candidate_id || '');
+            const evidence = Array.isArray(item.evidence) ? item.evidence.slice(0, 3).map(ev => `<li>${escapeHtml(ev)}</li>`).join('') : '';
+            return `
+                <div class="knowledge-review-card">
+                    <h3>${id}</h3>
+                    <div>${escapeHtml(item.lesson || '')}</div>
+                    <div class="knowledge-review-meta">
+                        topic: ${escapeHtml(item.topic || '')} · type: ${escapeHtml(item.knowledge_type || '')} · confidence: ${escapeHtml(item.confidence || '')} · recurrence: ${escapeHtml(String(item.recurrence_count || 0))}
+                    </div>
+                    ${evidence ? `<ul>${evidence}</ul>` : ''}
+                    <div class="knowledge-review-actions">
+                        <button type="button" class="button-primary" onclick="knowledgeAction('${id}', 'accept')">Accept</button>
+                        <button type="button" class="button-secondary" onclick="knowledgeAction('${id}', 'helper-work-item')">Convert to Helper Work Item</button>
+                        <button type="button" class="button-danger" onclick="knowledgeAction('${id}', 'reject')">Reject</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAcceptedLessonCard(item) {
+            const id = escapeHtml(item.candidate_id || '');
+            return `
+                <div class="knowledge-review-card">
+                    <h3>${id}</h3>
+                    <div>${escapeHtml(item.lesson || '')}</div>
+                    <div class="knowledge-review-meta">topic: ${escapeHtml(item.topic || '')} · type: ${escapeHtml(item.knowledge_type || '')}</div>
+                    <div class="knowledge-review-actions">
+                        <button type="button" class="button-secondary" onclick="knowledgeAction('${id}', 'retire')">Retire</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function knowledgeAction(candidateId, action) {
+            const status = document.getElementById('knowledge-audit-status');
+            try {
+                const body = action === 'reject' || action === 'retire'
+                    ? JSON.stringify({ reason: action === 'reject' ? 'Rejected from Settings review.' : 'Retired from Settings review.' })
+                    : '{}';
+                const resp = await fetch(`/api/knowledge/review/${encodeURIComponent(candidateId)}/${action}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body,
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+                if (status) status.textContent = `Knowledge action complete: ${action}`;
+                await refreshKnowledgeReview();
+            } catch (e) {
+                if (status) status.textContent = '';
+                showBanner('Knowledge action failed: ' + (e.message || String(e)), 'error');
+            }
+        }
+
+        async function runKnowledgeAudit() {
+            const status = document.getElementById('knowledge-audit-status');
+            const btn = document.getElementById('run-knowledge-audit-btn');
+            if (btn) btn.disabled = true;
+            if (status) status.textContent = 'Running audit...';
+            try {
+                const minRecurrence = Number(document.getElementById('knowledge-auditor-min-recurrence')?.value || 2);
+                const resp = await fetch('/api/knowledge/audit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ min_recurrence: minRecurrence }),
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+                const summary = data.summary || {};
+                if (status) status.textContent = `Reviewed ${summary.signals_reviewed || 0} signals; created ${summary.candidates_created || 0} candidates.`;
+                await refreshKnowledgeReview();
+            } catch (e) {
+                if (status) status.textContent = '';
+                showBanner('Knowledge audit failed: ' + (e.message || String(e)), 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
         }
 
         function hideAuthenticatedOrgs() {
@@ -1911,6 +2109,8 @@
         document.getElementById('repair-state-btn').addEventListener('click', repairPipelineState);
         document.getElementById('repair-stale-state-btn').addEventListener('click', repairAllStalePipelineState);
         document.getElementById('refresh-similarity-health-btn').addEventListener('click', refreshSimilarityHealth);
+        document.getElementById('refresh-knowledge-btn').addEventListener('click', refreshKnowledgeReview);
+        document.getElementById('run-knowledge-audit-btn').addEventListener('click', runKnowledgeAudit);
         document.getElementById('refresh-status-btn').addEventListener('click', async () => {
             const btn = document.getElementById('refresh-status-btn');
             btn.disabled = true;
@@ -1958,6 +2158,7 @@
         loadSettings();
         refreshStatusPanels();
         refreshSimilarityHealth();
+        refreshKnowledgeReview();
         refreshRunControlStatus();
         loadDisplayLabel();
         loadCannedMessages();

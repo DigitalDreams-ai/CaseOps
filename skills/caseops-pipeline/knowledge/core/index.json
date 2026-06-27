@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "description": "CaseOps reusable Salesforce org knowledge. The orchestrator reads this index, then loads only matching files for each issue.",
+  "always_read": [
+    "run-rules.md"
+  ],
+  "max_context_chars": 12000,
+  "max_topic_files": 6,
+  "topics": [
+    {
+      "id": "custom-field-picklist",
+      "title": "Custom fields and picklist values",
+      "keywords": [
+        "custom field",
+        "fielddefinition",
+        "customfield",
+        "picklist",
+        "picklist value",
+        "__c",
+        "field-level",
+        "field level",
+        "supplement",
+        "values"
+      ],
+      "files": [
+        "query-patterns/custom-field.md",
+        "query-patterns/picklist-values.md",
+        "deploy-patterns/custom-field-mdapi.md",
+        "helper-scripts.md",
+        "salesforce-gotchas/fields-and-picklists.md"
+      ]
+    },
+    {
+      "id": "layouts",
+      "title": "Layouts and field placement",
+      "keywords": [
+        "layout",
+        "page layout",
+        "section",
+        "field placement",
+        "lightning page"
+      ],
+      "files": [
+        "query-patterns/layouts.md",
+        "helper-scripts.md",
+        "salesforce-gotchas/layouts-and-record-types.md"
+      ]
+    },
+    {
+      "id": "permission-sets",
+      "title": "Permission sets and FLS",
+      "keywords": [
+        "permission set",
+        "permissionset",
+        "fls",
+        "fieldpermissions",
+        "field permission",
+        "read edit",
+        "read/write",
+        "access",
+        "profile",
+        "sharing",
+        "share object",
+        "usershare",
+        "accountshare",
+        "opportunityshare",
+        "rowcause",
+        "userorgroupid"
+      ],
+      "files": [
+        "query-patterns/permission-sets.md",
+        "helper-scripts.md",
+        "salesforce-gotchas/access-and-visibility.md",
+        "query-patterns/share-objects.md"
+      ]
+    },
+    {
+      "id": "deploy-troubleshooting",
+      "title": "Deploy mechanics and source tracking pitfalls",
+      "keywords": [
+        "deploy",
+        "sandbox",
+        "metadata api",
+        "mdapi",
+        "nothingtodeploy",
+        "source tracking",
+        "candidate",
+        "baseline",
+        "revert",
+        "release process"
+      ],
+      "files": [
+        "deploy-patterns/custom-field-mdapi.md",
+        "deploy-patterns/source-tracking.md",
+        "helper-scripts.md",
+        "salesforce-gotchas/deploy-and-sandbox.md"
+      ]
+    },
+    {
+      "id": "flows",
+      "title": "Flow investigation",
+      "keywords": [
+        "flow",
+        "flowdefinition",
+        "flow version",
+        "triggered flow",
+        "record-triggered"
+      ],
+      "files": [
+        "query-patterns/flows.md",
+        "salesforce-gotchas/automation-order.md"
+      ]
+    },
+    {
+      "id": "apex",
+      "title": "Apex investigation",
+      "keywords": [
+        "apex",
+        "class",
+        "trigger",
+        "test class",
+        "debug log"
+      ],
+      "files": [
+        "query-patterns/apex.md",
+        "salesforce-gotchas/automation-order.md"
+      ]
+    }
+  ]
+}

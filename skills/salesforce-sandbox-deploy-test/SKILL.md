@@ -32,7 +32,7 @@ description: Mandatory for caseops-pipeline after a proposed solution is prepare
 2. Create an attempt directory under `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/`.
 3. Retrieve Sandbox baseline metadata for every component that may change.
 4. Review changed metadata and expected deployment scope.
-5. Deploy **only** to the allowlisted Sandbox (target must match step 1). Prefer `python scripts/sf_caseops_helper.py deploy-mdapi ...` for issue-scoped candidate metadata.
+5. Deploy **only** to the allowlisted Sandbox (target must match step 1). Prefer `python scripts/sf_caseops_helper.py deploy-source|deploy-mdapi|deploy-report ...` for issue-scoped candidate metadata and deploy status.
 6. Run automated tests when available.
 7. Run manual or data-driven validation against Jira acceptance criteria.
 8. Record results in `outputs/test-reports/<KEY>.md` using the canonical template at `../caseops-pipeline/assets/test-report-template.md` (paths per parent pipeline). Fill the required **Validation Verdict** block exactly:
@@ -58,8 +58,9 @@ description: Mandatory for caseops-pipeline after a proposed solution is prepare
 - Target was verified against `CASEOPS_SANDBOX_TARGET_ORG` from the active env file before deploy, not assumed from memory or defaults.
 - Engineering proposal packages are clearly marked as Sandbox-only proposals, not Production changes.
 - Deployment command and result are recorded.
-- Deployment uses modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
-- Deploys use deterministic MDAPI helper flow before repeated source-tracking variants.
+- Deployment uses CaseOps helper operations before equivalent raw `sf` commands.
+- Helper failures with `retryable=false` stop the attempt and trigger replanning instead of repeated command variants.
+- Any raw fallback deploy uses modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
 - Tests map to Jira acceptance criteria.
 - Failure evidence is preserved.
 - Failed or abandoned attempts were reverted and verified.

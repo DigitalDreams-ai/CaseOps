@@ -41,6 +41,7 @@ from typing import Any
 from flask import Flask, Response, jsonify, render_template, request, send_file, stream_with_context
 
 from caseops_paths import default_jira_dir
+import knowledge_service
 from issue_clusters import (
     CLUSTER_DIR_NAME,
     CLUSTER_INDEX_FILE,
@@ -68,6 +69,7 @@ class PipelineState(Enum):
 
 
 PIPELINE_STATE_SCHEMA_VERSION = 2
+QUEUE_DISPOSITION_STATE_VERSION = 1
 PIPELINE_LOOP_LIMITS = {"metadata_rounds": 3, "deploy_rounds": 3}
 PIPELINE_TOOL_PERMISSION_VERSION = 1
 CASEOPS_VERSION = (os.environ.get("CASEOPS_VERSION") or "dev").strip() or "dev"
@@ -424,8 +426,43 @@ investigation_cache: dict[str, dict[str, bool]] = {}
 # TTL: 24 hours
 artifact_metadata_cache: dict[str, dict[str, Any]] = {}
 
+# Issue list payload cache: short-lived because the browser can request
+# /api/issues several times during SSE reconnects, issue selection, and run
+# completion refreshes. This cache is invalidated on manifest/list changes.
+_issues_api_cache: dict[str, Any] = {"created": 0.0, "payload": None, "signature": None}
+_ISSUES_API_CACHE_LOCK = threading.Lock()
+_issues_api_metrics: dict[str, Any] = {
+    "cache_hits": 0,
+    "cache_misses": 0,
+    "invalidations": 0,
+    "last_cache_hit": False,
+    "last_build_seconds": None,
+    "last_total_seconds": None,
+    "last_issue_count": 0,
+    "last_payload_bytes": 0,
+    "last_cache_signature": None,
+    "last_built_at": None,
+    "last_served_at": None,
+}
+_ISSUES_API_METRICS_LOCK = threading.Lock()
+
 _CACHE_MAX_KEYS = 100
 _ARTIFACT_CACHE_TTL_SECONDS = 86400  # 24 hours
+_ISSUES_API_CACHE_TTL_SECONDS = 5.0
+try:
+    _ISSUES_API_SLOW_LOG_SECONDS = max(
+        0.0,
+        float((os.environ.get("CASEOPS_ISSUES_API_SLOW_LOG_SECONDS") or "1.0").strip() or "1.0"),
+    )
+except ValueError:
+    _ISSUES_API_SLOW_LOG_SECONDS = 1.0
+try:
+    _ISSUE_LIST_SUMMARY_SEARCH_CHARS = max(
+        0,
+        int((os.environ.get("CASEOPS_ISSUE_LIST_SUMMARY_SEARCH_CHARS") or "3000").strip() or "3000"),
+    )
+except ValueError:
+    _ISSUE_LIST_SUMMARY_SEARCH_CHARS = 3000
 
 # Skill registry: loads all skills once at startup, reuses cached data
 skill_registry = SkillRegistry()
@@ -489,440 +526,12 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
 
 # Consolidated temp directory: instance-specific runtime workspace
 TEMP_ROOT = None  # Path | None — Set in __main__
+_KNOWLEDGE_AUDITOR_THREAD_STARTED = False
+_KNOWLEDGE_AUDITOR_LOCK = threading.Lock()
 
 
-_ORG_KNOWLEDGE_DEFAULT_INDEX: dict[str, Any] = {
-    "version": 1,
-    "description": "CaseOps reusable Salesforce org knowledge. The orchestrator reads this index, then loads only matching files for each issue.",
-    "always_read": ["run-rules.md"],
-    "max_context_chars": 12000,
-    "max_topic_files": 6,
-    "topics": [
-        {
-            "id": "custom-field-picklist",
-            "title": "Custom fields and picklist values",
-            "keywords": [
-                "custom field", "fielddefinition", "customfield", "picklist", "picklist value",
-                "__c", "field-level", "field level", "supplement", "values"
-            ],
-            "files": [
-                "helper-scripts.md",
-                "salesforce-gotchas/fields-and-picklists.md",
-                "query-patterns/custom-field.md",
-                "query-patterns/picklist-values.md",
-                "deploy-patterns/custom-field-mdapi.md",
-            ],
-        },
-        {
-            "id": "layouts",
-            "title": "Layouts and field placement",
-            "keywords": ["layout", "page layout", "section", "field placement", "lightning page"],
-            "files": [
-                "helper-scripts.md",
-                "salesforce-gotchas/layouts-and-record-types.md",
-                "query-patterns/layouts.md",
-            ],
-        },
-        {
-            "id": "permission-sets",
-            "title": "Permission sets and FLS",
-            "keywords": [
-                "permission set", "permissionset", "fls", "fieldpermissions", "field permission",
-                "read edit", "read/write", "access", "profile", "sharing", "share object",
-                "usershare", "accountshare", "opportunityshare", "rowcause", "userorgroupid"
-            ],
-            "files": [
-                "helper-scripts.md",
-                "salesforce-gotchas/access-and-visibility.md",
-                "query-patterns/share-objects.md",
-                "query-patterns/permission-sets.md",
-            ],
-        },
-        {
-            "id": "deploy-troubleshooting",
-            "title": "Deploy mechanics and source tracking pitfalls",
-            "keywords": [
-                "deploy", "sandbox", "metadata api", "mdapi", "nothingtodeploy", "source tracking",
-                "candidate", "baseline", "revert", "gearset"
-            ],
-            "files": [
-                "helper-scripts.md",
-                "salesforce-gotchas/deploy-and-sandbox.md",
-                "deploy-patterns/custom-field-mdapi.md",
-                "deploy-patterns/source-tracking.md",
-            ],
-        },
-        {
-            "id": "flows",
-            "title": "Flow investigation",
-            "keywords": ["flow", "flowdefinition", "flow version", "triggered flow", "record-triggered"],
-            "files": ["salesforce-gotchas/automation-order.md", "query-patterns/flows.md"],
-        },
-        {
-            "id": "apex",
-            "title": "Apex investigation",
-            "keywords": ["apex", "class", "trigger", "test class", "debug log"],
-            "files": ["salesforce-gotchas/automation-order.md", "query-patterns/apex.md"],
-        },
-    ],
-}
-
-
-_ORG_KNOWLEDGE_DEFAULT_FILES: dict[str, str] = {
-    "helper-scripts.md": """# CaseOps Salesforce Helper Scripts
-
-Use deterministic helpers before improvising Salesforce CLI/SOQL/curl commands.
-
-Helper entrypoint:
-
-```bash
-python scripts/sf_caseops_helper.py --help
-```
-
-Available helpers:
-
-```bash
-python scripts/sf_caseops_helper.py custom-field --org "$ORG" --object Case --field Supplement_Inquiry__c --out-dir "$RAW_DIR"
-python scripts/sf_caseops_helper.py layout --org "$ORG" --object Case --contains "Customer Experience" --field Supplement_Inquiry__c --out-dir "$RAW_DIR"
-python scripts/sf_caseops_helper.py fls --org "$ORG" --field Case.Supplement_Inquiry__c --out-dir "$RAW_DIR"
-python scripts/sf_caseops_helper.py sobject-fields --org "$ORG" --sobject OpportunityShare --contains "AccessLevel" --out-dir "$RAW_DIR"
-python scripts/sf_caseops_helper.py deploy-mdapi --sandbox-org "$SANDBOX_ORG" --candidate "$CANDIDATE" --attempt "$ATTEMPT"
-```
-
-Rules:
-
-- Run helpers first for custom field, picklist, layout, FLS, and custom-field MDAPI deploy work.
-- Before querying setup/share objects with unfamiliar fields, run `sobject-fields` and use only fields returned by describe.
-- Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands.
-- Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy. Use `--metadata`, `--source-dir`, or `--metadata-dir`.
-- Helpers write compact JSON summaries into the issue-scoped directory and avoid raw access-token output.
-- If a helper fails, inspect the helper summary/error and replan. Do not try many ad hoc variants of the same query.
-""",
-    "salesforce-gotchas/fields-and-picklists.md": """# Salesforce Gotchas: Fields And Picklists
-
-Use these checks before concluding a field or picklist is missing or wrong.
-
-- Custom field API names use `Object.Field__c`, but Tooling `CustomField.DeveloperName` usually omits `__c`.
-- Picklist labels and API values can differ. Compare both label and value, and normalize trailing spaces and non-breaking spaces before reporting mismatch.
-- A value can exist in metadata but be inactive, unavailable for a record type, hidden by field-level security, or absent from a dependent picklist controlling matrix.
-- Record type picklist availability can make a field look wrong even when the field's global value set or valueSet is correct.
-- Dependent picklists require checking controlling field values, not just the dependent field's value list.
-- Custom field visibility can be blocked by FLS even when the field exists and is on the page layout.
-- Formula fields, rollups, and calculated fields may show stale-looking values if dependent records or async recalculation have not completed.
-- Standard fields often cannot be changed the same way custom fields can. Verify metadata type and mutability before proposing a deploy.
-- Before creating a new field, query Production for existing API name, label, and semantically similar fields. Extend existing metadata when possible.
-- For CaseOps, retrieve/deploy with modern `sf` CLI only. Prefer `--metadata`, `--source-dir`, or helper summaries; do not use `package.xml` or legacy `sfdx force:*`.
-""",
-    "salesforce-gotchas/layouts-and-record-types.md": """# Salesforce Gotchas: Layouts And Record Types
-
-Use these checks before concluding a page layout or field placement is wrong.
-
-- A field being present on one layout does not mean it appears for every profile, app, record type, or Lightning page.
-- Page layout assignment depends on profile and record type. Lightning App Builder visibility rules can further hide or show components.
-- A Lightning record page can display Dynamic Forms fields that are not visible in the classic page layout metadata shape.
-- A section label can be confused with a nearby field label. Confirm the field's actual `layoutSections[].layoutColumns[].layoutItems[].field` placement.
-- Record type picklist settings can make values unavailable even when the field and layout are correct.
-- Compact layouts, highlights panels, related lists, and Lightning components are separate surfaces. Do not treat one as evidence for the others.
-- Field-level security overrides layout visibility. If a user cannot see a field, check FLS and page layout/Lightning visibility.
-- Profiles are not valid Support-owned targets for CaseOps edits. Prefer permission sets or document admin steps.
-- For visual-only uncertainty, browser/frontdoor inspection is allowed, but API/SOQL/retrieve/deploy work must use `sf` CLI.
-""",
-    "salesforce-gotchas/access-and-visibility.md": """# Salesforce Gotchas: Access And Visibility
-
-Use these checks before concluding an access issue is fixed or escalated.
-
-- Object CRUD, field-level security, record sharing, app visibility, tab visibility, page layout, and Lightning component visibility are separate gates.
-- Permission sets and permission set groups can combine access. Missing access may be caused by absent assignment, muted permission, or group-level behavior.
-- FieldPermissions rows can include profile-owned permission sets. CaseOps should not modify Profile metadata; use permission sets or document admin steps.
-- Permission Set Groups can mute permissions. Granting access in an underlying permission set may not be enough if the group mutes it.
-- A user can have object access but still fail record access because sharing, ownership, role hierarchy, criteria sharing, teams, territories, or restriction rules block the record.
-- Share objects do not all expose the same fields. Do not assume `Name`, `Description`, or `SharingType` exist on `UserShare`, `AccountShare`, `OpportunityShare`, or `Object__Share`; use `sf sobject describe` or query only documented fields such as `Id`, `UserOrGroupId`, `<Object>AccessLevel`, `RowCause`, and parent relationship fields valid for that share object.
-- For share-object investigation, run the `query-patterns/share-objects.md` describe pattern first. Never query `UserShare.Name`; `UserShare` is not a user record and does not expose that field.
-- A field can be editable in metadata but effectively read-only because the page uses a formula, validation rule, automation overwrite, approval lock, or record type process.
-- Login as / UI inspection can prove visibility symptoms, but `sf data query`, `sf org`, and metadata retrieve are the source for API-level investigation.
-- Always map the affected user/persona to exact PermissionSetAssignment, PermissionSetGroup, Profile, UserRole, and record ownership facts before proposing access changes.
-""",
-    "salesforce-gotchas/deploy-and-sandbox.md": """# Salesforce Gotchas: Deploy And Sandbox
-
-Use these checks before trying repeated deploy variants.
-
-- CaseOps deploys only to the allowlisted Sandbox from `CASEOPS_SANDBOX_TARGET_ORG`; Production is read-only.
-- Use modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest` for routine CaseOps work.
-- Sandbox source tracking can produce `NothingToDeploy` even when candidate metadata exists. Prefer deterministic metadata-dir deploy via the CaseOps helper before inspecting `.sf` internals.
-- Always retrieve a Sandbox baseline for every component before deploying a candidate. The baseline is the rollback anchor.
-- Failed or abandoned attempts must be reverted before a new attempt starts. Verify revert by retrieve/diff, not by assumption.
-- Some metadata deploys merge partial XML, while others replace larger structures. Confirm metadata type behavior before deploying partial files.
-- Permission set field permissions can be deployed as narrow partial entries. Profile metadata must not be modified by the Support-owned pipeline.
-- Record type, picklist, layout, and FLS changes often need to be tested together because each can block the same user-visible outcome.
-- A successful deploy is not proof of a fixed issue. Validate the Jira acceptance criteria and record actual evidence.
-""",
-    "salesforce-gotchas/automation-order.md": """# Salesforce Gotchas: Automation Order
-
-Use these checks before blaming the first automation artifact found.
-
-- Salesforce save behavior can involve validation rules, before-save flows, Apex before triggers, duplicate rules, assignment rules, after-save flows, Apex after triggers, workflow/process leftovers, rollups, sharing recalculation, and async jobs.
-- A field value can be set correctly, then overwritten later by automation. Compare before/after behavior and inspect downstream flows/triggers before declaring root cause.
-- Record-triggered flows can have multiple entry conditions, order values, and active versions. Verify `FlowDefinition.ActiveVersionId` and the active version metadata.
-- Flow labels and API names can differ. Use Tooling queries to resolve active versions before retrieving or referencing a flow.
-- Apex triggers may delegate to handler classes. Query triggers first, then inspect only implicated classes instead of reading all Apex.
-- Validation rules can block automation updates even when UI updates work, or vice versa, depending on user context and bypass logic.
-- Assignment rules, auto-response rules, escalation rules, and email alerts can change Case behavior without changing the record fields the customer mentions.
-- Scheduled paths, queueable Apex, platform events, and integrations can make failures appear delayed. Check timing evidence before narrowing scope.
-- If the fix requires Apex, flow modification, validation rule change, approval process change, or business-critical automation ownership, route to Engineering with evidence and a Sandbox-validated proposal when possible.
-""",
-    "run-rules.md": """# CaseOps Org Knowledge Run Rules
-
-These rules are always safe to include in Salesforce pipeline runs.
-
-- Read this file plus only the topic files selected by `index.json`; do not bulk-read the entire org-knowledge directory.
-- Use org knowledge to avoid relearning Salesforce CLI behavior. Prefer the known pattern first, then investigate only if the known pattern fails.
-- Use `python scripts/sf_caseops_helper.py ...` helpers first for known Salesforce mechanics before writing ad hoc SOQL/curl/Python snippets.
-- Use `sf` CLI and SOQL for Salesforce API work. Do not use frontdoor links, magic links, or browser session IDs for API, SOQL, retrieve, deploy, or tests.
-- Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands. Do not use `package.xml` or `--manifest` unless the operator explicitly approves a metadata-type exception.
-- Never print, export, or embed raw Salesforce access tokens. Do not run `SF_TEMP_SHOW_SECRETS=true sf org display`. If a REST call is unavoidable, use an internal helper that does not log the token.
-- Stay inside the current issue workspace. Do not inspect other issue metadata or output directories unless the operator explicitly asks for cross-issue comparison.
-- Stop after two failed variants of the same query/deploy pattern. Replan using the selected org knowledge instead of trying many small variations.
-- Prefer `--json` output and parse concise fields. Do not read full persisted deploy/retrieve logs unless the concise status is insufficient.
-- When a run discovers a durable, verified, reusable fact, update the most relevant org-knowledge topic file with one short bullet. Do not store secrets or customer-specific narrative.
-""",
-    "query-patterns/custom-field.md": """# Custom Field Query Pattern
-
-Use these patterns before experimenting.
-
-## Find a custom field
-
-FieldDefinition commonly uses DeveloperName without the `__c` suffix:
-
-```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, DeveloperName, Label, DataType FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName = 'Case' AND DeveloperName = 'Field_Name'"
-```
-
-Tooling `CustomField` is often better for metadata details:
-
-```bash
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, DeveloperName, TableEnumOrId, FullName, Metadata FROM CustomField WHERE TableEnumOrId = 'Case' AND DeveloperName = 'Field_Name'"
-```
-
-Notes:
-
-- `CustomField.DeveloperName` usually omits `__c`; `FullName` includes `Object.Field__c`.
-- Use the returned `00N...` Id for Salesforce artifact links.
-- Save large JSON to the issue-scoped metadata directory and summarize it; do not paste full metadata into the operator log.
-""",
-    "query-patterns/picklist-values.md": """# Picklist Value Query Pattern
-
-Avoid repeated `PicklistValueInfo` experiments. In this org it can fail with unsupported fields, complicated filters, or zero rows depending on endpoint and filter shape.
-
-Preferred path for custom picklist truth:
-
-1. Run `python scripts/sf_caseops_helper.py custom-field --org "$ORG" --object Case --field Field_Name__c --out-dir "$RAW_DIR"`.
-2. If the helper cannot answer the question, resolve the field through Tooling `CustomField`.
-3. Inspect `CustomField.Metadata.valueSet.valueSetDefinition.value`.
-4. If active/default behavior is ambiguous, perform Metadata API retrieve or a UI/API describe check and record which source was authoritative.
-
-Example:
-
-```bash
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, DeveloperName, TableEnumOrId, FullName, Metadata FROM CustomField WHERE TableEnumOrId = 'Case' AND DeveloperName = 'Field_Name'" > "$RAW_DIR/Case.Field_Name__c.json"
-```
-
-Comparison guidance:
-
-- Compare requested labels after trimming whitespace and normalizing non-breaking spaces.
-- Detect merged values by comparing requested count vs actual count and by checking adjacent requested labels.
-- Do not assume one source is definitive when it conflicts with user-visible behavior; verify with a second source and summarize.
-""",
-    "query-patterns/layouts.md": """# Layout Query Pattern
-
-For layout section and field placement checks, Tooling `Layout.Metadata` is often faster and cleaner than repeated `sf project retrieve` attempts.
-
-Preferred helper:
-
-```bash
-python scripts/sf_caseops_helper.py layout --org "$ORG" --object Case --contains "Customer Experience" --field Field_Name__c --out-dir "$RAW_DIR"
-```
-
-Find Case layouts:
-
-```bash
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, TableEnumOrId FROM Layout WHERE TableEnumOrId = 'Case'"
-```
-
-Fetch layout metadata:
-
-```bash
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, Metadata FROM Layout WHERE Id = '00h...'" > "$RAW_DIR/Case-Customer_Experience_layout.json"
-```
-
-Then parse `Metadata.layoutSections[].layoutColumns[].layoutItems[].field`.
-
-Rules:
-
-- Distinguish a section label from a nearby field label. A field beside `Call_Details__c` is not automatically in a section named `Call Details`.
-- If an acceptance criterion names a section that does not exist, document both the actual placement and the ambiguity.
-""",
-    "query-patterns/permission-sets.md": """# Permission Set and FLS Query Pattern
-
-Resolve candidate permission sets first:
-
-Preferred helper:
-
-```bash
-python scripts/sf_caseops_helper.py fls --org "$ORG" --field Case.Field_Name__c --out-dir "$RAW_DIR"
-```
-
-```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, Name, Label FROM PermissionSet WHERE Name LIKE '%Customer%' OR Label LIKE '%Customer%'"
-```
-
-Check FLS with parent details:
-
-```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, Field, PermissionsRead, PermissionsEdit, ParentId, Parent.Name, Parent.Type FROM FieldPermissions WHERE Field = 'Case.Field_Name__c'"
-```
-
-Guidance:
-
-- Report Read+Edit vs Read-only separately.
-- Ignore session/profile-like permission records only when they are not part of the requested audience, and say why.
-- If the customer asked for a team, map labels to that team explicitly instead of assuming every matching permission set is in scope.
-""",
-    "query-patterns/share-objects.md": """# Share Object Query Pattern
-
-Use this pattern before querying `UserShare`, `AccountShare`, `OpportunityShare`, or custom `Object__Share` rows.
-
-## Describe first
-
-Share-object fields vary by object. Do not assume fields such as `Name`, `Description`, or `SharingType`.
-
-```bash
-python scripts/sf_caseops_helper.py sobject-fields --org "$ORG" --sobject OpportunityShare --contains "AccessLevel" --out-dir "$RAW_DIR"
-python scripts/sf_caseops_helper.py sobject-fields --org "$ORG" --sobject UserShare --out-dir "$RAW_DIR"
-```
-
-Use only fields returned in the helper output or by `sf sobject describe`.
-
-## Safe common patterns
-
-Opportunity share rows:
-
-```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, UserOrGroupId, UserOrGroup.Name, OpportunityId, OpportunityAccessLevel, RowCause FROM OpportunityShare WHERE UserOrGroup.Name = 'Tier 1 Tech Support' LIMIT 20"
-```
-
-Account share rows:
-
-```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, UserOrGroupId, UserOrGroup.Name, AccountId, AccountAccessLevel, RowCause FROM AccountShare WHERE UserOrGroup.Name = 'Tier 1 Tech Support' LIMIT 20"
-```
-
-User share rows:
-
-```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, UserId, UserOrGroupId, RowCause, UserAccessLevel FROM UserShare WHERE UserId = '005...' LIMIT 20"
-```
-
-Rules:
-
-- `UserShare` does not have a `Name` field. Query `User` separately for the user's name, or use a relationship field only if describe confirms it.
-- For standard object share rows, the object-specific access field is usually `<Object>AccessLevel`, such as `OpportunityAccessLevel` or `AccountAccessLevel`.
-- `UserOrGroup.Name` is useful for groups/users when the relationship is present, but it is not the same as a top-level `Name` field on the share row.
-- If a share query fails once with `No such column`, stop and describe the sObject before trying another variant.
-""",
-    "query-patterns/flows.md": """# Flow Query Pattern
-
-Use Tooling queries to resolve FlowDefinition and active versions before retrieving full XML.
-
-```bash
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, DeveloperName, ActiveVersionId, LatestVersionId FROM FlowDefinition WHERE DeveloperName = 'Flow_API_Name'"
-```
-
-Retrieve full metadata only for the flow(s) implicated by the issue. Do not retrieve every flow unless the issue is explicitly broad.
-""",
-    "query-patterns/apex.md": """# Apex Query Pattern
-
-Resolve Apex classes/triggers with Tooling API before reading or testing broadly.
-
-```bash
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, Status FROM ApexClass WHERE Name = 'ClassName'"
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, TableEnumOrId, Status FROM ApexTrigger WHERE Name = 'TriggerName'"
-```
-
-Run targeted tests first. Broad test runs need a clear reason.
-""",
-    "deploy-patterns/custom-field-mdapi.md": """# Custom Field Deploy Pattern
-
-If source deploy returns `NothingToDeploy` or appears affected by source tracking, do not inspect `.sf` internals for long. Use the deterministic `sf project deploy start --metadata-dir ...` path.
-
-Preferred helper:
-
-```bash
-python scripts/sf_caseops_helper.py deploy-mdapi --sandbox-org "$SANDBOX_ORG" --candidate "$CANDIDATE" --attempt "$ATTEMPT"
-```
-
-Preferred sequence:
-
-1. Build candidate source under the issue attempt directory.
-2. Do not create or use `package.xml` for routine CaseOps deploys. Prefer explicit `--source-dir`, `--metadata`, or `--metadata-dir`.
-3. Convert source to metadata-dir when possible:
-
-```bash
-sf project convert source --source-dir "$CANDIDATE/force-app" --output-dir "$ATTEMPT/mdapi-converted"
-```
-
-4. Deploy with metadata-dir:
-
-```bash
-sf project deploy start --metadata-dir "$ATTEMPT/mdapi-converted" --single-package --target-org "$SANDBOX_ORG" --json
-```
-
-Rules:
-
-- Use only the allowlisted Sandbox org for deploys.
-- Do not deploy to Production from CaseOps.
-- Capture concise deploy status and deploy id. Do not read thousands of progress lines.
-- If conversion/deploy fails twice, stop and summarize the exact blocker rather than trying many variants.
-""",
-    "deploy-patterns/source-tracking.md": """# Source Tracking Pitfalls
-
-Sandbox source tracking can make a valid metadata change look like `NothingToDeploy`.
-
-Rules:
-
-- Do not delete or inspect `.sf` tracking internals unless the operator specifically requests it.
-- Prefer `sf project deploy start --metadata-dir ... --single-package --json` for deterministic issue-scoped packages.
-- Treat source tracking as a deploy mechanism detail, not as evidence that the candidate is empty.
-""",
-    "lessons-learned.md": """# Org Knowledge Lessons Learned
-
-Append only durable, verified, reusable lessons here when no more specific topic file fits.
-
-Format:
-
-- YYYY-MM-DD: Short reusable lesson. Evidence source: CLI/SOQL/metadata. No secrets. No customer narrative.
-""",
-}
-
-
-_ORG_KNOWLEDGE_REQUIRED_LINES: dict[str, list[str]] = {
-    "run-rules.md": [
-        "- Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands. Do not use `package.xml` or `--manifest` unless the operator explicitly approves a metadata-type exception.",
-    ],
-    "helper-scripts.md": [
-        'python scripts/sf_caseops_helper.py sobject-fields --org "$ORG" --sobject OpportunityShare --contains "AccessLevel" --out-dir "$RAW_DIR"',
-        "- Before querying setup/share objects with unfamiliar fields, run `sobject-fields` and use only fields returned by describe.",
-        "- Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands.",
-        "- Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy. Use `--metadata`, `--source-dir`, or `--metadata-dir`.",
-    ],
-    "salesforce-gotchas/access-and-visibility.md": [
-        "- Share objects do not all expose the same fields. Do not assume `Name`, `Description`, or `SharingType` exist on `UserShare`, `AccountShare`, `OpportunityShare`, or `Object__Share`; use `sf sobject describe` or query only documented fields such as `Id`, `UserOrGroupId`, `<Object>AccessLevel`, `RowCause`, and parent relationship fields valid for that share object.",
-        "- For share-object investigation, run the `query-patterns/share-objects.md` describe pattern first. Never query `UserShare.Name`; `UserShare` is not a user record and does not expose that field.",
-    ],
-    "deploy-patterns/custom-field-mdapi.md": [
-        "2. Do not create or use `package.xml` for routine CaseOps deploys. Prefer explicit `--source-dir`, `--metadata`, or `--metadata-dir`.",
-    ],
-}
-
+# Source-controlled CaseOps core knowledge lives under skills/caseops-pipeline/knowledge/core/.
+# Runtime org-specific knowledge and learning artifacts live under OUTPUTS/org-knowledge/.
 
 def _safe_path_component(value: str, default: str) -> str:
     """Return a conservative path component for metadata cache/workspace paths."""
@@ -970,130 +579,79 @@ def _ensure_metadata_workspace_dirs() -> None:
 
 def _org_knowledge_dir() -> Path:
     """Return the instance-scoped reusable org knowledge directory."""
-    return OUTPUTS / "org-knowledge"
+    return knowledge_service.knowledge_root(OUTPUTS)
 
 
 def _merge_org_knowledge_index(index: dict[str, Any]) -> tuple[dict[str, Any], bool]:
     """Merge new default topic wiring without replacing operator-edited content."""
-    if not isinstance(index, dict):
-        return copy.deepcopy(_ORG_KNOWLEDGE_DEFAULT_INDEX), True
-
-    merged = copy.deepcopy(index)
-    changed = False
-
-    for key in ("version", "description", "max_context_chars", "max_topic_files"):
-        if key not in merged:
-            merged[key] = copy.deepcopy(_ORG_KNOWLEDGE_DEFAULT_INDEX.get(key))
-            changed = True
-
-    existing_always = merged.get("always_read")
-    if not isinstance(existing_always, list):
-        merged["always_read"] = copy.deepcopy(_ORG_KNOWLEDGE_DEFAULT_INDEX["always_read"])
-        changed = True
-    else:
-        for rel in _ORG_KNOWLEDGE_DEFAULT_INDEX["always_read"]:
-            if rel not in existing_always:
-                existing_always.append(rel)
-                changed = True
-
-    topics = merged.get("topics")
-    if not isinstance(topics, list):
-        merged["topics"] = copy.deepcopy(_ORG_KNOWLEDGE_DEFAULT_INDEX["topics"])
-        return merged, True
-
-    existing_by_id = {
-        topic.get("id"): topic
-        for topic in topics
-        if isinstance(topic, dict) and isinstance(topic.get("id"), str)
-    }
-    for default_topic in _ORG_KNOWLEDGE_DEFAULT_INDEX["topics"]:
-        topic_id = default_topic.get("id")
-        existing_topic = existing_by_id.get(topic_id)
-        if not existing_topic:
-            topics.append(copy.deepcopy(default_topic))
-            changed = True
-            continue
-
-        for key in ("title", "keywords", "files"):
-            if key not in existing_topic:
-                existing_topic[key] = copy.deepcopy(default_topic.get(key))
-                changed = True
-
-        for list_key in ("keywords", "files"):
-            current = existing_topic.get(list_key)
-            if not isinstance(current, list):
-                existing_topic[list_key] = copy.deepcopy(default_topic.get(list_key, []))
-                changed = True
-                continue
-            for item in default_topic.get(list_key, []):
-                if item not in current:
-                    current.append(item)
-                    changed = True
-
-    return merged, changed
+    return knowledge_service._merge_index(index, knowledge_service._core_index())
 
 
 def _ensure_org_knowledge_defaults() -> None:
     """Seed editable org knowledge files without overwriting user updates."""
-    root = _org_knowledge_dir()
     try:
-        root.mkdir(parents=True, exist_ok=True)
+        knowledge_service.ensure_knowledge_defaults(OUTPUTS)
     except OSError as exc:
-        print(f"WARNING: unable to create org-knowledge directory {root}: {exc}", file=sys.stderr)
-        return
-    index_path = root / "index.json"
-    if not index_path.exists():
-        try:
-            index_path.write_text(
-                json.dumps(_ORG_KNOWLEDGE_DEFAULT_INDEX, indent=2, ensure_ascii=False) + "\n",
-                encoding="utf-8",
-            )
-        except OSError as exc:
-            print(f"WARNING: unable to seed org-knowledge index {index_path}: {exc}", file=sys.stderr)
-    for rel, content in _ORG_KNOWLEDGE_DEFAULT_FILES.items():
-        path = root / rel
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            if not path.exists():
-                path.write_text(content, encoding="utf-8")
-        except OSError as exc:
-            print(f"WARNING: unable to seed org-knowledge file {path}: {exc}", file=sys.stderr)
-    for rel, lines in _ORG_KNOWLEDGE_REQUIRED_LINES.items():
-        path = root / rel
-        try:
-            existing = path.read_text(encoding="utf-8")
-        except OSError:
-            existing = ""
-        missing = [line for line in lines if line not in existing]
-        if missing:
-            suffix = "\n" if existing and not existing.endswith("\n") else ""
-            try:
-                path.write_text(existing + suffix + "\n".join(missing) + "\n", encoding="utf-8")
-            except OSError as exc:
-                print(f"WARNING: unable to update org-knowledge file {path}: {exc}", file=sys.stderr)
-    try:
-        data = json.loads(index_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        data = {}
-    merged, changed = _merge_org_knowledge_index(data if isinstance(data, dict) else {})
-    if changed:
-        try:
-            index_path.write_text(
-                json.dumps(merged, indent=2, ensure_ascii=False) + "\n",
-                encoding="utf-8",
-            )
-        except OSError as exc:
-            print(f"WARNING: unable to update org-knowledge index {index_path}: {exc}", file=sys.stderr)
+        print(f"WARNING: unable to seed org-knowledge defaults: {exc}", file=sys.stderr)
 
 
 def _read_org_knowledge_index() -> dict[str, Any]:
-    _ensure_org_knowledge_defaults()
-    index_path = _org_knowledge_dir() / "index.json"
+    return knowledge_service.read_runtime_index(OUTPUTS)
+
+
+def _knowledge_auditor_settings(settings: dict[str, str] | None = None) -> dict[str, Any]:
+    settings = settings or _read_env_file(Path(app.config.get("ENV_FILE_PATH", "")) if app.config.get("ENV_FILE_PATH") else None)
+    raw_enabled = settings.get("CASEOPS_KNOWLEDGE_AUDITOR_ENABLED") if settings else None
+    if raw_enabled is None:
+        raw_enabled = os.environ.get("CASEOPS_KNOWLEDGE_AUDITOR_ENABLED")
+    enabled = str(raw_enabled or "").strip().lower() in {"1", "true", "yes", "on", "enabled"}
     try:
-        data = json.loads(index_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return _ORG_KNOWLEDGE_DEFAULT_INDEX
-    return data if isinstance(data, dict) else _ORG_KNOWLEDGE_DEFAULT_INDEX
+        interval_minutes = int(settings.get("CASEOPS_KNOWLEDGE_AUDITOR_INTERVAL_MINUTES") or os.environ.get("CASEOPS_KNOWLEDGE_AUDITOR_INTERVAL_MINUTES") or "0")
+    except ValueError:
+        interval_minutes = 0
+    try:
+        min_recurrence = int(settings.get("CASEOPS_KNOWLEDGE_AUDITOR_MIN_RECURRENCE") or os.environ.get("CASEOPS_KNOWLEDGE_AUDITOR_MIN_RECURRENCE") or "2")
+    except ValueError:
+        min_recurrence = 2
+    return {
+        "enabled": enabled and interval_minutes > 0,
+        "interval_minutes": max(0, interval_minutes),
+        "min_recurrence": max(1, min(25, min_recurrence)),
+    }
+
+
+def _run_scheduled_knowledge_auditor_once(*, reason: str) -> dict[str, Any]:
+    with _KNOWLEDGE_AUDITOR_LOCK:
+        settings = _knowledge_auditor_settings()
+        summary = knowledge_service.run_manual_audit(
+            OUTPUTS,
+            min_recurrence=int(settings.get("min_recurrence") or 2),
+        )
+        summary["reason"] = reason
+        return summary
+
+
+def _knowledge_auditor_scheduler_loop() -> None:
+    while True:
+        settings = _knowledge_auditor_settings()
+        interval = int(settings.get("interval_minutes") or 0)
+        if settings.get("enabled") and interval > 0:
+            try:
+                _run_scheduled_knowledge_auditor_once(reason="scheduled")
+            except Exception as exc:
+                print(f"WARNING: scheduled knowledge auditor failed: {exc}", file=sys.stderr)
+            time.sleep(max(60, interval * 60))
+        else:
+            time.sleep(60)
+
+
+def _start_knowledge_auditor_scheduler_if_needed() -> None:
+    global _KNOWLEDGE_AUDITOR_THREAD_STARTED
+    if _KNOWLEDGE_AUDITOR_THREAD_STARTED:
+        return
+    _KNOWLEDGE_AUDITOR_THREAD_STARTED = True
+    thread = threading.Thread(target=_knowledge_auditor_scheduler_loop, daemon=True, name="caseops-knowledge-auditor")
+    thread.start()
 
 
 def _read_small_text(path: Path, max_chars: int) -> str:
@@ -1105,10 +663,13 @@ def _read_small_text(path: Path, max_chars: int) -> str:
 
 
 def _jira_summary_search_text(key: str) -> str:
-    if not key:
+    if not key or _ISSUE_LIST_SUMMARY_SEARCH_CHARS <= 0:
         return ""
     path = OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key)
-    return _compact_text(_read_small_text(path, 12000), 12000)
+    return _compact_text(
+        _read_small_text(path, _ISSUE_LIST_SUMMARY_SEARCH_CHARS),
+        _ISSUE_LIST_SUMMARY_SEARCH_CHARS,
+    )
 
 
 def _estimate_token_count(text: str) -> int:
@@ -1136,7 +697,7 @@ def _build_context_packet_for_issue(key: str) -> tuple[dict[str, Any], int]:
     """Build a compact context packet for planner/state and prompt injection."""
     row = _find_manifest_row(key)
     index = _read_org_knowledge_index()
-    selected_paths = _select_org_knowledge_files(key, row or {})
+    selected_items = _select_org_knowledge_items(key, row or {})
     total_chars_budget = int(index.get("max_context_chars") or PIPELINE_CONTEXT_LIMITS["org_knowledge_total_chars"])
     if total_chars_budget <= 0:
         total_chars_budget = PIPELINE_CONTEXT_LIMITS["org_knowledge_total_chars"]
@@ -1148,10 +709,12 @@ def _build_context_packet_for_issue(key: str) -> tuple[dict[str, Any], int]:
     org_entries: list[dict[str, Any]] = []
     used = 0
     remaining = total_chars_budget
-    for path in selected_paths[:selected_cap]:
-        rel = str(path.relative_to(_org_knowledge_dir()))
+    for item in selected_items[:selected_cap]:
+        path = item.path
+        rel = item.rel_path
         signature = _file_signature(path)
-        evidence_id = f"org-knowledge:{rel}:{signature[:8] if signature else '?'}"
+        signature_short = signature.split(":", 1)[-1][:8] if signature else "?"
+        evidence_id = f"org-knowledge:{rel}:{signature_short}"
         snippet = _compact_text(_read_small_text(path, per_file_chars), PIPELINE_CONTEXT_LIMITS["org_knowledge_summary_chars"])
         char_estimate = len(snippet)
         if remaining <= 0:
@@ -1164,6 +727,10 @@ def _build_context_packet_for_issue(key: str) -> tuple[dict[str, Any], int]:
             remaining -= char_estimate
         org_entries.append({
             "path": rel,
+            "layer": item.layer,
+            "knowledge_type": item.knowledge_type,
+            "topic_ids": list(item.topic_ids),
+            "selection_reasons": list(item.reasons),
             "evidence_id": evidence_id,
             "signature": signature,
             "signature_type": "sha256",
@@ -1237,69 +804,39 @@ def _issue_org_knowledge_search_text(key: str, row: dict[str, str]) -> str:
     return "\n".join(part for part in parts if part).lower()
 
 
+def _select_org_knowledge_items(key: str, row: dict[str, str]) -> list[knowledge_service.KnowledgeSelection]:
+    """Select active knowledge with diagnostics."""
+    return knowledge_service.select_knowledge(
+        OUTPUTS,
+        key,
+        row,
+        _issue_org_knowledge_search_text(key, row),
+    )
+
+
 def _select_org_knowledge_files(key: str, row: dict[str, str]) -> list[Path]:
     """Select only the org-knowledge files relevant to this issue."""
-    index = _read_org_knowledge_index()
-    root = _org_knowledge_dir()
-    selected: list[str] = []
-    always_read = [rel for rel in index.get("always_read", []) if isinstance(rel, str)]
-    always_read_set = set(always_read)
-    for rel in always_read:
-        if isinstance(rel, str) and rel not in selected:
-            selected.append(rel)
-
-    search_text = _issue_org_knowledge_search_text(key, row)
-    topic_scores: list[tuple[int, str, list[str]]] = []
-    for topic in index.get("topics", []):
-        if not isinstance(topic, dict):
-            continue
-        files = [str(f) for f in topic.get("files", []) if isinstance(f, str)]
-        if not files:
-            continue
-        score = 0
-        for keyword in topic.get("keywords", []):
-            if isinstance(keyword, str) and keyword.lower() in search_text:
-                score += 1
-        if score:
-            topic_scores.append((score, str(topic.get("id", "")), files))
-
-    max_topic_files = int(index.get("max_topic_files") or 6)
-    for _score, _topic_id, files in sorted(topic_scores, key=lambda item: (-item[0], item[1])):
-        for rel in files:
-            if rel not in selected:
-                selected.append(rel)
-            topic_file_count = sum(1 for relpath in selected if relpath not in always_read_set)
-            if topic_file_count >= max_topic_files:
-                break
-        topic_file_count = sum(1 for relpath in selected if relpath not in always_read_set)
-        if topic_file_count >= max_topic_files:
-            break
-
-    paths: list[Path] = []
-    for rel in selected:
-        path = (root / rel).resolve()
-        try:
-            path.relative_to(root.resolve())
-        except ValueError:
-            continue
-        if path.is_file():
-            paths.append(path)
-    return paths
+    return [item.path for item in _select_org_knowledge_items(key, row)]
 
 
 def _build_org_knowledge_context_block(key: str, row: dict[str, str]) -> str:
     """Build a capped progressive-disclosure context block for Claude runs."""
     index = _read_org_knowledge_index()
-    paths = _select_org_knowledge_files(key, row)
+    selections = _select_org_knowledge_items(key, row)
     max_chars = int(index.get("max_context_chars") or 12000)
     remaining = max(4000, max_chars)
     chunks: list[str] = []
     rel_paths: list[str] = []
     root = _org_knowledge_dir()
 
-    for path in paths:
-        rel = path.relative_to(root).as_posix()
-        rel_paths.append(f"- `{_path_relative_for_prompt(path)}`")
+    for item in selections:
+        path = item.path
+        rel = item.rel_path
+        reasons = "; ".join(item.reasons[:2]) if item.reasons else "selected"
+        rel_paths.append(
+            f"- `{_path_relative_for_prompt(path)}` "
+            f"({item.layer}, {item.knowledge_type}; {reasons})"
+        )
         if remaining <= 0:
             continue
         text = _read_small_text(path, min(remaining, 3500)).strip()
@@ -1311,13 +848,13 @@ def _build_org_knowledge_context_block(key: str, row: dict[str, str]) -> str:
     selected_list = "\n".join(rel_paths) if rel_paths else "- None selected"
     content = "\n\n".join(chunks) if chunks else "(No org knowledge content selected.)"
     return (
-        "## Org Knowledge Context (selected, progressive disclosure)\n"
-        f"Org knowledge directory: `{_path_relative_for_prompt(root)}`\n"
-        "CaseOps selected only the reusable files below for this issue. Do not bulk-read the org-knowledge directory.\n"
+        "## CaseOps Knowledge Context (selected, progressive disclosure)\n"
+        f"Runtime knowledge directory: `{_path_relative_for_prompt(root)}`\n"
+        "CaseOps selected only the reusable files below for this issue. Do not bulk-read the knowledge directory.\n"
         "When spawning Step 5, Step 6, Step 8, or Step 9 sub-agents, include the relevant bullets from this section in the sub-agent prompt so the sub-agent does not relearn known Salesforce CLI behavior.\n\n"
         f"Selected files:\n{selected_list}\n\n"
         f"{content}\n\n"
-        "Learning rule: if this run discovers a durable, verified, reusable org fact, update the most specific selected topic file with one short bullet. Do not store secrets, access tokens, frontdoor links, or customer-private narrative.\n\n"
+        "Learning rule: if this run discovers a durable, verified, reusable fact, write a structured knowledge signal for later audit. Do not activate lessons, rewrite source-controlled core knowledge, or store secrets/customer-private narrative.\n\n"
     )
 
 
@@ -2964,15 +2501,22 @@ def _build_pipeline_resume_plan(
     sandbox_work_dir = metadata_dirs["sandbox_work"] / key
     confirmed_dir = metadata_dirs["confirmed"] / key / "confirmed"
     metadata_manifest = sandbox_work_dir / "metadata-workspace.json"
+    failure_artifact = _pipeline_failure_path(key)
     metadata = {
         "raw_production_dir": {"path": _path_relative_for_prompt(raw_metadata_dir), "has_files": _directory_has_files(raw_metadata_dir)},
         "sandbox_work_dir": {"path": _path_relative_for_prompt(sandbox_work_dir), "has_files": _directory_has_files(sandbox_work_dir)},
         "confirmed_dir": {"path": _path_relative_for_prompt(confirmed_dir), "has_files": _directory_has_files(confirmed_dir)},
         "workspace_manifest": _artifact_snapshot(metadata_manifest, None),
+        "latest_failure": _artifact_snapshot(failure_artifact, None),
     }
 
     state = {} if rebuild_from_artifacts else _read_pipeline_state(key)
     has_schema = _state_has_schema(state)
+    latest_failure = state.get("latest_failure") if isinstance(state.get("latest_failure"), dict) else _read_pipeline_failure_artifact(key)
+    run_metrics = state.get("run_metrics") if isinstance(state.get("run_metrics"), dict) else {}
+    latest_run = run_metrics.get("latest") if isinstance(run_metrics.get("latest"), dict) else {}
+    if str(latest_run.get("status") or "").strip().lower() == "completed":
+        latest_failure = {}
     evidence_prechecks = state.get("evidence_prechecks") if isinstance(state.get("evidence_prechecks"), dict) else None
     stored_signatures = state.get("signatures", {}) if isinstance(state.get("signatures", {}), dict) else {}
     has_stored_signatures = has_schema and bool(stored_signatures)
@@ -3285,6 +2829,7 @@ def _build_pipeline_resume_plan(
         "why_next_step": (next_step or {}).get("reason"),
         "artifacts": artifacts,
         "metadata": metadata,
+        "latest_failure": latest_failure,
         "recent_evidence": recent_evidence,
         "steps": steps,
     }
@@ -3371,10 +2916,16 @@ def _apply_loop_state_to_plan(
             step["action"] = f"Resolve '{loop_reason}' before continuing."
 
     step9 = _build_step(plan, 9)
+    latest_failure = plan.get("latest_failure") if isinstance(plan.get("latest_failure"), dict) else {}
+    latest_failure_class = str(latest_failure.get("failure_class") or "").lower()
     if step9 and (deploy_rounds_exceeded or loop_reason in {STEP_LOOP_MARKER_REASONS["deploy"], STEP_LOOP_MARKER_REASONS["candidate"], STEP_LOOP_MARKER_REASONS["stoppoint"]} or no_candidate_delta):
         step9["status"] = "blocked" if step9["status"] != "complete" else step9["status"]
         if step9["status"] != "complete":
             step9["reason"] = "Loop control hold; rerun is capped or candidate delta stalled."
+    if step9 and latest_failure_class and "timeout" in latest_failure_class and step9["status"] != "complete":
+        step9["status"] = "blocked"
+        step9["reason"] = f"Latest run timed out ({latest_failure_class}); inspect pipeline failure artifact before rerunning."
+        step9["action"] = str(latest_failure.get("next_action") or "Review timeout artifact, repair state if needed, then rerun.")
 
     step4 = _build_step(plan, 4)
     step6 = _build_step(plan, 6)
@@ -3494,6 +3045,20 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
         lines.extend(f"- {line}" for line in recent_evidence[:10])
         lines.append("")
 
+    latest_failure = plan.get("latest_failure") if isinstance(plan.get("latest_failure"), dict) else {}
+    if latest_failure:
+        lines.extend([
+            "## Latest Pipeline Failure",
+            f"- Failure class: `{latest_failure.get('failure_class') or 'unknown'}`",
+            f"- Failed step: STEP_{latest_failure.get('failed_step') or 'unknown'}",
+            f"- Last successful checkpoint: STEP_{latest_failure.get('last_successful_checkpoint') or 'unknown'}",
+            f"- Last command family: `{latest_failure.get('last_command_family') or 'unknown'}`",
+            f"- Retry safe: `{bool(latest_failure.get('retry_safe'))}`",
+            f"- Next action: {str(latest_failure.get('next_action') or 'Review failure artifact before retrying.')}",
+            "- Rule: do not repeat the same command family if the prior failure says `retry_safe=false`.",
+            "",
+        ])
+
     similarity = plan.get("similar_issues") or {}
     if similarity.get("enabled") or similarity.get("lookup_performed"):
         lines.extend([
@@ -3609,7 +3174,12 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
                 rel = item.get("path", "")
                 sig = item.get("signature", "")
                 chars = item.get("summary_chars", 0)
-                lines.append(f"- {rel} ({chars} chars, sig={sig})")
+                layer = item.get("layer", "unknown")
+                knowledge_type = item.get("knowledge_type", "unknown")
+                reasons = ", ".join(item.get("selection_reasons") or [])
+                lines.append(f"- {rel} ({layer}, {knowledge_type}, {chars} chars, sig={sig})")
+                if reasons:
+                    lines.append(f"  - Selected because: {reasons}")
             if artifact_count:
                 lines.append("Selected artifact summaries:")
                 for item in context_packet.get("artifacts", [])[:8]:
@@ -3838,8 +3408,43 @@ def _resume_plan_short_circuit(run_key: str, plan: dict[str, Any]) -> bool:
     return True
 
 
+def _invalidate_issues_api_cache() -> None:
+    with _ISSUES_API_CACHE_LOCK:
+        _issues_api_cache["created"] = 0.0
+        _issues_api_cache["payload"] = None
+        _issues_api_cache["signature"] = None
+    with _ISSUES_API_METRICS_LOCK:
+        _issues_api_metrics["invalidations"] = int(_issues_api_metrics.get("invalidations") or 0) + 1
+
+
+def _issues_api_cache_signature() -> dict[str, Any]:
+    manifest_path = _manifest_path()
+    try:
+        manifest_stat = manifest_path.stat()
+        manifest_meta: dict[str, Any] = {
+            "exists": True,
+            "mtime_ns": manifest_stat.st_mtime_ns,
+            "size": manifest_stat.st_size,
+        }
+    except OSError:
+        manifest_meta = {"exists": False, "mtime_ns": None, "size": None}
+    return {
+        "manifest": str(manifest_path),
+        "manifest_meta": manifest_meta,
+        "outputs": str(OUTPUTS),
+        "workspace": app.config.get("WORKSPACE", "default"),
+        "jira_base_url": JIRA_BASE_URL,
+        # Function identities make test-time monkey patches and runtime context
+        # switches miss the cache without changing production cache behavior.
+        "read_manifest_fn": id(_read_manifest),
+        "pipeline_file_flags_fn": id(_pipeline_file_flags),
+        "tag_contract_fn": id(_derive_issue_tag_contract),
+    }
+
+
 def manifest_changed(changed_keys: list[str] | None = None) -> None:
     """Signal that manifest.csv was updated. Broadcasts to all SSE clients."""
+    _invalidate_issues_api_cache()
     msg = f"updated:{','.join(changed_keys)}" if changed_keys else "updated:all"
     _manifest_q.put(msg)
 
@@ -4041,6 +3646,247 @@ def _parse_run_metrics_from_logs(run_key: str, run_started: datetime, run_ended:
         "last_stop_code": last_stop_code,
         "loop_events": loop_events,
     }
+
+
+def _infer_command_family(text: str) -> str:
+    raw = str(text or "")
+    lower = raw.lower()
+    if "sf_caseops_helper.py" in lower:
+        if " deploy-mdapi " in lower or " deploy-source " in lower:
+            return "sf-helper-deploy"
+        if " retrieve-metadata " in lower:
+            return "sf-helper-retrieve"
+        if " query-data " in lower or " query-tooling " in lower:
+            return "sf-helper-query"
+        return "sf-helper"
+    if "sf project deploy" in lower:
+        return "sf-project-deploy"
+    if "sf project retrieve" in lower:
+        return "sf-project-retrieve"
+    if "sf data query" in lower:
+        return "sf-data-query"
+    if "[agent]" in lower or "sub-agent" in lower or "subagent" in lower:
+        return "sub-agent"
+    if "claude process" in lower or "claude code" in lower:
+        return "claude"
+    return ""
+
+
+def _extract_failure_classes_from_log_text(text: str) -> list[str]:
+    lower = str(text or "").lower()
+    found: list[str] = []
+    patterns = {
+        "invalid_project_workspace": r"invalidprojectworkspaceerror|does not contain a valid salesforce dx project",
+        "permission_denied_app_path": r"permission denied.*[/\\]app",
+        "invalid_field": r"invalid_field|no such column|didn't understand relationship",
+        "bad_cli_flag_combo": r"mutually exclusive|specify exactly one|--source-dir.*--metadata|--metadata.*--source-dir",
+        "nothing_to_deploy": r"nothingtodeploy|nothing to deploy",
+        "json_parse_failed": r"expecting value: line 1 column 1|json_parse_failed|json decode",
+        "metadata_conversion_failed": r"metadata_conversion_failed|project convert source",
+        "timeout": r"timeout|timed out|exceeded total timeout|produced no output",
+    }
+    for name, pattern in patterns.items():
+        if re.search(pattern, lower):
+            found.append(name)
+    for raw in re.findall(r'"failure_class"\s*:\s*"([^"]+)"|failure_class[=:]\s*([A-Za-z0-9_.-]+)', text):
+        value = next((part for part in raw if part), "")
+        if value and value not in found:
+            found.append(value)
+    return found
+
+
+def _pipeline_failure_path(key: str) -> Path:
+    safe_key = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(key or "unknown"))
+    return OUTPUTS / "pipeline-failures" / f"{safe_key}.json"
+
+
+def _read_pipeline_failure_artifact(key: str) -> dict[str, Any]:
+    path = _pipeline_failure_path(key)
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _build_pipeline_failure_artifact(
+    key: str,
+    run_key: str,
+    *,
+    failure_class: str,
+    reason: str,
+    retryable: bool,
+    next_action: str,
+    run_started: datetime | None = None,
+    run_ended: datetime | None = None,
+) -> dict[str, Any]:
+    run_ended = run_ended or datetime.now(timezone.utc)
+    entries = _read_pipeline_log_entries(run_key)
+    filtered: list[tuple[datetime, str]] = []
+    for row in entries:
+        ts = _parse_iso_ts(str(row.get("ts") or ""))
+        if ts is None:
+            continue
+        if run_started and ts < run_started:
+            continue
+        if ts > run_ended:
+            continue
+        filtered.append((ts, str(row.get("text") or "")))
+
+    step_markers: list[tuple[int, datetime, str]] = []
+    failure_classes: list[str] = []
+    last_command_family = ""
+    last_command_text = ""
+    last_error_lines: list[str] = []
+    for ts, text in filtered:
+        marker = _PIPELINE_STEP_MARKER_RE.search(text)
+        if marker:
+            try:
+                step_markers.append((int(marker.group(1)), ts, text))
+            except ValueError:
+                pass
+        family = _infer_command_family(text)
+        if family:
+            if family != "claude" or not last_command_family:
+                last_command_family = family
+                last_command_text = text[-500:]
+        for item in _extract_failure_classes_from_log_text(text):
+            if item not in failure_classes:
+                failure_classes.append(item)
+        if re.search(r"(?i)\b(error|failed|warning|timeout|killing subprocess)\b", text):
+            last_error_lines.append(text[-500:])
+
+    if failure_class and failure_class not in failure_classes:
+        failure_classes.insert(0, failure_class)
+    failed_step = step_markers[-1][0] if step_markers else None
+    previous_steps = [step for step, _ts, _text in step_markers if failed_step is None or step < failed_step]
+    last_checkpoint = max(previous_steps) if previous_steps else None
+    return {
+        "schema_version": 1,
+        "key": key,
+        "run_key": run_key,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "run_started": run_started.isoformat() if run_started else "",
+        "run_ended": run_ended.isoformat(),
+        "status": "timeout" if "timeout" in failure_class else "failed",
+        "failed_step": failed_step,
+        "last_successful_checkpoint": last_checkpoint,
+        "failure_class": failure_class,
+        "failure_classes_seen": failure_classes,
+        "reason": reason,
+        "last_command_family": last_command_family,
+        "last_command": last_command_text,
+        "retryable": retryable,
+        "retry_safe": retryable,
+        "next_action": next_action,
+        "log_path": str(_pipeline_log_path(run_key)),
+        "recent_error_lines": last_error_lines[-10:],
+    }
+
+
+def _write_pipeline_failure_artifact(
+    key: str | None,
+    run_key: str,
+    *,
+    failure_class: str,
+    reason: str,
+    retryable: bool,
+    next_action: str,
+    run_started: datetime | None = None,
+    run_ended: datetime | None = None,
+) -> dict[str, Any]:
+    if not key:
+        return {}
+    artifact = _build_pipeline_failure_artifact(
+        key,
+        run_key,
+        failure_class=failure_class,
+        reason=reason,
+        retryable=retryable,
+        next_action=next_action,
+        run_started=run_started,
+        run_ended=run_ended,
+    )
+    path = _pipeline_failure_path(key)
+    _validate_instance_path(path, "write")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(artifact, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    state = _read_pipeline_state(key)
+    if not state:
+        state = {"key": key, "schema_version": PIPELINE_STATE_SCHEMA_VERSION}
+    state["key"] = key
+    state["schema_version"] = state.get("schema_version", PIPELINE_STATE_SCHEMA_VERSION)
+    state["latest_failure"] = artifact
+    _write_pipeline_resume_plan(state)
+    _write_pipeline_knowledge_signals_from_failure(key, run_key, artifact)
+    _log_emit_line(run_key, f"Pipeline failure artifact written: {_path_relative_for_prompt(path)}")
+    return artifact
+
+
+def _write_pipeline_knowledge_signals_from_failure(key: str, run_key: str, artifact: dict[str, Any]) -> None:
+    """Convert high-confidence pipeline failure facts into inactive knowledge signals."""
+    knowledge_selected = []
+    state = _read_pipeline_state(key)
+    context_packet = state.get("context_packet") if isinstance(state, dict) else {}
+    org_knowledge = context_packet.get("org_knowledge") if isinstance(context_packet, dict) else {}
+    for item in (org_knowledge or {}).get("selected_files", []) or []:
+        if isinstance(item, dict) and item.get("path"):
+            layer = item.get("layer") or "runtime"
+            knowledge_selected.append(f"{layer}:{item.get('path')}")
+
+    failure_classes = [str(item) for item in artifact.get("failure_classes_seen") or [] if item]
+    last_command = str(artifact.get("last_command") or "")
+    last_family = str(artifact.get("last_command_family") or "")
+    recent_error_lines = [str(item) for item in artifact.get("recent_error_lines") or [] if item]
+
+    try:
+        if last_family.startswith("sf-helper") or any(cls and cls != "timeout_total" for cls in failure_classes):
+            knowledge_service.write_signal(
+                OUTPUTS,
+                issue_key=key,
+                run_id=run_key,
+                source_step=f"STEP_{artifact.get('failed_step') or 'unknown'}",
+                signal_type="helper_failure" if last_family.startswith("sf-helper") else "helper_related_failure",
+                topic=last_family or "salesforce",
+                summary=f"Pipeline failure captured {artifact.get('failure_class') or 'unknown'} while running {last_family or 'Salesforce/Claude command'}.",
+                evidence=recent_error_lines[:5] or failure_classes[:5],
+                helper_available="scripts/sf_caseops_helper.py" if last_family.startswith("sf-helper") else "",
+                knowledge_selected=knowledge_selected,
+            )
+        guardrail = knowledge_service.classify_guardrail_command(last_command)
+        guardrail_findings = guardrail.get("findings") if isinstance(guardrail, dict) else []
+        if guardrail_findings:
+            knowledge_service.write_signal(
+                OUTPUTS,
+                issue_key=key,
+                run_id=run_key,
+                source_step=f"STEP_{artifact.get('failed_step') or 'unknown'}",
+                signal_type="invalid_command_pattern",
+                topic="deploy-command",
+                summary="Pipeline failure involved discouraged command pattern.",
+                evidence=[f"{item.get('rule')}: {item.get('message')}" for item in guardrail_findings[:5]] + [last_command[:500]],
+                helper_available="scripts/sf_caseops_helper.py",
+                knowledge_selected=knowledge_selected,
+            )
+    except Exception as exc:
+        _log_emit_line(run_key, f"WARNING: unable to write knowledge signal: {exc}")
+
+
+def _status_from_latest_failure_artifact(key: str, run_key: str) -> str:
+    artifact = _read_pipeline_failure_artifact(key)
+    if not artifact:
+        return "failed"
+    if artifact.get("run_key") != run_key:
+        return "failed"
+    failure_class = str(artifact.get("failure_class") or "").lower()
+    if "timeout" in failure_class:
+        return "timeout"
+    if failure_class == "stop_requested":
+        return "stopped"
+    return str(artifact.get("status") or "failed")
 
 
 def _format_run_metrics_summary(issue_key: str, metrics: dict[str, Any]) -> str:
@@ -5766,9 +5612,12 @@ def _do_stream_claude_code_cli(
         idle_timeout = _env_int("CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS", 240, min_value=60, max_value=3600)
         total_timeout = _env_int("CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS", 1200, min_value=300, max_value=14400)
         started_at = time.monotonic()
+        run_started_at = datetime.now(timezone.utc)
         last_output_at = started_at
         open_streams = {"stdout", "stderr"}
         killed_for_timeout = False
+        timeout_failure_class = ""
+        timeout_reason = ""
 
         while open_streams:
             try:
@@ -5778,25 +5627,25 @@ def _do_stream_claude_code_cli(
                 if proc.poll() is not None:
                     continue
                 if _run_stop_requested(run_key):
-                    _log_emit_line(run_key, "Stop requested; killing Claude subprocess")
+                    timeout_reason = "Stop requested; killing Claude subprocess"
+                    _log_emit_line(run_key, timeout_reason)
                     _terminate_process_group(proc)
                     killed_for_timeout = True
+                    timeout_failure_class = "stop_requested"
                     break
                 if now - last_output_at > idle_timeout:
-                    _log_emit_line(
-                        run_key,
-                        f"ERROR: Claude process produced no output for {idle_timeout}s — killing subprocess",
-                    )
+                    timeout_reason = f"ERROR: Claude process produced no output for {idle_timeout}s — killing subprocess"
+                    _log_emit_line(run_key, timeout_reason)
                     _terminate_process_group(proc)
                     killed_for_timeout = True
+                    timeout_failure_class = "timeout_idle"
                     break
                 if now - started_at > total_timeout:
-                    _log_emit_line(
-                        run_key,
-                        f"ERROR: Claude process exceeded total timeout of {total_timeout}s — killing subprocess",
-                    )
+                    timeout_reason = f"ERROR: Claude process exceeded total timeout of {total_timeout}s — killing subprocess"
+                    _log_emit_line(run_key, timeout_reason)
                     _terminate_process_group(proc)
                     killed_for_timeout = True
+                    timeout_failure_class = "timeout_total"
                     break
                 continue
 
@@ -5902,15 +5751,45 @@ def _do_stream_claude_code_cli(
         try:
             returncode = proc.wait(timeout=30)
         except subprocess.TimeoutExpired:
-            _log_emit_line(run_key, "ERROR: Claude process did not exit after stream timeout — killing subprocess")
+            timeout_reason = "ERROR: Claude process did not exit after stream timeout — killing subprocess"
+            _log_emit_line(run_key, timeout_reason)
             proc.kill()
             try:
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 proc.terminate()
+            _write_pipeline_failure_artifact(
+                issue_key,
+                run_key,
+                failure_class="timeout_exit_wait",
+                reason=timeout_reason,
+                retryable=True,
+                next_action="Review the failure artifact and rerun after confirming the previous Claude process exited cleanly.",
+                run_started=run_started_at,
+                run_ended=datetime.now(timezone.utc),
+            )
             return False
 
         if killed_for_timeout:
+            retryable = timeout_failure_class == "timeout_idle"
+            next_action = (
+                "Review the last command family and rerun with narrower scope or after fixing the blocker; do not repeat the same stalled command."
+                if retryable
+                else "Repair/rebuild pipeline state and inspect recent error lines before rerunning; increase timeout only after narrowing repeated work."
+            )
+            if timeout_failure_class == "stop_requested":
+                retryable = True
+                next_action = "Operator stopped the run. Rerun only if the issue still needs processing."
+            _write_pipeline_failure_artifact(
+                issue_key,
+                run_key,
+                failure_class=timeout_failure_class or "timeout",
+                reason=timeout_reason or "Claude process was killed before completion.",
+                retryable=retryable,
+                next_action=next_action,
+                run_started=run_started_at,
+                run_ended=datetime.now(timezone.utc),
+            )
             return False
         effective_usage = final_token_usage if any(final_token_usage.values()) else token_usage
         if any(effective_usage.values()) or total_cost_usd is not None:
@@ -5920,6 +5799,16 @@ def _do_stream_claude_code_cli(
             _save_claude_output(full_output, issue_key)
         elif returncode != 0:
             _log_emit_line(run_key, f"-- exit code {returncode} --")
+            _write_pipeline_failure_artifact(
+                issue_key,
+                run_key,
+                failure_class="claude_exit_failure",
+                reason=f"Claude exited with code {returncode}.",
+                retryable=True,
+                next_action="Review recent error lines, fix the runtime or prompt blocker, then rerun.",
+                run_started=run_started_at,
+                run_ended=datetime.now(timezone.utc),
+            )
             return False
         return True
 
@@ -6019,6 +5908,7 @@ def _stream_proc(cmd: list[str], run_key: str) -> None:
         else:
             # For individual issue syncs/runs, clear that issue's cached data
             _invalidate_jira_summary_cache(run_key)
+        _invalidate_issues_api_cache()
 
         if cmd and "jira_sync.py" in (arg for arg in cmd) and rc == 0:
             if run_key == _GLOBAL_KEY:
@@ -6142,6 +6032,7 @@ def _stream_claude_proc(
         if issue_key:
             _invalidate_jira_summary_cache(issue_key)
             investigation_cache.pop(issue_key, None)
+        _invalidate_issues_api_cache()
         _log_emit_line(run_key, "Done: global run" if run_key == _GLOBAL_KEY else f"Done: {run_key}")
         _log_emit_done(run_key)
 
@@ -6227,6 +6118,8 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
             run_status = "completed"
         elif _run_stop_requested(run_key):
             run_status = "stopped"
+        else:
+            run_status = _status_from_latest_failure_artifact(key, run_key)
     finally:
         if should_update_metrics and run_status != "completed":
             _repair_pipeline_state_from_artifacts_after_run(
@@ -6256,6 +6149,7 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
         # Phase 2: invalidate caches for this issue when full-issue run completes
         _invalidate_jira_summary_cache(key)
         investigation_cache.pop(key, None)
+        _invalidate_issues_api_cache()
         _log_emit_line(run_key, f"Done: {run_key}")
         _log_emit_done(run_key)
 
@@ -6301,6 +6195,8 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
             run_status = "completed"
         elif _run_stop_requested(run_key):
             run_status = "stopped"
+        else:
+            run_status = _status_from_latest_failure_artifact(key, run_key)
     finally:
         if should_update_metrics and run_status != "completed":
             _repair_pipeline_state_from_artifacts_after_run(
@@ -6329,6 +6225,7 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
         _finish_run_control(run_key)
         _invalidate_jira_summary_cache(key)
         investigation_cache.pop(key, None)
+        _invalidate_issues_api_cache()
         _log_emit_line(run_key, f"Done: {run_key}")
         _log_emit_done(run_key)
 
@@ -6369,15 +6266,183 @@ def _global_issue_queue_fingerprint(plan: dict[str, Any]) -> str:
     return _sha256_signature(json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str))
 
 
-def _global_issue_queue_snapshot(key: str) -> tuple[bool, str, str]:
-    row = next((r for r in _read_manifest() if r.get("Key") == key), {})
+def _queue_disposition_payload(
+    *,
+    disposition: str,
+    reason: str,
+    fingerprint: str,
+    detail: str,
+    row: dict[str, str] | None = None,
+    plan: dict[str, Any] | None = None,
+    source: str = "global_queue",
+) -> dict[str, Any]:
+    row = row or {}
+    plan = plan or {}
+    next_step = plan.get("next_step") if isinstance(plan.get("next_step"), dict) else {}
+    return {
+        "state_version": QUEUE_DISPOSITION_STATE_VERSION,
+        "disposition": disposition,
+        "reason": reason,
+        "fingerprint": fingerprint,
+        "detail": detail,
+        "source": source,
+        "status": row.get("Status", "") or plan.get("status", ""),
+        "jira_updated": row.get("Updated", ""),
+        "next_step": {
+            "step": next_step.get("step"),
+            "name": next_step.get("name"),
+            "status": next_step.get("status"),
+        },
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _write_queue_disposition(key: str, payload: dict[str, Any]) -> None:
+    if not key:
+        return
+    state = _read_pipeline_state(key)
+    if not state:
+        state = {"key": key, "schema_version": PIPELINE_STATE_SCHEMA_VERSION}
+    state["key"] = key
+    state["schema_version"] = state.get("schema_version", PIPELINE_STATE_SCHEMA_VERSION)
+    state["queue_disposition"] = payload
+    _write_pipeline_resume_plan(state)
+
+
+def _queue_disposition_skip_label(disposition: str) -> str:
+    labels = {
+        "skip_unchanged_success": "already current",
+        "skip_unchanged_failure": "unchanged failed run",
+        "skip_closed_or_resolved": "closed/resolved",
+        "skip_escalated_to_engineering": "escalated to engineering",
+        "blocked_by_operator": "blocked by operator",
+        "blocked_by_engineering": "blocked by engineering",
+        "stale_state_needs_repair": "stale state needs repair",
+        "failed_retry_budget_exhausted": "failed retry budget exhausted",
+    }
+    return labels.get(disposition, disposition.replace("_", " "))
+
+
+def _classify_incomplete_queue_disposition(plan: dict[str, Any], detail: str) -> str:
+    text = str(detail or "").lower()
+    pending = _plan_pending_issue_steps(plan)
+    next_step = pending[0] if pending else (plan.get("next_step") if isinstance(plan.get("next_step"), dict) else {})
+    next_status = str((next_step or {}).get("status") or "").lower()
+    routing = plan.get("routing") if isinstance(plan.get("routing"), dict) else {}
+    if "blocked" in text or next_status == "blocked":
+        if routing.get("path") == "engineering_required":
+            return "blocked_by_engineering"
+        return "blocked_by_operator"
+    if "failed unexpectedly" in text or "timeout" in text or "killing subprocess" in text:
+        return "failed_retry_budget_exhausted"
+    if "stale" in text or next_status == "stale":
+        return "stale_state_needs_repair"
+    return "failed_retry_budget_exhausted"
+
+
+def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detail: str, fingerprint: str) -> dict[str, Any]:
+    key = (row.get("Key") or plan.get("key") or "").strip()
+    status = row.get("Status", "") or str(plan.get("status") or "")
+    mode = str(plan.get("mode") or "").strip().lower()
+    if _disposition(status) == "closed" or mode == "closed":
+        return _queue_disposition_payload(
+            disposition="skip_closed_or_resolved",
+            reason="Jira status is closed/resolved; active queue processing is not needed.",
+            fingerprint=fingerprint,
+            detail=detail,
+            row=row,
+            plan=plan,
+        )
+    if _disposition(status) == "escalated" or mode == "escalated":
+        return _queue_disposition_payload(
+            disposition="skip_escalated_to_engineering",
+            reason="Jira status is escalated to engineering; Auto-Process should not reprocess it.",
+            fingerprint=fingerprint,
+            detail=detail,
+            row=row,
+            plan=plan,
+        )
+
+    pending = _plan_pending_issue_steps(plan)
+    if not pending:
+        return _queue_disposition_payload(
+            disposition="skip_unchanged_success",
+            reason="Planner found no actionable issue steps.",
+            fingerprint=fingerprint,
+            detail=detail,
+            row=row,
+            plan=plan,
+        )
+
+    state = _read_pipeline_state(key)
+    prior = state.get("queue_disposition") if isinstance(state.get("queue_disposition"), dict) else {}
+    prior_disposition = str(prior.get("disposition") or "")
+    prior_fingerprint = str(prior.get("fingerprint") or "")
+    skip_dispositions = {
+        "skip_unchanged_failure",
+        "blocked_by_operator",
+        "blocked_by_engineering",
+        "stale_state_needs_repair",
+        "failed_retry_budget_exhausted",
+    }
+    if prior_disposition in skip_dispositions and prior_fingerprint and prior_fingerprint == fingerprint:
+        return _queue_disposition_payload(
+            disposition=prior_disposition,
+            reason=f"Previous queue result is unchanged: {prior.get('reason') or _queue_disposition_skip_label(prior_disposition)}",
+            fingerprint=fingerprint,
+            detail=detail,
+            row=row,
+            plan=plan,
+        )
+
+    run_metrics = state.get("run_metrics") if isinstance(state.get("run_metrics"), dict) else {}
+    latest_run = run_metrics.get("latest") if isinstance(run_metrics.get("latest"), dict) else {}
+    latest_status = str(latest_run.get("status") or "").strip().lower()
+    stored_signatures = state.get("signatures") if isinstance(state.get("signatures"), dict) else {}
+    current_signatures = plan.get("signatures") if isinstance(plan.get("signatures"), dict) else {}
+    unchanged_signatures = bool(
+        stored_signatures
+        and current_signatures
+        and all(
+            _normalized_signature(current_signatures.get(name)) == _normalized_signature(stored_signatures.get(name))
+            for name in ("jira_source", "investigation", "hypothesis", "test_report", "metadata_workspace")
+        )
+    )
+    if latest_status in {"failed", "stopped", "timeout"} and unchanged_signatures:
+        return _queue_disposition_payload(
+            disposition="skip_unchanged_failure",
+            reason=f"Latest run status is {latest_status}; Jira/artifact signatures are unchanged since that run.",
+            fingerprint=fingerprint,
+            detail=detail,
+            row=row,
+            plan=plan,
+        )
+
+    return _queue_disposition_payload(
+        disposition="ready_to_process",
+        reason=detail,
+        fingerprint=fingerprint,
+        detail=detail,
+        row=row,
+        plan=plan,
+    )
+
+
+def _global_issue_queue_snapshot_from_row(row: dict[str, str]) -> tuple[bool, str, str, dict[str, Any]]:
+    key = row.get("Key", "")
     plan = _build_pipeline_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
     fingerprint = _global_issue_queue_fingerprint(plan)
     pending = _plan_pending_issue_steps(plan)
     if pending:
         next_step = pending[0]
-        return False, f"incomplete; next STEP_{next_step.get('step')} ({next_step.get('name')}, {next_step.get('status')})", fingerprint
-    return True, "complete", fingerprint
+        return False, f"incomplete; next STEP_{next_step.get('step')} ({next_step.get('name')}, {next_step.get('status')})", fingerprint, plan
+    return True, "complete", fingerprint, plan
+
+
+def _global_issue_queue_snapshot(key: str) -> tuple[bool, str, str]:
+    row = next((r for r in _read_manifest() if r.get("Key") == key), {})
+    complete, detail, fingerprint, _plan = _global_issue_queue_snapshot_from_row(row)
+    return complete, detail, fingerprint
 
 
 def _global_issue_queue_detail(key: str) -> tuple[bool, str]:
@@ -6410,28 +6475,36 @@ def _queue_incomplete_summary_bucket(detail: str) -> str:
 def _select_global_issue_queue(run_key: str) -> list[str]:
     rows = _read_manifest()
     queued: list[str] = []
-    skipped = 0
-    skipped_escalated = 0
+    skip_counts: Counter[str] = Counter()
     for row in rows:
         key = (row.get("Key") or "").strip()
         if not key:
             continue
-        status = row.get("Status", "")
-        if _disposition(status) == "escalated":
-            skipped_escalated += 1
-            continue
-        complete, detail = _global_issue_queue_detail(key)
-        if not complete:
+        complete, detail, fingerprint, plan = _global_issue_queue_snapshot_from_row(row)
+        disposition = _queue_disposition_for_plan(row, plan, detail, fingerprint)
+        disposition_name = str(disposition.get("disposition") or "")
+        if disposition_name == "ready_to_process":
             _log_emit_line(
                 run_key,
                 f"Queue: {key} {detail}",
             )
             queued.append(key)
         else:
-            skipped += 1
-    if skipped_escalated:
-        _log_emit_line(run_key, f"Queue: skipped {skipped_escalated} issue(s) already Escalated to Engineering.")
-    _log_emit_line(run_key, f"Queue: {len(queued)} issue(s) need pipeline work; {skipped} already current; {skipped_escalated} escalated skipped.")
+            skip_counts[disposition_name] += 1
+            _write_queue_disposition(key, disposition)
+            if disposition_name not in {"skip_unchanged_success"}:
+                _log_emit_line(
+                    run_key,
+                    f"Queue skip: {key} — {_queue_disposition_skip_label(disposition_name)}; {disposition.get('reason')}",
+                )
+    total_skipped = sum(skip_counts.values())
+    if skip_counts:
+        summary = ", ".join(
+            f"{_queue_disposition_skip_label(name)}={count}"
+            for name, count in sorted(skip_counts.items())
+        )
+        _log_emit_line(run_key, f"Queue skip summary: {summary}")
+    _log_emit_line(run_key, f"Queue: {len(queued)} issue(s) need pipeline work; {total_skipped} skipped.")
     return queued
 
 
@@ -6448,14 +6521,54 @@ def _run_global_issue_worker(key: str, index: int, total: int, *, reprocess: boo
         else:
             _stream_full_issue(key, key, run_preflight=False)
 
-        complete, detail = _global_issue_queue_detail(key)
+        row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
+        complete, detail, fingerprint, plan = _global_issue_queue_snapshot_from_row(row)
         if not complete:
+            disposition_name = _classify_incomplete_queue_disposition(plan, detail)
+            _write_queue_disposition(
+                key,
+                _queue_disposition_payload(
+                    disposition=disposition_name,
+                    reason=f"Worker finished but issue remains incomplete: {detail}",
+                    fingerprint=fingerprint,
+                    detail=detail,
+                    row=row,
+                    plan=plan,
+                ),
+            )
             _log_emit_line(_GLOBAL_KEY, f"Queue: {key} {detail}")
             return key, False, detail
+        _write_queue_disposition(
+            key,
+            _queue_disposition_payload(
+                disposition="skip_unchanged_success",
+                reason="Issue completed during global queue processing.",
+                fingerprint=fingerprint,
+                detail=detail,
+                row=row,
+                plan=plan,
+            ),
+        )
         _log_emit_line(_GLOBAL_KEY, f"Queue: {key} complete")
         return key, True, "complete"
     except Exception as exc:
         detail = f"failed unexpectedly: {type(exc).__name__}: {exc}"
+        row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
+        try:
+            _complete, snapshot_detail, fingerprint, plan = _global_issue_queue_snapshot_from_row(row)
+        except Exception:
+            snapshot_detail, fingerprint, plan = detail, "", {"key": key}
+        _write_queue_disposition(
+            key,
+            _queue_disposition_payload(
+                disposition="failed_retry_budget_exhausted",
+                reason=detail,
+                fingerprint=fingerprint,
+                detail=snapshot_detail,
+                row=row,
+                plan=plan,
+            ),
+        )
         _log_emit_line(_GLOBAL_KEY, f"Queue: {key} {detail}")
         return key, False, detail
 
@@ -6601,6 +6714,23 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                     for key, detail in incomplete_details.items():
                         if not incomplete_reasons.get(key, "").startswith("worker "):
                             incomplete_reasons[key] = f"stalled/no progress in pass {queue_pass}; {detail}"
+                        row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
+                        try:
+                            _complete, snapshot_detail, fingerprint, plan = _global_issue_queue_snapshot_from_row(row)
+                        except Exception:
+                            snapshot_detail, fingerprint, plan = detail, last_fingerprints.get(key, ""), {"key": key}
+                        disposition_name = _classify_incomplete_queue_disposition(plan, incomplete_reasons[key])
+                        _write_queue_disposition(
+                            key,
+                            _queue_disposition_payload(
+                                disposition=disposition_name,
+                                reason=incomplete_reasons[key],
+                                fingerprint=fingerprint,
+                                detail=snapshot_detail,
+                                row=row,
+                                plan=plan,
+                            ),
+                        )
                 break
 
             queue_keys = next_queue
@@ -6616,6 +6746,23 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                 for key, detail in incomplete_details.items():
                     if not incomplete_reasons.get(key, "").startswith("worker "):
                         incomplete_reasons[key] = f"max_passes={max_passes} reached; {detail}"
+                    row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
+                    try:
+                        _complete, snapshot_detail, fingerprint, plan = _global_issue_queue_snapshot_from_row(row)
+                    except Exception:
+                        snapshot_detail, fingerprint, plan = detail, last_fingerprints.get(key, ""), {"key": key}
+                    disposition_name = _classify_incomplete_queue_disposition(plan, incomplete_reasons[key])
+                    _write_queue_disposition(
+                        key,
+                        _queue_disposition_payload(
+                            disposition=disposition_name,
+                            reason=incomplete_reasons[key],
+                            fingerprint=fingerprint,
+                            detail=snapshot_detail,
+                            row=row,
+                            plan=plan,
+                        ),
+                    )
 
         complete = len(completed_keys)
         incomplete = len(incomplete_details)
@@ -6745,6 +6892,10 @@ def _build_claude_prompt(
         f"requires every component of that type. First identify the exact component with SOQL, describe/list "
         f"metadata, org-knowledge, or `scripts/sf_caseops_helper.py`, then retrieve only named components "
         f"(for example `--metadata Flow:My_Flow` or `--metadata EmailTemplate:Folder/Template`).\n"
+        f"- Use `python scripts/sf_caseops_helper.py ...` before equivalent raw `sf` commands for targeted "
+        f"metadata retrieval, SOQL checks, field/Flow verification, workspace initialization, deploys, and deploy reports. "
+        f"Helper failures include `failure_class`, `retryable`, and `next_action`; when `retryable=false`, stop and replan "
+        f"instead of trying small variants of the same command.\n"
         f"- Every external Salesforce CLI command must be bounded and produce operator-visible progress. "
         f"If a retrieve/query gives no useful output within 90 seconds, stop that approach, print "
         f"`STEP_LOOP {key} command_timeout`, record the command and elapsed time, and replan with a narrower "
@@ -6776,18 +6927,23 @@ def _build_claude_prompt(
         f"- Keep playbook analysis internal unless a playbook conflict blocks the run.\n\n"
         f"## Salesforce Queries: Use sf CLI + SOQL (DEFAULT)\n"
         f"**For metadata queries, field inspection, permission checks, and configuration verification:**\n"
-        f"1. **Use `sf` CLI commands** (read-only, fast, no browser needed):\n"
+        f"1. **Use CaseOps Salesforce helper commands first** when available:\n"
+        f"   - `python scripts/sf_caseops_helper.py retrieve-metadata ...`\n"
+        f"   - `python scripts/sf_caseops_helper.py query-data ...` or `query-tooling ...`\n"
+        f"   - `python scripts/sf_caseops_helper.py verify-field ...` or `verify-flow ...`\n"
+        f"   - `python scripts/sf_caseops_helper.py deploy-source|deploy-mdapi|deploy-report ...` for Sandbox deploy/test work\n"
+        f"2. **Use raw `sf` CLI commands only when no helper covers the task** (read-only, fast, no browser needed):\n"
         f"   - `sf org display --target-org <alias>` and `sf org list` to verify auth\n"
         f"   - `sf project retrieve start --metadata Type:Name` or another named/narrow selector (pull targeted metadata)\n"
         f"   - `sf sobject get --sobject [type]` (inspect objects/fields)\n"
-        f"2. **Use SOQL queries** via `sf data query` to inspect data, field values, record types, assignments\n"
-        f"3. **Never use Playwright, browser automation, frontdoor links, or frontdoor SIDs** for metadata queries, SOQL/API access, field inspection, permission checks, retrieval, deploy, or Apex tests\n"
-        f"4. **Only open browser / frontdoor links for:**\n"
+        f"3. **Use SOQL queries** via helper or `sf data query` to inspect data, field values, record types, assignments\n"
+        f"4. **Never use Playwright, browser automation, frontdoor links, or frontdoor SIDs** for metadata queries, SOQL/API access, field inspection, permission checks, retrieval, deploy, or Apex tests\n"
+        f"5. **Only open browser / frontdoor links for:**\n"
         f"   - Visual verification (testing layouts, field placement, visual tests)\n"
         f"   - UI clicks (when automation can't use CLI, e.g., custom buttons, flow runs)\n"
         f"   - Human-readable confirmation\n"
-        f"5. If `sf` reports no authenticated orgs, treat that as a CaseOps/container auth configuration blocker. Do **not** test frontdoor SIDs with `curl` and do not conclude Salesforce API is unreachable from frontdoor 401s.\n"
-        f"6. **Production is read-only in normal pipeline runs.** Do not run `sf data create`, `sf data update`, `sf data delete`, permission-set assignment commands, Apex anonymous execution, deploys, or any other mutating command against Production unless this prompt includes a valid **Temporary Production Write Approval** section. For Support-resolvable Production data/config/permission fixes without that approval, document the exact operator action and validation plan only.\n"
+        f"6. If `sf` reports no authenticated orgs, treat that as a CaseOps/container auth configuration blocker. Do **not** test frontdoor SIDs with `curl` and do not conclude Salesforce API is unreachable from frontdoor 401s.\n"
+        f"7. **Production is read-only in normal pipeline runs.** Do not run `sf data create`, `sf data update`, `sf data delete`, permission-set assignment commands, Apex anonymous execution, deploys, or any other mutating command against Production unless this prompt includes a valid **Temporary Production Write Approval** section. For Support-resolvable Production data/config/permission fixes without that approval, document the exact operator action and validation plan only.\n"
         f"\n{_salesforce_browser_prompt_section()}"
         f"## CaseOps Output Files (update these when your task is complete)\n"
         f"You can read and write these files directly for issue {key}:\n"
@@ -6801,6 +6957,7 @@ def _build_claude_prompt(
         f"| `{outputs_dir_relative}/jira-messages/{key}.md` | Customer-facing Jira message (confirmed fix OR engineering escalation) | When ready to respond to customer |\n"
         f"| `{outputs_dir_relative}/test-reports/{key}.md` | Test cases, results, and fix validation | After testing the fix in Sandbox |\n"
         f"| `{outputs_dir_relative}/engineering-escalations/{key}.md` | Engineering handoff only for issues routed to Engineering | When escalating to Engineering team |\n"
+        f"| `{outputs_dir_relative}/pipeline-failures/{key}.json` | Structured timeout/failure artifact for resumable recovery | Written by CaseOps automatically when a run times out or Claude exits unexpectedly |\n"
         f"| `{outputs_dir_relative}/generated-files/{key}/` | Issue-specific generated files such as spreadsheets, exports, CSVs, or supporting documents | Whenever a run creates non-markdown files |\n"
         f"\n"
         f"**Update guidance:**\n"
@@ -7667,6 +7824,8 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
     has_generated_files = bool(_generated_files_for_issue(key))
     has_similar_issues = _issue_has_similar_issue_context(key)
     needs_customer_reply = _issue_needs_customer_reply(key)
+    latest_failure = state_payload.get("latest_failure") if isinstance(state_payload.get("latest_failure"), dict) else _read_pipeline_failure_artifact(key)
+    has_pipeline_failure = bool(latest_failure or _pipeline_failure_path(key).exists())
     has_stale_pipeline_step = _pipeline_state_has_stale_step(state_payload)
     has_partial_pipeline_run = _pipeline_state_has_partial_issue_run(state_payload)
 
@@ -7722,6 +7881,8 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         "has_generated_files": has_generated_files,
         "has_similar_issues": has_similar_issues,
         "needs_customer_reply": needs_customer_reply,
+        "has_pipeline_failure": has_pipeline_failure,
+        "pipeline_failure_class": str((latest_failure or {}).get("failure_class") or ""),
         "has_stale_pipeline_step": has_stale_pipeline_step,
         "has_partial_pipeline_run": has_partial_pipeline_run,
     }
@@ -8088,6 +8249,34 @@ def favicon_ico():
 
 @app.get("/api/issues")
 def api_issues():
+    request_started = time.perf_counter()
+    now = time.time()
+    cache_signature = _issues_api_cache_signature()
+    cache_hit_payload: list[dict[str, Any]] | None = None
+    with _ISSUES_API_CACHE_LOCK:
+        cached_payload = _issues_api_cache.get("payload")
+        cached_created = float(_issues_api_cache.get("created") or 0.0)
+        cached_signature = _issues_api_cache.get("signature")
+        if (
+            isinstance(cached_payload, list)
+            and cached_signature == cache_signature
+            and now - cached_created < _ISSUES_API_CACHE_TTL_SECONDS
+        ):
+            cache_hit_payload = cached_payload
+    if cache_hit_payload is not None:
+        total_seconds = time.perf_counter() - request_started
+        with _ISSUES_API_METRICS_LOCK:
+            _issues_api_metrics["cache_hits"] = int(_issues_api_metrics.get("cache_hits") or 0) + 1
+            _issues_api_metrics["last_cache_hit"] = True
+            _issues_api_metrics["last_total_seconds"] = round(total_seconds, 4)
+            _issues_api_metrics["last_issue_count"] = len(cache_hit_payload)
+            _issues_api_metrics["last_served_at"] = datetime.now(timezone.utc).isoformat()
+        response = jsonify(cache_hit_payload)
+        response.headers["X-CaseOps-Issues-Cache"] = "hit"
+        response.headers["X-CaseOps-Issues-Seconds"] = f"{total_seconds:.4f}"
+        return response
+
+    build_started = time.perf_counter()
     issues = _read_manifest()
     result = []
     for row in issues:
@@ -8113,7 +8302,75 @@ def api_issues():
             **flags,
             **tag_contract,
         })
-    return jsonify(result)
+    build_seconds = time.perf_counter() - build_started
+    total_seconds = time.perf_counter() - request_started
+    payload_bytes = len(json.dumps(result, ensure_ascii=False).encode("utf-8"))
+    built_at = datetime.now(timezone.utc).isoformat()
+
+    with _ISSUES_API_CACHE_LOCK:
+        _issues_api_cache["created"] = time.time()
+        _issues_api_cache["payload"] = result
+        _issues_api_cache["signature"] = cache_signature
+    with _ISSUES_API_METRICS_LOCK:
+        _issues_api_metrics["cache_misses"] = int(_issues_api_metrics.get("cache_misses") or 0) + 1
+        _issues_api_metrics["last_cache_hit"] = False
+        _issues_api_metrics["last_build_seconds"] = round(build_seconds, 4)
+        _issues_api_metrics["last_total_seconds"] = round(total_seconds, 4)
+        _issues_api_metrics["last_issue_count"] = len(result)
+        _issues_api_metrics["last_payload_bytes"] = payload_bytes
+        _issues_api_metrics["last_cache_signature"] = cache_signature
+        _issues_api_metrics["last_built_at"] = built_at
+        _issues_api_metrics["last_served_at"] = built_at
+    if _ISSUES_API_SLOW_LOG_SECONDS and build_seconds >= _ISSUES_API_SLOW_LOG_SECONDS:
+        app.logger.warning(
+            "Slow /api/issues build: %.3fs issues=%s payload=%s bytes",
+            build_seconds,
+            len(result),
+            payload_bytes,
+        )
+    response = jsonify(result)
+    response.headers["X-CaseOps-Issues-Cache"] = "miss"
+    response.headers["X-CaseOps-Issues-Build-Seconds"] = f"{build_seconds:.4f}"
+    response.headers["X-CaseOps-Issues-Seconds"] = f"{total_seconds:.4f}"
+    return response
+
+
+@app.get("/api/diagnostics/performance")
+def api_diagnostics_performance():
+    with _ISSUES_API_CACHE_LOCK:
+        cached_payload = _issues_api_cache.get("payload")
+        cached_created = float(_issues_api_cache.get("created") or 0.0)
+        cached_signature = _issues_api_cache.get("signature")
+        current_signature = _issues_api_cache_signature()
+        cache_age_seconds = max(0.0, time.time() - cached_created) if cached_payload is not None else None
+        cache_active = bool(
+            cached_payload is not None
+            and cached_signature == current_signature
+            and cache_age_seconds is not None
+            and cache_age_seconds < _ISSUES_API_CACHE_TTL_SECONDS
+        )
+    with _ISSUES_API_METRICS_LOCK:
+        issue_metrics = dict(_issues_api_metrics)
+    return jsonify({
+        "issues_api": {
+            **issue_metrics,
+            "cache_active": cache_active,
+            "cache_age_seconds": round(cache_age_seconds, 4) if cache_age_seconds is not None else None,
+            "cache_ttl_seconds": _ISSUES_API_CACHE_TTL_SECONDS,
+            "slow_log_seconds": _ISSUES_API_SLOW_LOG_SECONDS,
+            "summary_search_chars": _ISSUE_LIST_SUMMARY_SEARCH_CHARS,
+            "current_cache_signature": current_signature,
+        },
+        "manifest": {
+            "path": str(_manifest_path()),
+            "exists": _manifest_path().exists(),
+            "rows": len(_read_manifest()),
+        },
+        "outputs": {
+            "path": str(OUTPUTS),
+            "exists": OUTPUTS.exists(),
+        },
+    })
 
 
 @app.get("/api/latest-issue-summary")
@@ -8648,6 +8905,107 @@ def api_pipeline_state_repair_all():
 @app.get("/health")
 def health():
     return jsonify({"ok": True})
+
+
+@app.get("/api/knowledge/diagnostics/<key>")
+def api_knowledge_diagnostics(key: str):
+    row = _find_manifest_row(key)
+    selections = _select_org_knowledge_items(key, row or {})
+    context_packet, total_chars = _build_context_packet_for_issue(key)
+    root = _org_knowledge_dir()
+    counts = {}
+    for subdir in knowledge_service.RUNTIME_DIRS:
+        directory = root / subdir
+        counts[subdir] = len(list(directory.glob("*.json"))) if directory.exists() else 0
+    return jsonify({
+        "key": key,
+        "runtime_dir": str(root),
+        "selected": knowledge_service.selection_diagnostics(selections),
+        "context_chars": total_chars,
+        "context_packet": {
+            "version": context_packet.get("version"),
+            "generated_at": context_packet.get("generated_at"),
+            "org_knowledge": context_packet.get("org_knowledge"),
+        },
+        "runtime_counts": counts,
+    })
+
+
+@app.post("/api/knowledge/audit")
+def api_knowledge_audit():
+    data = request.get_json(silent=True) or {}
+    min_recurrence = int(data.get("min_recurrence") or 2)
+    min_recurrence = max(1, min(25, min_recurrence))
+    try:
+        summary = knowledge_service.run_manual_audit(OUTPUTS, min_recurrence=min_recurrence)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+    return jsonify({"ok": True, "summary": summary})
+
+
+@app.get("/api/knowledge/review")
+def api_knowledge_review():
+    try:
+        return jsonify({"ok": True, "items": knowledge_service.list_review_items(OUTPUTS)})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.post("/api/knowledge/review/<candidate_id>/accept")
+def api_knowledge_accept(candidate_id: str):
+    body = request.get_json(silent=True) or {}
+    try:
+        item = knowledge_service.accept_lesson(OUTPUTS, candidate_id, edit=body.get("edit") if isinstance(body.get("edit"), dict) else None)
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "candidate not found"}), 404
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    return jsonify({"ok": True, "item": item})
+
+
+@app.post("/api/knowledge/review/<candidate_id>/reject")
+def api_knowledge_reject(candidate_id: str):
+    body = request.get_json(silent=True) or {}
+    try:
+        item = knowledge_service.reject_lesson(OUTPUTS, candidate_id, reason=str(body.get("reason") or ""))
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "candidate not found"}), 404
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    return jsonify({"ok": True, "item": item})
+
+
+@app.post("/api/knowledge/review/<candidate_id>/retire")
+def api_knowledge_retire(candidate_id: str):
+    body = request.get_json(silent=True) or {}
+    try:
+        item = knowledge_service.retire_lesson(OUTPUTS, candidate_id, reason=str(body.get("reason") or ""))
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "accepted lesson not found"}), 404
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    return jsonify({"ok": True, "item": item})
+
+
+@app.post("/api/knowledge/review/<candidate_id>/helper-work-item")
+def api_knowledge_helper_work_item(candidate_id: str):
+    try:
+        item = knowledge_service.convert_to_helper_work_item(OUTPUTS, candidate_id)
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "candidate not found"}), 404
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    return jsonify({"ok": True, "item": item})
+
+
+@app.post("/api/knowledge/guardrail-check")
+def api_knowledge_guardrail_check():
+    body = request.get_json(silent=True) or {}
+    result = knowledge_service.classify_guardrail_command(
+        str(body.get("command") or ""),
+        production_approved=bool(body.get("production_approved")),
+    )
+    return jsonify({"ok": True, "result": result})
 
 
 @app.get("/api/pipeline-log/<key>")
@@ -9303,6 +9661,9 @@ def api_get_settings():
         "CASEOPS_SIMILAR_ISSUES_CURRENT_USER",
         "CASEOPS_AUTO_SYNC_ENABLED",
         "CASEOPS_AUTO_SYNC_INTERVAL_MINUTES",
+        "CASEOPS_KNOWLEDGE_AUDITOR_ENABLED",
+        "CASEOPS_KNOWLEDGE_AUDITOR_INTERVAL_MINUTES",
+        "CASEOPS_KNOWLEDGE_AUDITOR_MIN_RECURRENCE",
         "CASEOPS_FLASK_DEBUG",
         "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
         "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
@@ -9327,6 +9688,9 @@ def api_get_settings():
         "CASEOPS_SIMILAR_ISSUES_CURRENT_USER": "",
         "CASEOPS_AUTO_SYNC_ENABLED": "false",
         "CASEOPS_AUTO_SYNC_INTERVAL_MINUTES": "0",
+        "CASEOPS_KNOWLEDGE_AUDITOR_ENABLED": "false",
+        "CASEOPS_KNOWLEDGE_AUDITOR_INTERVAL_MINUTES": "0",
+        "CASEOPS_KNOWLEDGE_AUDITOR_MIN_RECURRENCE": "2",
         "CASEOPS_FLASK_DEBUG": "false",
         "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS": "240",
         "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS": "1200",
@@ -9377,6 +9741,9 @@ def api_post_settings():
                 "CASEOPS_SIMILAR_ISSUES_CURRENT_USER",
                 "CASEOPS_AUTO_SYNC_ENABLED",
                 "CASEOPS_AUTO_SYNC_INTERVAL_MINUTES",
+                "CASEOPS_KNOWLEDGE_AUDITOR_ENABLED",
+                "CASEOPS_KNOWLEDGE_AUDITOR_INTERVAL_MINUTES",
+                "CASEOPS_KNOWLEDGE_AUDITOR_MIN_RECURRENCE",
                 "CASEOPS_FLASK_DEBUG",
                 "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
                 "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
@@ -9997,13 +10364,14 @@ if __name__ == "__main__":
     # Pre-create all pipeline output subdirectories so Claude Code doesn't need write permissions to create them
     for subdir in [
         "jira", "investigations", "internal-notes", "jira-messages", "issue-briefs", "test-reports",
-        "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
+        "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state", "pipeline-failures",
         "issue-clusters",
         "closed-resolved", "not-assigned", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces",
         "production-approvals", "summaries"
     ]:
         _ensure_directory_writable(OUTPUTS / subdir, f"outputs/{subdir}")
     _ensure_org_knowledge_defaults()
+    _start_knowledge_auditor_scheduler_if_needed()
 
     JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "").rstrip("/")
     app.config["WORKSPACE"] = WORKSPACE
@@ -10047,7 +10415,7 @@ if __name__ == "__main__":
     # Validate all required subdirectories exist
     required_subdirs = [
         "jira", "investigations", "internal-notes", "jira-messages", "issue-briefs", "test-reports",
-        "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state",
+        "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state", "pipeline-failures",
         "issue-clusters",
         "closed-resolved", "not-assigned", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces",
         "production-approvals", _SUMMARY_DIR

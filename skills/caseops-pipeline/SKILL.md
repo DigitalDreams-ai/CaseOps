@@ -75,7 +75,7 @@ For global runs that process multiple issues, emit a single timestamped line at 
 
 **Operator log hygiene:** Do not echo, restate, or summarize this playbook, prompts, reference files, or checklists into stdout during a run. The CaseOps pipeline log is for live execution only: step markers, concise status, commands/tools used, files written, test results, and blockers.
 
-**Org knowledge hygiene:** Do not bulk-read `outputs/org-knowledge/`. The CaseOps prompt includes selected org-knowledge files for the active issue. Use those first, pass relevant bullets to sub-agents, and update only durable verified lessons. Never store secrets, raw access tokens, frontdoor links, or customer-private narrative in org knowledge.
+**CaseOps knowledge hygiene:** Do not bulk-read `outputs/org-knowledge/`. The CaseOps prompt includes selected knowledge files for the active issue. Use those first and pass relevant bullets to sub-agents. Normal pipeline runs must create structured knowledge signals only; they must not activate lessons or rewrite core/appdata knowledge directly. Never store secrets, raw access tokens, frontdoor links, or customer-private narrative in knowledge artifacts.
 
 ### Operator Setup
 

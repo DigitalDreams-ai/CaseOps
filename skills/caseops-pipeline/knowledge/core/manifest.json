@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "description": "Source-controlled generic CaseOps core knowledge manifest. Runtime org-profile and accepted lessons live in appdata.",
+  "items": {
+    "run-rules.md": {
+      "type": "guardrail_rule",
+      "layer": "core"
+    },
+    "helper-scripts.md": {
+      "type": "helper_contract",
+      "layer": "core"
+    },
+    "lessons-learned.md": {
+      "type": "lesson_learned",
+      "layer": "core",
+      "active": false
+    },
+    "query-patterns/apex.md": {
+      "type": "query_pattern",
+      "layer": "core"
+    },
+    "query-patterns/custom-field.md": {
+      "type": "query_pattern",
+      "layer": "core"
+    },
+    "query-patterns/flows.md": {
+      "type": "query_pattern",
+      "layer": "core"
+    },
+    "query-patterns/layouts.md": {
+      "type": "query_pattern",
+      "layer": "core"
+    },
+    "query-patterns/permission-sets.md": {
+      "type": "query_pattern",
+      "layer": "core"
+    },
+    "query-patterns/picklist-values.md": {
+      "type": "query_pattern",
+      "layer": "core"
+    },
+    "query-patterns/share-objects.md": {
+      "type": "query_pattern",
+      "layer": "core"
+    },
+    "deploy-patterns/custom-field-mdapi.md": {
+      "type": "deploy_pattern",
+      "layer": "core"
+    },
+    "deploy-patterns/source-tracking.md": {
+      "type": "deploy_pattern",
+      "layer": "core"
+    },
+    "salesforce-gotchas/access-and-visibility.md": {
+      "type": "gotcha",
+      "layer": "core"
+    },
+    "salesforce-gotchas/automation-order.md": {
+      "type": "gotcha",
+      "layer": "core"
+    },
+    "salesforce-gotchas/deploy-and-sandbox.md": {
+      "type": "gotcha",
+      "layer": "core"
+    },
+    "salesforce-gotchas/fields-and-picklists.md": {
+      "type": "gotcha",
+      "layer": "core"
+    },
+    "salesforce-gotchas/layouts-and-record-types.md": {
+      "type": "gotcha",
+      "layer": "core"
+    }
+  }
+}
