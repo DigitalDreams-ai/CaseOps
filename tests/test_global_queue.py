@@ -1082,6 +1082,51 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertEqual(len(payload), 1)
         self.assertIn("practitioner billing address mismatch", payload[0]["jira_summary_search_text"])
 
+    def test_api_issues_row_cache_tracks_manifest_and_artifact_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            summary_path = outputs / app.FILE_LOCATIONS["jira_summary"].format(key="OPEN-1")
+            summary_path.parent.mkdir(parents=True, exist_ok=True)
+            summary_path.write_text("first hidden keyword", encoding="utf-8")
+
+            manifest_row = {
+                "Key": "OPEN-1",
+                "Status": "Open",
+                "Summary": "Original summary",
+                "Assignee": "CaseOps User",
+                "Updated": "2026-06-01T00:00:00.000+0000",
+            }
+
+            def expire_payload_cache() -> None:
+                with app._ISSUES_API_CACHE_LOCK:
+                    app._issues_api_cache["created"] = 0.0
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_read_manifest", side_effect=lambda: [dict(manifest_row)]),
+            ):
+                app._invalidate_issues_api_cache()
+                client = app.app.test_client()
+
+                first = client.get("/api/issues").get_json()[0]
+                expire_payload_cache()
+                second = client.get("/api/issues").get_json()[0]
+
+                manifest_row["Summary"] = "Updated summary"
+                expire_payload_cache()
+                third = client.get("/api/issues").get_json()[0]
+
+                summary_path.write_text("second hidden keyword", encoding="utf-8")
+                os.utime(summary_path, None)
+                expire_payload_cache()
+                fourth = client.get("/api/issues").get_json()[0]
+
+        self.assertEqual(first["summary"], "Original summary")
+        self.assertEqual(second["summary"], "Original summary")
+        self.assertEqual(third["summary"], "Updated summary")
+        self.assertIn("first hidden keyword", third["jira_summary_search_text"])
+        self.assertIn("second hidden keyword", fourth["jira_summary_search_text"])
+
     def test_available_tabs_includes_similar_issues_for_candidate_only_context(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)

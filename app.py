@@ -431,11 +431,17 @@ artifact_metadata_cache: dict[str, dict[str, Any]] = {}
 # completion refreshes. This cache is invalidated on manifest/list changes.
 _issues_api_cache: dict[str, Any] = {"created": 0.0, "payload": None, "signature": None}
 _ISSUES_API_CACHE_LOCK = threading.Lock()
+_ISSUE_LIST_ROW_CACHE: dict[str, dict[str, Any]] = {}
+_ISSUE_LIST_ROW_CACHE_LOCK = threading.Lock()
 _issues_api_metrics: dict[str, Any] = {
     "cache_hits": 0,
     "cache_misses": 0,
+    "row_cache_hits": 0,
+    "row_cache_misses": 0,
     "invalidations": 0,
     "last_cache_hit": False,
+    "last_row_cache_hits": 0,
+    "last_row_cache_misses": 0,
     "last_build_seconds": None,
     "last_total_seconds": None,
     "last_issue_count": 0,
@@ -3413,8 +3419,119 @@ def _invalidate_issues_api_cache() -> None:
         _issues_api_cache["created"] = 0.0
         _issues_api_cache["payload"] = None
         _issues_api_cache["signature"] = None
+    with _ISSUE_LIST_ROW_CACHE_LOCK:
+        _ISSUE_LIST_ROW_CACHE.clear()
     with _ISSUES_API_METRICS_LOCK:
         _issues_api_metrics["invalidations"] = int(_issues_api_metrics.get("invalidations") or 0) + 1
+
+
+def _path_stat_signature(path: Path) -> tuple[bool, int, int]:
+    try:
+        stat = path.stat()
+    except OSError:
+        return (False, 0, 0)
+    if not path.is_file() and not path.is_dir():
+        return (False, 0, 0)
+    return (True, int(stat.st_mtime_ns), int(stat.st_size))
+
+
+def _dir_children_signature(path: Path) -> tuple[bool, int, int, int]:
+    if not path.is_dir():
+        return (False, 0, 0, 0)
+    latest_mtime = 0
+    total_size = 0
+    file_count = 0
+    try:
+        for child in path.rglob("*"):
+            if not child.is_file():
+                continue
+            stat = child.stat()
+            file_count += 1
+            latest_mtime = max(latest_mtime, int(stat.st_mtime_ns))
+            total_size += int(stat.st_size)
+    except OSError:
+        return (True, latest_mtime, total_size, file_count)
+    return (True, latest_mtime, total_size, file_count)
+
+
+def _issue_list_artifact_signature(key: str, status: str) -> tuple[Any, ...]:
+    paths = [
+        OUTPUTS / FILE_LOCATIONS["jira_summary"].format(key=key),
+        OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key),
+        OUTPUTS / FILE_LOCATIONS["hypothesis"].format(key=key),
+        OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key),
+        OUTPUTS / FILE_LOCATIONS["jira_message"].format(key=key),
+        OUTPUTS / FILE_LOCATIONS["issue_brief"].format(key=key),
+        OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key),
+        OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key),
+        OUTPUTS / FILE_LOCATIONS["closed_resolved"].format(key=key),
+        _pipeline_state_path(key),
+        _pipeline_failure_path(key),
+        OUTPUTS / "issue-clusters" / "issues.jsonl",
+    ]
+    return (
+        str(OUTPUTS),
+        key,
+        status,
+        _ISSUE_LIST_SUMMARY_SEARCH_CHARS,
+        tuple((path.as_posix(), _path_stat_signature(path)) for path in paths),
+        ("generated_files", _dir_children_signature(_generated_files_dir(key))),
+    )
+
+
+def _build_issue_list_row(row: dict[str, str]) -> dict[str, Any]:
+    key = row.get("Key", "")
+    status = row.get("Status", "")
+    flags = _pipeline_file_flags(key, status)
+    due = row.get("Due", "") or ""
+    has_new_comments = row.get("HasNewComments", "false").lower() == "true"
+    tag_contract = _derive_issue_tag_contract(status, flags, has_new_comments=has_new_comments)
+    return {
+        "key": key,
+        "status": status,
+        "assignee": row.get("Assignee", ""),
+        "summary": row.get("Summary", ""),
+        "jira_summary_search_text": _jira_summary_search_text(key),
+        "disposition": _disposition(status),
+        "updated": row.get("Updated", ""),
+        "due": due,
+        "priority_name": row.get("Priority", "") or "",
+        "sla_remaining_ms": _sla_remaining_ms(due),
+        "jira_url": f"{JIRA_BASE_URL}/browse/{key}" if JIRA_BASE_URL else "",
+        "hasNewComments": has_new_comments,
+        **flags,
+        **tag_contract,
+    }
+
+
+def _issue_list_row_from_cache(row: dict[str, str]) -> tuple[dict[str, Any], bool]:
+    key = row.get("Key", "")
+    status = row.get("Status", "")
+    due = row.get("Due", "") or ""
+    row_signature = (
+        row.get("Assignee", ""),
+        row.get("Summary", ""),
+        row.get("Updated", ""),
+        due,
+        row.get("Priority", "") or "",
+        row.get("HasNewComments", ""),
+        JIRA_BASE_URL,
+    )
+    signature = (_issue_list_artifact_signature(key, status), row_signature)
+    with _ISSUE_LIST_ROW_CACHE_LOCK:
+        cached = _ISSUE_LIST_ROW_CACHE.get(key)
+        if cached and cached.get("signature") == signature and isinstance(cached.get("payload"), dict):
+            payload = dict(cached["payload"])
+            payload["sla_remaining_ms"] = _sla_remaining_ms(due)
+            return payload, True
+
+    payload = _build_issue_list_row(row)
+    with _ISSUE_LIST_ROW_CACHE_LOCK:
+        _ISSUE_LIST_ROW_CACHE[key] = {"signature": signature, "payload": dict(payload)}
+        if len(_ISSUE_LIST_ROW_CACHE) > 500:
+            for stale_key in list(_ISSUE_LIST_ROW_CACHE.keys())[:100]:
+                _ISSUE_LIST_ROW_CACHE.pop(stale_key, None)
+    return payload, False
 
 
 def _issues_api_cache_signature() -> dict[str, Any]:
@@ -8279,29 +8396,15 @@ def api_issues():
     build_started = time.perf_counter()
     issues = _read_manifest()
     result = []
+    row_cache_hits = 0
+    row_cache_misses = 0
     for row in issues:
-        key = row.get("Key", "")
-        status = row.get("Status", "")
-        flags = _pipeline_file_flags(key, status)
-        due = row.get("Due", "") or ""
-        has_new_comments = row.get("HasNewComments", "false").lower() == "true"
-        tag_contract = _derive_issue_tag_contract(status, flags, has_new_comments=has_new_comments)
-        result.append({
-            "key": key,
-            "status": status,
-            "assignee": row.get("Assignee", ""),
-            "summary": row.get("Summary", ""),
-            "jira_summary_search_text": _jira_summary_search_text(key),
-            "disposition": _disposition(status),
-            "updated": row.get("Updated", ""),
-            "due": due,
-            "priority_name": row.get("Priority", "") or "",
-            "sla_remaining_ms": _sla_remaining_ms(due),
-            "jira_url": f"{JIRA_BASE_URL}/browse/{key}" if JIRA_BASE_URL else "",
-            "hasNewComments": has_new_comments,
-            **flags,
-            **tag_contract,
-        })
+        issue_row, row_cache_hit = _issue_list_row_from_cache(row)
+        if row_cache_hit:
+            row_cache_hits += 1
+        else:
+            row_cache_misses += 1
+        result.append(issue_row)
     build_seconds = time.perf_counter() - build_started
     total_seconds = time.perf_counter() - request_started
     payload_bytes = len(json.dumps(result, ensure_ascii=False).encode("utf-8"))
@@ -8313,7 +8416,11 @@ def api_issues():
         _issues_api_cache["signature"] = cache_signature
     with _ISSUES_API_METRICS_LOCK:
         _issues_api_metrics["cache_misses"] = int(_issues_api_metrics.get("cache_misses") or 0) + 1
+        _issues_api_metrics["row_cache_hits"] = int(_issues_api_metrics.get("row_cache_hits") or 0) + row_cache_hits
+        _issues_api_metrics["row_cache_misses"] = int(_issues_api_metrics.get("row_cache_misses") or 0) + row_cache_misses
         _issues_api_metrics["last_cache_hit"] = False
+        _issues_api_metrics["last_row_cache_hits"] = row_cache_hits
+        _issues_api_metrics["last_row_cache_misses"] = row_cache_misses
         _issues_api_metrics["last_build_seconds"] = round(build_seconds, 4)
         _issues_api_metrics["last_total_seconds"] = round(total_seconds, 4)
         _issues_api_metrics["last_issue_count"] = len(result)
