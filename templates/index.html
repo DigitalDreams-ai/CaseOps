@@ -1521,6 +1521,11 @@
       return;
     }
 
+    if (ftype === 'caseops_knowledge') {
+      await renderKnowledgeTab(key, seq);
+      return;
+    }
+
     if (ftype === 'generated_files') {
       await loadGeneratedFilesTab(key, issueBody, seq);
       return;
@@ -1593,6 +1598,117 @@
     }
     html += '</div>';
     area.innerHTML = html;
+  }
+
+  async function renderKnowledgeTab(key, tabSeq) {
+    const issueBody = document.getElementById('issue-body');
+    if (!issueBody) return;
+
+    let data;
+    try {
+      const res = await fetch(`/api/knowledge/diagnostics/${encodeURIComponent(key)}`);
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Knowledge diagnostics failed');
+    } catch (e) {
+      if (tabSeq === selectTabSeq && activeKey === key) {
+        issueBody.innerHTML = '<p class="empty">Could not load CaseOps knowledge diagnostics.</p>';
+      }
+      return;
+    }
+    if (tabSeq !== selectTabSeq || activeKey !== key) return;
+
+    const selected = Array.isArray(data.selected) ? data.selected : [];
+    const orgKnowledge = data.context_packet && data.context_packet.org_knowledge ? data.context_packet.org_knowledge : {};
+    const selectedFiles = Array.isArray(orgKnowledge.selected_files) ? orgKnowledge.selected_files : [];
+    const contextChars = Number(data.context_chars || 0);
+    const runtimeCounts = data.runtime_counts || {};
+    const layerCounts = selected.reduce((acc, item) => {
+      const layer = item.layer || 'unknown';
+      acc[layer] = (acc[layer] || 0) + 1;
+      return acc;
+    }, {});
+    const issueSpecificCount = selected.filter(item => Array.isArray(item.topic_ids) && item.topic_ids.some(topic => topic !== 'always_read')).length;
+
+    const renderReasons = item => {
+      const reasons = Array.isArray(item.reasons) ? item.reasons : [];
+      if (!reasons.length) return '';
+      return `<div class="knowledge-reasons">${reasons.map(reason => `<span>${escHtml(reason)}</span>`).join('')}</div>`;
+    };
+    const renderTopics = item => {
+      const topics = Array.isArray(item.topic_ids) ? item.topic_ids : [];
+      if (!topics.length) return '';
+      return topics.map(topic => `<span class="knowledge-chip">${escHtml(topic)}</span>`).join('');
+    };
+    const selectedHtml = selected.length
+      ? selected.map(item => `
+          <div class="knowledge-card">
+            <div class="knowledge-card-main">
+              <div class="knowledge-path">${escHtml(item.path || '')}</div>
+              <div class="knowledge-meta">
+                <span>${escHtml(item.layer || 'unknown')}</span>
+                <span>${escHtml(item.knowledge_type || 'unknown')}</span>
+                <span>${escHtml(String(item.size || 0))} bytes</span>
+              </div>
+              ${renderReasons(item)}
+              <div class="knowledge-topics">${renderTopics(item)}</div>
+            </div>
+          </div>
+        `).join('')
+      : '<p class="empty">No CaseOps knowledge selected for this issue.</p>';
+
+    const contextHtml = selectedFiles.length
+      ? selectedFiles.slice(0, 12).map(item => `
+          <li>
+            <span class="knowledge-path">${escHtml(item.path || '')}</span>
+            <span class="knowledge-meta-inline">${escHtml(item.layer || '')} · ${escHtml(item.knowledge_type || '')} · ${escHtml(String(item.chars || 0))} chars</span>
+          </li>
+        `).join('')
+      : '<li>No selected files were included in the prompt context packet.</li>';
+
+    const countsHtml = Object.entries(runtimeCounts)
+      .filter(([, value]) => Number(value || 0) > 0)
+      .map(([name, value]) => `<span class="knowledge-chip">${escHtml(name)}: ${escHtml(String(value))}</span>`)
+      .join('');
+
+    issueBody.innerHTML = `
+      <div class="knowledge-panel">
+        <div class="knowledge-summary-grid">
+          <div class="knowledge-summary-card">
+            <strong>${selected.length}</strong>
+            <span>selected files</span>
+          </div>
+          <div class="knowledge-summary-card">
+            <strong>${issueSpecificCount}</strong>
+            <span>issue-specific matches</span>
+          </div>
+          <div class="knowledge-summary-card">
+            <strong>${contextChars}</strong>
+            <span>context chars</span>
+          </div>
+          <div class="knowledge-summary-card">
+            <strong>${escHtml(Object.entries(layerCounts).map(([k, v]) => `${k}:${v}`).join(' ') || 'none')}</strong>
+            <span>layers</span>
+          </div>
+        </div>
+
+        <section class="knowledge-section-block">
+          <h2>Selected Knowledge</h2>
+          <p class="knowledge-note">These are the exact reusable knowledge files CaseOps selected for this issue. Pending and rejected lessons are intentionally excluded.</p>
+          <div class="knowledge-card-list">${selectedHtml}</div>
+        </section>
+
+        <section class="knowledge-section-block">
+          <h2>Prompt Context</h2>
+          <p class="knowledge-note">The pipeline receives a capped summary from these files, not the full knowledge directory.</p>
+          <ul class="knowledge-context-list">${contextHtml}</ul>
+        </section>
+
+        <section class="knowledge-section-block">
+          <h2>Runtime Knowledge Counts</h2>
+          <div class="knowledge-topics">${countsHtml || '<span class="knowledge-chip">no runtime JSON artifacts</span>'}</div>
+        </section>
+      </div>
+    `;
   }
 
   async function renderSimilarIssuesTab(key, tabSeq) {

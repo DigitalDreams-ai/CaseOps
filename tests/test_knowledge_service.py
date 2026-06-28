@@ -265,6 +265,35 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(len(review_after.get_json()["items"]["pending_lessons"]), 0)
         self.assertEqual(len(review_after.get_json()["items"]["accepted_lessons"]), 1)
 
+    def test_issue_detail_exposes_selected_knowledge_tab(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(
+                    app,
+                    "_read_manifest",
+                    return_value=[{
+                        "Key": "OPEN-1",
+                        "Status": "Open",
+                        "Summary": "Custom field picklist value is not visible on layout",
+                        "Assignee": "CaseOps User",
+                    }],
+                ),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+                patch.object(app, "_read_pipeline_state", return_value={}),
+            ):
+                client = app.app.test_client()
+                issue_payload = client.get("/api/issue/OPEN-1").get_json()
+                diagnostics = client.get("/api/knowledge/diagnostics/OPEN-1").get_json()
+
+        self.assertIn("caseops_knowledge", [tab["id"] for tab in issue_payload["tabs"]])
+        selected_paths = {item["path"] for item in diagnostics["selected"]}
+        self.assertIn("run-rules.md", selected_paths)
+        self.assertIn("query-patterns/custom-field.md", selected_paths)
+        self.assertTrue(any("matched keywords" in " ".join(item["reasons"]) for item in diagnostics["selected"]))
+
     def test_guardrail_check_api(self):
         response = app.app.test_client().post(
             "/api/knowledge/guardrail-check",

@@ -1705,6 +1705,130 @@ select.desktop-only {
   margin: 16px 0;
 }
 
+/* ── CaseOps Knowledge Panel ─────────────────────────────── */
+
+.knowledge-panel {
+  display: grid;
+  gap: 16px;
+  padding: 4px 2px 20px;
+  color: var(--color-text);
+}
+
+.knowledge-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.knowledge-summary-card,
+.knowledge-card {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+}
+
+.knowledge-summary-card {
+  padding: 12px;
+  min-width: 0;
+}
+
+.knowledge-summary-card strong {
+  display: block;
+  font-size: 18px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-summary-card span,
+.knowledge-note,
+.knowledge-meta,
+.knowledge-meta-inline {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.knowledge-section-block h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.knowledge-note {
+  margin: 0 0 10px;
+}
+
+.knowledge-card-list {
+  display: grid;
+  gap: 10px;
+}
+
+.knowledge-card {
+  padding: 10px;
+  min-width: 0;
+}
+
+.knowledge-card-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.knowledge-path {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.knowledge-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.knowledge-reasons span {
+  display: inline-flex;
+  padding: 3px 7px;
+  border-radius: 10px;
+  background: rgba(31, 111, 235, 0.08);
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.knowledge-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.knowledge-chip {
+  display: inline-flex;
+  padding: 3px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.knowledge-context-list {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.knowledge-context-list li {
+  padding-left: 2px;
+}
+
+.knowledge-meta-inline {
+  margin-left: 6px;
+}
+
 /* ── Similar Issues Panel ───────────────────────────────── */
 
 .sim-issue-wrap {

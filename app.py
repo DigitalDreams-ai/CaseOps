@@ -7582,6 +7582,14 @@ def _available_tabs(key: str) -> list[dict[str, str]]:
     cluster_context = read_issue_cluster_context(outputs_dir=OUTPUTS, issue_key=key)
     if cluster_context.get("cluster_id") or cluster_context.get("candidate_matches"):
         tabs.append({"id": "similar_issues", "label": "Similar Issues"})
+    row = _find_manifest_row(key)
+    knowledge_items = _select_org_knowledge_items(key, row or {})
+    has_issue_specific_knowledge = any(
+        any(topic != "always_read" for topic in item.topic_ids)
+        for item in knowledge_items
+    )
+    if has_issue_specific_knowledge:
+        tabs.append({"id": "caseops_knowledge", "label": "Knowledge"})
     for ftype, rel in FILE_LOCATIONS.items():
         if ftype == "attachments":
             continue
