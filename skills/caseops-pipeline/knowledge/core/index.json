@@ -2,7 +2,8 @@
   "version": 1,
   "description": "CaseOps reusable Salesforce org knowledge. The orchestrator reads this index, then loads only matching files for each issue.",
   "always_read": [
-    "run-rules.md"
+    "run-rules.md",
+    "query-patterns/object-existence.md"
   ],
   "max_context_chars": 12000,
   "max_topic_files": 6,
@@ -24,6 +25,7 @@
       ],
       "files": [
         "query-patterns/custom-field.md",
+        "query-patterns/object-existence.md",
         "query-patterns/picklist-values.md",
         "deploy-patterns/custom-field-mdapi.md",
         "helper-scripts.md",
@@ -69,6 +71,7 @@
       ],
       "files": [
         "query-patterns/permission-sets.md",
+        "query-patterns/object-existence.md",
         "helper-scripts.md",
         "salesforce-gotchas/access-and-visibility.md",
         "query-patterns/share-objects.md"
@@ -93,7 +96,8 @@
         "deploy-patterns/custom-field-mdapi.md",
         "deploy-patterns/source-tracking.md",
         "helper-scripts.md",
-        "salesforce-gotchas/deploy-and-sandbox.md"
+        "salesforce-gotchas/deploy-and-sandbox.md",
+        "query-patterns/object-existence.md"
       ]
     },
     {
@@ -108,6 +112,7 @@
       ],
       "files": [
         "query-patterns/flows.md",
+        "query-patterns/object-existence.md",
         "salesforce-gotchas/automation-order.md"
       ]
     },
@@ -123,6 +128,7 @@
       ],
       "files": [
         "query-patterns/apex.md",
+        "query-patterns/object-existence.md",
         "salesforce-gotchas/automation-order.md"
       ]
     }

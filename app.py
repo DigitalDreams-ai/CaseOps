@@ -4399,7 +4399,7 @@ def _write_production_write_approval_marker(issue_key: str, approval: dict[str, 
     return updated
 
 
-def _claude_process_env() -> dict[str, str]:
+def _claude_process_env(issue_key: str | None = None) -> dict[str, str]:
     """Environment for Claude Code CLI subprocess.
 
     For claude_code mode: omit ANTHROPIC_API_KEY. Claude Code CLI uses the
@@ -4453,6 +4453,8 @@ def _claude_process_env() -> dict[str, str]:
     env["CASEOPS_METADATA_RAW_PROD_DIR"] = str(metadata_dirs["raw_prod"])
     env["CASEOPS_METADATA_SANDBOX_WORK_DIR"] = str(metadata_dirs["sandbox_work"])
     env["CASEOPS_METADATA_CONFIRMED_DIR"] = str(metadata_dirs["confirmed"])
+    if issue_key:
+        env["CASEOPS_CURRENT_ISSUE_KEY"] = issue_key
 
     # Keep Salesforce CLI subprocesses deterministic in noninteractive Docker runs.
     # The CLI can otherwise spend time on telemetry/update/progress initialization
@@ -5725,7 +5727,7 @@ def _do_stream_claude_code_cli(
                 _log_emit_line(run_key, "WARNING: Claude Code auth token not configured.")
                 _log_emit_line(run_key, "Open Settings > Claude and paste output from `claude setup-token`.")
 
-        env = _claude_process_env()
+        env = _claude_process_env(issue_key)
         if production_approval:
             env.update(production_approval)
             _log_emit_line(

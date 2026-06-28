@@ -158,6 +158,7 @@ Use these helper operations before trying equivalent raw `sf` commands:
 
 ```bash
 python scripts/sf_caseops_helper.py workspace-init --issue-key "<KEY>" --attempt attempt-001
+python scripts/sf_caseops_helper.py verify-sobject --org "$ORG" --sobject Case --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
 python scripts/sf_caseops_helper.py retrieve-metadata --org "$ORG" --metadata "Flow:Flow_API_Name" --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
 python scripts/sf_caseops_helper.py query-data --org "$ORG" --soql "SELECT Id FROM Account LIMIT 1" --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
 python scripts/sf_caseops_helper.py query-tooling --org "$ORG" --soql "SELECT Id, DeveloperName FROM FlowDefinition LIMIT 1" --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
@@ -170,12 +171,15 @@ python scripts/sf_caseops_helper.py deploy-report --org "$CASEOPS_SANDBOX_TARGET
 
 Every helper returns JSON with `ok`, `failure_class`, `retryable`, and `next_action` on failures. If `retryable` is false, stop and replan instead of trying small variants of the same command.
 
+Before the first query against an unfamiliar, optional, or managed-package object, run `verify-sobject` or `sobject-fields`. If the object does not exist, treat that as investigation evidence and stop retrying broad SOQL variants.
+
 Retrieve/deploy command contract:
 
 - Use modern `sf` CLI commands only.
 - Do not use legacy `sfdx force:*` commands.
 - Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy.
 - Prefer the helper operations above. If a helper does not cover the case, use `sf project retrieve start --metadata`, `sf project retrieve start --source-dir`, `sf project deploy start --source-dir`, or `sf project deploy start --metadata-dir`.
+- Raw `sf project` commands must run inside an issue-scoped Salesforce DX workspace. CaseOps now guards these commands, but helper-based retrieve/deploy is still the preferred path.
 
 If a run discovers a durable, verified, reusable org fact, update the most specific selected topic file with one short bullet. Do not store secrets, raw access tokens, frontdoor links, or customer-private narrative.
 

@@ -637,6 +637,25 @@
             gap: 8px;
         }
 
+        .knowledge-lesson-editor {
+            width: 100%;
+            min-height: 110px;
+            resize: vertical;
+            font: inherit;
+            line-height: 1.45;
+        }
+
+        .knowledge-edit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        .knowledge-keywords-editor {
+            min-height: 54px;
+            resize: vertical;
+        }
+
         .knowledge-audit-result {
             border: 1px solid var(--color-border);
             border-radius: 6px;
@@ -1325,6 +1344,14 @@
                 .replace(/"/g, '&quot;');
         }
 
+        function escapeAttr(value) {
+            return escapeHtml(value).replace(/'/g, '&#39;');
+        }
+
+        function selectedAttr(current, expected) {
+            return String(current || '') === expected ? ' selected' : '';
+        }
+
         async function writeClipboardText(text) {
             if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function' && window.isSecureContext) {
                 await navigator.clipboard.writeText(text);
@@ -1553,7 +1580,11 @@
                 <div class="knowledge-review-card">
                     <h3>${escapeHtml(item.work_item_id || item.source_candidate_id || 'helper work item')}</h3>
                     <div>${escapeHtml(item.summary || '')}</div>
-                    <div class="knowledge-review-meta">status: ${escapeHtml(item.status || 'pending')} · topic: ${escapeHtml(item.topic || '')}</div>
+                    ${item.lesson ? `<div class="field-note" style="margin-top:8px;">${escapeHtml(item.lesson)}</div>` : ''}
+                    <div class="knowledge-review-meta">
+                        status: ${escapeHtml(item.status || 'pending')} · topic: ${escapeHtml(item.topic || '')}
+                        ${Array.isArray(item.affected_issue_keys) && item.affected_issue_keys.length ? ` · issues: ${escapeHtml(item.affected_issue_keys.slice(0, 5).join(', '))}${item.affected_issue_keys.length > 5 ? '...' : ''}` : ''}
+                    </div>
                 </div>
             `).join('') : '<div class="field-note">No helper work items.</div>';
             panel.innerHTML = `
@@ -1573,34 +1604,68 @@
         }
 
         function renderPendingLessonCard(item) {
-            const id = escapeHtml(item.candidate_id || '');
+            const rawId = String(item.candidate_id || '');
+            const id = escapeHtml(rawId);
+            const attrId = escapeAttr(rawId);
+            const confidence = String(item.confidence || 'medium');
+            const knowledgeType = String(item.knowledge_type || 'lesson_learned');
+            const keywords = Array.isArray(item.keywords) ? item.keywords.join(', ') : '';
             const evidence = Array.isArray(item.evidence) ? item.evidence.slice(0, 3).map(ev => `<li>${escapeHtml(ev)}</li>`).join('') : '';
             return `
                 <div class="knowledge-review-card">
                     <h3>${id}</h3>
-                    <div>${escapeHtml(item.lesson || '')}</div>
+                    <label class="settings-field" style="margin:0;">
+                        <span>Lesson Text</span>
+                        <textarea class="knowledge-lesson-editor" data-knowledge-candidate-id="${attrId}">${escapeHtml(item.lesson || '')}</textarea>
+                    </label>
+                    <div class="knowledge-edit-grid">
+                        <label class="settings-field" style="margin:0;">
+                            <span>Confidence</span>
+                            <select data-knowledge-confidence-id="${attrId}">
+                                <option value="high"${selectedAttr(confidence, 'high')}>High</option>
+                                <option value="medium"${selectedAttr(confidence, 'medium')}>Medium</option>
+                                <option value="low"${selectedAttr(confidence, 'low')}>Low</option>
+                            </select>
+                        </label>
+                        <label class="settings-field" style="margin:0;">
+                            <span>Knowledge Type</span>
+                            <select data-knowledge-type-id="${attrId}">
+                                <option value="query_pattern"${selectedAttr(knowledgeType, 'query_pattern')}>Query Pattern</option>
+                                <option value="deploy_pattern"${selectedAttr(knowledgeType, 'deploy_pattern')}>Deploy Pattern</option>
+                                <option value="helper_contract"${selectedAttr(knowledgeType, 'helper_contract')}>Helper Contract</option>
+                                <option value="lesson_learned"${selectedAttr(knowledgeType, 'lesson_learned')}>Lesson Learned</option>
+                                <option value="gotcha"${selectedAttr(knowledgeType, 'gotcha')}>Gotcha</option>
+                            </select>
+                        </label>
+                    </div>
+                    <label class="settings-field" style="margin:0;">
+                        <span>Keywords</span>
+                        <textarea class="knowledge-keywords-editor" data-knowledge-keywords-id="${attrId}" placeholder="Comma-separated matching terms">${escapeHtml(keywords)}</textarea>
+                    </label>
                     <div class="knowledge-review-meta">
                         topic: ${escapeHtml(item.topic || '')} · type: ${escapeHtml(item.knowledge_type || '')} · confidence: ${escapeHtml(item.confidence || '')} · recurrence: ${escapeHtml(String(item.recurrence_count || 0))}
                     </div>
                     ${evidence ? `<ul>${evidence}</ul>` : ''}
                     <div class="knowledge-review-actions">
-                        <button type="button" class="button-primary" onclick="knowledgeAction('${id}', 'accept')">Accept</button>
-                        <button type="button" class="button-secondary" onclick="knowledgeAction('${id}', 'helper-work-item')">Convert to Helper Work Item</button>
-                        <button type="button" class="button-danger" onclick="knowledgeAction('${id}', 'reject')">Reject</button>
+                        <button type="button" class="button-primary" onclick="knowledgeAction('${attrId}', 'accept')">Accept Edited Lesson</button>
+                        <button type="button" class="button-secondary" onclick="knowledgeAction('${attrId}', 'helper-work-item')">Convert to Helper Work Item</button>
+                        <button type="button" class="button-danger" onclick="knowledgeAction('${attrId}', 'reject')">Reject</button>
                     </div>
                 </div>
             `;
         }
 
         function renderAcceptedLessonCard(item) {
-            const id = escapeHtml(item.candidate_id || '');
+            const rawId = String(item.candidate_id || '');
+            const id = escapeHtml(rawId);
+            const attrId = escapeAttr(rawId);
             return `
                 <div class="knowledge-review-card">
                     <h3>${id}</h3>
                     <div>${escapeHtml(item.lesson || '')}</div>
                     <div class="knowledge-review-meta">topic: ${escapeHtml(item.topic || '')} · type: ${escapeHtml(item.knowledge_type || '')}</div>
                     <div class="knowledge-review-actions">
-                        <button type="button" class="button-secondary" onclick="knowledgeAction('${id}', 'retire')">Retire</button>
+                        <button type="button" class="button-secondary" onclick="knowledgeAction('${attrId}', 'retire')">Retire</button>
                     </div>
                 </div>
             `;
@@ -1609,13 +1674,36 @@
         async function knowledgeAction(candidateId, action) {
             const status = document.getElementById('knowledge-audit-status');
             try {
-                const body = action === 'reject' || action === 'retire'
-                    ? JSON.stringify({ reason: action === 'reject' ? 'Rejected from Settings review.' : 'Retired from Settings review.' })
-                    : '{}';
+                let payload = {};
+                if (action === 'reject' || action === 'retire') {
+                    payload = { reason: action === 'reject' ? 'Rejected from Settings review.' : 'Retired from Settings review.' };
+                } else if (action === 'accept') {
+                    const editor = Array.from(document.querySelectorAll('textarea[data-knowledge-candidate-id]'))
+                        .find(el => el.dataset.knowledgeCandidateId === candidateId);
+                    const confidenceInput = Array.from(document.querySelectorAll('[data-knowledge-confidence-id]'))
+                        .find(el => el.dataset.knowledgeConfidenceId === candidateId);
+                    const typeInput = Array.from(document.querySelectorAll('[data-knowledge-type-id]'))
+                        .find(el => el.dataset.knowledgeTypeId === candidateId);
+                    const keywordsInput = Array.from(document.querySelectorAll('textarea[data-knowledge-keywords-id]'))
+                        .find(el => el.dataset.knowledgeKeywordsId === candidateId);
+                    const lesson = editor ? editor.value.trim() : '';
+                    if (!lesson) throw new Error('Lesson text is required before accepting.');
+                    const keywords = keywordsInput && keywordsInput.value.trim()
+                        ? keywordsInput.value.split(',').map(item => item.trim()).filter(Boolean)
+                        : [];
+                    payload = {
+                        edit: {
+                            lesson,
+                            confidence: confidenceInput ? confidenceInput.value : undefined,
+                            knowledge_type: typeInput ? typeInput.value : undefined,
+                            keywords,
+                        },
+                    };
+                }
                 const resp = await fetch(`/api/knowledge/review/${encodeURIComponent(candidateId)}/${action}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body,
+                    body: JSON.stringify(payload),
                 });
                 const data = await resp.json();
                 if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
@@ -1664,8 +1752,16 @@
             if (!result) return;
             const created = Number(summary.candidates_created || 0);
             const helpers = Number(summary.helper_work_items_created || 0);
-            const noNewReason = created === 0
-                ? '<li>No new pending lessons were created. Matching signals are either below the recurrence threshold or already covered by an existing candidate.</li>'
+            const refined = Number(summary.pending_lessons_refined || 0);
+            const converted = Number(summary.pending_lessons_converted_to_helper || 0);
+            const suppressedExisting = Number(summary.pending_lessons_suppressed || 0);
+            const acceptedRefined = Number(summary.accepted_lessons_refined || 0);
+            const acceptedRetired = Number(summary.accepted_lessons_retired || 0);
+            const suppressedNew = Number(summary.suppressed_groups || 0);
+            const helperOnly = Number(summary.helper_only_groups || 0);
+            const totalActions = created + helpers + refined + converted + suppressedExisting + acceptedRefined + acceptedRetired + suppressedNew + helperOnly;
+            const noNewReason = totalActions === 0
+                ? '<li>No review changes were made. Matching signals are either below the recurrence threshold or already covered by an existing candidate.</li>'
                 : '';
             const candidateIds = Array.isArray(summary.candidate_ids) && summary.candidate_ids.length
                 ? `<li>New candidates: ${summary.candidate_ids.map(id => escapeHtml(id)).join(', ')}</li>`
@@ -1684,6 +1780,13 @@
                     <li>Signal groups considered: ${escapeHtml(String(summary.groups_considered || 0))}</li>
                     <li>Below-threshold groups: ${escapeHtml(String(summary.below_threshold_groups || 0))}</li>
                     <li>Groups already covered by existing candidates: ${escapeHtml(String(summary.existing_candidate_groups || 0))}</li>
+                    <li>Existing pending lessons refined: ${escapeHtml(String(refined))}</li>
+                    <li>Existing pending lessons converted to helper work: ${escapeHtml(String(converted))}</li>
+                    <li>Existing pending lessons suppressed: ${escapeHtml(String(suppressedExisting))}</li>
+                    <li>Existing accepted lessons refined: ${escapeHtml(String(acceptedRefined))}</li>
+                    <li>Existing accepted lessons retired: ${escapeHtml(String(acceptedRetired))}</li>
+                    <li>New signal groups routed directly to helper work: ${escapeHtml(String(helperOnly))}</li>
+                    <li>Noisy signal groups suppressed: ${escapeHtml(String(suppressedNew))}</li>
                     <li>Pending lessons created: ${escapeHtml(String(created))}</li>
                     <li>Helper work items created: ${escapeHtml(String(helpers))}</li>
                     ${candidateIds}

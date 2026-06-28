@@ -66,6 +66,21 @@ class KnowledgeSelection:
     reasons: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class LessonRefinement:
+    """Review-ready decision for a grouped set of audit signals."""
+
+    action: str
+    trigger: str
+    lesson: str
+    recommended_file: str
+    knowledge_type: str
+    confidence: str
+    risk: str = "low"
+    keywords: tuple[str, ...] = ()
+    reason: str = ""
+
+
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -641,16 +656,307 @@ def _read_auditor_state(outputs: Path) -> dict[str, Any]:
 
 def _candidate_exists(outputs: Path, source_signal_ids: list[str]) -> bool:
     target = set(source_signal_ids)
-    for path in (knowledge_root(outputs) / "pending-lessons").glob("*.json"):
+    for directory in ("pending-lessons", "accepted-lessons", "rejected-lessons"):
+        for path in (knowledge_root(outputs) / directory).glob("*.json"):
+            data = _load_json(path, {})
+            if target == set(data.get("source_signal_ids") or []):
+                return True
+    for path in (knowledge_root(outputs) / "helper-work-items").glob("*.json"):
         data = _load_json(path, {})
         if target == set(data.get("source_signal_ids") or []):
             return True
     return False
 
 
+def _signals_for_candidate(outputs: Path, candidate: dict[str, Any]) -> list[dict[str, Any]]:
+    signals: list[dict[str, Any]] = []
+    for signal_id in candidate.get("source_signal_ids") or []:
+        if not isinstance(signal_id, str) or not signal_id:
+            continue
+        signal = _load_json(knowledge_root(outputs) / "signals" / f"{safe_slug(signal_id)}.json", {})
+        if isinstance(signal, dict) and signal:
+            signals.append(signal)
+    return signals
+
+
+def _signal_type_topic_from_candidate(candidate: dict[str, Any], signals: list[dict[str, Any]]) -> tuple[str, str]:
+    for signal in signals:
+        signal_type = str(signal.get("signal_type") or "").strip()
+        topic = str(signal.get("topic") or "").strip()
+        if signal_type:
+            return signal_type, topic or str(candidate.get("topic") or "general")
+    candidate_id = str(candidate.get("candidate_id") or "")
+    for pattern in LOG_SIGNAL_PATTERNS:
+        signal_type = str(pattern["signal_type"])
+        if signal_type in candidate_id:
+            return signal_type, str(candidate.get("topic") or pattern.get("topic") or "general")
+    return "", str(candidate.get("topic") or "general")
+
+
+def _refine_lesson_candidate(signal_type: str, topic: str, group: list[dict[str, Any]]) -> LessonRefinement:
+    """Turn raw grouped signals into review-ready lesson or helper decisions."""
+    recurrence = len(group)
+    if signal_type == "invalid_query_type":
+        return LessonRefinement(
+            action="helper_work_item",
+            trigger="Repeated Salesforce INVALID_TYPE errors while querying data or metadata.",
+            lesson=(
+                "CaseOps should verify an object or metadata type exists before retrying after INVALID_TYPE. "
+                "Use verify-sobject, sobject-fields, describe, EntityDefinition, or another focused helper check "
+                "before broad SOQL retries. Treat absent optional or managed-package objects as investigation "
+                "evidence, not as a pipeline failure, unless the issue depends on that package being installed."
+            ),
+            recommended_file="query-patterns/object-existence.md",
+            knowledge_type="helper_contract",
+            confidence="high" if recurrence >= 3 else "medium",
+            keywords=("INVALID_TYPE", "EntityDefinition", "describe", "managed package", "sObject"),
+            reason="This is a shared pipeline guardrail gap and should be fixed in core knowledge/helpers, not stored as org-local runtime knowledge.",
+        )
+    if signal_type == "invalid_sfdx_workspace":
+        return LessonRefinement(
+            action="helper_work_item",
+            trigger="Repeated Salesforce CLI project commands ran outside a valid SFDX workspace.",
+            lesson=(
+                "CaseOps should run Salesforce project retrieve, deploy, and validate commands only inside an "
+                "issue-scoped Salesforce DX workspace that contains sfdx-project.json. Initialize missing "
+                "workspaces with scripts/sf_caseops_helper.py workspace-init or a guarded issue-scoped project "
+                "workspace before raw sf project commands run."
+            ),
+            recommended_file="salesforce-gotchas/deploy-and-sandbox.md",
+            knowledge_type="helper_contract",
+            confidence="high" if recurrence >= 3 else "medium",
+            keywords=("InvalidProjectWorkspaceError", "sfdx-project.json", "workspace-init", "sf project"),
+            reason="This is a shared pipeline/runtime guardrail gap and should be fixed in core command routing, not stored as org-local runtime knowledge.",
+        )
+    if signal_type == "json_decode_error":
+        return LessonRefinement(
+            action="helper_work_item",
+            trigger="Repeated CLI calls expected JSON but received non-JSON output.",
+            lesson=(
+                "CaseOps helpers should parse Salesforce CLI output defensively. When a command exits non-zero "
+                "or prints non-JSON output, preserve the stderr/stdout excerpt and classify the failure instead "
+                "of surfacing a raw JSONDecodeError."
+            ),
+            recommended_file="lessons-learned/general.md",
+            knowledge_type="helper_contract",
+            confidence="medium",
+            keywords=("JSONDecodeError", "Expecting value", "non-JSON", "stderr", "stdout"),
+            reason="This is a tooling robustness issue, so it should become helper work instead of runtime knowledge.",
+        )
+    if signal_type == "missing_file_or_directory":
+        return LessonRefinement(
+            action="suppress",
+            trigger="Repeated missing file, directory, or command messages.",
+            lesson=(
+                "The grouped missing-file signals combine unrelated causes such as optional output checks, old "
+                "paths, missing tools, and normal absence checks. Do not create a broad lesson from this bucket."
+            ),
+            recommended_file="lessons-learned/general.md",
+            knowledge_type="lesson_learned",
+            confidence="low",
+            reason="Too broad and mixed-root-cause to be useful as accepted knowledge.",
+        )
+    if signal_type == "helper_failure":
+        return LessonRefinement(
+            action="pending_lesson",
+            trigger=f"Repeated helper failure signal for {topic}.",
+            lesson=f"When {topic} helper failures recur, inspect the helper failure_class and next_action before retrying ad hoc commands.",
+            recommended_file=_recommended_file(signal_type, topic),
+            knowledge_type=_candidate_type(signal_type),
+            confidence="medium",
+        )
+    if signal_type == "invalid_query_field":
+        return LessonRefinement(
+            action="pending_lesson",
+            trigger=f"Repeated invalid query field signal for {topic}.",
+            lesson=f"When querying {topic} metadata or data, describe or verify fields first and use only returned fields.",
+            recommended_file=_recommended_file(signal_type, topic),
+            knowledge_type=_candidate_type(signal_type),
+            confidence="medium",
+        )
+    if signal_type == "helper_available_not_used":
+        return LessonRefinement(
+            action="pending_lesson",
+            trigger=f"Repeated helper available but not used signal for {topic}.",
+            lesson=f"When a deterministic helper exists for {topic}, use it before equivalent raw Salesforce commands.",
+            recommended_file=_recommended_file(signal_type, topic),
+            knowledge_type=_candidate_type(signal_type),
+            confidence="medium",
+        )
+    summaries = [str(item.get("summary")) for item in group if item.get("summary")]
+    return LessonRefinement(
+        action="pending_lesson",
+        trigger=f"Repeated {signal_type.replace('_', ' ')} signal for {topic}.",
+        lesson=_candidate_lesson_text(signal_type, topic, summaries),
+        recommended_file=_recommended_file(signal_type, topic),
+        knowledge_type=_candidate_type(signal_type),
+        confidence="medium" if recurrence >= 2 else "low",
+    )
+
+
+def _refine_existing_pending_candidates(outputs: Path) -> dict[str, Any]:
+    """Upgrade or retire pending candidates produced by older coarse audit logic."""
+    counts = {
+        "refined": 0,
+        "converted_to_helper": 0,
+        "suppressed": 0,
+        "helper_work_item_ids": [],
+    }
+    pending_dir = knowledge_root(outputs) / "pending-lessons"
+    for path in sorted(pending_dir.glob("*.json")):
+        candidate = _load_json(path, {})
+        if not isinstance(candidate, dict) or not candidate:
+            continue
+        signals = _signals_for_candidate(outputs, candidate)
+        signal_type, topic = _signal_type_topic_from_candidate(candidate, signals)
+        if not signal_type:
+            continue
+        group = signals or [{
+            "summary": candidate.get("lesson") or "",
+            "evidence": candidate.get("evidence") or [],
+            "signal_type": signal_type,
+            "topic": topic,
+        }]
+        refinement = _refine_lesson_candidate(signal_type, topic, group)
+        updated = copy.deepcopy(candidate)
+        updated.update({
+            "topic": topic,
+            "trigger": refinement.trigger,
+            "lesson": refinement.lesson,
+            "recommended_file": refinement.recommended_file,
+            "knowledge_type": refinement.knowledge_type,
+            "confidence": refinement.confidence,
+            "risk": refinement.risk,
+            "keywords": list(refinement.keywords),
+            "refined_at": utc_now_iso(),
+            "refinement_action": refinement.action,
+        })
+        if refinement.reason:
+            updated["refinement_reason"] = refinement.reason
+        validate_candidate(updated)
+        if refinement.action == "pending_lesson":
+            _write_json(path, updated)
+            _write_candidate_markdown(outputs, updated)
+            counts["refined"] += 1
+            continue
+        if refinement.action == "helper_work_item":
+            helper = _helper_work_item_from_candidate(updated)
+            helper["converted_at"] = utc_now_iso()
+            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper['work_item_id']}.json", helper)
+            counts["helper_work_item_ids"].append(helper["work_item_id"])
+            rejected = copy.deepcopy(updated)
+            rejected["status"] = "rejected"
+            rejected["rejected_at"] = utc_now_iso()
+            rejected["rejection_reason"] = refinement.reason or "Converted to helper work item."
+            validate_candidate(rejected)
+            _write_json(knowledge_root(outputs) / "rejected-lessons" / f"{rejected['candidate_id']}.json", rejected)
+            _write_candidate_markdown_in_dir(outputs, "rejected-lessons", rejected)
+            _move_candidate_to_status(outputs, str(updated["candidate_id"]), "pending-lessons", delete_only=True)
+            counts["converted_to_helper"] += 1
+            continue
+        if refinement.action == "suppress":
+            rejected = copy.deepcopy(updated)
+            rejected["status"] = "rejected"
+            rejected["rejected_at"] = utc_now_iso()
+            rejected["rejection_reason"] = refinement.reason or "Suppressed by lesson quality gate."
+            validate_candidate(rejected)
+            _write_json(knowledge_root(outputs) / "rejected-lessons" / f"{rejected['candidate_id']}.json", rejected)
+            _write_candidate_markdown_in_dir(outputs, "rejected-lessons", rejected)
+            _move_candidate_to_status(outputs, str(updated["candidate_id"]), "pending-lessons", delete_only=True)
+            counts["suppressed"] += 1
+    return counts
+
+
+def _refine_existing_accepted_lessons(outputs: Path) -> dict[str, Any]:
+    """Improve or retire active lessons when deterministic refinement supersedes them."""
+    counts = {"refined": 0, "retired": 0, "helper_work_item_ids": []}
+    accepted_dir = knowledge_root(outputs) / "accepted-lessons"
+    for path in sorted(accepted_dir.glob("*.json")):
+        lesson = _load_json(path, {})
+        if not isinstance(lesson, dict) or not lesson:
+            continue
+        status = str(lesson.get("status") or "").lower()
+        if status not in LESSON_ACTIVE_STATUSES:
+            continue
+        signals = _signals_for_candidate(outputs, lesson)
+        signal_type, topic = _signal_type_topic_from_candidate(lesson, signals)
+        if not signal_type:
+            continue
+        group = signals or [{
+            "summary": lesson.get("lesson") or "",
+            "evidence": lesson.get("evidence") or [],
+            "signal_type": signal_type,
+            "topic": topic,
+        }]
+        refinement = _refine_lesson_candidate(signal_type, topic, group)
+        if refinement.action == "helper_work_item":
+            helper = _helper_work_item_from_candidate({
+                **lesson,
+                "topic": topic,
+                "trigger": refinement.trigger,
+                "lesson": refinement.lesson,
+                "recommended_file": refinement.recommended_file,
+                "knowledge_type": refinement.knowledge_type,
+                "confidence": refinement.confidence,
+                "risk": refinement.risk,
+                "keywords": list(refinement.keywords),
+            })
+            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper['work_item_id']}.json", helper)
+            retired = copy.deepcopy(lesson)
+            retired["status"] = "retired"
+            retired["retired_at"] = utc_now_iso()
+            retired["retirement_reason"] = refinement.reason or "Superseded by core CaseOps knowledge/guardrails."
+            retired["refined_at"] = utc_now_iso()
+            retired["refinement_action"] = refinement.action
+            validate_candidate(retired)
+            _write_json(knowledge_root(outputs) / "rejected-lessons" / f"{retired['candidate_id']}.json", retired)
+            _write_candidate_markdown_in_dir(outputs, "rejected-lessons", retired)
+            _move_candidate_to_status(outputs, str(retired["candidate_id"]), "accepted-lessons", delete_only=True)
+            counts["retired"] += 1
+            counts["helper_work_item_ids"].append(helper["work_item_id"])
+            continue
+        if refinement.action == "suppress":
+            retired = copy.deepcopy(lesson)
+            retired["status"] = "retired"
+            retired["retired_at"] = utc_now_iso()
+            retired["retirement_reason"] = refinement.reason or "Superseded by current lesson quality gates."
+            retired["refined_at"] = utc_now_iso()
+            retired["refinement_action"] = refinement.action
+            validate_candidate(retired)
+            _write_json(knowledge_root(outputs) / "rejected-lessons" / f"{retired['candidate_id']}.json", retired)
+            _write_candidate_markdown_in_dir(outputs, "rejected-lessons", retired)
+            _move_candidate_to_status(outputs, str(retired["candidate_id"]), "accepted-lessons", delete_only=True)
+            counts["retired"] += 1
+            continue
+        if refinement.action != "pending_lesson":
+            continue
+        if str(lesson.get("lesson") or "") == refinement.lesson and str(lesson.get("confidence") or "") == refinement.confidence:
+            continue
+        updated = copy.deepcopy(lesson)
+        updated.update({
+            "topic": topic,
+            "trigger": refinement.trigger,
+            "lesson": refinement.lesson,
+            "recommended_file": refinement.recommended_file,
+            "knowledge_type": refinement.knowledge_type,
+            "confidence": refinement.confidence,
+            "risk": refinement.risk,
+            "keywords": list(refinement.keywords),
+            "refined_at": utc_now_iso(),
+            "refinement_action": refinement.action,
+        })
+        validate_candidate(updated)
+        _write_json(path, updated)
+        _write_candidate_markdown_in_dir(outputs, "accepted-lessons", updated)
+        counts["refined"] += 1
+    return counts
+
+
 def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any]:
     """Review signal/log artifacts and create pending lesson/helper candidates."""
     ensure_knowledge_defaults(outputs)
+    pending_refinement = _refine_existing_pending_candidates(outputs)
+    accepted_refinement = _refine_existing_accepted_lessons(outputs)
     log_signals_created = derive_signals_from_pipeline_logs(outputs)
     state = _read_auditor_state(outputs)
     processed = set(state.get("processed_signal_ids") or [])
@@ -663,6 +969,8 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
     candidates: list[dict[str, Any]] = []
     helper_items: list[dict[str, Any]] = []
     existing_candidate_groups = 0
+    suppressed_groups = 0
+    helper_only_groups = 0
     consumed_signal_ids: set[str] = set()
     for (signal_type, topic), group in grouped.items():
         if len(group) < min_recurrence:
@@ -683,25 +991,38 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
                     evidence.append(ev)
                 if len(evidence) >= 8:
                     break
+        refinement = _refine_lesson_candidate(signal_type, topic, group)
         candidate = {
             "schema_version": KNOWLEDGE_SCHEMA_VERSION,
             "candidate_id": f"lesson-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{safe_slug(signal_type)}-{safe_slug(topic)}",
             "source_signal_ids": source_ids,
             "affected_issue_keys": issue_keys,
             "topic": topic,
-            "trigger": f"Repeated {signal_type.replace('_', ' ')} signal for {topic}.",
-            "lesson": _candidate_lesson_text(signal_type, topic, summaries),
+            "trigger": refinement.trigger,
+            "lesson": refinement.lesson,
             "evidence": evidence or summaries[:5],
-            "recommended_file": _recommended_file(signal_type, topic),
-            "knowledge_type": _candidate_type(signal_type),
+            "recommended_file": refinement.recommended_file,
+            "knowledge_type": refinement.knowledge_type,
             "org_specific": False,
-            "confidence": "medium" if len(group) >= 2 else "low",
+            "confidence": refinement.confidence,
             "recurrence_count": len(group),
-            "risk": "low",
+            "risk": refinement.risk,
+            "keywords": list(refinement.keywords),
             "created_at": utc_now_iso(),
             "status": "pending",
         }
         validate_candidate(candidate)
+        if refinement.action == "suppress":
+            suppressed_groups += 1
+            consumed_signal_ids.update(source_ids)
+            continue
+        if refinement.action == "helper_work_item":
+            helper = _helper_work_item_from_candidate(candidate)
+            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper['work_item_id']}.json", helper)
+            helper_items.append(helper)
+            helper_only_groups += 1
+            consumed_signal_ids.update(source_ids)
+            continue
         _write_json(knowledge_root(outputs) / "pending-lessons" / f"{candidate['candidate_id']}.json", candidate)
         _write_candidate_markdown(outputs, candidate)
         candidates.append(candidate)
@@ -730,10 +1051,17 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
         "groups_considered": len(grouped),
         "below_threshold_groups": sum(1 for group in grouped.values() if len(group) < min_recurrence),
         "existing_candidate_groups": existing_candidate_groups,
+        "suppressed_groups": suppressed_groups,
+        "helper_only_groups": helper_only_groups,
+        "pending_lessons_refined": pending_refinement["refined"],
+        "pending_lessons_converted_to_helper": pending_refinement["converted_to_helper"],
+        "pending_lessons_suppressed": pending_refinement["suppressed"],
+        "accepted_lessons_refined": accepted_refinement["refined"],
+        "accepted_lessons_retired": accepted_refinement["retired"],
         "candidates_created": len(candidates),
-        "helper_work_items_created": len(helper_items),
+        "helper_work_items_created": len(helper_items) + int(pending_refinement["converted_to_helper"]) + len(accepted_refinement["helper_work_item_ids"]),
         "candidate_ids": [item["candidate_id"] for item in candidates],
-        "helper_work_item_ids": [item["work_item_id"] for item in helper_items],
+        "helper_work_item_ids": [item["work_item_id"] for item in helper_items] + list(pending_refinement["helper_work_item_ids"]) + list(accepted_refinement["helper_work_item_ids"]),
         "report_path": f"org-knowledge/audit-reports/audit-summary-{audit_id}.md",
     }
     _write_json(knowledge_root(outputs) / "audit-reports" / f"audit-summary-{audit_id}.json", summary)
@@ -950,8 +1278,11 @@ def _helper_work_item_from_candidate(candidate: dict[str, Any]) -> dict[str, Any
         "schema_version": KNOWLEDGE_SCHEMA_VERSION,
         "work_item_id": f"helper-{candidate['candidate_id']}",
         "source_candidate_id": candidate["candidate_id"],
+        "source_signal_ids": candidate.get("source_signal_ids") or [],
+        "affected_issue_keys": candidate.get("affected_issue_keys") or [],
         "topic": candidate["topic"],
         "summary": f"Evaluate helper/guardrail support for: {candidate['trigger']}",
+        "lesson": candidate.get("lesson") or "",
         "evidence": candidate.get("evidence") or [],
         "status": "pending",
         "created_at": utc_now_iso(),
@@ -971,6 +1302,13 @@ def _write_audit_markdown(
         f"- Signals reviewed: {summary['signals_reviewed']}",
         f"- Pending lesson candidates created: {summary['candidates_created']}",
         f"- Helper work items created: {summary['helper_work_items_created']}",
+        f"- Helper-only groups: {summary.get('helper_only_groups', 0)}",
+        f"- Suppressed noisy groups: {summary.get('suppressed_groups', 0)}",
+        f"- Existing pending lessons refined: {summary.get('pending_lessons_refined', 0)}",
+        f"- Existing pending lessons converted to helper work: {summary.get('pending_lessons_converted_to_helper', 0)}",
+        f"- Existing pending lessons suppressed: {summary.get('pending_lessons_suppressed', 0)}",
+        f"- Existing accepted lessons refined: {summary.get('accepted_lessons_refined', 0)}",
+        f"- Existing accepted lessons retired: {summary.get('accepted_lessons_retired', 0)}",
         "",
         "## Pending Lesson Candidates",
         "",

@@ -111,15 +111,280 @@ class KnowledgeServiceTests(unittest.TestCase):
             summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
             signals = list((outputs / "org-knowledge" / "signals").glob("*.json"))
             pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+            helpers = list((outputs / "org-knowledge" / "helper-work-items").glob("*.json"))
             second = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
 
         self.assertEqual(summary["log_signals_created"], 2)
         self.assertEqual(summary["signals_reviewed"], 2)
-        self.assertEqual(summary["candidates_created"], 1)
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(summary["helper_only_groups"], 1)
         self.assertEqual(len(signals), 2)
-        self.assertEqual(len(pending), 1)
+        self.assertEqual(pending, [])
+        self.assertEqual(len(helpers), 1)
         self.assertEqual(second["log_signals_created"], 0)
         self.assertEqual(second["candidates_created"], 0)
+
+    def test_manual_auditor_routes_invalid_type_to_helper_work(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            for key in ("OPEN-1", "OPEN-2", "OPEN-3"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="invalid_query_type",
+                    topic="salesforce-query",
+                    summary="Salesforce query or metadata command hit an invalid type error.",
+                    evidence=['{"name":"INVALID_TYPE"}'],
+                )
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+            helper = json.loads(next((outputs / "org-knowledge" / "helper-work-items").glob("*.json")).read_text(encoding="utf-8"))
+
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(summary["helper_only_groups"], 1)
+        self.assertEqual(summary["helper_work_items_created"], 1)
+        self.assertEqual(pending, [])
+        self.assertIn("verify an object or metadata type exists", helper["lesson"])
+        self.assertIn("INVALID_TYPE", helper["evidence"][0] if helper["evidence"] else "INVALID_TYPE")
+
+    def test_manual_auditor_routes_json_decode_to_helper_work_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            for key in ("OPEN-1", "OPEN-2"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="json_decode_error",
+                    topic="salesforce-cli-output",
+                    summary="A command expected JSON output but received non-JSON output.",
+                    evidence=["json.decoder.JSONDecodeError: Expecting value: line 1 column 1"],
+                )
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+            helpers = list((outputs / "org-knowledge" / "helper-work-items").glob("*.json"))
+            second = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(summary["helper_only_groups"], 1)
+        self.assertEqual(summary["helper_work_items_created"], 1)
+        self.assertEqual(pending, [])
+        self.assertEqual(len(helpers), 1)
+        self.assertEqual(second["helper_work_items_created"], 0)
+
+    def test_manual_auditor_suppresses_broad_missing_file_bucket(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            for key in ("OPEN-1", "OPEN-2"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="missing_file_or_directory",
+                    topic="filesystem",
+                    summary="Pipeline command referenced a missing file, directory, or command.",
+                    evidence=["ls: cannot access path: No such file or directory"],
+                )
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(summary["suppressed_groups"], 1)
+        self.assertEqual(summary["signals_consumed"], 2)
+        self.assertEqual(pending, [])
+
+    def test_manual_auditor_routes_invalid_sfdx_workspace_to_helper_work(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            for key in ("OPEN-1", "OPEN-2"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="invalid_sfdx_workspace",
+                    topic="deploy-command",
+                    summary="Salesforce CLI command ran outside a valid Salesforce DX project workspace.",
+                    evidence=["InvalidProjectWorkspaceError: /app does not contain a valid Salesforce DX project."],
+                )
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+            helper = json.loads(next((outputs / "org-knowledge" / "helper-work-items").glob("*.json")).read_text(encoding="utf-8"))
+
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(summary["helper_only_groups"], 1)
+        self.assertEqual(summary["helper_work_items_created"], 1)
+        self.assertEqual(pending, [])
+        self.assertIn("workspace-init", helper["lesson"])
+        self.assertIn("InvalidProjectWorkspaceError", helper["evidence"][0] if helper["evidence"] else "InvalidProjectWorkspaceError")
+
+    def test_manual_auditor_refines_existing_pending_candidates(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            signal_a = knowledge_service.write_signal(
+                outputs,
+                issue_key="OPEN-1",
+                run_id="OPEN-1",
+                source_step="LOG",
+                signal_type="invalid_query_type",
+                topic="salesforce-query",
+                summary="Salesforce query or metadata command hit an invalid type error.",
+                evidence=['{"name":"INVALID_TYPE"}'],
+            )
+            signal_b = knowledge_service.write_signal(
+                outputs,
+                issue_key="OPEN-2",
+                run_id="OPEN-2",
+                source_step="LOG",
+                signal_type="invalid_query_type",
+                topic="salesforce-query",
+                summary="Salesforce query or metadata command hit an invalid type error.",
+                evidence=['{"name":"INVALID_TYPE"}'],
+            )
+            old_candidate = {
+                "schema_version": 1,
+                "candidate_id": "lesson-old-invalid-query-type",
+                "source_signal_ids": [signal_a["signal_id"], signal_b["signal_id"]],
+                "affected_issue_keys": ["OPEN-1", "OPEN-2"],
+                "topic": "salesforce-query",
+                "trigger": "Repeated invalid query type signal for salesforce-query.",
+                "lesson": "Salesforce query or metadata command hit an invalid type error.",
+                "evidence": ['{"name":"INVALID_TYPE"}'],
+                "recommended_file": "local-gotchas/access-and-visibility.md",
+                "knowledge_type": "query_pattern",
+                "org_specific": False,
+                "confidence": "medium",
+                "recurrence_count": 2,
+                "risk": "low",
+                "created_at": "2026-06-27T00:00:00+00:00",
+                "status": "pending",
+            }
+            pending_path = outputs / "org-knowledge" / "pending-lessons" / "lesson-old-invalid-query-type.json"
+            pending_path.write_text(json.dumps(old_candidate), encoding="utf-8")
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+            helpers = list((outputs / "org-knowledge" / "helper-work-items").glob("*.json"))
+            rejected = json.loads(next((outputs / "org-knowledge" / "rejected-lessons").glob("*.json")).read_text(encoding="utf-8"))
+
+        self.assertEqual(summary["pending_lessons_converted_to_helper"], 1)
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(pending, [])
+        self.assertEqual(len(helpers), 1)
+        self.assertEqual(rejected["status"], "rejected")
+        self.assertEqual(rejected["refinement_action"], "helper_work_item")
+
+    def test_manual_auditor_converts_existing_json_decode_pending_to_helper(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            source_ids = []
+            for key in ("OPEN-1", "OPEN-2"):
+                signal = knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="json_decode_error",
+                    topic="salesforce-cli-output",
+                    summary="A command expected JSON output but received non-JSON output.",
+                    evidence=["json.decoder.JSONDecodeError: Expecting value"],
+                )
+                source_ids.append(signal["signal_id"])
+            candidate = {
+                "schema_version": 1,
+                "candidate_id": "lesson-old-json-decode",
+                "source_signal_ids": source_ids,
+                "affected_issue_keys": ["OPEN-1", "OPEN-2"],
+                "topic": "salesforce-cli-output",
+                "trigger": "Repeated json decode error signal for salesforce-cli-output.",
+                "lesson": "A command expected JSON output but received non-JSON output.",
+                "evidence": ["json.decoder.JSONDecodeError: Expecting value"],
+                "recommended_file": "lessons-learned/general.md",
+                "knowledge_type": "lesson_learned",
+                "org_specific": False,
+                "confidence": "medium",
+                "recurrence_count": 2,
+                "risk": "low",
+                "created_at": "2026-06-27T00:00:00+00:00",
+                "status": "pending",
+            }
+            (outputs / "org-knowledge" / "pending-lessons" / "lesson-old-json-decode.json").write_text(json.dumps(candidate), encoding="utf-8")
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+            helpers = list((outputs / "org-knowledge" / "helper-work-items").glob("*.json"))
+            rejected = list((outputs / "org-knowledge" / "rejected-lessons").glob("*.json"))
+
+        self.assertEqual(summary["pending_lessons_converted_to_helper"], 1)
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(pending, [])
+        self.assertEqual(len(helpers), 1)
+        self.assertEqual(len(rejected), 1)
+
+    def test_manual_auditor_refines_existing_accepted_lessons(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            source_ids = []
+            for key in ("OPEN-1", "OPEN-2"):
+                signal = knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="invalid_sfdx_workspace",
+                    topic="deploy-command",
+                    summary="Salesforce CLI command ran outside a valid Salesforce DX project workspace.",
+                    evidence=["InvalidProjectWorkspaceError: /app does not contain a valid Salesforce DX project."],
+                )
+                source_ids.append(signal["signal_id"])
+            accepted = {
+                "schema_version": 1,
+                "candidate_id": "lesson-old-sfdx-workspace",
+                "source_signal_ids": source_ids,
+                "affected_issue_keys": ["OPEN-1", "OPEN-2"],
+                "topic": "deploy-command",
+                "trigger": "Repeated invalid sfdx workspace signal for deploy-command.",
+                "lesson": "Salesforce CLI command ran outside a valid Salesforce DX project workspace.",
+                "evidence": ["InvalidProjectWorkspaceError"],
+                "recommended_file": "local-gotchas/deploy-and-sandbox.md",
+                "knowledge_type": "deploy_pattern",
+                "org_specific": False,
+                "confidence": "medium",
+                "recurrence_count": 2,
+                "risk": "low",
+                "created_at": "2026-06-27T00:00:00+00:00",
+                "status": "accepted",
+            }
+            accepted_path = outputs / "org-knowledge" / "accepted-lessons" / "lesson-old-sfdx-workspace.json"
+            accepted_path.write_text(json.dumps(accepted), encoding="utf-8")
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            accepted_remaining = list((outputs / "org-knowledge" / "accepted-lessons").glob("*.json"))
+            retired = json.loads(next((outputs / "org-knowledge" / "rejected-lessons").glob("*.json")).read_text(encoding="utf-8"))
+            helpers = list((outputs / "org-knowledge" / "helper-work-items").glob("*.json"))
+
+        self.assertEqual(summary["accepted_lessons_refined"], 0)
+        self.assertEqual(summary["accepted_lessons_retired"], 1)
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(accepted_remaining, [])
+        self.assertEqual(len(helpers), 1)
+        self.assertEqual(retired["status"], "retired")
+        self.assertEqual(retired["refinement_action"], "helper_work_item")
 
     def test_manual_auditor_does_not_process_below_threshold_singletons(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -282,13 +547,29 @@ class KnowledgeServiceTests(unittest.TestCase):
             with patch.object(app, "OUTPUTS", outputs):
                 client = app.app.test_client()
                 review_before = client.get("/api/knowledge/review")
-                accepted = client.post("/api/knowledge/review/lesson-api-1/accept", json={})
+                accepted = client.post(
+                    "/api/knowledge/review/lesson-api-1/accept",
+                    json={
+                        "edit": {
+                            "lesson": "Describe share objects before querying fields, then query only returned fields.",
+                            "confidence": "high",
+                            "knowledge_type": "query_pattern",
+                            "keywords": ["UserShare", "describe"],
+                        },
+                    },
+                )
                 review_after = client.get("/api/knowledge/review")
 
         self.assertEqual(review_before.status_code, 200)
         self.assertEqual(len(review_before.get_json()["items"]["pending_lessons"]), 1)
         self.assertEqual(accepted.status_code, 200)
         self.assertEqual(accepted.get_json()["item"]["status"], "accepted")
+        self.assertEqual(
+            accepted.get_json()["item"]["lesson"],
+            "Describe share objects before querying fields, then query only returned fields.",
+        )
+        self.assertEqual(accepted.get_json()["item"]["confidence"], "high")
+        self.assertEqual(accepted.get_json()["item"]["keywords"], ["UserShare", "describe"])
         self.assertEqual(len(review_after.get_json()["items"]["pending_lessons"]), 0)
         self.assertEqual(len(review_after.get_json()["items"]["accepted_lessons"]), 1)
 

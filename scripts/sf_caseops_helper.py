@@ -88,6 +88,8 @@ def _classify_failure(text: str, *, returncode: int | None = None, operation: st
     lower = (text or "").lower()
     if "invalidprojectworkspaceerror" in lower or "does not contain a valid salesforce dx project" in lower:
         return "invalid_project_workspace", False, "Run workspace-init or execute the command from an issue-scoped Salesforce DX project."
+    if "invalid_type" in lower or "invalid type:" in lower:
+        return "invalid_query_type", False, "Verify the object or metadata type exists before retrying. Use verify-sobject, sobject-fields, describe, or a focused helper check first."
     if "permission denied" in lower and ("/app" in lower or "\\app" in lower):
         return "permission_denied_app_path", False, "Use /data or the configured CaseOps metadata workspace, not /app."
     if "invalid_field" in lower or "no such column" in lower or "didn't understand relationship" in lower:
@@ -149,6 +151,13 @@ def _write_output(out_dir: str | None, filename: str, data: dict[str, Any]) -> N
     if not out_dir:
         return
     _write_json(Path(out_dir) / filename, data)
+
+
+def _extract_primary_sobject(soql: str) -> str | None:
+    match = re.search(r"\bfrom\s+([A-Za-z0-9_]+(?:__c|__mdt|__Share|Share|History)?)\b", soql or "", flags=re.IGNORECASE)
+    if not match:
+        return None
+    return match.group(1)
 
 
 def _query(org: str, soql: str, *, tooling: bool = False, timeout: int = 90) -> dict[str, Any]:
@@ -450,6 +459,34 @@ def sobject_fields(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def verify_sobject(args: argparse.Namespace) -> int:
+    describe = _describe_sobject(args.org, args.sobject, timeout=args.timeout)
+    result: dict[str, Any] = {
+        "kind": "verify-sobject",
+        "org": args.org,
+        "sobject": args.sobject,
+        "ok": bool(describe.get("ok")),
+        "exists": bool(describe.get("ok")),
+        "queryable": describe.get("queryable"),
+        "retrieveable": describe.get("retrieveable"),
+        "label": describe.get("label"),
+        "name": describe.get("name"),
+    }
+    if not describe.get("ok"):
+        result["failure_class"] = describe.get("failure_class") or "sf_cli_error"
+        result["retryable"] = describe.get("retryable", False)
+        result["next_action"] = describe.get("next_action") or "Verify the object API name before retrying the query."
+        result["describe"] = describe
+    elif describe.get("queryable") is False:
+        result["ok"] = False
+        result["failure_class"] = "not_queryable"
+        result["retryable"] = False
+        result["next_action"] = "The object exists but is not queryable. Use describe output to choose a different access path."
+    _write_output(args.out_dir, f"{_safe_name(args.sobject)}.verify-sobject.json", result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
 def workspace_init(args: argparse.Namespace) -> int:
     root = Path(args.root or os.environ.get("CASEOPS_METADATA_SANDBOX_WORK_DIR") or ".").resolve()
     attempt_name = args.attempt or "attempt-001"
@@ -493,9 +530,51 @@ def workspace_init(args: argparse.Namespace) -> int:
 
 
 def query_data(args: argparse.Namespace) -> int:
+    primary_sobject = _extract_primary_sobject(args.soql)
+    if not args.skip_existence_check and primary_sobject:
+        precheck = _describe_sobject(args.org, primary_sobject, timeout=args.timeout)
+        if not precheck.get("ok"):
+            result = {
+                "kind": "query-data",
+                "org": args.org,
+                "query": args.soql,
+                "ok": False,
+                "failure_class": precheck.get("failure_class") or "invalid_query_type",
+                "retryable": precheck.get("retryable", False),
+                "next_action": precheck.get("next_action") or "Verify the object exists before retrying the query.",
+                "precheck": {
+                    "kind": "verify-sobject",
+                    "sobject": primary_sobject,
+                    "ok": False,
+                },
+            }
+            _write_output(args.out_dir, f"{_safe_name(args.name or 'query-data')}.json", result)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1
+        if precheck.get("queryable") is False:
+            result = {
+                "kind": "query-data",
+                "org": args.org,
+                "query": args.soql,
+                "ok": False,
+                "failure_class": "not_queryable",
+                "retryable": False,
+                "next_action": "The object exists but is not queryable. Use describe output to choose a different access path.",
+                "precheck": {
+                    "kind": "verify-sobject",
+                    "sobject": primary_sobject,
+                    "ok": True,
+                    "queryable": False,
+                },
+            }
+            _write_output(args.out_dir, f"{_safe_name(args.name or 'query-data')}.json", result)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1
     result = _query(args.org, args.soql, tooling=False, timeout=args.timeout)
     result["kind"] = "query-data"
     result["org"] = args.org
+    if primary_sobject:
+        result["primarySObject"] = primary_sobject
     _write_output(args.out_dir, f"{_safe_name(args.name or 'query-data')}.json", result)
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0 if result.get("ok") else 1
@@ -788,6 +867,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out-dir")
     p.set_defaults(func=sobject_fields)
 
+    p = sub.add_parser("verify-sobject", help="Verify an sObject exists and is queryable before writing SOQL")
+    p.add_argument("--org", required=True)
+    p.add_argument("--sobject", required=True)
+    p.add_argument("--out-dir")
+    p.add_argument("--timeout", type=int, default=90)
+    p.set_defaults(func=verify_sobject)
+
     p = sub.add_parser("workspace-init", help="Create an issue-scoped metadata attempt workspace")
     p.add_argument("--issue-key", required=True)
     p.add_argument("--attempt", default="attempt-001")
@@ -800,6 +886,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--name")
     p.add_argument("--out-dir")
     p.add_argument("--timeout", type=int, default=90)
+    p.add_argument("--skip-existence-check", action="store_true")
     p.set_defaults(func=query_data)
 
     p = sub.add_parser("query-tooling", help="Run a Tooling API SOQL query and return structured JSON")
