@@ -637,6 +637,26 @@
             gap: 8px;
         }
 
+        .knowledge-audit-result {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-top: 8px;
+            background: var(--color-bg);
+            font-size: 13px;
+            color: var(--color-text);
+        }
+
+        .knowledge-audit-result strong {
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .knowledge-audit-result ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
         .error-box {
             display: none;
             margin-top: 8px;
@@ -1182,6 +1202,7 @@
                                 <label>&nbsp;</label>
                                 <button type="button" class="button-primary" id="run-knowledge-audit-btn">Run Manual Audit</button>
                                 <div id="knowledge-audit-status" class="field-note"></div>
+                                <div id="knowledge-audit-result" class="knowledge-audit-result" hidden></div>
                             </div>
                         </div>
 
@@ -1608,9 +1629,14 @@
 
         async function runKnowledgeAudit() {
             const status = document.getElementById('knowledge-audit-status');
+            const result = document.getElementById('knowledge-audit-result');
             const btn = document.getElementById('run-knowledge-audit-btn');
             if (btn) btn.disabled = true;
             if (status) status.textContent = 'Running audit...';
+            if (result) {
+                result.hidden = true;
+                result.innerHTML = '';
+            }
             try {
                 const minRecurrence = Number(document.getElementById('knowledge-auditor-min-recurrence')?.value || 2);
                 const resp = await fetch('/api/knowledge/audit', {
@@ -1621,7 +1647,9 @@
                 const data = await resp.json();
                 if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
                 const summary = data.summary || {};
-                if (status) status.textContent = `Reviewed ${summary.signals_reviewed || 0} signals; created ${summary.candidates_created || 0} candidates.`;
+                if (status) status.textContent = 'Audit complete.';
+                renderKnowledgeAuditResult(summary);
+                showBanner('Knowledge audit complete.', 'success');
                 await refreshKnowledgeReview();
             } catch (e) {
                 if (status) status.textContent = '';
@@ -1629,6 +1657,41 @@
             } finally {
                 if (btn) btn.disabled = false;
             }
+        }
+
+        function renderKnowledgeAuditResult(summary) {
+            const result = document.getElementById('knowledge-audit-result');
+            if (!result) return;
+            const created = Number(summary.candidates_created || 0);
+            const helpers = Number(summary.helper_work_items_created || 0);
+            const noNewReason = created === 0
+                ? '<li>No new pending lessons were created. Matching signals are either below the recurrence threshold or already covered by an existing candidate.</li>'
+                : '';
+            const candidateIds = Array.isArray(summary.candidate_ids) && summary.candidate_ids.length
+                ? `<li>New candidates: ${summary.candidate_ids.map(id => escapeHtml(id)).join(', ')}</li>`
+                : '';
+            const helperIds = Array.isArray(summary.helper_work_item_ids) && summary.helper_work_item_ids.length
+                ? `<li>New helper work items: ${summary.helper_work_item_ids.map(id => escapeHtml(id)).join(', ')}</li>`
+                : '';
+            const reportPath = summary.report_path
+                ? `<li>Report: ${escapeHtml(summary.report_path)}</li>`
+                : '';
+            result.innerHTML = `
+                <strong>Manual audit result${summary.audit_id ? ` ${escapeHtml(summary.audit_id)}` : ''}</strong>
+                <ul>
+                    <li>Signals reviewed: ${escapeHtml(String(summary.signals_reviewed || 0))}</li>
+                    <li>Signal groups considered: ${escapeHtml(String(summary.groups_considered || 0))}</li>
+                    <li>Below-threshold groups: ${escapeHtml(String(summary.below_threshold_groups || 0))}</li>
+                    <li>Groups already covered by existing candidates: ${escapeHtml(String(summary.existing_candidate_groups || 0))}</li>
+                    <li>Pending lessons created: ${escapeHtml(String(created))}</li>
+                    <li>Helper work items created: ${escapeHtml(String(helpers))}</li>
+                    ${candidateIds}
+                    ${helperIds}
+                    ${noNewReason}
+                    ${reportPath}
+                </ul>
+            `;
+            result.hidden = false;
         }
 
         function hideAuthenticatedOrgs() {

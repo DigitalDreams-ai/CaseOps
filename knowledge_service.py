@@ -537,6 +537,7 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
 
     candidates: list[dict[str, Any]] = []
     helper_items: list[dict[str, Any]] = []
+    existing_candidate_groups = 0
     consumed_signal_ids: set[str] = set()
     for (signal_type, topic), group in grouped.items():
         if len(group) < min_recurrence:
@@ -545,6 +546,7 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
         if not source_ids:
             continue
         if _candidate_exists(outputs, source_ids):
+            existing_candidate_groups += 1
             consumed_signal_ids.update(source_ids)
             continue
         issue_keys = sorted({str(item.get("issue_key")) for item in group if item.get("issue_key")})
@@ -592,18 +594,22 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
     }
     _write_json(knowledge_root(outputs) / "audit-reports" / "knowledge-auditor-state.json", state_payload)
 
+    audit_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     summary = {
         "schema_version": KNOWLEDGE_SCHEMA_VERSION,
         "created_at": utc_now_iso(),
+        "audit_id": audit_id,
         "signals_reviewed": len(signals),
         "signals_consumed": len(consumed_signal_ids),
+        "groups_considered": len(grouped),
         "below_threshold_groups": sum(1 for group in grouped.values() if len(group) < min_recurrence),
+        "existing_candidate_groups": existing_candidate_groups,
         "candidates_created": len(candidates),
         "helper_work_items_created": len(helper_items),
         "candidate_ids": [item["candidate_id"] for item in candidates],
         "helper_work_item_ids": [item["work_item_id"] for item in helper_items],
+        "report_path": f"org-knowledge/audit-reports/audit-summary-{audit_id}.md",
     }
-    audit_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     _write_json(knowledge_root(outputs) / "audit-reports" / f"audit-summary-{audit_id}.json", summary)
     _write_audit_markdown(outputs, audit_id, summary, candidates, helper_items)
     return summary
