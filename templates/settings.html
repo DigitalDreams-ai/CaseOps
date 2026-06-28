@@ -993,6 +993,11 @@
                                 <div class="field-note">Maximum full-queue passes before stopping. CaseOps stops earlier when no issue advances.</div>
                             </div>
                             <div class="settings-field">
+                                <label for="global-queue-progress-seconds">Queue Progress Interval</label>
+                                <input id="global-queue-progress-seconds" name="CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS" type="number" min="15" max="600" step="15" />
+                                <div class="field-note">Seconds between "still running" lines while parallel queue workers are active.</div>
+                            </div>
+                            <div class="settings-field">
                                 <label for="claude-total-timeout">Claude Total Timeout</label>
                                 <select id="claude-total-timeout" name="CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS">
                                     <option value="1200">20 minutes</option>

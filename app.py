@@ -32,7 +32,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from enum import Enum
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
 from functools import wraps
 from collections import Counter
 from pathlib import Path
@@ -510,6 +510,7 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
     "CASEOPS_ANTHROPIC_MODEL",
     "CASEOPS_GLOBAL_MAX_PARALLEL",
     "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
+    "CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS",
     "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
     "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
     "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
@@ -6240,7 +6241,13 @@ def _issue_pipeline_runtime_ready(run_key: str) -> bool:
     return True
 
 
-def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force_active: bool = False) -> None:
+def _stream_full_issue(
+    key: str,
+    run_key: str,
+    run_preflight: bool = True,
+    force_active: bool = False,
+    defer_daily_summary: bool = False,
+) -> None:
     """Run full CaseOps pipeline via the mounted caseops-pipeline playbook.
 
     This invokes Claude Code with direct file-path instructions for Steps 1-12 orchestration.
@@ -6273,6 +6280,13 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
             "Run the full CaseOps pipeline for this issue through completion of investigation, "
             "internal notes, and Jira customer message (and any sandbox/escalation steps the playbook "
             "requires for this issue). Read the mounted playbook files directly; do not invoke a slash-skill."
+            + (
+                " This issue is running inside a global queue. Complete issue-specific Steps 3-10 only; "
+                "do not create or edit the dated summary file. For Step 11, print exactly "
+                "`STEP_11 __summary__ defer-skip — global queue will update the dated summary after workers finish`, "
+                "then print `STEP_12 __complete__` when issue-specific artifacts are current."
+                if defer_daily_summary else ""
+            )
             + (
                 " Operator override: ignore the normal pre-escalated Jira-status skip for this issue and process it as active."
                 if force_active else ""
@@ -6319,7 +6333,13 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
         _log_emit_done(run_key)
 
 
-def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, force_active: bool = False) -> None:
+def _stream_reprocess_issue(
+    key: str,
+    run_key: str,
+    run_preflight: bool = True,
+    force_active: bool = False,
+    defer_daily_summary: bool = False,
+) -> None:
     """Reprocess single issue without Jira sync via the mounted caseops-pipeline playbook.
 
     Useful for re-running a single issue that failed or needs investigation updates.
@@ -6350,6 +6370,13 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
             key,
             "Reprocess the CaseOps pipeline for this issue without re-syncing from Jira. "
             "Read the mounted caseops-pipeline playbook files directly; do not invoke a slash-skill."
+            + (
+                " This issue is running inside a global queue. Complete issue-specific Steps 3-10 only; "
+                "do not create or edit the dated summary file. For Step 11, print exactly "
+                "`STEP_11 __summary__ defer-skip — global queue will update the dated summary after workers finish`, "
+                "then print `STEP_12 __complete__` when issue-specific artifacts are current."
+                if defer_daily_summary else ""
+            )
             + (
                 " Operator override: ignore the normal pre-escalated Jira-status skip for this issue and process it as active."
                 if force_active else ""
@@ -6401,6 +6428,10 @@ def _global_max_parallel() -> int:
 
 def _global_max_queue_passes() -> int:
     return _env_int("CASEOPS_GLOBAL_MAX_QUEUE_PASSES", 12, min_value=1, max_value=24)
+
+
+def _global_queue_progress_seconds() -> int:
+    return _env_int("CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS", 60, min_value=15, max_value=600)
 
 
 def _plan_pending_issue_steps(plan: dict[str, Any]) -> list[dict[str, Any]]:
@@ -6682,9 +6713,9 @@ def _run_global_issue_worker(key: str, index: int, total: int, *, reprocess: boo
     _log_emit_line(_GLOBAL_KEY, f"Queue: starting {key} ({index}/{total})")
     try:
         if reprocess:
-            _stream_reprocess_issue(key, key, run_preflight=False)
+            _stream_reprocess_issue(key, key, run_preflight=False, defer_daily_summary=True)
         else:
-            _stream_full_issue(key, key, run_preflight=False)
+            _stream_full_issue(key, key, run_preflight=False, defer_daily_summary=True)
 
         row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
         complete, detail, fingerprint, plan = _global_issue_queue_snapshot_from_row(row)
@@ -6738,6 +6769,46 @@ def _run_global_issue_worker(key: str, index: int, total: int, *, reprocess: boo
         return key, False, detail
 
 
+def _stream_global_dated_summary(issue_keys: list[str], run_key: str) -> bool:
+    """Update the shared dated summary once after global queue workers finish."""
+    keys = sorted({key for key in issue_keys if key})
+    if not keys:
+        return True
+
+    today_path = _today_issue_summary_path()
+    key_lines = "\n".join(f"- {key}" for key in keys)
+    prompt = (
+        "Update the CaseOps dated issue summary for the completed global queue run.\n\n"
+        "Hard rules:\n"
+        "- Do not sync Jira.\n"
+        "- Do not read from or write to Jira.\n"
+        "- Do not run Salesforce commands.\n"
+        "- Do not modify Production or Sandbox.\n"
+        "- Only read CaseOps output artifacts and update the dated summary markdown file.\n\n"
+        "Read these source files before writing:\n"
+        "- skills/caseops-pipeline/references/workflow.md, Step 11 only\n"
+        "- skills/caseops-pipeline/assets/issue-summary-template.md\n"
+        "- skills/caseops-pipeline/references/markdown-output-rules.md\n\n"
+        "Issues included in this global queue run:\n"
+        f"{key_lines}\n\n"
+        "For each issue, use the existing artifacts under outputs/ to determine the current disposition:\n"
+        "- outputs/investigations/<KEY>.md\n"
+        "- outputs/issue-briefs/<KEY>.md\n"
+        "- outputs/engineering-escalations/<KEY>.md when present\n"
+        "- outputs/internal-notes/<KEY>.md\n"
+        "- outputs/jira-messages/<KEY>.md\n"
+        "- outputs/test-reports/<KEY>.md\n"
+        "- outputs/pipeline-state/<KEY>.json\n\n"
+        f"Update today's dated summary at `{_path_relative_for_prompt(today_path)}`. "
+        "If it exists, Read it first and then Edit it. Use Write only if it does not exist.\n\n"
+        "Print `STEP_11 __summary__` before updating the summary. "
+        "Print `STEP_12 __complete__` after the summary is current. "
+        "Keep stdout concise and report the summary path and any issue that could not be summarized."
+    )
+    _log_emit_line(run_key, "Queue: updating dated summary once after worker completion")
+    return _do_stream_claude(prompt, run_key, "__global__")
+
+
 def _stream_global_skill(instruction: str, run_key: str) -> None:
     """Run global CaseOps pipeline as a CaseOps-owned issue queue."""
     try:
@@ -6789,6 +6860,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
         incomplete_details = dict(last_details)
         incomplete_reasons: dict[str, str] = {key: f"needs work; {detail}" for key, detail in last_details.items()}
         completed_keys: set[str] = set()
+        processed_keys: set[str] = set()
         stop_reason = "completed"
 
         _log_emit_line(
@@ -6812,6 +6884,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                         _log_emit_line(run_key, "Queue: stop requested; no further issues will be started.")
                         stop_reason = "stop requested"
                         break
+                    processed_keys.add(key)
                     pass_results.append(_run_global_issue_worker(key, idx, len(queue_keys), reprocess=reprocess))
             else:
                 with ThreadPoolExecutor(max_workers=max_parallel) as executor:
@@ -6819,14 +6892,39 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                         executor.submit(_run_global_issue_worker, key, idx, len(queue_keys), reprocess=reprocess): key
                         for idx, key in enumerate(queue_keys, start=1)
                     }
-                    for future in as_completed(futures):
-                        pass_results.append(future.result())
+                    pending = set(futures)
+                    progress_seconds = _global_queue_progress_seconds()
+                    last_progress_log = time.monotonic()
+                    pass_started = last_progress_log
+                    while pending:
+                        done, pending = wait(pending, timeout=5, return_when=FIRST_COMPLETED)
+                        for future in done:
+                            key = futures[future]
+                            processed_keys.add(key)
+                            try:
+                                pass_results.append(future.result())
+                            except Exception as exc:
+                                detail = f"failed unexpectedly: {type(exc).__name__}: {exc}"
+                                _log_emit_line(run_key, f"Queue: {key} {detail}")
+                                pass_results.append((key, False, detail))
                         if _run_stop_requested(run_key):
-                            for pending in futures:
-                                pending.cancel()
+                            for pending_future in pending:
+                                pending_future.cancel()
                             _log_emit_line(run_key, "Queue: stop requested; pending issue starts were canceled where possible.")
                             stop_reason = "stop requested"
                             break
+                        now = time.monotonic()
+                        if pending and now - last_progress_log >= progress_seconds:
+                            active_keys = [futures[pending_future] for pending_future in pending]
+                            active_preview = ", ".join(active_keys[:8])
+                            if len(active_keys) > 8:
+                                active_preview += f", +{len(active_keys) - 8} more"
+                            _log_emit_line(
+                                run_key,
+                                f"Queue pass {queue_pass}: still running {len(active_keys)} issue(s) "
+                                f"after {int(now - pass_started)}s: {active_preview}",
+                            )
+                            last_progress_log = now
 
             next_queue: list[str] = []
             pass_completed = 0
@@ -6928,6 +7026,11 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                             plan=plan,
                         ),
                     )
+
+        if processed_keys and stop_reason != "stop requested":
+            if not _stream_global_dated_summary(sorted(processed_keys), run_key):
+                _log_emit_line(run_key, "WARNING: dated summary update failed after global queue workers finished.")
+                stop_reason = "summary update failed" if not incomplete_details else f"{stop_reason}; summary update failed"
 
         complete = len(completed_keys)
         incomplete = len(incomplete_details)
@@ -9814,6 +9917,7 @@ def api_get_settings():
         "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
         "CASEOPS_GLOBAL_MAX_PARALLEL",
         "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
+        "CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
         "CASEOPS_SIMILAR_ISSUES_ENABLED",
@@ -9841,6 +9945,7 @@ def api_get_settings():
     defaults = {
         "CASEOPS_GLOBAL_MAX_PARALLEL": "1",
         "CASEOPS_GLOBAL_MAX_QUEUE_PASSES": "12",
+        "CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS": "60",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS": "false",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES": "false",
         "CASEOPS_SIMILAR_ISSUES_ENABLED": "true",
@@ -9894,6 +9999,7 @@ def api_post_settings():
                 "CASEOPS_ANTHROPIC_MODEL",
                 "CASEOPS_GLOBAL_MAX_PARALLEL",
                 "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
+                "CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS",
                 "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
                 "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
                 "CASEOPS_SIMILAR_ISSUES_ENABLED",

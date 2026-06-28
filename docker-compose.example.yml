@@ -1,6 +1,6 @@
 services:
   caseops:
-    image: ${CASEOPS_IMAGE:-ghcr.io/digitaldreams-ai/caseops:0.1.32}
+    image: ${CASEOPS_IMAGE:-ghcr.io/digitaldreams-ai/caseops:0.1.33}
     container_name: caseops
     ports:
       - "${CASEOPS_HOST_PORT:-5350}:8080"
