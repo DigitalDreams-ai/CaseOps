@@ -1680,6 +1680,7 @@
                 <strong>Manual audit result${summary.audit_id ? ` ${escapeHtml(summary.audit_id)}` : ''}</strong>
                 <ul>
                     <li>Signals reviewed: ${escapeHtml(String(summary.signals_reviewed || 0))}</li>
+                    <li>Signals created from logs: ${escapeHtml(String(summary.log_signals_created || 0))}</li>
                     <li>Signal groups considered: ${escapeHtml(String(summary.groups_considered || 0))}</li>
                     <li>Below-threshold groups: ${escapeHtml(String(summary.below_threshold_groups || 0))}</li>
                     <li>Groups already covered by existing candidates: ${escapeHtml(String(summary.existing_candidate_groups || 0))}</li>

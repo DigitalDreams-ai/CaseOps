@@ -509,6 +509,130 @@ def _read_signal_files(outputs: Path) -> list[dict[str, Any]]:
     return _read_json_files(knowledge_root(outputs) / "signals")
 
 
+LOG_SIGNAL_PATTERNS: tuple[dict[str, Any], ...] = (
+    {
+        "signal_type": "invalid_query_type",
+        "topic": "salesforce-query",
+        "needles": ("INVALID_TYPE", "Invalid type:"),
+        "summary": "Salesforce query or metadata command hit an invalid type error.",
+    },
+    {
+        "signal_type": "json_decode_error",
+        "topic": "salesforce-cli-output",
+        "needles": ("JSONDecodeError", "Expecting value: line 1 column"),
+        "summary": "A command expected JSON output but received non-JSON output.",
+    },
+    {
+        "signal_type": "invalid_sfdx_workspace",
+        "topic": "deploy-command",
+        "needles": ("InvalidProjectWorkspaceError", "does not contain a valid Salesforce DX project"),
+        "summary": "Salesforce CLI command ran outside a valid Salesforce DX project workspace.",
+    },
+    {
+        "signal_type": "missing_file_or_directory",
+        "topic": "filesystem",
+        "needles": ("No such file or directory", "cannot access", "not found"),
+        "summary": "Pipeline command referenced a missing file, directory, or command.",
+    },
+)
+
+
+def _classify_log_signal(text: str) -> dict[str, Any] | None:
+    lowered = text.lower()
+    for pattern in LOG_SIGNAL_PATTERNS:
+        if any(str(needle).lower() in lowered for needle in pattern["needles"]):
+            return pattern
+    return None
+
+
+def _iter_pipeline_log_records(outputs: Path) -> list[dict[str, Any]]:
+    logs_dir = outputs / "pipeline-logs"
+    if not logs_dir.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for path in sorted(logs_dir.glob("*.jsonl")):
+        if path.name == "__global__.jsonl":
+            continue
+        try:
+            lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        for line_no, line in enumerate(lines, start=1):
+            if not line.strip():
+                continue
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(item, dict):
+                continue
+            text = str(item.get("text") or "")
+            if not text:
+                continue
+            records.append({
+                "path": path,
+                "line_no": line_no,
+                "ts": str(item.get("ts") or ""),
+                "run_key": str(item.get("run_key") or path.stem),
+                "text": text,
+            })
+    return records
+
+
+def _write_log_signal_if_needed(outputs: Path, record: dict[str, Any], pattern: dict[str, Any]) -> bool:
+    issue_key = safe_slug(str(record.get("run_key") or ""), "issue")
+    signal_type = str(pattern["signal_type"])
+    signal_id = f"{issue_key}-LOG-{safe_slug(signal_type)}"
+    path = knowledge_root(outputs) / "signals" / f"{signal_id}.json"
+    if path.exists():
+        return False
+    evidence = str(record.get("text") or "")[:700]
+    payload = {
+        "schema_version": KNOWLEDGE_SCHEMA_VERSION,
+        "signal_id": signal_id,
+        "issue_key": issue_key,
+        "run_id": issue_key,
+        "source_step": "LOG",
+        "signal_type": signal_type,
+        "topic": str(pattern["topic"]),
+        "summary": redact_text(str(pattern["summary"])),
+        "evidence": [
+            redact_text(evidence),
+            redact_text(f"{Path(str(record.get('path') or '')).name}:{record.get('line_no') or 0}"),
+        ],
+        "helper_available": "",
+        "knowledge_selected": [],
+        "created_at": utc_now_iso(),
+    }
+    validate_signal(payload)
+    _write_json(path, payload)
+    return True
+
+
+def derive_signals_from_pipeline_logs(outputs: Path, *, max_created: int = 200) -> int:
+    """Create deterministic signal artifacts from high-confidence pipeline log patterns."""
+    ensure_knowledge_defaults(outputs)
+    created = 0
+    seen: set[tuple[str, str]] = set()
+    for record in _iter_pipeline_log_records(outputs):
+        pattern = _classify_log_signal(str(record.get("text") or ""))
+        if not pattern:
+            continue
+        issue_key = safe_slug(str(record.get("run_key") or ""), "issue")
+        key = (issue_key, str(pattern["signal_type"]))
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            if _write_log_signal_if_needed(outputs, record, pattern):
+                created += 1
+        except ValueError:
+            continue
+        if created >= max_created:
+            break
+    return created
+
+
 def _read_auditor_state(outputs: Path) -> dict[str, Any]:
     state_path = knowledge_root(outputs) / "audit-reports" / "knowledge-auditor-state.json"
     data = _load_json(state_path, {"processed_signal_ids": []})
@@ -525,8 +649,9 @@ def _candidate_exists(outputs: Path, source_signal_ids: list[str]) -> bool:
 
 
 def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any]:
-    """Review signal artifacts and create pending lesson/helper candidates."""
+    """Review signal/log artifacts and create pending lesson/helper candidates."""
     ensure_knowledge_defaults(outputs)
+    log_signals_created = derive_signals_from_pipeline_logs(outputs)
     state = _read_auditor_state(outputs)
     processed = set(state.get("processed_signal_ids") or [])
     signals = [item for item in _read_signal_files(outputs) if item.get("signal_id") not in processed]
@@ -600,6 +725,7 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
         "created_at": utc_now_iso(),
         "audit_id": audit_id,
         "signals_reviewed": len(signals),
+        "log_signals_created": log_signals_created,
         "signals_consumed": len(consumed_signal_ids),
         "groups_considered": len(grouped),
         "below_threshold_groups": sum(1 for group in grouped.values() if len(group) < min_recurrence),

@@ -94,6 +94,33 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(accepted, [])
         self.assertEqual(second["candidates_created"], 0)
 
+    def test_manual_auditor_derives_signals_from_pipeline_logs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            logs = outputs / "pipeline-logs"
+            logs.mkdir(parents=True)
+            for key in ("OPEN-1", "OPEN-2"):
+                record = {
+                    "ts": "2026-06-28T17:00:00+00:00",
+                    "run_key": key,
+                    "kind": "line",
+                    "text": 'Tool warning: command returned exit code 1. {"name":"INVALID_TYPE","errorCode":"INVALID_TYPE"}',
+                }
+                (logs / f"{key}.jsonl").write_text(json.dumps(record) + "\n", encoding="utf-8")
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            signals = list((outputs / "org-knowledge" / "signals").glob("*.json"))
+            pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+            second = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+
+        self.assertEqual(summary["log_signals_created"], 2)
+        self.assertEqual(summary["signals_reviewed"], 2)
+        self.assertEqual(summary["candidates_created"], 1)
+        self.assertEqual(len(signals), 2)
+        self.assertEqual(len(pending), 1)
+        self.assertEqual(second["log_signals_created"], 0)
+        self.assertEqual(second["candidates_created"], 0)
+
     def test_manual_auditor_does_not_process_below_threshold_singletons(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"
