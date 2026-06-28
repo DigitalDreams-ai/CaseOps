@@ -207,6 +207,7 @@ class GlobalQueueTests(unittest.TestCase):
         rows = [
             {"Key": "OPEN-1", "Status": "Open"},
             {"Key": "ENG-1", "Status": "Escalated to Engineering"},
+            {"Key": "CLOSED-1", "Status": "Resolved"},
             {"Key": "DONE-1", "Status": "Open"},
         ]
 
@@ -221,6 +222,14 @@ class GlobalQueueTests(unittest.TestCase):
                     "status": "Escalated to Engineering",
                     "next_step": {"step": 2, "name": "Triage pre-escalated issue", "status": "pending"},
                     "steps": [{"step": 2, "name": "Triage pre-escalated issue", "status": "pending"}],
+                }
+            if key == "CLOSED-1":
+                return False, "incomplete; next STEP_2 (Triage closed/resolved issue, pending)", f"fp-{key}", {
+                    "key": key,
+                    "mode": "closed",
+                    "status": "Resolved",
+                    "next_step": {"step": 2, "name": "Triage closed/resolved issue", "status": "pending"},
+                    "steps": [{"step": 2, "name": "Triage closed/resolved issue", "status": "pending"}],
                 }
             return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", f"fp-{key}", {
                 "key": key,
@@ -241,8 +250,12 @@ class GlobalQueueTests(unittest.TestCase):
 
         self.assertEqual(queued, ["OPEN-1"])
         self.assertIn(("ENG-1", "skip_escalated_to_engineering"), dispositions)
+        self.assertIn(("CLOSED-1", "skip_closed_or_resolved"), dispositions)
         self.assertIn(("DONE-1", "skip_unchanged_success"), dispositions)
-        self.assertTrue(any("escalated to engineering=1" in msg for msg in messages))
+        self.assertTrue(any("Queue skip: 1 issue — escalated to engineering;" in msg for msg in messages))
+        self.assertTrue(any("Queue skip: 1 issue — closed/resolved;" in msg for msg in messages))
+        self.assertFalse(any("Queue skip: ENG-1" in msg for msg in messages))
+        self.assertFalse(any("Queue skip: CLOSED-1" in msg for msg in messages))
         self.assertTrue(any("already current=1" in msg for msg in messages))
 
     def test_queue_disposition_skips_prior_unchanged_failure(self):

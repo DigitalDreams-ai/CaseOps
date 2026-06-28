@@ -6672,6 +6672,11 @@ def _select_global_issue_queue(run_key: str) -> list[str]:
     rows = _read_manifest()
     queued: list[str] = []
     skip_counts: Counter[str] = Counter()
+    aggregate_skip_dispositions = {
+        "skip_closed_or_resolved",
+        "skip_escalated_to_engineering",
+    }
+    aggregate_skip_reasons: dict[str, str] = {}
     for row in rows:
         key = (row.get("Key") or "").strip()
         if not key:
@@ -6688,16 +6693,32 @@ def _select_global_issue_queue(run_key: str) -> list[str]:
         else:
             skip_counts[disposition_name] += 1
             _write_queue_disposition(key, disposition)
-            if disposition_name not in {"skip_unchanged_success"}:
+            if disposition_name in aggregate_skip_dispositions:
+                aggregate_skip_reasons.setdefault(disposition_name, str(disposition.get("reason") or ""))
+            elif disposition_name not in {"skip_unchanged_success"}:
                 _log_emit_line(
                     run_key,
                     f"Queue skip: {key} — {_queue_disposition_skip_label(disposition_name)}; {disposition.get('reason')}",
                 )
+    for disposition_name in ("skip_closed_or_resolved", "skip_escalated_to_engineering"):
+        count = skip_counts.get(disposition_name, 0)
+        if count:
+            issue_word = "issue" if count == 1 else "issues"
+            _log_emit_line(
+                run_key,
+                f"Queue skip: {count} {issue_word} — {_queue_disposition_skip_label(disposition_name)}; "
+                f"{aggregate_skip_reasons.get(disposition_name) or _queue_disposition_skip_label(disposition_name)}",
+            )
     total_skipped = sum(skip_counts.values())
-    if skip_counts:
+    summary_counts = Counter({
+        name: count
+        for name, count in skip_counts.items()
+        if name not in aggregate_skip_dispositions
+    })
+    if summary_counts:
         summary = ", ".join(
             f"{_queue_disposition_skip_label(name)}={count}"
-            for name, count in sorted(skip_counts.items())
+            for name, count in sorted(summary_counts.items())
         )
         _log_emit_line(run_key, f"Queue skip summary: {summary}")
     _log_emit_line(run_key, f"Queue: {len(queued)} issue(s) need pipeline work; {total_skipped} skipped.")
