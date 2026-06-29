@@ -2040,7 +2040,12 @@ def _evaluate_transition_contract_step4_to_step5(hypothesis_text: str) -> dict[s
     missing: list[str] = []
     evidence: dict[str, bool] = {}
     text = hypothesis_text or ""
-    hypothesis_h2 = bool(re.search(r"(?im)^\s*#+\s*(root cause hypothesis|hypothesis)", text))
+    hypothesis_h2 = bool(
+        re.search(
+            r"(?im)^\s*#+\s*(?:(?:root\s+cause|problem|active|current)\s+)?hypothesis\b",
+            text,
+        )
+    )
     evidence["hypothesis_h2"] = hypothesis_h2
     if not hypothesis_h2:
         if not re.search(r"(?is)\broot cause\b", text):

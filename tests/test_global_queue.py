@@ -692,6 +692,18 @@ class GlobalQueueTests(unittest.TestCase):
             "STEP_9 Deploy and test in Sandbox (stale)",
         )
 
+    def test_step4_transition_contract_accepts_problem_hypothesis_heading(self):
+        contract = app._evaluate_transition_contract_step4_to_step5(
+            "## Problem Hypothesis (Active)\n\n"
+            "**Problem focus:** No Case Auto-Response Rule exists in Production.\n\n"
+            "The candidate solution is an operator Setup action."
+        )
+
+        self.assertEqual(contract["status"], "pass")
+        self.assertEqual(contract["missing"], [])
+        self.assertTrue(contract["observed"]["hypothesis_h2"])
+        self.assertTrue(contract["observed"]["problem_focus"])
+
     def test_ready_to_deploy_flag_requires_validated_confirmed_production_deploy(self):
         with tempfile.TemporaryDirectory() as tmp:
             state = {
