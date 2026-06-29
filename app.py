@@ -6607,6 +6607,8 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
     key = (row.get("Key") or plan.get("key") or "").strip()
     status = row.get("Status", "") or str(plan.get("status") or "")
     mode = str(plan.get("mode") or "").strip().lower()
+    routing = plan.get("routing") if isinstance(plan.get("routing"), dict) else {}
+    normalized_status = _normalized_jira_status(status)
     if _disposition(status) == "closed" or mode == "closed":
         return _queue_disposition_payload(
             disposition="skip_closed_or_resolved",
@@ -6620,6 +6622,15 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
         return _queue_disposition_payload(
             disposition="skip_escalated_to_engineering",
             reason="Jira status is escalated to engineering; Auto-Process should not reprocess it.",
+            fingerprint=fingerprint,
+            detail=detail,
+            row=row,
+            plan=plan,
+        )
+    if routing.get("path") == "engineering_required" and normalized_status in {"on hold", "waiting for engineering"}:
+        return _queue_disposition_payload(
+            disposition="blocked_by_engineering",
+            reason=f"Jira status is {status or 'On Hold'} and CaseOps routing requires Engineering; Auto-Process should not reprocess until the blocker changes.",
             fingerprint=fingerprint,
             detail=detail,
             row=row,

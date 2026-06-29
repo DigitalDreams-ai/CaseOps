@@ -258,6 +258,46 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertFalse(any("Queue skip: CLOSED-1" in msg for msg in messages))
         self.assertTrue(any("already current=1" in msg for msg in messages))
 
+    def test_global_queue_skips_on_hold_engineering_required_issue(self):
+        rows = [
+            {"Key": "OPEN-1", "Status": "Open"},
+            {"Key": "ENG-HOLD-1", "Status": "On Hold"},
+        ]
+
+        def snapshot_for(row):
+            key = row["Key"]
+            if key == "ENG-HOLD-1":
+                return False, "incomplete; next STEP_9 (Deploy and test in Sandbox, stale)", f"fp-{key}", {
+                    "key": key,
+                    "mode": "active",
+                    "status": "On Hold",
+                    "routing": {"path": "engineering_required"},
+                    "next_step": {"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"},
+                    "steps": [{"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"}],
+                }
+            return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", f"fp-{key}", {
+                "key": key,
+                "mode": "active",
+                "status": row.get("Status", ""),
+                "next_step": {"step": 5, "name": "Retrieve relevant Production metadata", "status": "pending"},
+                "steps": [{"step": 5, "name": "Retrieve relevant Production metadata", "status": "pending"}],
+            }
+
+        messages = []
+        dispositions = []
+        with (
+            patch.object(app, "_read_manifest", return_value=rows),
+            patch.object(app, "_global_issue_queue_snapshot_from_row", side_effect=snapshot_for),
+            patch.object(app, "_write_queue_disposition", side_effect=lambda key, payload: dispositions.append((key, payload["disposition"], payload["reason"]))),
+            patch.object(app, "_log_emit_line", side_effect=lambda _run_key, msg: messages.append(msg)),
+        ):
+            queued = app._select_global_issue_queue("__global__")
+
+        self.assertEqual(queued, ["OPEN-1"])
+        self.assertTrue(any(item[0] == "ENG-HOLD-1" and item[1] == "blocked_by_engineering" for item in dispositions))
+        self.assertTrue(any("Queue skip: ENG-HOLD-1 — blocked by engineering;" in msg for msg in messages))
+        self.assertTrue(any("blocked by engineering=1" in msg for msg in messages))
+
     def test_dated_summary_prompt_includes_authoritative_queue_outcomes(self):
         captured = {}
 
