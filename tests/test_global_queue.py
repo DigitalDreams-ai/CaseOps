@@ -1647,6 +1647,78 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertEqual(contract["primary_tag"], "in progress")
         self.assertNotIn("partial run", contract["condition_tags"])
 
+    def test_no_deploy_operator_report_recovers_from_unknown_durable_deliverable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            files = {
+                "jira/summary/OPEN-1.md": "# Jira Summary\n",
+                "investigations/OPEN-1.md": (
+                    "## Problem Location\n"
+                    "Specific artifact: Case Auto-Response Rule.\n"
+                    "Failure point: missing Production Setup admin action.\n"
+                    "Root cause: no active rule exists.\n"
+                    "Support-resolvable classification complete.\n"
+                ),
+                "hypothesis/OPEN-1.md": (
+                    "## Hypothesis\n"
+                    "Problem focus: missing Production Setup admin action.\n"
+                    "Root cause hypothesis: no active auto-response rule exists.\n"
+                ),
+                "test-reports/OPEN-1.md": "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: not-run",
+                        "- Fixed?: unknown",
+                        "- Production deploy required: n/a",
+                        "- Evidence: Operator action has not been executed by CaseOps.",
+                        "",
+                        "## Next Step",
+                        "Configure the rule in Production Setup, then run the final email receipt check.",
+                    ]
+                ),
+            }
+            for name, text in files.items():
+                path = outputs / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+            prod_org = app._safe_path_component(os.environ.get("CASEOPS_PRODUCTION_READ_ORG") or "production", "production")
+            api_version_raw = os.environ.get("CASEOPS_SALESFORCE_API_VERSION") or os.environ.get("SF_API_VERSION") or "v66.0"
+            api_version = app._safe_path_component(api_version_raw if str(api_version_raw).startswith("v") else f"v{api_version_raw}", "v66.0")
+            raw_metadata = outputs / "metadata-cache" / "production" / prod_org / api_version / "raw" / "OPEN-1" / "fixture.txt"
+            raw_metadata.parent.mkdir(parents=True, exist_ok=True)
+            raw_metadata.write_text("metadata evidence", encoding="utf-8")
+            degraded_state = {
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "routing": {
+                    "path": "support_resolvable",
+                    "confidence": "low",
+                    "reason": "Routing not yet persisted.",
+                },
+                "deliverable": {
+                    "type": "unknown",
+                    "production_deploy_required": "unknown",
+                    "no_deploy_reason": "",
+                },
+                "signatures": {},
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_read_pipeline_state", return_value=degraded_state),
+                patch.object(app, "_latest_issue_summary_path", return_value=None),
+                patch.object(app, "_issue_has_similar_issue_context", return_value=False),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+            ):
+                plan = app._build_pipeline_resume_plan("OPEN-1", status="Open")
+
+        step9 = next(step for step in plan["steps"] if step["step"] == 9)
+        step10 = next(step for step in plan["steps"] if step["step"] == 10)
+        self.assertEqual(step9["status"], "complete")
+        self.assertEqual(step10["status"], "pending")
+        self.assertEqual(plan["quality_gates"]["step_9_test_report"], "operator_action_pending")
+        self.assertEqual(plan["deliverable"]["type"], "admin_action")
+        self.assertEqual(plan["deliverable"]["production_deploy_required"], "n/a")
+
     def test_bulk_pipeline_state_repair_repairs_only_stale_states(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)

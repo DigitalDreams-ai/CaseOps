@@ -2570,6 +2570,13 @@ def _build_pipeline_resume_plan(
     )
     deliverable = _infer_deliverable_state(state, is_data_only_legacy=has_data_only_legacy)
     has_no_deploy = _deliverable_is_data_only(deliverable, legacy_detected=has_data_only_legacy)
+    if has_no_deploy and str(deliverable.get("production_deploy_required") or "unknown").strip().lower() == "unknown":
+        deliverable = {
+            **deliverable,
+            "type": "admin_action",
+            "production_deploy_required": "n/a",
+            "no_deploy_reason": "Recovered from no-deploy data/admin artifact evidence.",
+        }
 
     def sig_complete(field: str) -> bool:
         return _signatures_match(signatures.get(field, ""), stored_signatures.get(field))
@@ -2610,6 +2617,23 @@ def _build_pipeline_resume_plan(
     test_incomplete_contract = bool(test_current and test_verdict.get("contract_present") and not test_verdict.get("contract_complete"))
     test_unconfirmed = bool(test_current and not test_passed and not test_failed and not test_blocked and not test_not_run)
     test_needs_rerun = test_failed
+    if not has_no_deploy:
+        no_deploy_artifact_text = "\n".join([diagnosis_and_recent_text, test_report])
+        verdict_deploy_required = str(test_verdict.get("production_deploy_required") or "").strip().lower()
+        if (
+            test_current
+            and test_verdict.get("contract_complete")
+            and verdict_deploy_required in {"no", "n/a"}
+            and not _text_requires_production_deploy(no_deploy_artifact_text)
+            and _text_has_data_or_admin_action(no_deploy_artifact_text)
+        ):
+            deliverable = {
+                **deliverable,
+                "type": "admin_action",
+                "production_deploy_required": verdict_deploy_required,
+                "no_deploy_reason": "Recovered from structured test report and operator/admin action artifact evidence.",
+            }
+            has_no_deploy = True
     no_deploy_operator_report_ready = bool(
         has_no_deploy
         and test_not_run
@@ -8509,6 +8533,9 @@ def _text_has_data_or_admin_action(text: str) -> bool:
         r"(?is)\bpermission\s+set\s+assignment\b",
         r"(?is)\bassign(?:ing)?\s+(?:an?\s+)?(?:existing\s+)?permission\s+set\b",
         r"(?is)\bno-deploy\s+(?:admin|operator|support)\s+action\b",
+        r"(?is)\b(?:operator|admin|setup)\s+action\b",
+        r"(?is)\bproduction\s+setup\s+(?:admin\s+)?action\b",
+        r"(?is)\bsetup\s*>\s*[A-Za-z]",
     )
     return any(re.search(pattern, text) for pattern in patterns)
 
