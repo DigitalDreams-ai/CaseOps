@@ -3334,6 +3334,7 @@ def _repair_pipeline_state_from_artifacts_after_run(
     status: str = "",
     jira_updated: str | None = None,
     force_active: bool = False,
+    ignore_previous_state: bool = True,
 ) -> None:
     """Rebuild durable resume state after an interrupted run so the next run does not trust stale state."""
     try:
@@ -3342,12 +3343,12 @@ def _repair_pipeline_state_from_artifacts_after_run(
             status,
             jira_updated,
             force_active=force_active,
-            rebuild_from_artifacts=True,
+            rebuild_from_artifacts=ignore_previous_state,
         )
         plan["repair"] = {
             "rebuilt_from_artifacts": True,
             "rebuilt_at": datetime.now(timezone.utc).isoformat(),
-            "previous_state_ignored": True,
+            "previous_state_ignored": ignore_previous_state,
             "reason": reason,
             "queue_disposition_cleared": True,
         }
@@ -6333,6 +6334,7 @@ def _stream_full_issue(
                 status=row.get("Status", ""),
                 jira_updated=row.get("Updated", ""),
                 force_active=force_active,
+                ignore_previous_state=(run_status != "completed"),
             )
         if should_update_metrics:
             run_ended = datetime.now(timezone.utc)
@@ -6423,6 +6425,7 @@ def _stream_reprocess_issue(
                 status=row.get("Status", ""),
                 jira_updated=row.get("Updated", ""),
                 force_active=force_active,
+                ignore_previous_state=(run_status != "completed"),
             )
         if should_update_metrics:
             run_ended = datetime.now(timezone.utc)

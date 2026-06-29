@@ -581,7 +581,7 @@ class GlobalQueueTests(unittest.TestCase):
         events = []
 
         def record_repair(*args, **kwargs):
-            events.append(("repair", kwargs.get("reason")))
+            events.append(("repair", kwargs.get("reason"), kwargs.get("ignore_previous_state")))
 
         def record_metrics(*args, **kwargs):
             events.append(("metrics", kwargs.get("status")))
@@ -606,7 +606,7 @@ class GlobalQueueTests(unittest.TestCase):
         ):
             app._stream_reprocess_issue("DONE-1", "DONE-1", run_preflight=True)
 
-        self.assertEqual(events[:2], [("repair", "completed"), ("metrics", "completed")])
+        self.assertEqual(events[:2], [("repair", "completed", False), ("metrics", "completed")])
 
     def test_pipeline_failure_artifact_records_timeout_context(self):
         with tempfile.TemporaryDirectory() as tmp:
