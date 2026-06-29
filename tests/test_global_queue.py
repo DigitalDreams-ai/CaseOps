@@ -359,6 +359,74 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertEqual(same["disposition"], "stale_state_needs_repair")
         self.assertEqual(changed["disposition"], "ready_to_process")
 
+    def test_queue_disposition_prior_reason_is_not_recursively_wrapped(self):
+        row = {"Key": "STALE-1", "Status": "Open"}
+        plan = {
+            "key": "STALE-1",
+            "mode": "active",
+            "next_step": {"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"},
+            "steps": [{"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"}],
+        }
+        state = {
+            "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+            "queue_disposition": {
+                "disposition": "stale_state_needs_repair",
+                "fingerprint": "fp-same",
+                "reason": "Previous queue result is unchanged: stalled/no progress in pass 4",
+            },
+        }
+
+        with patch.object(app, "_read_pipeline_state", return_value=state):
+            disposition = app._queue_disposition_for_plan(
+                row,
+                plan,
+                "incomplete; next STEP_9 (Deploy and test in Sandbox, stale)",
+                "fp-same",
+            )
+
+        self.assertEqual(
+            disposition["reason"],
+            "Previous queue result is unchanged: stalled/no progress in pass 4",
+        )
+
+    def test_completed_run_metrics_clear_queue_disposition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            state_dir = outputs / "pipeline-state"
+            state_dir.mkdir(parents=True)
+            (state_dir / "DONE-1.json").write_text(
+                json.dumps({
+                    "key": "DONE-1",
+                    "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                    "signatures": {},
+                    "queue_disposition": {
+                        "disposition": "stale_state_needs_repair",
+                        "fingerprint": "old",
+                        "reason": "stalled/no progress",
+                    },
+                }),
+                encoding="utf-8",
+            )
+            now = app.datetime.now(app.timezone.utc)
+            metrics = {
+                "start": now.isoformat(),
+                "end": now.isoformat(),
+                "duration_seconds": 0.1,
+                "status": "completed",
+                "loop_events": {},
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_parse_run_metrics_from_logs", return_value=metrics),
+            ):
+                app._update_pipeline_run_metrics("DONE-1", "DONE-1", now, now, status="completed")
+
+            stored = json.loads((state_dir / "DONE-1.json").read_text(encoding="utf-8"))
+
+        self.assertNotIn("queue_disposition", stored)
+        self.assertEqual(stored["run_metrics"]["latest"]["status"], "completed")
+
     def test_pipeline_failure_artifact_records_timeout_context(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
@@ -1426,6 +1494,37 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertEqual(payload["skipped_count"], 1)
         self.assertEqual(calls, [("STALE-1", False)])
         manifest_changed_mock.assert_called_once_with(["STALE-1"])
+
+    def test_pipeline_state_repair_clears_queue_disposition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            plan = {
+                "key": "STALE-1",
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "queue_disposition": {
+                    "disposition": "stale_state_needs_repair",
+                    "fingerprint": "old",
+                    "reason": "stalled/no progress",
+                },
+                "next_step": {"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"},
+                "quality_gates": {},
+                "steps": [{"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"}],
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_find_manifest_row", return_value={"Key": "STALE-1", "Status": "Open", "Updated": ""}),
+                patch.object(app, "_build_pipeline_resume_plan", return_value=dict(plan)),
+                patch.object(app, "_invalidate_jira_summary_cache"),
+                patch.object(app, "manifest_changed"),
+            ):
+                result = app._repair_pipeline_state_key("STALE-1")
+
+            stored = json.loads((outputs / "pipeline-state" / "STALE-1.json").read_text(encoding="utf-8"))
+
+        self.assertTrue(result["ok"])
+        self.assertNotIn("queue_disposition", stored)
+        self.assertTrue(stored["repair"]["queue_disposition_cleared"])
 
     def test_legacy_escalated_status_aliases_normalize_to_one_canonical_tag(self):
         for status in ("Escalated to Engineering", "Escalated to Eng", "Jira Escalated"):

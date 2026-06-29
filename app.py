@@ -3331,7 +3331,9 @@ def _repair_pipeline_state_from_artifacts_after_run(
             "rebuilt_at": datetime.now(timezone.utc).isoformat(),
             "previous_state_ignored": True,
             "reason": reason,
+            "queue_disposition_cleared": True,
         }
+        plan.pop("queue_disposition", None)
         plan_path = _write_pipeline_resume_plan(plan)
         next_step = plan.get("next_step") or {}
         if next_step:
@@ -4144,6 +4146,8 @@ def _update_pipeline_run_metrics(
     if len(history) > 25:
         history = history[-25:]
 
+    if status == "completed":
+        state = _clear_queue_disposition(key, state)
     state["run_metrics"] = {
         "latest": latest,
         "history": history,
@@ -6507,6 +6511,13 @@ def _write_queue_disposition(key: str, payload: dict[str, Any]) -> None:
     _write_pipeline_resume_plan(state)
 
 
+def _clear_queue_disposition(key: str, state: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Remove transient global-queue skip state from a durable issue plan."""
+    current = dict(state or _read_pipeline_state(key) or {})
+    current.pop("queue_disposition", None)
+    return current
+
+
 def _queue_disposition_skip_label(disposition: str) -> str:
     labels = {
         "skip_unchanged_success": "already current",
@@ -6519,6 +6530,14 @@ def _queue_disposition_skip_label(disposition: str) -> str:
         "failed_retry_budget_exhausted": "failed retry budget exhausted",
     }
     return labels.get(disposition, disposition.replace("_", " "))
+
+
+def _queue_disposition_prior_reason(prior: dict[str, Any], disposition: str) -> str:
+    reason = str(prior.get("reason") or _queue_disposition_skip_label(disposition)).strip()
+    prefix = "Previous queue result is unchanged: "
+    while reason.startswith(prefix):
+        reason = reason[len(prefix):].strip()
+    return reason or _queue_disposition_skip_label(disposition)
 
 
 def _classify_incomplete_queue_disposition(plan: dict[str, Any], detail: str) -> str:
@@ -6584,9 +6603,10 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
         "failed_retry_budget_exhausted",
     }
     if prior_disposition in skip_dispositions and prior_fingerprint and prior_fingerprint == fingerprint:
+        prior_reason = _queue_disposition_prior_reason(prior, prior_disposition)
         return _queue_disposition_payload(
             disposition=prior_disposition,
-            reason=f"Previous queue result is unchanged: {prior.get('reason') or _queue_disposition_skip_label(prior_disposition)}",
+            reason=f"Previous queue result is unchanged: {prior_reason}",
             fingerprint=fingerprint,
             detail=detail,
             row=row,
@@ -9154,7 +9174,9 @@ def _repair_pipeline_state_key(key: str, row: dict[str, str] | None = None, *, e
         "rebuilt_from_artifacts": True,
         "rebuilt_at": datetime.now(timezone.utc).isoformat(),
         "previous_state_ignored": True,
+        "queue_disposition_cleared": True,
     }
+    plan.pop("queue_disposition", None)
     plan_path = _write_pipeline_resume_plan(plan)
     _invalidate_jira_summary_cache(key)
     investigation_cache.pop(key, None)
