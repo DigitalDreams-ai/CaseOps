@@ -355,7 +355,7 @@ Before writing the dated summary, check whether `outputs/summaries/YYYY-MM-DD/is
 - Operational/data/access follow-up count.
 - **Closed/Resolved** section: one row per skipped issue.
 - **Issue rollup** table: one row per active issue with Jira status, summary, disposition, **Production deploy?** (Gearset / No / N/A), next step. **Exclude** issues whose Jira status is already “Escalated to Engineering” from this table.
-- **Sandbox deployments / validations** section: Support-owned fixes only. Include **Prod deploy needed?** per row. **Do not** duplicate pre-escalated or Engineering-only rows here.
+- **Sandbox deployments / validations** section: Support-owned fixes only. Include **Prod deploy needed?** per row. **Only include issues whose test report has a structured Validation Verdict with `Validation Status: passed` and `Fixed?: yes`.** Treat partial passes, mixed results, blocked tests, failed tests, not-run tests, and unknown verdicts as not validated. Keep those issues in Issue Rollup with their precise next step. **Do not** duplicate pre-escalated or Engineering-only rows here.
 - **Escalated to Engineering** section: one unified table (pre-escalated at sync **and** escalated during processing). Columns: Issue, Jira Status, Component, Handoff File, Problem, Proposed Solution. **Only place** escalated issues appear together.
 - **Artifact index** for Jira summaries, investigations, issue briefs, engineering handoffs, closed/resolved logs, internal notes, Jira messages, and test reports.
 

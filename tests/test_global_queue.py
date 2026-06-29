@@ -287,6 +287,9 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertIn("Authoritative queue outcome facts", captured["prompt"])
         self.assertIn("BLOCKED-1: stalled/no progress in pass 3", captured["prompt"])
         self.assertIn("do not summarize it as complete", captured["prompt"])
+        self.assertIn("Validation Status: passed", captured["prompt"])
+        self.assertIn("Fixed?: yes", captured["prompt"])
+        self.assertIn("Partial Pass", captured["prompt"])
         self.assertIn("routing.path is unknown", captured["prompt"])
 
     def test_queue_disposition_skips_prior_unchanged_failure(self):
