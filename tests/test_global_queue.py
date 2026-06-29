@@ -572,6 +572,42 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertNotIn("queue_disposition", stored)
         self.assertEqual(stored["run_metrics"]["latest"]["status"], "completed")
 
+    def test_completed_reprocess_refreshes_state_from_artifacts_before_metrics(self):
+        plan = {
+            "key": "DONE-1",
+            "next_step": {"step": 5, "name": "Retrieve relevant Production metadata", "status": "pending"},
+            "steps": [{"step": 5, "name": "Retrieve relevant Production metadata", "status": "pending"}],
+        }
+        events = []
+
+        def record_repair(*args, **kwargs):
+            events.append(("repair", kwargs.get("reason")))
+
+        def record_metrics(*args, **kwargs):
+            events.append(("metrics", kwargs.get("status")))
+            return {"status": kwargs.get("status"), "step_timings": {}, "duration_seconds": 0.1}
+
+        with (
+            patch.object(app, "_log_emit_run_start"),
+            patch.object(app, "_log_emit_line"),
+            patch.object(app, "_issue_pipeline_runtime_ready", return_value=True),
+            patch.object(app, "_read_manifest", return_value=[{"Key": "DONE-1", "Status": "Open", "Updated": "2026-06-29T00:00:00.000+0000"}]),
+            patch.object(app, "_prepare_resume_plan", return_value=(plan, Path("pipeline-state/DONE-1.json"), "resume")),
+            patch.object(app, "_log_resume_plan_summary"),
+            patch.object(app, "_resume_plan_short_circuit", return_value=False),
+            patch.object(app, "_build_claude_prompt", return_value="prompt"),
+            patch.object(app, "_do_stream_claude", return_value=True),
+            patch.object(app, "_repair_pipeline_state_from_artifacts_after_run", side_effect=record_repair),
+            patch.object(app, "_update_pipeline_run_metrics", side_effect=record_metrics),
+            patch.object(app, "_finish_run_control"),
+            patch.object(app, "_invalidate_jira_summary_cache"),
+            patch.object(app, "_invalidate_issues_api_cache"),
+            patch.object(app, "_log_emit_done"),
+        ):
+            app._stream_reprocess_issue("DONE-1", "DONE-1", run_preflight=True)
+
+        self.assertEqual(events[:2], [("repair", "completed"), ("metrics", "completed")])
+
     def test_pipeline_failure_artifact_records_timeout_context(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)

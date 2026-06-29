@@ -6325,7 +6325,7 @@ def _stream_full_issue(
         else:
             run_status = _status_from_latest_failure_artifact(key, run_key)
     finally:
-        if should_update_metrics and run_status != "completed":
+        if should_update_metrics:
             _repair_pipeline_state_from_artifacts_after_run(
                 key,
                 run_key,
@@ -6415,7 +6415,7 @@ def _stream_reprocess_issue(
         else:
             run_status = _status_from_latest_failure_artifact(key, run_key)
     finally:
-        if should_update_metrics and run_status != "completed":
+        if should_update_metrics:
             _repair_pipeline_state_from_artifacts_after_run(
                 key,
                 run_key,
