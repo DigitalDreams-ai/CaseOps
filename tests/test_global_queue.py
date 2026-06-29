@@ -1182,6 +1182,11 @@ class GlobalQueueTests(unittest.TestCase):
             self.assertTrue(flags["is_complete_no_deploy"])
             self.assertEqual(contract["primary_tag"], "complete no deploy")
 
+    def test_no_gearset_deployment_needed_does_not_require_production_deploy(self):
+        self.assertFalse(app._text_requires_production_deploy("No Gearset deployment needed."))
+        self.assertFalse(app._text_requires_production_deploy("No Gearset promotion required."))
+        self.assertTrue(app._text_requires_production_deploy("Gearset deployment required."))
+
     def test_data_only_requires_data_or_admin_action_evidence_and_confirmed_verdict(self):
         with tempfile.TemporaryDirectory() as tmp:
             test_dir = Path(tmp) / "test-reports"

@@ -8501,7 +8501,7 @@ def _text_requires_production_deploy(text: str) -> bool:
         r"(?is)production\s+(?:metadata\s+)?deploy(?:ment)?\s+required[^.\n|:]*[:?|]?\s*\*{0,2}yes\b",
         r"(?is)production\s+(?:metadata\s+)?deploy(?:ment)?\s+required[^.\n]*\bgearset\b",
         r"(?is)\b(?:yes|ready)\s*[-—]\s*gearset\b",
-        r"(?is)\bgearset\s+(?:promotion|deploy(?:ment)?)\s+(?:required|needed)\b",
+        r"(?is)(?<!\bno\s)(?<!\bnot\s)\bgearset\s+(?:promotion|deploy(?:ment)?)\s+(?:required|needed)\b",
         r"(?is)\bmust\s+(?:be\s+)?(?:promote|promoted|deploy|deployed)\s+(?:from\s+sandbox\s+)?to\s+production\b",
         r"(?is)\bdeploy\s+(?:.+?\s+)?to\s+production\s+via\s+gearset\b",
         r"(?is)\bproduction\s+deployment\s+via\s+gearset\b",
