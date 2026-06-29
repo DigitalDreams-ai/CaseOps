@@ -385,6 +385,58 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertIn("stalled/no progress in pass 1", summary["outcomes"]["ISSUE-B"])
         self.assertIn("stalled/no progress in pass 2", summary["outcomes"]["ISSUE-A"])
 
+    def test_global_queue_does_not_requeue_same_blocked_step_for_artifact_churn(self):
+        rows = [{"Key": "BLOCKED-1", "Status": "Waiting for customer"}]
+        detail = "incomplete; next STEP_9 (Deploy and test in Sandbox, blocked)"
+        snapshot_calls = {"BLOCKED-1": 0}
+
+        def snapshot_for_key(key):
+            snapshot_calls[key] += 1
+            fingerprint = "fp-before" if snapshot_calls[key] == 1 else "fp-after-test-report-write"
+            return False, detail, fingerprint
+
+        def snapshot_from_row(row):
+            return False, detail, "fp-after-test-report-write", {
+                "key": row["Key"],
+                "mode": "active",
+                "status": row.get("Status", ""),
+                "next_step": {"step": 9, "name": "Deploy and test in Sandbox", "status": "blocked"},
+                "steps": [{"step": 9, "name": "Deploy and test in Sandbox", "status": "blocked"}],
+            }
+
+        messages = []
+        summary = {}
+        worker_calls = []
+
+        def worker(key, index, total, *, reprocess):
+            worker_calls.append(key)
+            return key, False, detail
+
+        with (
+            patch.object(app, "_issue_pipeline_runtime_ready", return_value=True),
+            patch.object(app, "_select_global_issue_queue", return_value=["BLOCKED-1"]),
+            patch.object(app, "_global_issue_queue_snapshot", side_effect=snapshot_for_key),
+            patch.object(app, "_global_issue_queue_snapshot_from_row", side_effect=snapshot_from_row),
+            patch.object(app, "_run_global_issue_worker", side_effect=worker),
+            patch.object(app, "_read_manifest", return_value=rows),
+            patch.object(app, "_global_max_parallel", return_value=1),
+            patch.object(app, "_global_max_queue_passes", return_value=12),
+            patch.object(app, "_run_stop_requested", return_value=False),
+            patch.object(app, "_stream_global_dated_summary", side_effect=lambda keys, _run_key, outcomes: summary.update({"keys": keys, "outcomes": outcomes}) or True),
+            patch.object(app, "_write_queue_disposition"),
+            patch.object(app, "manifest_changed"),
+            patch.object(app, "_log_emit_line", side_effect=lambda _run_key, msg: messages.append(msg)),
+            patch.object(app, "_log_emit_done"),
+            patch.object(app, "_finish_run_control"),
+        ):
+            app._stream_global_skill("reprocess all active issues without re-syncing from Jira", "__global__")
+
+        self.assertEqual(worker_calls, ["BLOCKED-1"])
+        self.assertFalse(any("Queue: requeueing" in msg for msg in messages))
+        self.assertTrue(any("Queue stalled: 1 active issue(s) still incomplete" in msg for msg in messages))
+        self.assertEqual(summary["keys"], ["BLOCKED-1"])
+        self.assertIn("artifact updated without planner advancement", summary["outcomes"]["BLOCKED-1"])
+
     def test_queue_disposition_skips_prior_unchanged_failure(self):
         row = {"Key": "FAIL-1", "Status": "Open", "Updated": "2026-06-08T00:00:00.000+0000"}
         signatures = {

@@ -7056,12 +7056,19 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                     incomplete_reasons[key] = f"worker {detail}; planner says {snapshot_detail}"
                 else:
                     incomplete_reasons[key] = f"needs more work; {snapshot_detail}"
-                if snapshot_detail != previous_detail or snapshot_fingerprint != previous_fingerprint:
+                detail_changed = snapshot_detail != previous_detail
+                fingerprint_changed = snapshot_fingerprint != previous_fingerprint
+                if detail_changed:
                     progressed += 1
                     incomplete_reasons[key] = f"advanced this pass; {snapshot_detail}"
                     next_queue.append(key)
                 elif not incomplete_reasons.get(key, "").startswith("worker "):
-                    incomplete_reasons[key] = f"stalled/no progress in pass {queue_pass}; {snapshot_detail}"
+                    if fingerprint_changed:
+                        incomplete_reasons[key] = (
+                            f"artifact updated without planner advancement in pass {queue_pass}; {snapshot_detail}"
+                        )
+                    else:
+                        incomplete_reasons[key] = f"stalled/no progress in pass {queue_pass}; {snapshot_detail}"
                     row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
                     try:
                         _complete, disposition_detail, disposition_fingerprint, disposition_plan = _global_issue_queue_snapshot_from_row(row)
@@ -7100,7 +7107,8 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                     )
                     _log_emit_line(run_key, "Queue stalled: stopping to avoid repeating the same failed work.")
                     for key, detail in current_pass_incomplete.items():
-                        if not incomplete_reasons.get(key, "").startswith("worker "):
+                        existing_reason = incomplete_reasons.get(key, "")
+                        if not existing_reason.startswith("worker ") and not existing_reason.startswith("artifact updated without planner advancement"):
                             incomplete_reasons[key] = f"stalled/no progress in pass {queue_pass}; {detail}"
                         row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
                         try:
