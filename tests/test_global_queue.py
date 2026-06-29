@@ -258,6 +258,37 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertFalse(any("Queue skip: CLOSED-1" in msg for msg in messages))
         self.assertTrue(any("already current=1" in msg for msg in messages))
 
+    def test_dated_summary_prompt_includes_authoritative_queue_outcomes(self):
+        captured = {}
+
+        def fake_stream(prompt, run_key, key):
+            captured["prompt"] = prompt
+            captured["run_key"] = run_key
+            captured["key"] = key
+            return True
+
+        with (
+            patch.object(app, "_today_issue_summary_path", return_value=Path("outputs/summaries/2026-06-29/issue-summary-2026-06-29.md")),
+            patch.object(app, "_do_stream_claude", side_effect=fake_stream),
+            patch.object(app, "_log_emit_line"),
+        ):
+            ok = app._stream_global_dated_summary(
+                ["OPEN-1", "BLOCKED-1"],
+                "__global__",
+                {
+                    "OPEN-1": "complete",
+                    "BLOCKED-1": "stalled/no progress in pass 3; incomplete; next STEP_9 (Deploy and test in Sandbox, blocked)",
+                },
+            )
+
+        self.assertTrue(ok)
+        self.assertEqual(captured["run_key"], "__global__")
+        self.assertEqual(captured["key"], "__global__")
+        self.assertIn("Authoritative queue outcome facts", captured["prompt"])
+        self.assertIn("BLOCKED-1: stalled/no progress in pass 3", captured["prompt"])
+        self.assertIn("do not summarize it as complete", captured["prompt"])
+        self.assertIn("routing.path is unknown", captured["prompt"])
+
     def test_queue_disposition_skips_prior_unchanged_failure(self):
         row = {"Key": "FAIL-1", "Status": "Open", "Updated": "2026-06-08T00:00:00.000+0000"}
         signatures = {

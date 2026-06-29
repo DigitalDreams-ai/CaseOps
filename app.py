@@ -6792,7 +6792,11 @@ def _run_global_issue_worker(key: str, index: int, total: int, *, reprocess: boo
         return key, False, detail
 
 
-def _stream_global_dated_summary(issue_keys: list[str], run_key: str) -> bool:
+def _stream_global_dated_summary(
+    issue_keys: list[str],
+    run_key: str,
+    issue_outcomes: dict[str, str] | None = None,
+) -> bool:
     """Update the shared dated summary once after global queue workers finish."""
     keys = sorted({key for key in issue_keys if key})
     if not keys:
@@ -6800,6 +6804,10 @@ def _stream_global_dated_summary(issue_keys: list[str], run_key: str) -> bool:
 
     today_path = _today_issue_summary_path()
     key_lines = "\n".join(f"- {key}" for key in keys)
+    outcome_lines = "\n".join(
+        f"- {key}: {issue_outcomes.get(key, 'processed; inspect pipeline-state') if issue_outcomes else 'processed; inspect pipeline-state'}"
+        for key in keys
+    )
     prompt = (
         "Update the CaseOps dated issue summary for the completed global queue run.\n\n"
         "Hard rules:\n"
@@ -6812,6 +6820,15 @@ def _stream_global_dated_summary(issue_keys: list[str], run_key: str) -> bool:
         "- skills/caseops-pipeline/references/workflow.md, Step 11 only\n"
         "- skills/caseops-pipeline/assets/issue-summary-template.md\n"
         "- skills/caseops-pipeline/references/markdown-output-rules.md\n\n"
+        "Authoritative queue outcome facts for this run:\n"
+        f"{outcome_lines}\n\n"
+        "Classification rules:\n"
+        "- Treat the queue outcome facts and outputs/pipeline-state/<KEY>.json as authoritative.\n"
+        "- If an issue outcome says incomplete, stalled, blocked, stale, or pending, do not summarize it as complete.\n"
+        "- Do not count an incomplete or blocked issue as support-resolvable unless pipeline-state routing.path is support_resolvable and the next step is clear.\n"
+        "- Do not count an issue as sandbox-validated unless its test report has an explicit passing structured verdict.\n"
+        "- Do not infer Production readiness from a Sandbox pass; Production deploy readiness requires a specific artifact or state that says it is ready.\n"
+        "- If routing.path is unknown, classify the disposition as incomplete/needs review and preserve the next step from pipeline-state.\n\n"
         "Issues included in this global queue run:\n"
         f"{key_lines}\n\n"
         "For each issue, use the existing artifacts under outputs/ to determine the current disposition:\n"
@@ -6911,11 +6928,24 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                     pass_results.append(_run_global_issue_worker(key, idx, len(queue_keys), reprocess=reprocess))
             else:
                 with ThreadPoolExecutor(max_workers=max_parallel) as executor:
-                    futures = {
-                        executor.submit(_run_global_issue_worker, key, idx, len(queue_keys), reprocess=reprocess): key
-                        for idx, key in enumerate(queue_keys, start=1)
-                    }
-                    pending = set(futures)
+                    queue_items = list(enumerate(queue_keys, start=1))
+                    futures: dict[Any, str] = {}
+                    pending: set[Any] = set()
+                    next_submit_index = 0
+
+                    def submit_next() -> None:
+                        nonlocal next_submit_index
+                        if next_submit_index >= len(queue_items):
+                            return
+                        idx, key = queue_items[next_submit_index]
+                        next_submit_index += 1
+                        future = executor.submit(_run_global_issue_worker, key, idx, len(queue_keys), reprocess=reprocess)
+                        futures[future] = key
+                        pending.add(future)
+
+                    for _ in range(min(max_parallel, len(queue_items))):
+                        submit_next()
+
                     progress_seconds = _global_queue_progress_seconds()
                     last_progress_log = time.monotonic()
                     pass_started = last_progress_log
@@ -6936,16 +6966,20 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                             _log_emit_line(run_key, "Queue: stop requested; pending issue starts were canceled where possible.")
                             stop_reason = "stop requested"
                             break
+                        while len(pending) < max_parallel and next_submit_index < len(queue_items):
+                            submit_next()
                         now = time.monotonic()
                         if pending and now - last_progress_log >= progress_seconds:
                             active_keys = [futures[pending_future] for pending_future in pending]
                             active_preview = ", ".join(active_keys[:8])
                             if len(active_keys) > 8:
                                 active_preview += f", +{len(active_keys) - 8} more"
+                            queued_count = len(queue_items) - next_submit_index
+                            queued_suffix = f"; {queued_count} queued" if queued_count else ""
                             _log_emit_line(
                                 run_key,
-                                f"Queue pass {queue_pass}: still running {len(active_keys)} issue(s) "
-                                f"after {int(now - pass_started)}s: {active_preview}",
+                                f"Queue pass {queue_pass}: still running {len(active_keys)} active issue(s) "
+                                f"after {int(now - pass_started)}s: {active_preview}{queued_suffix}",
                             )
                             last_progress_log = now
 
@@ -7051,7 +7085,15 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                     )
 
         if processed_keys and stop_reason != "stop requested":
-            if not _stream_global_dated_summary(sorted(processed_keys), run_key):
+            summary_outcomes: dict[str, str] = {}
+            for key in sorted(processed_keys):
+                if key in completed_keys:
+                    summary_outcomes[key] = "complete"
+                elif key in incomplete_reasons:
+                    summary_outcomes[key] = incomplete_reasons[key]
+                else:
+                    summary_outcomes[key] = incomplete_details.get(key, "processed; inspect pipeline-state")
+            if not _stream_global_dated_summary(sorted(processed_keys), run_key, summary_outcomes):
                 _log_emit_line(run_key, "WARNING: dated summary update failed after global queue workers finished.")
                 stop_reason = "summary update failed" if not incomplete_details else f"{stop_reason}; summary update failed"
 
