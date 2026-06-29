@@ -194,6 +194,14 @@ def main() -> int:
             except Exception as e:
                 print(f"[{i}/{len(keys)}] {key} - forms fetch failed (skipping): {str(e)[:100]}", flush=True)
 
+        old_row = old_manifest.get(key, {})
+        new_comment_count, external_comment_count, has_new_comments = comment_tracking_for_manifest(
+            key,
+            comments,
+            old_row,
+            raw_dir,
+        )
+
         bundle = {
             "issue": issue,
             "comments": comments,
@@ -217,12 +225,6 @@ def main() -> int:
             priority_name = pri_raw.get("name") or ""
         duedate = issue.get("fields", {}).get("duedate") or ""
 
-        # Track comment count and detect new comments
-        new_comment_count = len(comments)
-        old_row = old_manifest.get(key, {})
-        old_comment_count = int(old_row.get("CommentCount", "0"))
-        has_new_comments = "true" if new_comment_count > old_comment_count else old_row.get("HasNewComments", "false")
-
         manifest_rows.append(
             {
                 "Key": key,
@@ -237,6 +239,7 @@ def main() -> int:
                 "AttachmentCount": str(len(attachments)),
                 "FormCount": str(len(forms)),
                 "CommentCount": str(new_comment_count),
+                "ExternalCommentCount": str(external_comment_count),
                 "HasNewComments": has_new_comments,
             }
         )
@@ -298,6 +301,19 @@ def configured_default_assignee() -> str:
     return (os.environ.get("CASEOPS_DEFAULT_ASSIGNEE") or os.environ.get("JIRA_ASSIGNEE") or "").strip()
 
 
+def current_operator_comment_identities() -> set[str]:
+    """Return configured identities that should not trigger the new-comments badge."""
+    env_keys = [
+        "CASEOPS_DEFAULT_ASSIGNEE",
+        "JIRA_ASSIGNEE",
+        "JIRA_EMAIL",
+        "CASEOPS_EXAMPLE_ASSIGNEE_NAME",
+        "CASEOPS_DEFAULT_ACTOR",
+    ]
+    identities = {normalize_identity(os.environ.get(key)) for key in env_keys}
+    return {value for value in identities if value}
+
+
 def default_jql() -> str:
     return f'assignee = "{default_assignee()}" AND statusCategory != Done ORDER BY created ASC'
 
@@ -318,6 +334,99 @@ def issue_assignee_identities(issue: dict[str, Any]) -> set[str]:
         normalize_identity(assignee.get("key")),
     }
     return {value for value in identities if value}
+
+
+def comment_author_identities(comment: Any) -> set[str]:
+    if not isinstance(comment, dict):
+        return set()
+    author = comment.get("author")
+    if not isinstance(author, dict):
+        return set()
+    identities = {
+        normalize_identity(author.get("displayName")),
+        normalize_identity(author.get("emailAddress")),
+        normalize_identity(author.get("accountId")),
+        normalize_identity(author.get("name")),
+        normalize_identity(author.get("key")),
+    }
+    return {value for value in identities if value}
+
+
+def comment_authored_by_current_operator(comment: Any) -> bool:
+    operator_identities = current_operator_comment_identities()
+    if not operator_identities:
+        return False
+    return bool(comment_author_identities(comment) & operator_identities)
+
+
+def external_comment_count(comments: list[Any]) -> int:
+    return sum(1 for comment in comments if not comment_authored_by_current_operator(comment))
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        if value in (None, ""):
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _old_raw_bundle_candidates(key: str, old_row: dict[str, str], raw_dir: Path) -> list[Path]:
+    candidates: list[Path] = []
+    raw_path = (old_row.get("RawPath") or "").strip()
+    if raw_path:
+        candidates.append(Path(raw_path))
+    candidates.append(raw_dir / f"{key}.json")
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for path in candidates:
+        path_key = str(path)
+        if path_key not in seen:
+            deduped.append(path)
+            seen.add(path_key)
+    return deduped
+
+
+def old_external_comment_count_for_issue(key: str, old_row: dict[str, str], raw_dir: Path) -> int | None:
+    explicit_count = _int_or_none(old_row.get("ExternalCommentCount"))
+    if explicit_count is not None:
+        return explicit_count
+
+    for path in _old_raw_bundle_candidates(key, old_row, raw_dir):
+        try:
+            bundle = read_json_file(path, default=None)
+        except Exception:
+            continue
+        if isinstance(bundle, dict) and isinstance(bundle.get("comments"), list):
+            return external_comment_count(bundle["comments"])
+    return None
+
+
+def comment_tracking_for_manifest(
+    key: str,
+    comments: list[Any],
+    old_row: dict[str, str],
+    raw_dir: Path,
+) -> tuple[int, int, str]:
+    """Return total count, external count, and unviewed-external-comment flag."""
+    total_count = len(comments)
+    current_external_count = external_comment_count(comments)
+    old_external_count = old_external_comment_count_for_issue(key, old_row, raw_dir)
+
+    # If the previous manifest predates ExternalCommentCount and no raw bundle is
+    # available, avoid creating a false-positive badge from self-authored growth.
+    if old_external_count is None:
+        old_external_count = current_external_count
+
+    has_unviewed_external = (
+        current_external_count > old_external_count
+        or (
+            old_row.get("HasNewComments", "false").lower() == "true"
+            and old_external_count > 0
+        )
+    )
+    return total_count, current_external_count, "true" if has_unviewed_external else "false"
 
 
 def issue_matches_configured_assignee(issue: dict[str, Any]) -> bool:
@@ -440,6 +549,7 @@ def skipped_status_manifest_row(
         "AttachmentCount": old_row.get("AttachmentCount", "0"),
         "FormCount": old_row.get("FormCount", "0"),
         "CommentCount": old_row.get("CommentCount", "0"),
+        "ExternalCommentCount": old_row.get("ExternalCommentCount", "0"),
         "HasNewComments": old_row.get("HasNewComments", "false"),
         "EscalationReady": old_row.get("EscalationReady", ""),
     }
@@ -1026,11 +1136,12 @@ MANIFEST_FIELDNAMES = [
     "AttachmentCount",
     "FormCount",
     "CommentCount",
+    "ExternalCommentCount",
     "HasNewComments",
     "EscalationReady",
 ]
 
-NUMERIC_COUNT_FIELDS = {"AttachmentCount", "FormCount", "CommentCount"}
+NUMERIC_COUNT_FIELDS = {"AttachmentCount", "FormCount", "CommentCount", "ExternalCommentCount"}
 
 
 def write_manifest(path: Path, rows: list[dict[str, str]], *, remove_keys: set[str] | None = None) -> None:

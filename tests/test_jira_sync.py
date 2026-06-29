@@ -1,5 +1,6 @@
 import csv
 import argparse
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -31,6 +32,7 @@ class JiraSyncManifestTests(unittest.TestCase):
                 "AttachmentCount": "2",
                 "FormCount": "1",
                 "CommentCount": "5",
+                "ExternalCommentCount": "4",
                 "HasNewComments": "false",
                 "EscalationReady": "",
             }
@@ -60,6 +62,7 @@ class JiraSyncManifestTests(unittest.TestCase):
             self.assertEqual(rows[0]["Summary"], "Current summary")
             self.assertEqual(rows[0]["RawPath"], old_row["RawPath"])
             self.assertEqual(rows[0]["CommentCount"], "5")
+            self.assertEqual(rows[0]["ExternalCommentCount"], "4")
             self.assertFalse(jira_sync.manifest_status_is_active(rows[0]["Status"]))
 
     def test_manifest_removes_issue_that_is_no_longer_assigned(self):
@@ -78,6 +81,7 @@ class JiraSyncManifestTests(unittest.TestCase):
                 "AttachmentCount": "2",
                 "FormCount": "1",
                 "CommentCount": "5",
+                "ExternalCommentCount": "4",
                 "HasNewComments": "false",
                 "EscalationReady": "",
             }
@@ -145,6 +149,104 @@ class JiraSyncManifestTests(unittest.TestCase):
             self.assertIn("Not Assigned Archive - ISSUE-1", archive_text)
             self.assertIn("Current Jira assignee: Other Person", archive_text)
             self.assertIn("removed from `outputs/jira/manifest.csv`", archive_text)
+
+    def test_external_comment_count_ignores_current_operator_identities(self):
+        comments = [
+            {"author": {"emailAddress": "sean@example.com", "displayName": "Different Name"}},
+            {"author": {"displayName": "Sean Bingham"}},
+            {"author": {"accountId": "operator-account"}},
+            {"author": {"emailAddress": "other@example.com", "displayName": "Other Person"}},
+        ]
+
+        with patch.dict(
+            "os.environ",
+            {
+                "JIRA_EMAIL": "sean@example.com",
+                "CASEOPS_EXAMPLE_ASSIGNEE_NAME": "Sean Bingham",
+                "CASEOPS_DEFAULT_ASSIGNEE": "operator-account",
+            },
+            clear=False,
+        ):
+            self.assertEqual(jira_sync.external_comment_count(comments), 1)
+
+    def test_self_only_new_comment_does_not_set_new_comments_flag(self):
+        comments = [
+            {"author": {"emailAddress": "sean@example.com"}, "body": "older self comment"},
+            {"author": {"emailAddress": "sean@example.com"}, "body": "new self comment"},
+        ]
+        old_row = {
+            "CommentCount": "1",
+            "ExternalCommentCount": "0",
+            "HasNewComments": "false",
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict("os.environ", {"JIRA_EMAIL": "sean@example.com"}, clear=False):
+                total, external, flag = jira_sync.comment_tracking_for_manifest(
+                    "ISSUE-1",
+                    comments,
+                    old_row,
+                    Path(tmp) / "raw",
+                )
+
+        self.assertEqual(total, 2)
+        self.assertEqual(external, 0)
+        self.assertEqual(flag, "false")
+
+    def test_external_new_comment_sets_new_comments_flag(self):
+        comments = [
+            {"author": {"emailAddress": "sean@example.com"}, "body": "self comment"},
+            {"author": {"emailAddress": "other@example.com"}, "body": "external comment"},
+        ]
+        old_row = {
+            "CommentCount": "1",
+            "ExternalCommentCount": "0",
+            "HasNewComments": "false",
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict("os.environ", {"JIRA_EMAIL": "sean@example.com"}, clear=False):
+                _, external, flag = jira_sync.comment_tracking_for_manifest(
+                    "ISSUE-1",
+                    comments,
+                    old_row,
+                    Path(tmp) / "raw",
+                )
+
+        self.assertEqual(external, 1)
+        self.assertEqual(flag, "true")
+
+    def test_legacy_manifest_backfills_external_count_from_old_raw_bundle(self):
+        old_comments = [
+            {"author": {"emailAddress": "sean@example.com"}, "body": "self comment"},
+            {"author": {"emailAddress": "other@example.com"}, "body": "old external comment"},
+        ]
+        current_comments = [
+            *old_comments,
+            {"author": {"emailAddress": "another@example.com"}, "body": "new external comment"},
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_dir = Path(tmp) / "raw"
+            raw_dir.mkdir()
+            raw_path = raw_dir / "ISSUE-1.json"
+            raw_path.write_text(json.dumps({"comments": old_comments}), encoding="utf-8")
+            old_row = {
+                "CommentCount": "2",
+                "RawPath": str(raw_path),
+                "HasNewComments": "false",
+            }
+
+            with patch.dict("os.environ", {"JIRA_EMAIL": "sean@example.com"}, clear=False):
+                _, external, flag = jira_sync.comment_tracking_for_manifest(
+                    "ISSUE-1",
+                    current_comments,
+                    old_row,
+                    raw_dir,
+                )
+
+        self.assertEqual(external, 2)
+        self.assertEqual(flag, "true")
 
 
 if __name__ == "__main__":

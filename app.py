@@ -3528,6 +3528,7 @@ def _issue_list_row_from_cache(row: dict[str, str]) -> tuple[dict[str, Any], boo
         due,
         row.get("Priority", "") or "",
         row.get("HasNewComments", ""),
+        row.get("ExternalCommentCount", ""),
         JIRA_BASE_URL,
     )
     signature = (_issue_list_artifact_signature(key, status), row_signature)
@@ -6828,6 +6829,20 @@ def _stream_global_dated_summary(
         f"- {key}: {issue_outcomes.get(key, 'processed; inspect pipeline-state') if issue_outcomes else 'processed; inspect pipeline-state'}"
         for key in keys
     )
+    artifact_lines = "\n".join(
+        "\n".join(
+            f"- outputs/{location.format(key=key)}"
+            for location in (
+                FILE_LOCATIONS["investigation"],
+                FILE_LOCATIONS["issue_brief"],
+                FILE_LOCATIONS["eng_handoff"],
+                FILE_LOCATIONS["internal_notes"],
+                FILE_LOCATIONS["jira_message"],
+                FILE_LOCATIONS["test_report"],
+            )
+        ) + f"\n- outputs/pipeline-state/{key}.json"
+        for key in keys
+    )
     prompt = (
         "Update the CaseOps dated issue summary for the completed global queue run.\n\n"
         "Hard rules:\n"
@@ -6836,6 +6851,10 @@ def _stream_global_dated_summary(
         "- Do not run Salesforce commands.\n"
         "- Do not modify Production or Sandbox.\n"
         "- Only read CaseOps output artifacts and update the dated summary markdown file.\n\n"
+        "Read scope:\n"
+        "- Do not run `ls`, `find`, `rg`, or broad directory scans under outputs/.\n"
+        "- Do not read pipeline-state files or issue artifacts for issues not listed below.\n"
+        "- Read only the exact per-issue artifact paths listed below when they exist.\n\n"
         "Read these source files before writing:\n"
         "- skills/caseops-pipeline/references/workflow.md, Step 11 only\n"
         "- skills/caseops-pipeline/assets/issue-summary-template.md\n"
@@ -6843,7 +6862,7 @@ def _stream_global_dated_summary(
         "Authoritative queue outcome facts for this run:\n"
         f"{outcome_lines}\n\n"
         "Classification rules:\n"
-        "- Treat the queue outcome facts and outputs/pipeline-state/<KEY>.json as authoritative.\n"
+        "- Treat the queue outcome facts and the exact allowed pipeline-state files below as authoritative.\n"
         "- If an issue outcome says incomplete, stalled, blocked, stale, or pending, do not summarize it as complete.\n"
         "- Do not count an incomplete or blocked issue as support-resolvable unless pipeline-state routing.path is support_resolvable and the next step is clear.\n"
         "- Do not count an issue as sandbox-validated unless its test report has `Validation Status: passed` and `Fixed?: yes` in the structured Validation Verdict.\n"
@@ -6852,14 +6871,8 @@ def _stream_global_dated_summary(
         "- If routing.path is unknown, classify the disposition as incomplete/needs review and preserve the next step from pipeline-state.\n\n"
         "Issues included in this global queue run:\n"
         f"{key_lines}\n\n"
-        "For each issue, use the existing artifacts under outputs/ to determine the current disposition:\n"
-        "- outputs/investigations/<KEY>.md\n"
-        "- outputs/issue-briefs/<KEY>.md\n"
-        "- outputs/engineering-escalations/<KEY>.md when present\n"
-        "- outputs/internal-notes/<KEY>.md\n"
-        "- outputs/jira-messages/<KEY>.md\n"
-        "- outputs/test-reports/<KEY>.md\n"
-        "- outputs/pipeline-state/<KEY>.json\n\n"
+        "Allowed per-issue artifact paths:\n"
+        f"{artifact_lines}\n\n"
         f"Update today's dated summary at `{_path_relative_for_prompt(today_path)}`. "
         "If it exists, Read it first and then Edit it. Use Write only if it does not exist.\n\n"
         "Print `STEP_11 __summary__` before updating the summary. "
@@ -7008,6 +7021,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
             pass_completed = 0
             pass_incomplete = 0
             progressed = 0
+            current_pass_incomplete: dict[str, str] = {}
             for key, ok, detail in pass_results:
                 previous_detail = last_details.get(key)
                 previous_fingerprint = last_fingerprints.get(key)
@@ -7023,6 +7037,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                     last_fingerprints[key] = snapshot_fingerprint
                     continue
                 pass_incomplete += 1
+                current_pass_incomplete[key] = snapshot_detail
                 incomplete_details[key] = snapshot_detail
                 if detail.startswith("failed unexpectedly") or detail == "already running":
                     incomplete_reasons[key] = f"worker {detail}; planner says {snapshot_detail}"
@@ -7032,6 +7047,25 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                     progressed += 1
                     incomplete_reasons[key] = f"advanced this pass; {snapshot_detail}"
                     next_queue.append(key)
+                elif not incomplete_reasons.get(key, "").startswith("worker "):
+                    incomplete_reasons[key] = f"stalled/no progress in pass {queue_pass}; {snapshot_detail}"
+                    row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
+                    try:
+                        _complete, disposition_detail, disposition_fingerprint, disposition_plan = _global_issue_queue_snapshot_from_row(row)
+                    except Exception:
+                        disposition_detail, disposition_fingerprint, disposition_plan = snapshot_detail, snapshot_fingerprint, {"key": key}
+                    disposition_name = _classify_incomplete_queue_disposition(disposition_plan, incomplete_reasons[key])
+                    _write_queue_disposition(
+                        key,
+                        _queue_disposition_payload(
+                            disposition=disposition_name,
+                            reason=incomplete_reasons[key],
+                            fingerprint=disposition_fingerprint,
+                            detail=disposition_detail,
+                            row=row,
+                            plan=disposition_plan,
+                        ),
+                    )
                 last_details[key] = snapshot_detail
                 last_fingerprints[key] = snapshot_fingerprint
 
@@ -7044,15 +7078,15 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                 stop_reason = "stop requested"
                 break
             if not next_queue:
-                remaining = len(incomplete_details)
+                remaining = len(current_pass_incomplete)
                 if remaining:
                     stop_reason = "stalled"
                     _log_emit_line(
                         run_key,
-                        f"Queue stalled: {remaining} issue(s) still incomplete, but no issue advanced during pass {queue_pass}.",
+                        f"Queue stalled: {remaining} active issue(s) still incomplete, but no issue advanced during pass {queue_pass}.",
                     )
                     _log_emit_line(run_key, "Queue stalled: stopping to avoid repeating the same failed work.")
-                    for key, detail in incomplete_details.items():
+                    for key, detail in current_pass_incomplete.items():
                         if not incomplete_reasons.get(key, "").startswith("worker "):
                             incomplete_reasons[key] = f"stalled/no progress in pass {queue_pass}; {detail}"
                         row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
@@ -9548,8 +9582,23 @@ def api_issue_mark_viewed(key: str):
     if not manifest_path.exists():
         return jsonify({"error": "manifest not found"}), 404
 
-    fieldnames = ["Key", "Status", "Summary", "Updated", "Due", "Priority", "RawPath", "SummaryPath",
-                  "AttachmentCount", "FormCount", "CommentCount", "HasNewComments", "EscalationReady"]
+    fieldnames = [
+        "Key",
+        "Status",
+        "Assignee",
+        "Summary",
+        "Updated",
+        "Due",
+        "Priority",
+        "RawPath",
+        "SummaryPath",
+        "AttachmentCount",
+        "FormCount",
+        "CommentCount",
+        "ExternalCommentCount",
+        "HasNewComments",
+        "EscalationReady",
+    ]
     rows: list[dict[str, str]] = []
     try:
         with manifest_path.open(encoding="utf-8", newline="") as f:

@@ -291,6 +291,72 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertIn("Fixed?: yes", captured["prompt"])
         self.assertIn("Partial Pass", captured["prompt"])
         self.assertIn("routing.path is unknown", captured["prompt"])
+        self.assertIn("Do not run `ls`, `find`, `rg`, or broad directory scans under outputs/.", captured["prompt"])
+        self.assertIn("outputs/pipeline-state/OPEN-1.json", captured["prompt"])
+        self.assertIn("outputs/investigations/BLOCKED-1.md", captured["prompt"])
+        self.assertNotIn("outputs/pipeline-state/<KEY>.json", captured["prompt"])
+
+    def test_global_queue_stall_counts_only_active_requeued_issue(self):
+        rows = [
+            {"Key": "ISSUE-A", "Status": "Open"},
+            {"Key": "ISSUE-B", "Status": "Open"},
+        ]
+        snapshot_calls = {"ISSUE-A": 0, "ISSUE-B": 0}
+
+        def snapshot_for_key(key):
+            snapshot_calls[key] += 1
+            if key == "ISSUE-A":
+                if snapshot_calls[key] == 1:
+                    return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", "a0"
+                return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, stale)", "a1"
+            return False, "incomplete; next STEP_9 (Deploy and test in Sandbox, pending)", "b0"
+
+        def snapshot_from_row(row):
+            key = row["Key"]
+            _complete, detail, fingerprint = snapshot_for_key(key)
+            status = "stale" if "stale" in detail else "pending"
+            step_no = 5 if key == "ISSUE-A" else 9
+            plan = {
+                "key": key,
+                "mode": "active",
+                "next_step": {"step": step_no, "name": "Step", "status": status},
+                "steps": [{"step": step_no, "name": "Step", "status": status}],
+            }
+            return False, detail, fingerprint, plan
+
+        worker_results = [
+            ("ISSUE-A", False, "incomplete"),
+            ("ISSUE-B", False, "incomplete"),
+            ("ISSUE-A", False, "incomplete"),
+        ]
+        messages = []
+        summary = {}
+
+        with (
+            patch.object(app, "_issue_pipeline_runtime_ready", return_value=True),
+            patch.object(app, "_select_global_issue_queue", return_value=["ISSUE-A", "ISSUE-B"]),
+            patch.object(app, "_global_issue_queue_snapshot", side_effect=snapshot_for_key),
+            patch.object(app, "_global_issue_queue_snapshot_from_row", side_effect=snapshot_from_row),
+            patch.object(app, "_run_global_issue_worker", side_effect=worker_results),
+            patch.object(app, "_read_manifest", return_value=rows),
+            patch.object(app, "_global_max_parallel", return_value=1),
+            patch.object(app, "_global_max_queue_passes", return_value=12),
+            patch.object(app, "_run_stop_requested", return_value=False),
+            patch.object(app, "_stream_global_dated_summary", side_effect=lambda keys, _run_key, outcomes: summary.update({"keys": keys, "outcomes": outcomes}) or True),
+            patch.object(app, "_write_queue_disposition"),
+            patch.object(app, "manifest_changed"),
+            patch.object(app, "_log_emit_line", side_effect=lambda _run_key, msg: messages.append(msg)),
+            patch.object(app, "_log_emit_done"),
+            patch.object(app, "_finish_run_control"),
+        ):
+            app._stream_global_skill("reprocess all active issues without re-syncing from Jira", "__global__")
+
+        self.assertTrue(any("Queue: requeueing 1 issue(s)" in msg for msg in messages))
+        self.assertTrue(any("Queue stalled: 1 active issue(s) still incomplete" in msg for msg in messages))
+        self.assertTrue(any("Queue: finished. complete=0, incomplete=2, reason=stalled" in msg for msg in messages))
+        self.assertEqual(summary["keys"], ["ISSUE-A", "ISSUE-B"])
+        self.assertIn("stalled/no progress in pass 1", summary["outcomes"]["ISSUE-B"])
+        self.assertIn("stalled/no progress in pass 2", summary["outcomes"]["ISSUE-A"])
 
     def test_queue_disposition_skips_prior_unchanged_failure(self):
         row = {"Key": "FAIL-1", "Status": "Open", "Updated": "2026-06-08T00:00:00.000+0000"}
