@@ -373,7 +373,20 @@ except ImportError:
 
 app = Flask(__name__)
 ROOT = Path(__file__).resolve().parent
-OUTPUTS = ROOT / "outputs"
+
+
+def _resolve_outputs_dir(workspace: str = "default", override: str | None = None) -> Path:
+    data_dir = (os.environ.get("CASEOPS_DATA_DIR") or "").strip()
+    if override:
+        return Path(override)
+    if os.environ.get("CASEOPS_OUTPUTS_DIR"):
+        return Path(os.environ["CASEOPS_OUTPUTS_DIR"])
+    if data_dir:
+        return Path(data_dir) / "outputs"
+    return ROOT / "outputs" / workspace if workspace != "default" else ROOT / "outputs"
+
+
+OUTPUTS = _resolve_outputs_dir(os.environ.get("CASEOPS_WORKSPACE", "default"))
 
 
 def _safe_runtime_home() -> Path:
@@ -6831,7 +6844,7 @@ def _stream_global_dated_summary(
     )
     artifact_lines = "\n".join(
         "\n".join(
-            f"- outputs/{location.format(key=key)}"
+            f"- {_path_relative_for_prompt(OUTPUTS / location.format(key=key))}"
             for location in (
                 FILE_LOCATIONS["investigation"],
                 FILE_LOCATIONS["issue_brief"],
@@ -6840,7 +6853,7 @@ def _stream_global_dated_summary(
                 FILE_LOCATIONS["jira_message"],
                 FILE_LOCATIONS["test_report"],
             )
-        ) + f"\n- outputs/pipeline-state/{key}.json"
+        ) + f"\n- {_path_relative_for_prompt(OUTPUTS / 'pipeline-state' / f'{key}.json')}"
         for key in keys
     )
     prompt = (
@@ -6852,7 +6865,7 @@ def _stream_global_dated_summary(
         "- Do not modify Production or Sandbox.\n"
         "- Only read CaseOps output artifacts and update the dated summary markdown file.\n\n"
         "Read scope:\n"
-        "- Do not run `ls`, `find`, `rg`, or broad directory scans under outputs/.\n"
+        "- Do not run `ls`, `find`, `rg`, or broad directory scans under the CaseOps output directory.\n"
         "- Do not read pipeline-state files or issue artifacts for issues not listed below.\n"
         "- Read only the exact per-issue artifact paths listed below when they exist.\n\n"
         "Read these source files before writing:\n"
@@ -10738,15 +10751,7 @@ if __name__ == "__main__":
     _args = parser.parse_args()
 
     WORKSPACE = _args.workspace
-    data_dir = (os.environ.get("CASEOPS_DATA_DIR") or "").strip()
-    if _args.outputs_dir:
-        OUTPUTS = Path(_args.outputs_dir)
-    elif os.environ.get("CASEOPS_OUTPUTS_DIR"):
-        OUTPUTS = Path(os.environ["CASEOPS_OUTPUTS_DIR"])
-    elif data_dir:
-        OUTPUTS = Path(data_dir) / "outputs"
-    else:
-        OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
+    OUTPUTS = _resolve_outputs_dir(WORKSPACE, _args.outputs_dir)
     _ensure_directory_writable(OUTPUTS, "outputs")
 
     env_override = (os.environ.get("CASEOPS_ENV_FILE") or "").strip()

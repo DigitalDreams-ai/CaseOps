@@ -291,10 +291,37 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertIn("Fixed?: yes", captured["prompt"])
         self.assertIn("Partial Pass", captured["prompt"])
         self.assertIn("routing.path is unknown", captured["prompt"])
-        self.assertIn("Do not run `ls`, `find`, `rg`, or broad directory scans under outputs/.", captured["prompt"])
+        self.assertIn("Do not run `ls`, `find`, `rg`, or broad directory scans under the CaseOps output directory.", captured["prompt"])
         self.assertIn("outputs/pipeline-state/OPEN-1.json", captured["prompt"])
         self.assertIn("outputs/investigations/BLOCKED-1.md", captured["prompt"])
         self.assertNotIn("outputs/pipeline-state/<KEY>.json", captured["prompt"])
+
+    def test_dated_summary_prompt_uses_instance_routed_output_paths(self):
+        captured = {}
+
+        with (
+            patch.object(app, "OUTPUTS", Path("/data/outputs")),
+            patch.object(app, "_today_issue_summary_path", return_value=Path("/data/outputs/summaries/2026-06-29/issue-summary-2026-06-29.md")),
+            patch.object(app, "_do_stream_claude", side_effect=lambda prompt, _run_key, _key: captured.setdefault("prompt", prompt) or True),
+            patch.object(app, "_log_emit_line"),
+        ):
+            ok = app._stream_global_dated_summary(
+                ["OPEN-1"],
+                "__global__",
+                {"OPEN-1": "incomplete; next STEP_5 (Retrieve relevant Production metadata, stale)"},
+            )
+
+        self.assertTrue(ok)
+        self.assertIn("/data/outputs/pipeline-state/OPEN-1.json", captured["prompt"])
+        self.assertIn("/data/outputs/investigations/OPEN-1.md", captured["prompt"])
+        self.assertNotIn("\n- outputs/pipeline-state/OPEN-1.json", captured["prompt"])
+
+    def test_outputs_dir_resolver_uses_docker_runtime_env(self):
+        with patch.dict(os.environ, {"CASEOPS_OUTPUTS_DIR": "/data/outputs"}, clear=False):
+            self.assertEqual(app._resolve_outputs_dir(), Path("/data/outputs"))
+
+        with patch.dict(os.environ, {"CASEOPS_OUTPUTS_DIR": "", "CASEOPS_DATA_DIR": "/data"}, clear=False):
+            self.assertEqual(app._resolve_outputs_dir(), Path("/data/outputs"))
 
     def test_global_queue_stall_counts_only_active_requeued_issue(self):
         rows = [
