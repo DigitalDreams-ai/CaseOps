@@ -684,7 +684,7 @@ class KnowledgeServiceTests(unittest.TestCase):
                 outputs,
                 helper["work_item_id"],
                 "implemented",
-                reference="scripts/sf_caseops_helper.py in 0.1.55",
+                reference="scripts/sf_caseops_helper.py in 0.1.56",
             )
             verified = knowledge_service.update_helper_work_item_status(
                 outputs,
@@ -701,7 +701,7 @@ class KnowledgeServiceTests(unittest.TestCase):
             decisions = list((outputs / "org-knowledge" / "decision-artifacts").glob("*helper_work_item_status_changed*.json"))
 
         self.assertEqual(accepted["status"], "accepted_for_work")
-        self.assertEqual(implemented["implementation_reference"], "scripts/sf_caseops_helper.py in 0.1.55")
+        self.assertEqual(implemented["implementation_reference"], "scripts/sf_caseops_helper.py in 0.1.56")
         self.assertEqual(verified["status"], "verified")
         self.assertEqual(retired["retirement_reason"], "covered by core helper guardrail")
         self.assertGreaterEqual(len(decisions), 4)
@@ -831,6 +831,43 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(missing_ref.status_code, 400)
         self.assertEqual(implemented.status_code, 200)
         self.assertEqual(implemented.get_json()["item"]["implementation_reference"], "commit abc123")
+
+    def test_review_items_separate_active_and_retired_helper_work(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            helper_dir = outputs / "org-knowledge" / "helper-work-items"
+            helper_dir.mkdir(parents=True, exist_ok=True)
+            base = {
+                "schema_version": 1,
+                "source_candidate_id": "lesson-helper",
+                "source_signal_ids": ["sig-1"],
+                "affected_issue_keys": ["OPEN-1"],
+                "topic": "deploy-command",
+                "summary": "Evaluate helper work.",
+                "lesson": "Run deploy commands inside an issue-scoped workspace.",
+                "evidence": ["InvalidProjectWorkspaceError"],
+                "failure_class": "bad_context",
+                "route": "helper_work_item",
+                "quality": "high",
+                "quality_reason": "Repeated helper failure.",
+                "redaction_status": "not_needed",
+                "created_at": "2026-06-27T00:00:00+00:00",
+            }
+            active = dict(base, work_item_id="helper-active", status="pending")
+            retired = dict(
+                base,
+                work_item_id="helper-retired",
+                status="retired",
+                retired_at="2026-06-30T00:00:00+00:00",
+                retirement_reason="Covered by core helper behavior.",
+            )
+            (helper_dir / "helper-active.json").write_text(json.dumps(active), encoding="utf-8")
+            (helper_dir / "helper-retired.json").write_text(json.dumps(retired), encoding="utf-8")
+
+            items = knowledge_service.list_review_items(outputs)
+
+        self.assertEqual([item["work_item_id"] for item in items["helper_work_items"]], ["helper-active"])
+        self.assertEqual([item["work_item_id"] for item in items["retired_helper_work_items"]], ["helper-retired"])
 
     def test_issue_detail_exposes_selected_knowledge_tab(self):
         with tempfile.TemporaryDirectory() as tmp:

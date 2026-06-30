@@ -1427,11 +1427,15 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
 def list_review_items(outputs: Path) -> dict[str, Any]:
     ensure_knowledge_defaults(outputs)
     root = knowledge_root(outputs)
+    helper_items = _read_json_files(root / "helper-work-items")
+    active_helper_items = [item for item in helper_items if str(item.get("status") or "pending") != "retired"]
+    retired_helper_items = [item for item in helper_items if str(item.get("status") or "pending") == "retired"]
     return {
         "pending_lessons": _public_items(_read_json_files(root / "pending-lessons")),
         "accepted_lessons": _public_items(_read_json_files(root / "accepted-lessons")),
         "rejected_lessons": _public_items(_read_json_files(root / "rejected-lessons")),
-        "helper_work_items": _public_items(_read_json_files(root / "helper-work-items")),
+        "helper_work_items": _public_items(active_helper_items),
+        "retired_helper_work_items": _public_items(retired_helper_items),
         "signals": _public_items(_read_json_files(root / "signals")[-100:]),
         "audit_reports": sorted(path.name for path in (root / "audit-reports").glob("audit-summary-*.json"))[-20:],
     }
