@@ -152,12 +152,13 @@ Instructions:
    Fill **Production deployment state** (Sandbox vs Production; Gearset required Y/N/N/A).
 7. Use selected CaseOps knowledge first. Initialize the attempt with `python scripts/sf_caseops_helper.py workspace-init --issue-key "<KEY>" --attempt attempt-N` when the attempt directories or manifest are missing.
 8. Prefer structured helpers before equivalent raw `sf` commands:
+   - `verify-sobject` before the first query against an unfamiliar, optional, or managed-package object.
    - `deploy-source` for source-format candidate directories.
    - `deploy-mdapi` for deterministic metadata-dir deploys.
    - `deploy-report` for deploy status follow-up.
    - `verify-field`, `verify-flow`, `query-data`, and `query-tooling` for validation checks that need classified failures.
 9. Helper failures return `failure_class`, `retryable`, and `next_action`. If `retryable=false`, stop and replan instead of repeating the same command family.
-10. If a helper does not cover the case, deploy with modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
+10. If a helper does not cover the case, deploy with modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`. Raw `sf project` commands still require an issue-scoped SFDX workspace.
 11. Never print raw Salesforce access tokens. Do not use `SF_TEMP_SHOW_SECRETS=true sf org display`; use `sf` commands or JSON outputs that do not reveal secrets.
 
 Return a compact summary (max 400 tokens) containing:

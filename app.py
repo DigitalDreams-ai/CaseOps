@@ -32,7 +32,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from enum import Enum
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
 from functools import wraps
 from collections import Counter
 from pathlib import Path
@@ -373,7 +373,20 @@ except ImportError:
 
 app = Flask(__name__)
 ROOT = Path(__file__).resolve().parent
-OUTPUTS = ROOT / "outputs"
+
+
+def _resolve_outputs_dir(workspace: str = "default", override: str | None = None) -> Path:
+    data_dir = (os.environ.get("CASEOPS_DATA_DIR") or "").strip()
+    if override:
+        return Path(override)
+    if os.environ.get("CASEOPS_OUTPUTS_DIR"):
+        return Path(os.environ["CASEOPS_OUTPUTS_DIR"])
+    if data_dir:
+        return Path(data_dir) / "outputs"
+    return ROOT / "outputs" / workspace if workspace != "default" else ROOT / "outputs"
+
+
+OUTPUTS = _resolve_outputs_dir(os.environ.get("CASEOPS_WORKSPACE", "default"))
 
 
 def _safe_runtime_home() -> Path:
@@ -510,6 +523,7 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
     "CASEOPS_ANTHROPIC_MODEL",
     "CASEOPS_GLOBAL_MAX_PARALLEL",
     "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
+    "CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS",
     "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
     "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
     "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
@@ -2026,7 +2040,12 @@ def _evaluate_transition_contract_step4_to_step5(hypothesis_text: str) -> dict[s
     missing: list[str] = []
     evidence: dict[str, bool] = {}
     text = hypothesis_text or ""
-    hypothesis_h2 = bool(re.search(r"(?im)^\s*#+\s*(root cause hypothesis|hypothesis)", text))
+    hypothesis_h2 = bool(
+        re.search(
+            r"(?im)^\s*#+\s*(?:(?:root\s+cause|problem|active|current)\s+)?hypothesis\b",
+            text,
+        )
+    )
     evidence["hypothesis_h2"] = hypothesis_h2
     if not hypothesis_h2:
         if not re.search(r"(?is)\broot cause\b", text):
@@ -2551,6 +2570,13 @@ def _build_pipeline_resume_plan(
     )
     deliverable = _infer_deliverable_state(state, is_data_only_legacy=has_data_only_legacy)
     has_no_deploy = _deliverable_is_data_only(deliverable, legacy_detected=has_data_only_legacy)
+    if has_no_deploy and str(deliverable.get("production_deploy_required") or "unknown").strip().lower() == "unknown":
+        deliverable = {
+            **deliverable,
+            "type": "admin_action",
+            "production_deploy_required": "n/a",
+            "no_deploy_reason": "Recovered from no-deploy data/admin artifact evidence.",
+        }
 
     def sig_complete(field: str) -> bool:
         return _signatures_match(signatures.get(field, ""), stored_signatures.get(field))
@@ -2591,6 +2617,23 @@ def _build_pipeline_resume_plan(
     test_incomplete_contract = bool(test_current and test_verdict.get("contract_present") and not test_verdict.get("contract_complete"))
     test_unconfirmed = bool(test_current and not test_passed and not test_failed and not test_blocked and not test_not_run)
     test_needs_rerun = test_failed
+    if not has_no_deploy:
+        no_deploy_artifact_text = "\n".join([diagnosis_and_recent_text, test_report])
+        verdict_deploy_required = str(test_verdict.get("production_deploy_required") or "").strip().lower()
+        if (
+            test_current
+            and test_verdict.get("contract_complete")
+            and verdict_deploy_required in {"no", "n/a"}
+            and not _text_requires_production_deploy(no_deploy_artifact_text)
+            and _text_has_data_or_admin_action(no_deploy_artifact_text)
+        ):
+            deliverable = {
+                **deliverable,
+                "type": "admin_action",
+                "production_deploy_required": verdict_deploy_required,
+                "no_deploy_reason": "Recovered from structured test report and operator/admin action artifact evidence.",
+            }
+            has_no_deploy = True
     no_deploy_operator_report_ready = bool(
         has_no_deploy
         and test_not_run
@@ -3315,6 +3358,7 @@ def _repair_pipeline_state_from_artifacts_after_run(
     status: str = "",
     jira_updated: str | None = None,
     force_active: bool = False,
+    ignore_previous_state: bool = True,
 ) -> None:
     """Rebuild durable resume state after an interrupted run so the next run does not trust stale state."""
     try:
@@ -3323,14 +3367,16 @@ def _repair_pipeline_state_from_artifacts_after_run(
             status,
             jira_updated,
             force_active=force_active,
-            rebuild_from_artifacts=True,
+            rebuild_from_artifacts=ignore_previous_state,
         )
         plan["repair"] = {
             "rebuilt_from_artifacts": True,
             "rebuilt_at": datetime.now(timezone.utc).isoformat(),
-            "previous_state_ignored": True,
+            "previous_state_ignored": ignore_previous_state,
             "reason": reason,
+            "queue_disposition_cleared": True,
         }
+        plan.pop("queue_disposition", None)
         plan_path = _write_pipeline_resume_plan(plan)
         next_step = plan.get("next_step") or {}
         if next_step:
@@ -3525,6 +3571,7 @@ def _issue_list_row_from_cache(row: dict[str, str]) -> tuple[dict[str, Any], boo
         due,
         row.get("Priority", "") or "",
         row.get("HasNewComments", ""),
+        row.get("ExternalCommentCount", ""),
         JIRA_BASE_URL,
     )
     signature = (_issue_list_artifact_signature(key, status), row_signature)
@@ -4143,6 +4190,8 @@ def _update_pipeline_run_metrics(
     if len(history) > 25:
         history = history[-25:]
 
+    if status == "completed":
+        state = _clear_queue_disposition(key, state)
     state["run_metrics"] = {
         "latest": latest,
         "history": history,
@@ -4398,7 +4447,7 @@ def _write_production_write_approval_marker(issue_key: str, approval: dict[str, 
     return updated
 
 
-def _claude_process_env() -> dict[str, str]:
+def _claude_process_env(issue_key: str | None = None) -> dict[str, str]:
     """Environment for Claude Code CLI subprocess.
 
     For claude_code mode: omit ANTHROPIC_API_KEY. Claude Code CLI uses the
@@ -4452,6 +4501,8 @@ def _claude_process_env() -> dict[str, str]:
     env["CASEOPS_METADATA_RAW_PROD_DIR"] = str(metadata_dirs["raw_prod"])
     env["CASEOPS_METADATA_SANDBOX_WORK_DIR"] = str(metadata_dirs["sandbox_work"])
     env["CASEOPS_METADATA_CONFIRMED_DIR"] = str(metadata_dirs["confirmed"])
+    if issue_key:
+        env["CASEOPS_CURRENT_ISSUE_KEY"] = issue_key
 
     # Keep Salesforce CLI subprocesses deterministic in noninteractive Docker runs.
     # The CLI can otherwise spend time on telemetry/update/progress initialization
@@ -5724,7 +5775,7 @@ def _do_stream_claude_code_cli(
                 _log_emit_line(run_key, "WARNING: Claude Code auth token not configured.")
                 _log_emit_line(run_key, "Open Settings > Claude and paste output from `claude setup-token`.")
 
-        env = _claude_process_env()
+        env = _claude_process_env(issue_key)
         if production_approval:
             env.update(production_approval)
             _log_emit_line(
@@ -6240,7 +6291,13 @@ def _issue_pipeline_runtime_ready(run_key: str) -> bool:
     return True
 
 
-def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force_active: bool = False) -> None:
+def _stream_full_issue(
+    key: str,
+    run_key: str,
+    run_preflight: bool = True,
+    force_active: bool = False,
+    defer_daily_summary: bool = False,
+) -> None:
     """Run full CaseOps pipeline via the mounted caseops-pipeline playbook.
 
     This invokes Claude Code with direct file-path instructions for Steps 1-12 orchestration.
@@ -6274,6 +6331,13 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
             "internal notes, and Jira customer message (and any sandbox/escalation steps the playbook "
             "requires for this issue). Read the mounted playbook files directly; do not invoke a slash-skill."
             + (
+                " This issue is running inside a global queue. Complete issue-specific Steps 3-10 only; "
+                "do not create or edit the dated summary file. For Step 11, print exactly "
+                "`STEP_11 __summary__ defer-skip — global queue will update the dated summary after workers finish`, "
+                "then print `STEP_12 __complete__` when issue-specific artifacts are current."
+                if defer_daily_summary else ""
+            )
+            + (
                 " Operator override: ignore the normal pre-escalated Jira-status skip for this issue and process it as active."
                 if force_active else ""
             ),
@@ -6286,7 +6350,7 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
         else:
             run_status = _status_from_latest_failure_artifact(key, run_key)
     finally:
-        if should_update_metrics and run_status != "completed":
+        if should_update_metrics:
             _repair_pipeline_state_from_artifacts_after_run(
                 key,
                 run_key,
@@ -6294,6 +6358,7 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
                 status=row.get("Status", ""),
                 jira_updated=row.get("Updated", ""),
                 force_active=force_active,
+                ignore_previous_state=(run_status != "completed"),
             )
         if should_update_metrics:
             run_ended = datetime.now(timezone.utc)
@@ -6319,7 +6384,13 @@ def _stream_full_issue(key: str, run_key: str, run_preflight: bool = True, force
         _log_emit_done(run_key)
 
 
-def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, force_active: bool = False) -> None:
+def _stream_reprocess_issue(
+    key: str,
+    run_key: str,
+    run_preflight: bool = True,
+    force_active: bool = False,
+    defer_daily_summary: bool = False,
+) -> None:
     """Reprocess single issue without Jira sync via the mounted caseops-pipeline playbook.
 
     Useful for re-running a single issue that failed or needs investigation updates.
@@ -6351,6 +6422,13 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
             "Reprocess the CaseOps pipeline for this issue without re-syncing from Jira. "
             "Read the mounted caseops-pipeline playbook files directly; do not invoke a slash-skill."
             + (
+                " This issue is running inside a global queue. Complete issue-specific Steps 3-10 only; "
+                "do not create or edit the dated summary file. For Step 11, print exactly "
+                "`STEP_11 __summary__ defer-skip — global queue will update the dated summary after workers finish`, "
+                "then print `STEP_12 __complete__` when issue-specific artifacts are current."
+                if defer_daily_summary else ""
+            )
+            + (
                 " Operator override: ignore the normal pre-escalated Jira-status skip for this issue and process it as active."
                 if force_active else ""
             ),
@@ -6363,7 +6441,7 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
         else:
             run_status = _status_from_latest_failure_artifact(key, run_key)
     finally:
-        if should_update_metrics and run_status != "completed":
+        if should_update_metrics:
             _repair_pipeline_state_from_artifacts_after_run(
                 key,
                 run_key,
@@ -6371,6 +6449,7 @@ def _stream_reprocess_issue(key: str, run_key: str, run_preflight: bool = True, 
                 status=row.get("Status", ""),
                 jira_updated=row.get("Updated", ""),
                 force_active=force_active,
+                ignore_previous_state=(run_status != "completed"),
             )
         if should_update_metrics:
             run_ended = datetime.now(timezone.utc)
@@ -6401,6 +6480,10 @@ def _global_max_parallel() -> int:
 
 def _global_max_queue_passes() -> int:
     return _env_int("CASEOPS_GLOBAL_MAX_QUEUE_PASSES", 12, min_value=1, max_value=24)
+
+
+def _global_queue_progress_seconds() -> int:
+    return _env_int("CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS", 60, min_value=15, max_value=600)
 
 
 def _plan_pending_issue_steps(plan: dict[str, Any]) -> list[dict[str, Any]]:
@@ -6474,6 +6557,13 @@ def _write_queue_disposition(key: str, payload: dict[str, Any]) -> None:
     _write_pipeline_resume_plan(state)
 
 
+def _clear_queue_disposition(key: str, state: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Remove transient global-queue skip state from a durable issue plan."""
+    current = dict(state or _read_pipeline_state(key) or {})
+    current.pop("queue_disposition", None)
+    return current
+
+
 def _queue_disposition_skip_label(disposition: str) -> str:
     labels = {
         "skip_unchanged_success": "already current",
@@ -6486,6 +6576,14 @@ def _queue_disposition_skip_label(disposition: str) -> str:
         "failed_retry_budget_exhausted": "failed retry budget exhausted",
     }
     return labels.get(disposition, disposition.replace("_", " "))
+
+
+def _queue_disposition_prior_reason(prior: dict[str, Any], disposition: str) -> str:
+    reason = str(prior.get("reason") or _queue_disposition_skip_label(disposition)).strip()
+    prefix = "Previous queue result is unchanged: "
+    while reason.startswith(prefix):
+        reason = reason[len(prefix):].strip()
+    return reason or _queue_disposition_skip_label(disposition)
 
 
 def _classify_incomplete_queue_disposition(plan: dict[str, Any], detail: str) -> str:
@@ -6509,6 +6607,8 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
     key = (row.get("Key") or plan.get("key") or "").strip()
     status = row.get("Status", "") or str(plan.get("status") or "")
     mode = str(plan.get("mode") or "").strip().lower()
+    routing = plan.get("routing") if isinstance(plan.get("routing"), dict) else {}
+    normalized_status = _normalized_jira_status(status)
     if _disposition(status) == "closed" or mode == "closed":
         return _queue_disposition_payload(
             disposition="skip_closed_or_resolved",
@@ -6522,6 +6622,15 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
         return _queue_disposition_payload(
             disposition="skip_escalated_to_engineering",
             reason="Jira status is escalated to engineering; Auto-Process should not reprocess it.",
+            fingerprint=fingerprint,
+            detail=detail,
+            row=row,
+            plan=plan,
+        )
+    if routing.get("path") == "engineering_required" and normalized_status in {"on hold", "waiting for engineering"}:
+        return _queue_disposition_payload(
+            disposition="blocked_by_engineering",
+            reason=f"Jira status is {status or 'On Hold'} and CaseOps routing requires Engineering; Auto-Process should not reprocess until the blocker changes.",
             fingerprint=fingerprint,
             detail=detail,
             row=row,
@@ -6551,9 +6660,10 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
         "failed_retry_budget_exhausted",
     }
     if prior_disposition in skip_dispositions and prior_fingerprint and prior_fingerprint == fingerprint:
+        prior_reason = _queue_disposition_prior_reason(prior, prior_disposition)
         return _queue_disposition_payload(
             disposition=prior_disposition,
-            reason=f"Previous queue result is unchanged: {prior.get('reason') or _queue_disposition_skip_label(prior_disposition)}",
+            reason=f"Previous queue result is unchanged: {prior_reason}",
             fingerprint=fingerprint,
             detail=detail,
             row=row,
@@ -6641,6 +6751,11 @@ def _select_global_issue_queue(run_key: str) -> list[str]:
     rows = _read_manifest()
     queued: list[str] = []
     skip_counts: Counter[str] = Counter()
+    aggregate_skip_dispositions = {
+        "skip_closed_or_resolved",
+        "skip_escalated_to_engineering",
+    }
+    aggregate_skip_reasons: dict[str, str] = {}
     for row in rows:
         key = (row.get("Key") or "").strip()
         if not key:
@@ -6657,16 +6772,32 @@ def _select_global_issue_queue(run_key: str) -> list[str]:
         else:
             skip_counts[disposition_name] += 1
             _write_queue_disposition(key, disposition)
-            if disposition_name not in {"skip_unchanged_success"}:
+            if disposition_name in aggregate_skip_dispositions:
+                aggregate_skip_reasons.setdefault(disposition_name, str(disposition.get("reason") or ""))
+            elif disposition_name not in {"skip_unchanged_success"}:
                 _log_emit_line(
                     run_key,
                     f"Queue skip: {key} — {_queue_disposition_skip_label(disposition_name)}; {disposition.get('reason')}",
                 )
+    for disposition_name in ("skip_closed_or_resolved", "skip_escalated_to_engineering"):
+        count = skip_counts.get(disposition_name, 0)
+        if count:
+            issue_word = "issue" if count == 1 else "issues"
+            _log_emit_line(
+                run_key,
+                f"Queue skip: {count} {issue_word} — {_queue_disposition_skip_label(disposition_name)}; "
+                f"{aggregate_skip_reasons.get(disposition_name) or _queue_disposition_skip_label(disposition_name)}",
+            )
     total_skipped = sum(skip_counts.values())
-    if skip_counts:
+    summary_counts = Counter({
+        name: count
+        for name, count in skip_counts.items()
+        if name not in aggregate_skip_dispositions
+    })
+    if summary_counts:
         summary = ", ".join(
             f"{_queue_disposition_skip_label(name)}={count}"
-            for name, count in sorted(skip_counts.items())
+            for name, count in sorted(summary_counts.items())
         )
         _log_emit_line(run_key, f"Queue skip summary: {summary}")
     _log_emit_line(run_key, f"Queue: {len(queued)} issue(s) need pipeline work; {total_skipped} skipped.")
@@ -6682,9 +6813,9 @@ def _run_global_issue_worker(key: str, index: int, total: int, *, reprocess: boo
     _log_emit_line(_GLOBAL_KEY, f"Queue: starting {key} ({index}/{total})")
     try:
         if reprocess:
-            _stream_reprocess_issue(key, key, run_preflight=False)
+            _stream_reprocess_issue(key, key, run_preflight=False, defer_daily_summary=True)
         else:
-            _stream_full_issue(key, key, run_preflight=False)
+            _stream_full_issue(key, key, run_preflight=False, defer_daily_summary=True)
 
         row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
         complete, detail, fingerprint, plan = _global_issue_queue_snapshot_from_row(row)
@@ -6738,6 +6869,76 @@ def _run_global_issue_worker(key: str, index: int, total: int, *, reprocess: boo
         return key, False, detail
 
 
+def _stream_global_dated_summary(
+    issue_keys: list[str],
+    run_key: str,
+    issue_outcomes: dict[str, str] | None = None,
+) -> bool:
+    """Update the shared dated summary once after global queue workers finish."""
+    keys = sorted({key for key in issue_keys if key})
+    if not keys:
+        return True
+
+    today_path = _today_issue_summary_path()
+    key_lines = "\n".join(f"- {key}" for key in keys)
+    outcome_lines = "\n".join(
+        f"- {key}: {issue_outcomes.get(key, 'processed; inspect pipeline-state') if issue_outcomes else 'processed; inspect pipeline-state'}"
+        for key in keys
+    )
+    artifact_lines = "\n".join(
+        "\n".join(
+            f"- {_path_relative_for_prompt(OUTPUTS / location.format(key=key))}"
+            for location in (
+                FILE_LOCATIONS["investigation"],
+                FILE_LOCATIONS["issue_brief"],
+                FILE_LOCATIONS["eng_handoff"],
+                FILE_LOCATIONS["internal_notes"],
+                FILE_LOCATIONS["jira_message"],
+                FILE_LOCATIONS["test_report"],
+            )
+        ) + f"\n- {_path_relative_for_prompt(OUTPUTS / 'pipeline-state' / f'{key}.json')}"
+        for key in keys
+    )
+    prompt = (
+        "Update the CaseOps dated issue summary for the completed global queue run.\n\n"
+        "Hard rules:\n"
+        "- Do not sync Jira.\n"
+        "- Do not read from or write to Jira.\n"
+        "- Do not run Salesforce commands.\n"
+        "- Do not modify Production or Sandbox.\n"
+        "- Only read CaseOps output artifacts and update the dated summary markdown file.\n\n"
+        "Read scope:\n"
+        "- Do not run `ls`, `find`, `rg`, or broad directory scans under the CaseOps output directory.\n"
+        "- Do not read pipeline-state files or issue artifacts for issues not listed below.\n"
+        "- Read only the exact per-issue artifact paths listed below when they exist.\n\n"
+        "Read these source files before writing:\n"
+        "- skills/caseops-pipeline/references/workflow.md, Step 11 only\n"
+        "- skills/caseops-pipeline/assets/issue-summary-template.md\n"
+        "- skills/caseops-pipeline/references/markdown-output-rules.md\n\n"
+        "Authoritative queue outcome facts for this run:\n"
+        f"{outcome_lines}\n\n"
+        "Classification rules:\n"
+        "- Treat the queue outcome facts and the exact allowed pipeline-state files below as authoritative.\n"
+        "- If an issue outcome says incomplete, stalled, blocked, stale, or pending, do not summarize it as complete.\n"
+        "- Do not count an incomplete or blocked issue as support-resolvable unless pipeline-state routing.path is support_resolvable and the next step is clear.\n"
+        "- Do not count an issue as sandbox-validated unless its test report has `Validation Status: passed` and `Fixed?: yes` in the structured Validation Verdict.\n"
+        "- Treat Partial Pass, partially passed, mixed result, blocked, failed, not-run, or unknown as not sandbox-validated. Put those in Issue Rollup with the precise next step instead.\n"
+        "- Do not infer Production readiness from a Sandbox pass; Production deploy readiness requires a specific artifact or state that says it is ready.\n"
+        "- If routing.path is unknown, classify the disposition as incomplete/needs review and preserve the next step from pipeline-state.\n\n"
+        "Issues included in this global queue run:\n"
+        f"{key_lines}\n\n"
+        "Allowed per-issue artifact paths:\n"
+        f"{artifact_lines}\n\n"
+        f"Update today's dated summary at `{_path_relative_for_prompt(today_path)}`. "
+        "If it exists, Read it first and then Edit it. Use Write only if it does not exist.\n\n"
+        "Print `STEP_11 __summary__` before updating the summary. "
+        "Print `STEP_12 __complete__` after the summary is current. "
+        "Keep stdout concise and report the summary path and any issue that could not be summarized."
+    )
+    _log_emit_line(run_key, "Queue: updating dated summary once after worker completion")
+    return _do_stream_claude(prompt, run_key, "__global__")
+
+
 def _stream_global_skill(instruction: str, run_key: str) -> None:
     """Run global CaseOps pipeline as a CaseOps-owned issue queue."""
     try:
@@ -6789,6 +6990,7 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
         incomplete_details = dict(last_details)
         incomplete_reasons: dict[str, str] = {key: f"needs work; {detail}" for key, detail in last_details.items()}
         completed_keys: set[str] = set()
+        processed_keys: set[str] = set()
         stop_reason = "completed"
 
         _log_emit_line(
@@ -6812,26 +7014,70 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                         _log_emit_line(run_key, "Queue: stop requested; no further issues will be started.")
                         stop_reason = "stop requested"
                         break
+                    processed_keys.add(key)
                     pass_results.append(_run_global_issue_worker(key, idx, len(queue_keys), reprocess=reprocess))
             else:
                 with ThreadPoolExecutor(max_workers=max_parallel) as executor:
-                    futures = {
-                        executor.submit(_run_global_issue_worker, key, idx, len(queue_keys), reprocess=reprocess): key
-                        for idx, key in enumerate(queue_keys, start=1)
-                    }
-                    for future in as_completed(futures):
-                        pass_results.append(future.result())
+                    queue_items = list(enumerate(queue_keys, start=1))
+                    futures: dict[Any, str] = {}
+                    pending: set[Any] = set()
+                    next_submit_index = 0
+
+                    def submit_next() -> None:
+                        nonlocal next_submit_index
+                        if next_submit_index >= len(queue_items):
+                            return
+                        idx, key = queue_items[next_submit_index]
+                        next_submit_index += 1
+                        future = executor.submit(_run_global_issue_worker, key, idx, len(queue_keys), reprocess=reprocess)
+                        futures[future] = key
+                        pending.add(future)
+
+                    for _ in range(min(max_parallel, len(queue_items))):
+                        submit_next()
+
+                    progress_seconds = _global_queue_progress_seconds()
+                    last_progress_log = time.monotonic()
+                    pass_started = last_progress_log
+                    while pending:
+                        done, pending = wait(pending, timeout=5, return_when=FIRST_COMPLETED)
+                        for future in done:
+                            key = futures[future]
+                            processed_keys.add(key)
+                            try:
+                                pass_results.append(future.result())
+                            except Exception as exc:
+                                detail = f"failed unexpectedly: {type(exc).__name__}: {exc}"
+                                _log_emit_line(run_key, f"Queue: {key} {detail}")
+                                pass_results.append((key, False, detail))
                         if _run_stop_requested(run_key):
-                            for pending in futures:
-                                pending.cancel()
+                            for pending_future in pending:
+                                pending_future.cancel()
                             _log_emit_line(run_key, "Queue: stop requested; pending issue starts were canceled where possible.")
                             stop_reason = "stop requested"
                             break
+                        while len(pending) < max_parallel and next_submit_index < len(queue_items):
+                            submit_next()
+                        now = time.monotonic()
+                        if pending and now - last_progress_log >= progress_seconds:
+                            active_keys = [futures[pending_future] for pending_future in pending]
+                            active_preview = ", ".join(active_keys[:8])
+                            if len(active_keys) > 8:
+                                active_preview += f", +{len(active_keys) - 8} more"
+                            queued_count = len(queue_items) - next_submit_index
+                            queued_suffix = f"; {queued_count} queued" if queued_count else ""
+                            _log_emit_line(
+                                run_key,
+                                f"Queue pass {queue_pass}: still running {len(active_keys)} active issue(s) "
+                                f"after {int(now - pass_started)}s: {active_preview}{queued_suffix}",
+                            )
+                            last_progress_log = now
 
             next_queue: list[str] = []
             pass_completed = 0
             pass_incomplete = 0
             progressed = 0
+            current_pass_incomplete: dict[str, str] = {}
             for key, ok, detail in pass_results:
                 previous_detail = last_details.get(key)
                 previous_fingerprint = last_fingerprints.get(key)
@@ -6847,15 +7093,42 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                     last_fingerprints[key] = snapshot_fingerprint
                     continue
                 pass_incomplete += 1
+                current_pass_incomplete[key] = snapshot_detail
                 incomplete_details[key] = snapshot_detail
                 if detail.startswith("failed unexpectedly") or detail == "already running":
                     incomplete_reasons[key] = f"worker {detail}; planner says {snapshot_detail}"
                 else:
                     incomplete_reasons[key] = f"needs more work; {snapshot_detail}"
-                if snapshot_detail != previous_detail or snapshot_fingerprint != previous_fingerprint:
+                detail_changed = snapshot_detail != previous_detail
+                fingerprint_changed = snapshot_fingerprint != previous_fingerprint
+                if detail_changed:
                     progressed += 1
                     incomplete_reasons[key] = f"advanced this pass; {snapshot_detail}"
                     next_queue.append(key)
+                elif not incomplete_reasons.get(key, "").startswith("worker "):
+                    if fingerprint_changed:
+                        incomplete_reasons[key] = (
+                            f"artifact updated without planner advancement in pass {queue_pass}; {snapshot_detail}"
+                        )
+                    else:
+                        incomplete_reasons[key] = f"stalled/no progress in pass {queue_pass}; {snapshot_detail}"
+                    row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
+                    try:
+                        _complete, disposition_detail, disposition_fingerprint, disposition_plan = _global_issue_queue_snapshot_from_row(row)
+                    except Exception:
+                        disposition_detail, disposition_fingerprint, disposition_plan = snapshot_detail, snapshot_fingerprint, {"key": key}
+                    disposition_name = _classify_incomplete_queue_disposition(disposition_plan, incomplete_reasons[key])
+                    _write_queue_disposition(
+                        key,
+                        _queue_disposition_payload(
+                            disposition=disposition_name,
+                            reason=incomplete_reasons[key],
+                            fingerprint=disposition_fingerprint,
+                            detail=disposition_detail,
+                            row=row,
+                            plan=disposition_plan,
+                        ),
+                    )
                 last_details[key] = snapshot_detail
                 last_fingerprints[key] = snapshot_fingerprint
 
@@ -6868,16 +7141,17 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                 stop_reason = "stop requested"
                 break
             if not next_queue:
-                remaining = len(incomplete_details)
+                remaining = len(current_pass_incomplete)
                 if remaining:
                     stop_reason = "stalled"
                     _log_emit_line(
                         run_key,
-                        f"Queue stalled: {remaining} issue(s) still incomplete, but no issue advanced during pass {queue_pass}.",
+                        f"Queue stalled: {remaining} active issue(s) still incomplete, but no issue advanced during pass {queue_pass}.",
                     )
                     _log_emit_line(run_key, "Queue stalled: stopping to avoid repeating the same failed work.")
-                    for key, detail in incomplete_details.items():
-                        if not incomplete_reasons.get(key, "").startswith("worker "):
+                    for key, detail in current_pass_incomplete.items():
+                        existing_reason = incomplete_reasons.get(key, "")
+                        if not existing_reason.startswith("worker ") and not existing_reason.startswith("artifact updated without planner advancement"):
                             incomplete_reasons[key] = f"stalled/no progress in pass {queue_pass}; {detail}"
                         row = next((r for r in _read_manifest() if r.get("Key") == key), {"Key": key})
                         try:
@@ -6928,6 +7202,19 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
                             plan=plan,
                         ),
                     )
+
+        if processed_keys and stop_reason != "stop requested":
+            summary_outcomes: dict[str, str] = {}
+            for key in sorted(processed_keys):
+                if key in completed_keys:
+                    summary_outcomes[key] = "complete"
+                elif key in incomplete_reasons:
+                    summary_outcomes[key] = incomplete_reasons[key]
+                else:
+                    summary_outcomes[key] = incomplete_details.get(key, "processed; inspect pipeline-state")
+            if not _stream_global_dated_summary(sorted(processed_keys), run_key, summary_outcomes):
+                _log_emit_line(run_key, "WARNING: dated summary update failed after global queue workers finished.")
+                stop_reason = "summary update failed" if not incomplete_details else f"{stop_reason}; summary update failed"
 
         complete = len(completed_keys)
         incomplete = len(incomplete_details)
@@ -7057,8 +7344,9 @@ def _build_claude_prompt(
         f"requires every component of that type. First identify the exact component with SOQL, describe/list "
         f"metadata, org-knowledge, or `scripts/sf_caseops_helper.py`, then retrieve only named components "
         f"(for example `--metadata Flow:My_Flow` or `--metadata EmailTemplate:Folder/Template`).\n"
-        f"- Use `python scripts/sf_caseops_helper.py ...` before equivalent raw `sf` commands for targeted "
-        f"metadata retrieval, SOQL checks, field/Flow verification, workspace initialization, deploys, and deploy reports. "
+        f"- Use `python scripts/sf_caseops_helper.py ...` instead of equivalent raw `sf project retrieve`, "
+        f"`sf project deploy`, or broad `sf data query` commands for targeted metadata retrieval, SOQL checks, "
+        f"field/Flow verification, workspace initialization, deploys, and deploy reports. "
         f"Helper failures include `failure_class`, `retryable`, and `next_action`; when `retryable=false`, stop and replan "
         f"instead of trying small variants of the same command.\n"
         f"- Every external Salesforce CLI command must be bounded and produce operator-visible progress. "
@@ -7099,8 +7387,8 @@ def _build_claude_prompt(
         f"   - `python scripts/sf_caseops_helper.py deploy-source|deploy-mdapi|deploy-report ...` for Sandbox deploy/test work\n"
         f"2. **Use raw `sf` CLI commands only when no helper covers the task** (read-only, fast, no browser needed):\n"
         f"   - `sf org display --target-org <alias>` and `sf org list` to verify auth\n"
-        f"   - `sf project retrieve start --metadata Type:Name` or another named/narrow selector (pull targeted metadata)\n"
-        f"   - `sf sobject get --sobject [type]` (inspect objects/fields)\n"
+        f"   - `sf sobject get --sobject [type]` only when helper describe commands do not cover the need\n"
+        f"   - Do not run raw `sf project retrieve start` or `sf project deploy start`; use `scripts/sf_caseops_helper.py retrieve-metadata`, `deploy-source`, or `deploy-mdapi` so CaseOps creates a valid SFDX workspace and captures structured output.\n"
         f"3. **Use SOQL queries** via helper or `sf data query` to inspect data, field values, record types, assignments\n"
         f"4. **Never use Playwright, browser automation, frontdoor links, or frontdoor SIDs** for metadata queries, SOQL/API access, field inspection, permission checks, retrieval, deploy, or Apex tests\n"
         f"5. **Only open browser / frontdoor links for:**\n"
@@ -8225,7 +8513,7 @@ def _text_requires_production_deploy(text: str) -> bool:
         r"(?is)production\s+(?:metadata\s+)?deploy(?:ment)?\s+required[^.\n|:]*[:?|]?\s*\*{0,2}yes\b",
         r"(?is)production\s+(?:metadata\s+)?deploy(?:ment)?\s+required[^.\n]*\bgearset\b",
         r"(?is)\b(?:yes|ready)\s*[-—]\s*gearset\b",
-        r"(?is)\bgearset\s+(?:promotion|deploy(?:ment)?)\s+(?:required|needed)\b",
+        r"(?is)(?<!\bno\s)(?<!\bnot\s)\bgearset\s+(?:promotion|deploy(?:ment)?)\s+(?:required|needed)\b",
         r"(?is)\bmust\s+(?:be\s+)?(?:promote|promoted|deploy|deployed)\s+(?:from\s+sandbox\s+)?to\s+production\b",
         r"(?is)\bdeploy\s+(?:.+?\s+)?to\s+production\s+via\s+gearset\b",
         r"(?is)\bproduction\s+deployment\s+via\s+gearset\b",
@@ -8257,6 +8545,9 @@ def _text_has_data_or_admin_action(text: str) -> bool:
         r"(?is)\bpermission\s+set\s+assignment\b",
         r"(?is)\bassign(?:ing)?\s+(?:an?\s+)?(?:existing\s+)?permission\s+set\b",
         r"(?is)\bno-deploy\s+(?:admin|operator|support)\s+action\b",
+        r"(?is)\b(?:operator|admin|setup)\s+action\b",
+        r"(?is)\bproduction\s+setup\s+(?:admin\s+)?action\b",
+        r"(?is)\bsetup\s*>\s*[A-Za-z]",
     )
     return any(re.search(pattern, text) for pattern in patterns)
 
@@ -8985,7 +9276,9 @@ def _repair_pipeline_state_key(key: str, row: dict[str, str] | None = None, *, e
         "rebuilt_from_artifacts": True,
         "rebuilt_at": datetime.now(timezone.utc).isoformat(),
         "previous_state_ignored": True,
+        "queue_disposition_cleared": True,
     }
+    plan.pop("queue_disposition", None)
     plan_path = _write_pipeline_resume_plan(plan)
     _invalidate_jira_summary_cache(key)
     investigation_cache.pop(key, None)
@@ -9116,9 +9409,8 @@ def api_knowledge_review():
 
 @app.post("/api/knowledge/review/<candidate_id>/accept")
 def api_knowledge_accept(candidate_id: str):
-    body = request.get_json(silent=True) or {}
     try:
-        item = knowledge_service.accept_lesson(OUTPUTS, candidate_id, edit=body.get("edit") if isinstance(body.get("edit"), dict) else None)
+        item = knowledge_service.accept_lesson(OUTPUTS, candidate_id)
     except FileNotFoundError:
         return jsonify({"ok": False, "error": "candidate not found"}), 404
     except Exception as exc:
@@ -9156,6 +9448,24 @@ def api_knowledge_helper_work_item(candidate_id: str):
         item = knowledge_service.convert_to_helper_work_item(OUTPUTS, candidate_id)
     except FileNotFoundError:
         return jsonify({"ok": False, "error": "candidate not found"}), 404
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    return jsonify({"ok": True, "item": item})
+
+
+@app.post("/api/knowledge/helper-work/<work_item_id>/status")
+def api_knowledge_helper_work_status(work_item_id: str):
+    body = request.get_json(silent=True) or {}
+    try:
+        item = knowledge_service.update_helper_work_item_status(
+            OUTPUTS,
+            work_item_id,
+            str(body.get("status") or ""),
+            reference=str(body.get("reference") or ""),
+            reason=str(body.get("reason") or ""),
+        )
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "helper work item not found"}), 404
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     return jsonify({"ok": True, "item": item})
@@ -9357,8 +9667,23 @@ def api_issue_mark_viewed(key: str):
     if not manifest_path.exists():
         return jsonify({"error": "manifest not found"}), 404
 
-    fieldnames = ["Key", "Status", "Summary", "Updated", "Due", "Priority", "RawPath", "SummaryPath",
-                  "AttachmentCount", "FormCount", "CommentCount", "HasNewComments", "EscalationReady"]
+    fieldnames = [
+        "Key",
+        "Status",
+        "Assignee",
+        "Summary",
+        "Updated",
+        "Due",
+        "Priority",
+        "RawPath",
+        "SummaryPath",
+        "AttachmentCount",
+        "FormCount",
+        "CommentCount",
+        "ExternalCommentCount",
+        "HasNewComments",
+        "EscalationReady",
+    ]
     rows: list[dict[str, str]] = []
     try:
         with manifest_path.open(encoding="utf-8", newline="") as f:
@@ -9814,6 +10139,7 @@ def api_get_settings():
         "CASEOPS_LLM_AUTH", "CASEOPS_ANTHROPIC_MODEL",
         "CASEOPS_GLOBAL_MAX_PARALLEL",
         "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
+        "CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
         "CASEOPS_SIMILAR_ISSUES_ENABLED",
@@ -9841,6 +10167,7 @@ def api_get_settings():
     defaults = {
         "CASEOPS_GLOBAL_MAX_PARALLEL": "1",
         "CASEOPS_GLOBAL_MAX_QUEUE_PASSES": "12",
+        "CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS": "60",
         "CASEOPS_ENABLE_PARALLEL_PRECHECKS": "false",
         "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES": "false",
         "CASEOPS_SIMILAR_ISSUES_ENABLED": "true",
@@ -9894,6 +10221,7 @@ def api_post_settings():
                 "CASEOPS_ANTHROPIC_MODEL",
                 "CASEOPS_GLOBAL_MAX_PARALLEL",
                 "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
+                "CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS",
                 "CASEOPS_ENABLE_PARALLEL_PRECHECKS",
                 "CASEOPS_ENABLE_PARALLEL_EVIDENCE_BRANCHES",
                 "CASEOPS_SIMILAR_ISSUES_ENABLED",
@@ -10495,15 +10823,7 @@ if __name__ == "__main__":
     _args = parser.parse_args()
 
     WORKSPACE = _args.workspace
-    data_dir = (os.environ.get("CASEOPS_DATA_DIR") or "").strip()
-    if _args.outputs_dir:
-        OUTPUTS = Path(_args.outputs_dir)
-    elif os.environ.get("CASEOPS_OUTPUTS_DIR"):
-        OUTPUTS = Path(os.environ["CASEOPS_OUTPUTS_DIR"])
-    elif data_dir:
-        OUTPUTS = Path(data_dir) / "outputs"
-    else:
-        OUTPUTS = ROOT / "outputs" / WORKSPACE if WORKSPACE != "default" else ROOT / "outputs"
+    OUTPUTS = _resolve_outputs_dir(WORKSPACE, _args.outputs_dir)
     _ensure_directory_writable(OUTPUTS, "outputs")
 
     env_override = (os.environ.get("CASEOPS_ENV_FILE") or "").strip()

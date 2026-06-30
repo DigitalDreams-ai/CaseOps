@@ -8,6 +8,47 @@ if [[ ! -x "$REAL_SF" ]]; then
   exit 127
 fi
 
+has_sfdx_workspace() {
+  local dir="$PWD"
+  while [[ -n "$dir" ]]; do
+    if [[ -f "$dir/sfdx-project.json" ]]; then
+      return 0
+    fi
+    [[ "$dir" == "/" ]] && break
+    dir="$(dirname "$dir")"
+  done
+  return 1
+}
+
+prepare_guard_workspace() {
+  local issue_key="${CASEOPS_CURRENT_ISSUE_KEY:-}"
+  local root="${CASEOPS_METADATA_WORKSPACES_DIR:-${CASEOPS_METADATA_ROOT:-}}"
+  local safe_key project_dir
+  if [[ -z "$issue_key" || -z "$root" ]]; then
+    return 1
+  fi
+  safe_key="$(printf '%s' "$issue_key" | tr -c 'A-Za-z0-9_.-' '_')"
+  project_dir="$root/.sf-guard-projects/$safe_key"
+  mkdir -p "$project_dir/force-app"
+  if [[ ! -f "$project_dir/sfdx-project.json" ]]; then
+    cat > "$project_dir/sfdx-project.json" <<'EOF'
+{
+  "packageDirectories": [
+    {
+      "path": "force-app",
+      "default": true
+    }
+  ],
+  "name": "caseops-guard-workspace",
+  "namespace": "",
+  "sfdcLoginUrl": "https://login.salesforce.com",
+  "sourceApiVersion": "66.0"
+}
+EOF
+  fi
+  printf '%s\n' "$project_dir"
+}
+
 prod_aliases=()
 [[ -n "${CASEOPS_PRODUCTION_READ_ORG:-}" ]] && prod_aliases+=("$CASEOPS_PRODUCTION_READ_ORG")
 [[ -n "${CASEOPS_PRODUCTION_ORG:-}" ]] && prod_aliases+=("$CASEOPS_PRODUCTION_ORG")
@@ -40,6 +81,20 @@ is_mutating=0
 first="${1:-}"
 second="${2:-}"
 third="${3:-}"
+
+needs_project_workspace=0
+case "$first $second $third" in
+  "project retrieve start"|"project deploy start"|"project deploy validate"|"project deploy quick"|"project convert source")
+    needs_project_workspace=1
+    ;;
+esac
+
+if [[ "$needs_project_workspace" == "1" ]] && ! has_sfdx_workspace; then
+  if project_dir="$(prepare_guard_workspace 2>/dev/null)"; then
+    cd "$project_dir"
+    echo "CaseOps sf guard: using issue-scoped project workspace $project_dir for sf project command." >&2
+  fi
+fi
 
 case "$first $second" in
   "data create"|"data update"|"data delete"|"data upsert"|"data import"|"data tree"|"project deploy"|"project delete"|"apex run"|"org assign")

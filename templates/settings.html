@@ -170,6 +170,7 @@
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 14px;
+            align-items: start;
             min-width: 0;
         }
 
@@ -637,6 +638,26 @@
             gap: 8px;
         }
 
+        .knowledge-audit-result {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-top: 8px;
+            background: var(--color-bg);
+            font-size: 13px;
+            color: var(--color-text);
+        }
+
+        .knowledge-audit-result strong {
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .knowledge-audit-result ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
         .error-box {
             display: none;
             margin-top: 8px;
@@ -993,6 +1014,11 @@
                                 <div class="field-note">Maximum full-queue passes before stopping. CaseOps stops earlier when no issue advances.</div>
                             </div>
                             <div class="settings-field">
+                                <label for="global-queue-progress-seconds">Queue Progress Interval</label>
+                                <input id="global-queue-progress-seconds" name="CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS" type="number" min="15" max="600" step="15" />
+                                <div class="field-note">Seconds between "still running" lines while parallel queue workers are active.</div>
+                            </div>
+                            <div class="settings-field">
                                 <label for="claude-total-timeout">Claude Total Timeout</label>
                                 <select id="claude-total-timeout" name="CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS">
                                     <option value="1200">20 minutes</option>
@@ -1177,6 +1203,7 @@
                                 <label>&nbsp;</label>
                                 <button type="button" class="button-primary" id="run-knowledge-audit-btn">Run Manual Audit</button>
                                 <div id="knowledge-audit-status" class="field-note"></div>
+                                <div id="knowledge-audit-result" class="knowledge-audit-result" hidden></div>
                             </div>
                         </div>
 
@@ -1297,6 +1324,10 @@
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;');
+        }
+
+        function escapeAttr(value) {
+            return escapeHtml(value).replace(/'/g, '&#39;');
         }
 
         async function writeClipboardText(text) {
@@ -1523,13 +1554,7 @@
             const metric = (count, label) => `<div class="health-metric"><strong>${escapeHtml(String(count))}</strong><span>${escapeHtml(label)}</span></div>`;
             const pendingHtml = pending.length ? pending.map(renderPendingLessonCard).join('') : '<div class="field-note">No pending lessons.</div>';
             const acceptedHtml = accepted.length ? accepted.slice(0, 8).map(renderAcceptedLessonCard).join('') : '<div class="field-note">No accepted lessons.</div>';
-            const helperHtml = helpers.length ? helpers.slice(0, 8).map(item => `
-                <div class="knowledge-review-card">
-                    <h3>${escapeHtml(item.work_item_id || item.source_candidate_id || 'helper work item')}</h3>
-                    <div>${escapeHtml(item.summary || '')}</div>
-                    <div class="knowledge-review-meta">status: ${escapeHtml(item.status || 'pending')} · topic: ${escapeHtml(item.topic || '')}</div>
-                </div>
-            `).join('') : '<div class="field-note">No helper work items.</div>';
+            const helperHtml = helpers.length ? helpers.slice(0, 8).map(renderHelperWorkItemCard).join('') : '<div class="field-note">No helper work items.</div>';
             panel.innerHTML = `
                 <div class="health-metric-grid">
                     ${metric(pending.length, 'Pending lessons')}
@@ -1547,34 +1572,100 @@
         }
 
         function renderPendingLessonCard(item) {
-            const id = escapeHtml(item.candidate_id || '');
+            const rawId = String(item.candidate_id || '');
+            const id = escapeHtml(rawId);
+            const attrId = escapeAttr(rawId);
             const evidence = Array.isArray(item.evidence) ? item.evidence.slice(0, 3).map(ev => `<li>${escapeHtml(ev)}</li>`).join('') : '';
+            const route = item.route ? ` · route: ${escapeHtml(item.route)}` : '';
+            const quality = item.quality ? ` · quality: ${escapeHtml(item.quality)}` : '';
+            const failureClass = item.failure_class ? ` · class: ${escapeHtml(item.failure_class)}` : '';
+            const redaction = item.redaction_status ? ` · redaction: ${escapeHtml(item.redaction_status)}` : '';
+            const qualityReason = item.quality_reason
+                ? `<div class="knowledge-review-meta">quality reason: ${escapeHtml(item.quality_reason)}</div>`
+                : '';
             return `
                 <div class="knowledge-review-card">
                     <h3>${id}</h3>
                     <div>${escapeHtml(item.lesson || '')}</div>
                     <div class="knowledge-review-meta">
-                        topic: ${escapeHtml(item.topic || '')} · type: ${escapeHtml(item.knowledge_type || '')} · confidence: ${escapeHtml(item.confidence || '')} · recurrence: ${escapeHtml(String(item.recurrence_count || 0))}
+                        topic: ${escapeHtml(item.topic || '')} · type: ${escapeHtml(item.knowledge_type || '')} · confidence: ${escapeHtml(item.confidence || '')} · recurrence: ${escapeHtml(String(item.recurrence_count || 0))}${route}${quality}${failureClass}${redaction}
                     </div>
+                    ${qualityReason}
                     ${evidence ? `<ul>${evidence}</ul>` : ''}
                     <div class="knowledge-review-actions">
-                        <button type="button" class="button-primary" onclick="knowledgeAction('${id}', 'accept')">Accept</button>
-                        <button type="button" class="button-secondary" onclick="knowledgeAction('${id}', 'helper-work-item')">Convert to Helper Work Item</button>
-                        <button type="button" class="button-danger" onclick="knowledgeAction('${id}', 'reject')">Reject</button>
+                        <button type="button" class="button-primary" onclick="knowledgeAction('${attrId}', 'accept')">Accept Lesson</button>
+                        <button type="button" class="button-secondary" onclick="knowledgeAction('${attrId}', 'helper-work-item')">Convert to Helper Work Item</button>
+                        <button type="button" class="button-danger" onclick="knowledgeAction('${attrId}', 'reject')">Reject</button>
                     </div>
                 </div>
             `;
         }
 
+        function renderHelperWorkItemCard(item) {
+            const rawId = String(item.work_item_id || item.source_candidate_id || '');
+            const id = escapeHtml(rawId || 'helper work item');
+            const attrId = escapeAttr(rawId);
+            const status = String(item.status || 'pending');
+            const issues = Array.isArray(item.affected_issue_keys) && item.affected_issue_keys.length
+                ? ` · issues: ${escapeHtml(item.affected_issue_keys.slice(0, 5).join(', '))}${item.affected_issue_keys.length > 5 ? '...' : ''}`
+                : '';
+            const meta = [
+                `status: ${escapeHtml(status)}`,
+                `topic: ${escapeHtml(item.topic || '')}`,
+                item.failure_class ? `class: ${escapeHtml(item.failure_class)}` : '',
+                item.quality ? `quality: ${escapeHtml(item.quality)}` : '',
+                item.redaction_status ? `redaction: ${escapeHtml(item.redaction_status)}` : '',
+            ].filter(Boolean).join(' · ');
+            const references = [
+                item.implementation_reference ? `<div class="knowledge-review-meta">implemented: ${escapeHtml(item.implementation_reference)}</div>` : '',
+                item.verification_reference ? `<div class="knowledge-review-meta">verified: ${escapeHtml(item.verification_reference)}</div>` : '',
+                item.retirement_reason ? `<div class="knowledge-review-meta">retired: ${escapeHtml(item.retirement_reason)}</div>` : '',
+            ].join('');
+            const actions = renderHelperWorkItemActions(attrId, status);
+            return `
+                <div class="knowledge-review-card">
+                    <h3>${id}</h3>
+                    <div>${escapeHtml(item.summary || '')}</div>
+                    ${item.lesson ? `<div class="field-note" style="margin-top:8px;">${escapeHtml(item.lesson)}</div>` : ''}
+                    <div class="knowledge-review-meta">${meta}${issues}</div>
+                    ${references}
+                    ${actions}
+                </div>
+            `;
+        }
+
+        function renderHelperWorkItemActions(attrId, status) {
+            if (!attrId || status === 'retired') return '';
+            const buttons = [];
+            if (status === 'pending') {
+                buttons.push(`<button type="button" class="button-secondary" onclick="helperWorkAction('${attrId}', 'accepted_for_work')">Accept for Work</button>`);
+            }
+            if (status === 'accepted_for_work') {
+                buttons.push(`<button type="button" class="button-secondary" onclick="helperWorkAction('${attrId}', 'implemented')">Mark Implemented</button>`);
+            }
+            if (status === 'implemented') {
+                buttons.push(`<button type="button" class="button-secondary" onclick="helperWorkAction('${attrId}', 'verified')">Mark Verified</button>`);
+            }
+            if (status !== 'verified') {
+                buttons.push(`<button type="button" class="button-danger" onclick="helperWorkAction('${attrId}', 'retired')">Retire</button>`);
+            }
+            if (status === 'verified') {
+                buttons.push(`<button type="button" class="button-secondary" onclick="helperWorkAction('${attrId}', 'retired')">Retire</button>`);
+            }
+            return buttons.length ? `<div class="knowledge-review-actions">${buttons.join('')}</div>` : '';
+        }
+
         function renderAcceptedLessonCard(item) {
-            const id = escapeHtml(item.candidate_id || '');
+            const rawId = String(item.candidate_id || '');
+            const id = escapeHtml(rawId);
+            const attrId = escapeAttr(rawId);
             return `
                 <div class="knowledge-review-card">
                     <h3>${id}</h3>
                     <div>${escapeHtml(item.lesson || '')}</div>
                     <div class="knowledge-review-meta">topic: ${escapeHtml(item.topic || '')} · type: ${escapeHtml(item.knowledge_type || '')}</div>
                     <div class="knowledge-review-actions">
-                        <button type="button" class="button-secondary" onclick="knowledgeAction('${id}', 'retire')">Retire</button>
+                        <button type="button" class="button-secondary" onclick="knowledgeAction('${attrId}', 'retire')">Retire</button>
                     </div>
                 </div>
             `;
@@ -1583,13 +1674,14 @@
         async function knowledgeAction(candidateId, action) {
             const status = document.getElementById('knowledge-audit-status');
             try {
-                const body = action === 'reject' || action === 'retire'
-                    ? JSON.stringify({ reason: action === 'reject' ? 'Rejected from Settings review.' : 'Retired from Settings review.' })
-                    : '{}';
+                let payload = {};
+                if (action === 'reject' || action === 'retire') {
+                    payload = { reason: action === 'reject' ? 'Rejected from Settings review.' : 'Retired from Settings review.' };
+                }
                 const resp = await fetch(`/api/knowledge/review/${encodeURIComponent(candidateId)}/${action}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body,
+                    body: JSON.stringify(payload),
                 });
                 const data = await resp.json();
                 if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
@@ -1601,11 +1693,48 @@
             }
         }
 
+        async function helperWorkAction(workItemId, statusValue) {
+            const status = document.getElementById('knowledge-audit-status');
+            let reference = '';
+            let reason = '';
+            if (statusValue === 'implemented') {
+                reference = window.prompt('Implementation reference, such as commit, file path, PR, or version:') || '';
+                if (!reference.trim()) return;
+            } else if (statusValue === 'verified') {
+                reference = window.prompt('Verification reference, such as test, NAS audit result, or observed run:') || '';
+                if (!reference.trim()) return;
+            } else if (statusValue === 'retired') {
+                reason = window.prompt('Retirement reason:') || '';
+                if (!reason.trim()) return;
+            } else if (statusValue === 'accepted_for_work') {
+                reason = 'Accepted for CaseOps helper/core work from Settings review.';
+            }
+            try {
+                const resp = await fetch(`/api/knowledge/helper-work/${encodeURIComponent(workItemId)}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: statusValue, reference, reason }),
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+                if (status) status.textContent = `Helper work item updated: ${statusValue}`;
+                await refreshKnowledgeReview();
+            } catch (e) {
+                if (status) status.textContent = '';
+                showBanner('Helper work action failed: ' + (e.message || String(e)), 'error');
+            }
+        }
+
         async function runKnowledgeAudit() {
             const status = document.getElementById('knowledge-audit-status');
+            const result = document.getElementById('knowledge-audit-result');
             const btn = document.getElementById('run-knowledge-audit-btn');
             if (btn) btn.disabled = true;
             if (status) status.textContent = 'Running audit...';
+            if (result) {
+                result.hidden = true;
+                result.innerHTML = '';
+            }
             try {
                 const minRecurrence = Number(document.getElementById('knowledge-auditor-min-recurrence')?.value || 2);
                 const resp = await fetch('/api/knowledge/audit', {
@@ -1616,7 +1745,9 @@
                 const data = await resp.json();
                 if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
                 const summary = data.summary || {};
-                if (status) status.textContent = `Reviewed ${summary.signals_reviewed || 0} signals; created ${summary.candidates_created || 0} candidates.`;
+                if (status) status.textContent = 'Audit complete.';
+                renderKnowledgeAuditResult(summary);
+                showBanner('Knowledge audit complete.', 'success');
                 await refreshKnowledgeReview();
             } catch (e) {
                 if (status) status.textContent = '';
@@ -1624,6 +1755,72 @@
             } finally {
                 if (btn) btn.disabled = false;
             }
+        }
+
+        function renderKnowledgeAuditResult(summary) {
+            const result = document.getElementById('knowledge-audit-result');
+            if (!result) return;
+            const created = Number(summary.candidates_created || 0);
+            const helpers = Number(summary.helper_work_items_created || 0);
+            const refined = Number(summary.pending_lessons_refined || 0);
+            const converted = Number(summary.pending_lessons_converted_to_helper || 0);
+            const suppressedExisting = Number(summary.pending_lessons_suppressed || 0);
+            const acceptedRefined = Number(summary.accepted_lessons_refined || 0);
+            const acceptedRetired = Number(summary.accepted_lessons_retired || 0);
+            const helpersRefined = Number(summary.helper_work_items_refined || 0);
+            const suppressedNew = Number(summary.suppressed_groups || 0);
+            const helperOnly = Number(summary.helper_only_groups || 0);
+            const totalActions = created + helpers + refined + converted + suppressedExisting + acceptedRefined + acceptedRetired + helpersRefined + suppressedNew + helperOnly;
+            const noNewReason = totalActions === 0
+                ? '<li>No review changes were made. Matching signals are either below the recurrence threshold or already covered by an existing candidate.</li>'
+                : '';
+            const candidateIds = Array.isArray(summary.candidate_ids) && summary.candidate_ids.length
+                ? `<li>New candidates: ${summary.candidate_ids.map(id => escapeHtml(id)).join(', ')}</li>`
+                : '';
+            const helperIds = Array.isArray(summary.helper_work_item_ids) && summary.helper_work_item_ids.length
+                ? `<li>New helper work items: ${summary.helper_work_item_ids.map(id => escapeHtml(id)).join(', ')}</li>`
+                : '';
+            const scopeLimitations = Array.isArray(summary.scope_limitations) && summary.scope_limitations.length
+                ? `<li>Scope limitations: ${summary.scope_limitations.map(item => escapeHtml(item)).join('; ')}</li>`
+                : '';
+            const globalExcluded = summary.global_logs_excluded_reason
+                ? `<li>Global log exclusion reason: ${escapeHtml(summary.global_logs_excluded_reason)}</li>`
+                : '';
+            const reportPath = summary.report_path
+                ? `<li>Report: ${escapeHtml(summary.report_path)}</li>`
+                : '';
+            result.innerHTML = `
+                <strong>Manual audit result${summary.audit_id ? ` ${escapeHtml(summary.audit_id)}` : ''}</strong>
+                <ul>
+                    <li>Issue logs scanned: ${escapeHtml(String(summary.issue_logs_scanned || 0))}</li>
+                    <li>Global logs scanned: ${escapeHtml(String(summary.global_logs_scanned || 0))}</li>
+                    <li>Signals considered: ${escapeHtml(String(summary.signals_considered || 0))}</li>
+                    <li>Signals skipped: ${escapeHtml(String(summary.signals_skipped || 0))}</li>
+                    <li>Redaction status: ${escapeHtml(String(summary.redaction_status || 'unknown'))}</li>
+                    ${globalExcluded}
+                    ${scopeLimitations}
+                    <li>Signals reviewed: ${escapeHtml(String(summary.signals_reviewed || 0))}</li>
+                    <li>Signals created from logs: ${escapeHtml(String(summary.log_signals_created || 0))}</li>
+                    <li>Signal groups considered: ${escapeHtml(String(summary.groups_considered || 0))}</li>
+                    <li>Below-threshold groups: ${escapeHtml(String(summary.below_threshold_groups || 0))}</li>
+                    <li>Groups already covered by existing candidates: ${escapeHtml(String(summary.existing_candidate_groups || 0))}</li>
+                    <li>Existing pending lessons refined: ${escapeHtml(String(refined))}</li>
+                    <li>Existing pending lessons converted to helper work: ${escapeHtml(String(converted))}</li>
+                    <li>Existing pending lessons suppressed: ${escapeHtml(String(suppressedExisting))}</li>
+                    <li>Existing accepted lessons refined: ${escapeHtml(String(acceptedRefined))}</li>
+                    <li>Existing accepted lessons retired: ${escapeHtml(String(acceptedRetired))}</li>
+                    <li>Existing helper work items normalized: ${escapeHtml(String(helpersRefined))}</li>
+                    <li>New signal groups routed directly to helper work: ${escapeHtml(String(helperOnly))}</li>
+                    <li>Noisy signal groups suppressed: ${escapeHtml(String(suppressedNew))}</li>
+                    <li>Pending lessons created: ${escapeHtml(String(created))}</li>
+                    <li>Helper work items created: ${escapeHtml(String(helpers))}</li>
+                    ${candidateIds}
+                    ${helperIds}
+                    ${noNewReason}
+                    ${reportPath}
+                </ul>
+            `;
+            result.hidden = false;
         }
 
         function hideAuthenticatedOrgs() {

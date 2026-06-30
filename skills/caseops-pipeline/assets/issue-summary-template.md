@@ -46,6 +46,8 @@ Concise problem and solution briefs created for every processed issue. These are
 
 Support-owned fixes validated in Sandbox. Do not include issues that are in the Escalated to Engineering section — their sandbox work is recorded in their handoff files.
 
+Only include issues whose test report has a structured Validation Verdict with `Validation Status: passed` and `Fixed?: yes`. Do not include partial passes, mixed results, blocked tests, failed tests, not-run tests, or unknown verdicts in this section. Keep those issues in the Issue Rollup with the precise next step.
+
 | Issue | Sandbox | Deploy / Validation | Prod deploy needed? |
 | --- | --- | --- | --- |
 
