@@ -37,7 +37,7 @@ def _sf_env() -> dict[str, str]:
     return env
 
 
-def _run(cmd: list[str], timeout: int = 90) -> subprocess.CompletedProcess[str]:
+def _run(cmd: list[str], timeout: int = 90, cwd: str | Path | None = None) -> subprocess.CompletedProcess[str]:
     sf = shutil.which("sf")
     if not sf:
         raise RuntimeError("Salesforce CLI `sf` is not on PATH")
@@ -51,6 +51,7 @@ def _run(cmd: list[str], timeout: int = 90) -> subprocess.CompletedProcess[str]:
         errors="replace",
         env=_sf_env(),
         timeout=timeout,
+        cwd=str(cwd) if cwd else None,
     )
 
 
@@ -256,6 +257,24 @@ def _write_json(path: Path | None, data: dict[str, Any]) -> None:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _ensure_sfdx_project(project_root: Path) -> Path:
+    project_root.mkdir(parents=True, exist_ok=True)
+    force_app = project_root / "force-app"
+    force_app.mkdir(parents=True, exist_ok=True)
+    project_file = project_root / "sfdx-project.json"
+    if not project_file.exists():
+        _write_json(project_file, {
+            "packageDirectories": [{"path": "force-app", "default": True}],
+            "sourceApiVersion": "66.0",
+        })
+    return project_root
+
+
+def _default_helper_project_root(name: str) -> Path:
+    base = Path(os.environ.get("CASEOPS_TEMP_DIR") or os.environ.get("TMPDIR") or "/tmp/caseops")
+    return base / name
 
 
 def _normalize_field_name(field: str) -> tuple[str, str]:
@@ -592,6 +611,7 @@ def query_tooling(args: argparse.Namespace) -> int:
 def retrieve_metadata(args: argparse.Namespace) -> int:
     out_dir = Path(args.out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
+    project_root = _ensure_sfdx_project(out_dir / "_caseops-sfdx-project")
     metadata = args.metadata or []
     source_dirs = args.source_dir or []
     result: dict[str, Any] = {
@@ -617,7 +637,7 @@ def retrieve_metadata(args: argparse.Namespace) -> int:
         cmd.extend(["--metadata", item])
     for item in source_dirs:
         cmd.extend(["--source-dir", item])
-    proc = _run(cmd, timeout=args.timeout)
+    proc = _run(cmd, timeout=args.timeout, cwd=project_root)
     result["retrieve"] = _command_result(kind="retrieve-metadata-command", proc=proc, command=cmd)
     result["ok"] = bool(result["retrieve"].get("ok"))
     if not result["ok"]:
@@ -632,6 +652,7 @@ def retrieve_metadata(args: argparse.Namespace) -> int:
 def deploy_source(args: argparse.Namespace) -> int:
     source_dir = Path(args.source_dir).resolve()
     attempt = Path(args.attempt).resolve() if args.attempt else source_dir.parent
+    project_root = _ensure_sfdx_project(source_dir.parent if source_dir.name == "force-app" else attempt / "_caseops-sfdx-project")
     summary_path = attempt / "deploy-source-summary.json"
     result: dict[str, Any] = {
         "kind": "deploy-source",
@@ -655,7 +676,7 @@ def deploy_source(args: argparse.Namespace) -> int:
         cmd.extend(["--test-level", args.test_level])
     for test_name in args.tests or []:
         cmd.extend(["--tests", test_name])
-    proc = _run(cmd, timeout=args.timeout)
+    proc = _run(cmd, timeout=args.timeout, cwd=project_root)
     result["deploy"] = _command_result(kind="deploy-source-command", proc=proc, command=cmd)
     result["ok"] = bool(result["deploy"].get("ok"))
     if not result["ok"]:
@@ -669,7 +690,12 @@ def deploy_source(args: argparse.Namespace) -> int:
 
 def deploy_report(args: argparse.Namespace) -> int:
     cmd = ["sf", "project", "deploy", "report", "--target-org", args.org, "--job-id", args.deploy_id, "--json"]
-    proc = _run(cmd, timeout=args.timeout)
+    project_root = _ensure_sfdx_project(
+        Path(args.out_dir).resolve() / "_caseops-sfdx-project"
+        if args.out_dir
+        else _default_helper_project_root("deploy-report-sfdx-project")
+    )
+    proc = _run(cmd, timeout=args.timeout, cwd=project_root)
     result = _command_result(kind="deploy-report", proc=proc, command=cmd)
     result["org"] = args.org
     result["deployId"] = args.deploy_id
@@ -746,6 +772,7 @@ def verify_flow(args: argparse.Namespace) -> int:
 def deploy_mdapi(args: argparse.Namespace) -> int:
     candidate = Path(args.candidate).resolve()
     attempt = Path(args.attempt).resolve()
+    project_root = _ensure_sfdx_project(candidate if (candidate / "force-app").is_dir() else attempt / "_caseops-sfdx-project")
     mdapi_dir = attempt / "mdapi-converted"
     summary_path = attempt / "deploy-summary.json"
     result: dict[str, Any] = {
@@ -768,7 +795,7 @@ def deploy_mdapi(args: argparse.Namespace) -> int:
             str(source_dir),
             "--output-dir",
             str(mdapi_dir),
-        ], timeout=120)
+        ], timeout=120, cwd=project_root)
         result["convert"] = {
             "returncode": convert.returncode,
             "stdout": _redact(convert.stdout)[-2000:],
@@ -802,7 +829,7 @@ def deploy_mdapi(args: argparse.Namespace) -> int:
         "--target-org",
         args.sandbox_org,
         "--json",
-    ], timeout=args.timeout)
+    ], timeout=args.timeout, cwd=project_root)
     deploy_json = _json_from_stdout(deploy.stdout)
     deploy_result = deploy_json.get("result", {}) if isinstance(deploy_json, dict) else {}
     result["deploy"] = {

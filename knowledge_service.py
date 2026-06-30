@@ -1665,6 +1665,27 @@ def classify_guardrail_command(command: str, *, production_approved: bool = Fals
             "message": "Routine CaseOps retrieve/deploy should avoid package.xml/--manifest unless an exception is approved.",
             "next_action": "Use --metadata, --source-dir, --metadata-dir, or CaseOps deploy helpers.",
         })
+    if "sf project retrieve" in lower and "sf_caseops_helper.py" not in lower:
+        findings.append({
+            "rule": "raw_project_retrieve_without_helper",
+            "severity": "block",
+            "message": "Raw sf project retrieve is workspace-sensitive and has repeatedly failed outside valid SFDX projects.",
+            "next_action": "Use `python scripts/sf_caseops_helper.py retrieve-metadata ...`; it creates an issue-scoped SFDX workspace and returns structured failure_class/next_action.",
+        })
+    if re.search(r"\bsf\s+project\s+deploy\s+start\b", lower) and "sf_caseops_helper.py" not in lower:
+        findings.append({
+            "rule": "raw_project_deploy_without_helper",
+            "severity": "block",
+            "message": "Raw sf project deploy is workspace-sensitive and bypasses CaseOps deploy summaries.",
+            "next_action": "Use `python scripts/sf_caseops_helper.py deploy-source ...` or `deploy-mdapi ...` from an issue-scoped attempt workspace.",
+        })
+    if "sf data query" in lower and "sf_caseops_helper.py" not in lower:
+        findings.append({
+            "rule": "raw_soql_without_helper",
+            "severity": "warn",
+            "message": "Raw sf data query bypasses CaseOps object/field prechecks and structured INVALID_TYPE handling.",
+            "next_action": "Use `python scripts/sf_caseops_helper.py query-data ...` or verify the sObject with `verify-sobject` first.",
+        })
     if re.search(r"\b(project\s+deploy|deploy\s+start|data\s+(?:update|delete|upsert|create)|apex\s+run)\b", lower) and "production" in lower and not production_approved:
         findings.append({
             "rule": "production_write_without_approval",

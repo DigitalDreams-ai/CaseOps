@@ -684,7 +684,7 @@ class KnowledgeServiceTests(unittest.TestCase):
                 outputs,
                 helper["work_item_id"],
                 "implemented",
-                reference="scripts/sf_caseops_helper.py in 0.1.54",
+                reference="scripts/sf_caseops_helper.py in 0.1.55",
             )
             verified = knowledge_service.update_helper_work_item_status(
                 outputs,
@@ -701,7 +701,7 @@ class KnowledgeServiceTests(unittest.TestCase):
             decisions = list((outputs / "org-knowledge" / "decision-artifacts").glob("*helper_work_item_status_changed*.json"))
 
         self.assertEqual(accepted["status"], "accepted_for_work")
-        self.assertEqual(implemented["implementation_reference"], "scripts/sf_caseops_helper.py in 0.1.54")
+        self.assertEqual(implemented["implementation_reference"], "scripts/sf_caseops_helper.py in 0.1.55")
         self.assertEqual(verified["status"], "verified")
         self.assertEqual(retired["retirement_reason"], "covered by core helper guardrail")
         self.assertGreaterEqual(len(decisions), 4)
@@ -710,10 +710,25 @@ class KnowledgeServiceTests(unittest.TestCase):
         legacy = knowledge_service.classify_guardrail_command("sfdx force:source:deploy -p force-app")
         manifest = knowledge_service.classify_guardrail_command("sf project deploy start --manifest package.xml")
         usershare = knowledge_service.classify_guardrail_command("sf data query --query 'SELECT Id, Name FROM UserShare'")
+        raw_retrieve = knowledge_service.classify_guardrail_command(
+            "sf project retrieve start --metadata Flow:Example --target-org prod"
+        )
+        raw_deploy = knowledge_service.classify_guardrail_command(
+            "sf project deploy start --source-dir candidate --target-org sandbox"
+        )
+        raw_query = knowledge_service.classify_guardrail_command(
+            "sf data query --query 'SELECT Id FROM Missing_Object__c'"
+        )
 
         self.assertFalse(legacy["ok"])
         self.assertTrue(any(item["rule"] == "routine_manifest_deploy" for item in manifest["findings"]))
         self.assertFalse(usershare["ok"])
+        self.assertFalse(raw_retrieve["ok"])
+        self.assertTrue(any(item["rule"] == "raw_project_retrieve_without_helper" for item in raw_retrieve["findings"]))
+        self.assertFalse(raw_deploy["ok"])
+        self.assertTrue(any(item["rule"] == "raw_project_deploy_without_helper" for item in raw_deploy["findings"]))
+        self.assertTrue(raw_query["ok"])
+        self.assertTrue(any(item["rule"] == "raw_soql_without_helper" for item in raw_query["findings"]))
 
     def test_knowledge_review_api_accepts_pending_candidate(self):
         with tempfile.TemporaryDirectory() as tmp:
