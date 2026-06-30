@@ -124,6 +124,82 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(second["log_signals_created"], 0)
         self.assertEqual(second["candidates_created"], 0)
 
+    def test_manual_auditor_reports_scope_and_global_logs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            logs = outputs / "pipeline-logs"
+            logs.mkdir(parents=True)
+            issue_record = {
+                "ts": "2026-06-28T17:00:00+00:00",
+                "run_key": "OPEN-1",
+                "kind": "line",
+                "text": 'Tool warning: command returned exit code 1. {"name":"INVALID_TYPE","errorCode":"INVALID_TYPE"}',
+            }
+            global_record = {
+                "ts": "2026-06-28T17:01:00+00:00",
+                "run_key": "__global__",
+                "kind": "line",
+                "text": 'Tool warning: command returned exit code 1. {"name":"INVALID_TYPE","errorCode":"INVALID_TYPE"}',
+            }
+            (logs / "OPEN-1.jsonl").write_text(json.dumps(issue_record) + "\n", encoding="utf-8")
+            (logs / "__global__.jsonl").write_text(json.dumps(global_record) + "\n", encoding="utf-8")
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+
+        self.assertEqual(summary["issue_logs_scanned"], 1)
+        self.assertEqual(summary["global_logs_scanned"], 1)
+        self.assertEqual(summary["global_logs_excluded_reason"], "")
+        self.assertIn("signals_considered", summary)
+        self.assertIn("signals_skipped", summary)
+        self.assertEqual(summary["redaction_status"], "not_needed")
+
+    def test_low_and_report_only_findings_do_not_create_pending_lessons(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            for key in ("OPEN-1", "OPEN-2"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="STEP_5",
+                    signal_type="missing_file_or_directory",
+                    topic="mixed-missing-files",
+                    summary="No such file or directory appeared in a broad context.",
+                    evidence=["No such file or directory"],
+                )
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+
+        self.assertEqual(summary["suppressed_groups"], 1)
+        self.assertEqual(pending, [])
+
+    def test_decision_artifact_schema_redacts_or_blocks_unsafe_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+
+            artifact = knowledge_service.write_decision_artifact(
+                outputs,
+                issue_key="OPEN-1",
+                decision_type="helper_failure",
+                belief="Helper failed and needs developer review.",
+                evidence=["access_token=secret-value"],
+                action_or_refusal="Created a helper work item.",
+                next_need="Developer reviews helper output.",
+                failure_class="helper_failure",
+                source="unit-test",
+            )
+            stored = json.loads(
+                (outputs / "org-knowledge" / "decision-artifacts" / f"{artifact['artifact_id']}.json").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(stored["schema_version"], 1)
+        self.assertEqual(stored["redaction_status"], "redacted")
+        self.assertIn("[REDACTED]", json.dumps(stored))
+        self.assertNotIn("secret-value", json.dumps(stored))
+
     def test_manual_auditor_routes_invalid_type_to_helper_work(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"
@@ -178,6 +254,46 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(pending, [])
         self.assertEqual(len(helpers), 1)
         self.assertEqual(second["helper_work_items_created"], 0)
+
+    def test_manual_auditor_normalizes_legacy_helper_work_items(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            signal = knowledge_service.write_signal(
+                outputs,
+                issue_key="OPEN-1",
+                run_id="OPEN-1",
+                source_step="LOG",
+                signal_type="invalid_query_type",
+                topic="salesforce-query",
+                summary="Salesforce INVALID_TYPE occurred while querying an optional object.",
+                evidence=["INVALID_TYPE"],
+            )
+            helper = {
+                "schema_version": 1,
+                "work_item_id": "helper-legacy-invalid-type",
+                "source_candidate_id": "lesson-legacy-invalid_query_type",
+                "source_signal_ids": [signal["signal_id"]],
+                "affected_issue_keys": ["OPEN-1"],
+                "topic": "salesforce-query",
+                "summary": "Evaluate helper support for INVALID_TYPE.",
+                "lesson": "Verify object existence before retrying.",
+                "evidence": ["INVALID_TYPE"],
+                "status": "pending",
+                "created_at": "2026-06-28T00:00:00+00:00",
+            }
+            helper_path = outputs / "org-knowledge" / "helper-work-items" / "helper-legacy-invalid-type.json"
+            helper_path.write_text(json.dumps(helper), encoding="utf-8")
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            updated = json.loads(helper_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(summary["helper_work_items_refined"], 1)
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(updated["route"], "helper_work_item")
+        self.assertEqual(updated["failure_class"], "invalid_salesforce_assumption")
+        self.assertEqual(updated["quality"], "high")
+        self.assertEqual(updated["redaction_status"], "not_needed")
 
     def test_manual_auditor_suppresses_broad_missing_file_bucket(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -269,6 +385,7 @@ class KnowledgeServiceTests(unittest.TestCase):
                 "confidence": "medium",
                 "recurrence_count": 2,
                 "risk": "low",
+                "keywords": ["UserShare"],
                 "created_at": "2026-06-27T00:00:00+00:00",
                 "status": "pending",
             }
@@ -319,6 +436,7 @@ class KnowledgeServiceTests(unittest.TestCase):
                 "confidence": "medium",
                 "recurrence_count": 2,
                 "risk": "low",
+                "keywords": ["UserShare"],
                 "created_at": "2026-06-27T00:00:00+00:00",
                 "status": "pending",
             }
@@ -488,6 +606,7 @@ class KnowledgeServiceTests(unittest.TestCase):
                 "confidence": "medium",
                 "recurrence_count": 2,
                 "risk": "low",
+                "keywords": ["UserShare"],
                 "created_at": "2026-06-27T00:00:00+00:00",
                 "status": "pending",
             }
@@ -496,8 +615,10 @@ class KnowledgeServiceTests(unittest.TestCase):
             pending_path.write_text(json.dumps(candidate), encoding="utf-8")
 
             helper = knowledge_service.convert_to_helper_work_item(outputs, "lesson-review-1")
-            accepted = knowledge_service.accept_lesson(outputs, "lesson-review-1")
-            retired = knowledge_service.retire_lesson(outputs, "lesson-review-1", reason="replaced by helper")
+            with self.assertRaises(FileNotFoundError):
+                knowledge_service.accept_lesson(outputs, "lesson-review-1")
+            rejected_converted = outputs / "org-knowledge" / "rejected-lessons" / "lesson-review-1.json"
+            self.assertTrue(rejected_converted.exists())
 
             pending_path_2 = outputs / "org-knowledge" / "pending-lessons" / "lesson-review-2.json"
             pending_2 = dict(candidate, candidate_id="lesson-review-2")
@@ -505,8 +626,6 @@ class KnowledgeServiceTests(unittest.TestCase):
             rejected = knowledge_service.reject_lesson(outputs, "lesson-review-2", reason="too broad")
 
         self.assertEqual(helper["source_candidate_id"], "lesson-review-1")
-        self.assertEqual(accepted["status"], "accepted")
-        self.assertEqual(retired["status"], "retired")
         self.assertEqual(rejected["status"], "rejected")
 
     def test_guardrail_command_classification(self):
@@ -537,6 +656,7 @@ class KnowledgeServiceTests(unittest.TestCase):
                 "confidence": "medium",
                 "recurrence_count": 2,
                 "risk": "low",
+                "keywords": ["UserShare"],
                 "created_at": "2026-06-27T00:00:00+00:00",
                 "status": "pending",
             }
@@ -566,10 +686,10 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(accepted.get_json()["item"]["status"], "accepted")
         self.assertEqual(
             accepted.get_json()["item"]["lesson"],
-            "Describe share objects before querying fields, then query only returned fields.",
+            "Describe share objects before querying fields.",
         )
-        self.assertEqual(accepted.get_json()["item"]["confidence"], "high")
-        self.assertEqual(accepted.get_json()["item"]["keywords"], ["UserShare", "describe"])
+        self.assertEqual(accepted.get_json()["item"]["confidence"], "medium")
+        self.assertEqual(accepted.get_json()["item"]["keywords"], ["UserShare"])
         self.assertEqual(len(review_after.get_json()["items"]["pending_lessons"]), 0)
         self.assertEqual(len(review_after.get_json()["items"]["accepted_lessons"]), 1)
 

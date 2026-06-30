@@ -31,10 +31,26 @@ RUNTIME_DIRS = (
     "helper-work-items",
     "signals",
     "audit-reports",
+    "decision-artifacts",
 )
 
 LESSON_ACTIVE_STATUSES = {"accepted", "active"}
 LESSON_INACTIVE_STATUSES = {"pending", "rejected", "retired"}
+ROUTES = {"org_lesson", "helper_work_item", "developer_review", "report_only"}
+DEVELOPER_REVIEW_TYPES = {"core_knowledge", "guardrail", "template", "code", "queue_policy"}
+QUALITY_LABELS = {"high", "medium", "low", "report_only"}
+REDACTION_STATUSES = {"not_needed", "redacted", "blocked_unsafe", "unknown"}
+FAILURE_CLASSES = {
+    "bad_context",
+    "missing_helper",
+    "helper_failure",
+    "stale_state",
+    "weak_template",
+    "unsafe_prod_request",
+    "invalid_salesforce_assumption",
+    "queue_policy_skip",
+    "noise",
+}
 
 DEFAULT_RUNTIME_INDEX: dict[str, Any] = {
     "version": KNOWLEDGE_SCHEMA_VERSION,
@@ -110,8 +126,66 @@ def redact_text(text: str) -> str:
     return redacted
 
 
+def redaction_status_for_text(text: str) -> str:
+    return "redacted" if contains_secret(text or "") else "not_needed"
+
+
+def redaction_status_for_payload(payload: dict[str, Any]) -> str:
+    return redaction_status_for_text(json.dumps(payload, ensure_ascii=False))
+
+
 def contains_secret(text: str) -> bool:
     return redact_text(text) != (text or "")
+
+
+def classify_failure_class(signal_type: str, topic: str = "", text: str = "") -> str:
+    value = " ".join([signal_type or "", topic or "", text or ""]).lower()
+    if any(item in value for item in ("invalidprojectworkspace", "invalid_sfdx_workspace", "sfdx workspace", "sfdx-project")):
+        return "bad_context"
+    if any(item in value for item in ("json_decode", "jsondecode", "json_parse", "expecting value", "helper_failure")):
+        return "helper_failure"
+    if any(item in value for item in ("helper_available_not_used", "missing_helper")):
+        return "missing_helper"
+    if any(item in value for item in ("template", "markdown", "jira-message", "issue-brief", "handoff")):
+        return "weak_template"
+    if any(item in value for item in ("prod", "production", "unsafe_prod", "frontdoor")):
+        return "unsafe_prod_request"
+    if any(item in value for item in ("queue_policy", "closed", "resolved", "engineering")):
+        return "queue_policy_skip"
+    if any(item in value for item in ("stale", "retry", "blocked", "state")):
+        return "stale_state"
+    if any(item in value for item in ("invalid_query", "invalid_type", "invalid field", "no such column", "salesforce")):
+        return "invalid_salesforce_assumption"
+    if any(item in value for item in ("missing_file", "missing file", "no such file")):
+        return "noise"
+    return "noise"
+
+
+def route_for_failure_class(failure_class: str, signal_type: str = "") -> tuple[str, str]:
+    if failure_class in {"missing_helper", "helper_failure"} or signal_type in {"helper_available_not_used", "invalid_command_pattern"}:
+        return "helper_work_item", ""
+    if failure_class in {"weak_template", "unsafe_prod_request", "bad_context", "invalid_salesforce_assumption", "stale_state"}:
+        review_type = {
+            "weak_template": "template",
+            "unsafe_prod_request": "guardrail",
+            "bad_context": "code",
+            "invalid_salesforce_assumption": "core_knowledge",
+            "stale_state": "queue_policy",
+        }.get(failure_class, "code")
+        return "developer_review", review_type
+    return "report_only", ""
+
+
+def quality_for_group(failure_class: str, recurrence: int, *, deterministic: bool = False) -> tuple[str, str]:
+    if failure_class in {"queue_policy_skip", "noise"}:
+        return "report_only", "Queue policy or noisy evidence is report-only unless it exposes a repair gap."
+    if deterministic:
+        return "high", "High-confidence deterministic helper or guardrail failure."
+    if recurrence >= 3:
+        return "high", f"Repeated across {recurrence} matching signals."
+    if recurrence >= 2:
+        return "medium", f"Repeated across {recurrence} matching signals."
+    return "low", "Single signal or weak recurrence; keep report-only."
 
 
 def knowledge_root(outputs: Path) -> Path:
@@ -129,6 +203,49 @@ def _load_json(path: Path, default: Any) -> Any:
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def write_decision_artifact(
+    outputs: Path,
+    *,
+    issue_key: str,
+    decision_type: str,
+    belief: str,
+    evidence: list[str],
+    action_or_refusal: str,
+    next_need: str,
+    failure_class: str,
+    source: str,
+    related_artifacts: list[str] | None = None,
+) -> dict[str, Any]:
+    clean_evidence = [redact_text(item) for item in evidence[:12]]
+    payload = {
+        "schema_version": KNOWLEDGE_SCHEMA_VERSION,
+        "artifact_id": f"{safe_slug(issue_key, '__global__')}-{safe_slug(decision_type, 'decision')}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}",
+        "decision_type": safe_slug(decision_type, "decision"),
+        "belief": redact_text(belief),
+        "evidence": clean_evidence,
+        "action_or_refusal": redact_text(action_or_refusal),
+        "next_need": redact_text(next_need),
+        "failure_class": failure_class if failure_class in FAILURE_CLASSES else "noise",
+        "issue_key": issue_key or "__global__",
+        "source": redact_text(source),
+        "related_artifacts": [redact_text(item) for item in (related_artifacts or [])[:12]],
+        "redaction_status": redaction_status_for_text(json.dumps({
+            "belief": belief,
+            "evidence": evidence,
+            "action_or_refusal": action_or_refusal,
+            "next_need": next_need,
+            "source": source,
+            "related_artifacts": related_artifacts or [],
+        }, ensure_ascii=False)),
+        "created_at": utc_now_iso(),
+    }
+    if contains_secret(json.dumps(payload, ensure_ascii=False)):
+        raise ValueError("Decision artifact contains secret-like content")
+    path = knowledge_root(outputs) / "decision-artifacts" / f"{payload['artifact_id']}.json"
+    _write_json(path, payload)
+    return payload
 
 
 def _read_json_files(directory: Path) -> list[dict[str, Any]]:
@@ -467,6 +584,11 @@ def write_signal(
     issue = safe_slug(issue_key, "issue")
     signal = safe_slug(signal_type, "signal")
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    redacted_summary = redact_text(summary)
+    redacted_evidence = [redact_text(item) for item in evidence[:12]]
+    failure_class = classify_failure_class(signal_type, topic, " ".join([redacted_summary, *redacted_evidence]))
+    route, developer_review_type = route_for_failure_class(failure_class, signal_type)
+    quality, quality_reason = quality_for_group(failure_class, 1)
     payload = {
         "schema_version": KNOWLEDGE_SCHEMA_VERSION,
         "signal_id": f"{issue}-{safe_slug(source_step, 'step')}-{timestamp}-{signal}",
@@ -475,12 +597,19 @@ def write_signal(
         "source_step": source_step,
         "signal_type": signal_type,
         "topic": topic,
-        "summary": redact_text(summary),
-        "evidence": [redact_text(item) for item in evidence[:12]],
+        "summary": redacted_summary,
+        "evidence": redacted_evidence,
         "helper_available": helper_available,
         "knowledge_selected": knowledge_selected or [],
+        "failure_class": failure_class,
+        "route": route,
+        "quality": quality,
+        "quality_reason": quality_reason,
+        "redaction_status": redaction_status_for_text(json.dumps({"summary": summary, "evidence": evidence}, ensure_ascii=False)),
         "created_at": utc_now_iso(),
     }
+    if developer_review_type:
+        payload["developer_review_type"] = developer_review_type
     validate_signal(payload)
     path = knowledge_root(outputs) / "signals" / f"{payload['signal_id']}.json"
     _write_json(path, payload)
@@ -492,6 +621,16 @@ def validate_signal(payload: dict[str, Any]) -> None:
     missing = [field for field in required if not payload.get(field)]
     if missing:
         raise ValueError(f"Signal missing required fields: {', '.join(missing)}")
+    if payload.get("route") and payload["route"] not in ROUTES:
+        raise ValueError("Signal has invalid route")
+    if payload.get("quality") and payload["quality"] not in QUALITY_LABELS:
+        raise ValueError("Signal has invalid quality")
+    if payload.get("failure_class") and payload["failure_class"] not in FAILURE_CLASSES:
+        raise ValueError("Signal has invalid failure_class")
+    if payload.get("redaction_status") and payload["redaction_status"] not in REDACTION_STATUSES:
+        raise ValueError("Signal has invalid redaction_status")
+    if payload.get("developer_review_type") and payload["developer_review_type"] not in DEVELOPER_REVIEW_TYPES:
+        raise ValueError("Signal has invalid developer_review_type")
     if contains_secret(json.dumps(payload, ensure_ascii=False)):
         raise ValueError("Signal contains secret-like content")
 
@@ -516,6 +655,18 @@ def validate_candidate(payload: dict[str, Any]) -> None:
         raise ValueError(f"Lesson candidate missing required fields: {', '.join(missing)}")
     if payload.get("status") not in {"pending", "accepted", "active", "rejected", "retired"}:
         raise ValueError("Lesson candidate has invalid status")
+    if payload.get("route") and payload["route"] not in ROUTES:
+        raise ValueError("Lesson candidate has invalid route")
+    if payload.get("quality") and payload["quality"] not in QUALITY_LABELS:
+        raise ValueError("Lesson candidate has invalid quality")
+    if payload.get("failure_class") and payload["failure_class"] not in FAILURE_CLASSES:
+        raise ValueError("Lesson candidate has invalid failure_class")
+    if payload.get("redaction_status") and payload["redaction_status"] not in REDACTION_STATUSES:
+        raise ValueError("Lesson candidate has invalid redaction_status")
+    if payload.get("developer_review_type") and payload["developer_review_type"] not in DEVELOPER_REVIEW_TYPES:
+        raise ValueError("Lesson candidate has invalid developer_review_type")
+    if payload.get("status") == "pending" and payload.get("quality") in {"low", "report_only"}:
+        raise ValueError("Low/report-only candidates cannot be pending lessons")
     if contains_secret(json.dumps(payload, ensure_ascii=False)):
         raise ValueError("Lesson candidate contains secret-like content")
 
@@ -560,18 +711,36 @@ def _classify_log_signal(text: str) -> dict[str, Any] | None:
     return None
 
 
-def _iter_pipeline_log_records(outputs: Path) -> list[dict[str, Any]]:
+def _iter_pipeline_log_records(outputs: Path, *, include_global: bool = True) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     logs_dir = outputs / "pipeline-logs"
+    scope = {
+        "issue_logs_scanned": 0,
+        "global_logs_scanned": 0,
+        "global_logs_excluded_reason": "" if include_global else "Global queue logs excluded by caller.",
+        "scan_started_at": utc_now_iso(),
+        "scan_completed_at": "",
+        "since_cursor": "",
+        "until_cursor": "",
+        "scope_limitations": [],
+    }
     if not logs_dir.exists():
-        return []
+        scope["scope_limitations"].append("pipeline-logs directory does not exist")
+        scope["scan_completed_at"] = utc_now_iso()
+        return [], scope
     records: list[dict[str, Any]] = []
     for path in sorted(logs_dir.glob("*.jsonl")):
-        if path.name == "__global__.jsonl":
+        is_global = path.name == "__global__.jsonl"
+        if is_global and not include_global:
             continue
         try:
             lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         except OSError:
+            scope["scope_limitations"].append(f"unable to read {path.name}")
             continue
+        if is_global:
+            scope["global_logs_scanned"] += 1
+        else:
+            scope["issue_logs_scanned"] += 1
         for line_no, line in enumerate(lines, start=1):
             if not line.strip():
                 continue
@@ -586,12 +755,14 @@ def _iter_pipeline_log_records(outputs: Path) -> list[dict[str, Any]]:
                 continue
             records.append({
                 "path": path,
+                "is_global": is_global,
                 "line_no": line_no,
                 "ts": str(item.get("ts") or ""),
                 "run_key": str(item.get("run_key") or path.stem),
                 "text": text,
             })
-    return records
+    scope["scan_completed_at"] = utc_now_iso()
+    return records, scope
 
 
 def _write_log_signal_if_needed(outputs: Path, record: dict[str, Any], pattern: dict[str, Any]) -> bool:
@@ -602,6 +773,11 @@ def _write_log_signal_if_needed(outputs: Path, record: dict[str, Any], pattern: 
     if path.exists():
         return False
     evidence = str(record.get("text") or "")[:700]
+    redacted_evidence = redact_text(evidence)
+    redacted_source = redact_text(f"{Path(str(record.get('path') or '')).name}:{record.get('line_no') or 0}")
+    failure_class = classify_failure_class(signal_type, str(pattern["topic"]), redacted_evidence)
+    route, developer_review_type = route_for_failure_class(failure_class, signal_type)
+    quality, quality_reason = quality_for_group(failure_class, 1)
     payload = {
         "schema_version": KNOWLEDGE_SCHEMA_VERSION,
         "signal_id": signal_id,
@@ -612,24 +788,32 @@ def _write_log_signal_if_needed(outputs: Path, record: dict[str, Any], pattern: 
         "topic": str(pattern["topic"]),
         "summary": redact_text(str(pattern["summary"])),
         "evidence": [
-            redact_text(evidence),
-            redact_text(f"{Path(str(record.get('path') or '')).name}:{record.get('line_no') or 0}"),
+            redacted_evidence,
+            redacted_source,
         ],
         "helper_available": "",
         "knowledge_selected": [],
+        "failure_class": failure_class,
+        "route": route,
+        "quality": quality,
+        "quality_reason": quality_reason,
+        "redaction_status": redaction_status_for_text(evidence),
         "created_at": utc_now_iso(),
     }
+    if developer_review_type:
+        payload["developer_review_type"] = developer_review_type
     validate_signal(payload)
     _write_json(path, payload)
     return True
 
 
-def derive_signals_from_pipeline_logs(outputs: Path, *, max_created: int = 200) -> int:
+def derive_signals_from_pipeline_logs(outputs: Path, *, max_created: int = 200) -> dict[str, Any]:
     """Create deterministic signal artifacts from high-confidence pipeline log patterns."""
     ensure_knowledge_defaults(outputs)
     created = 0
     seen: set[tuple[str, str]] = set()
-    for record in _iter_pipeline_log_records(outputs):
+    records, scope = _iter_pipeline_log_records(outputs)
+    for record in records:
         pattern = _classify_log_signal(str(record.get("text") or ""))
         if not pattern:
             continue
@@ -645,7 +829,9 @@ def derive_signals_from_pipeline_logs(outputs: Path, *, max_created: int = 200) 
             continue
         if created >= max_created:
             break
-    return created
+    scope["records_scanned"] = len(records)
+    scope["signals_created"] = created
+    return scope
 
 
 def _read_auditor_state(outputs: Path) -> dict[str, Any]:
@@ -794,6 +980,38 @@ def _refine_lesson_candidate(signal_type: str, topic: str, group: list[dict[str,
     )
 
 
+def _candidate_contract_fields(signal_type: str, topic: str, group: list[dict[str, Any]], action: str) -> dict[str, Any]:
+    text = " ".join(
+        str(item.get("summary") or "") + " " + " ".join(str(ev) for ev in (item.get("evidence") or []))
+        for item in group
+    )
+    failure_class = classify_failure_class(signal_type, topic, text)
+    deterministic = action == "helper_work_item" or signal_type in {"invalid_query_type", "invalid_sfdx_workspace", "json_decode_error"}
+    quality, quality_reason = quality_for_group(failure_class, len(group), deterministic=deterministic)
+    route, developer_review_type = route_for_failure_class(failure_class, signal_type)
+    if action == "pending_lesson":
+        route = "org_lesson"
+        developer_review_type = ""
+    elif action == "helper_work_item":
+        route = "helper_work_item"
+        developer_review_type = ""
+    elif action == "suppress":
+        route = "report_only"
+        developer_review_type = ""
+        quality = "report_only"
+        quality_reason = "Suppressed by audit quality gate."
+    fields = {
+        "failure_class": failure_class,
+        "route": route,
+        "quality": quality,
+        "quality_reason": quality_reason,
+        "redaction_status": redaction_status_for_text(text),
+    }
+    if developer_review_type:
+        fields["developer_review_type"] = developer_review_type
+    return fields
+
+
 def _refine_existing_pending_candidates(outputs: Path) -> dict[str, Any]:
     """Upgrade or retire pending candidates produced by older coarse audit logic."""
     counts = {
@@ -830,11 +1048,12 @@ def _refine_existing_pending_candidates(outputs: Path) -> dict[str, Any]:
             "keywords": list(refinement.keywords),
             "refined_at": utc_now_iso(),
             "refinement_action": refinement.action,
+            **_candidate_contract_fields(signal_type, topic, group, refinement.action),
         })
         if refinement.reason:
             updated["refinement_reason"] = refinement.reason
-        validate_candidate(updated)
         if refinement.action == "pending_lesson":
+            validate_candidate(updated)
             _write_json(path, updated)
             _write_candidate_markdown(outputs, updated)
             counts["refined"] += 1
@@ -900,6 +1119,7 @@ def _refine_existing_accepted_lessons(outputs: Path) -> dict[str, Any]:
                 "confidence": refinement.confidence,
                 "risk": refinement.risk,
                 "keywords": list(refinement.keywords),
+                **_candidate_contract_fields(signal_type, topic, group, refinement.action),
             })
             _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper['work_item_id']}.json", helper)
             retired = copy.deepcopy(lesson)
@@ -908,6 +1128,7 @@ def _refine_existing_accepted_lessons(outputs: Path) -> dict[str, Any]:
             retired["retirement_reason"] = refinement.reason or "Superseded by core CaseOps knowledge/guardrails."
             retired["refined_at"] = utc_now_iso()
             retired["refinement_action"] = refinement.action
+            retired.update(_candidate_contract_fields(signal_type, topic, group, refinement.action))
             validate_candidate(retired)
             _write_json(knowledge_root(outputs) / "rejected-lessons" / f"{retired['candidate_id']}.json", retired)
             _write_candidate_markdown_in_dir(outputs, "rejected-lessons", retired)
@@ -922,6 +1143,7 @@ def _refine_existing_accepted_lessons(outputs: Path) -> dict[str, Any]:
             retired["retirement_reason"] = refinement.reason or "Superseded by current lesson quality gates."
             retired["refined_at"] = utc_now_iso()
             retired["refinement_action"] = refinement.action
+            retired.update(_candidate_contract_fields(signal_type, topic, group, refinement.action))
             validate_candidate(retired)
             _write_json(knowledge_root(outputs) / "rejected-lessons" / f"{retired['candidate_id']}.json", retired)
             _write_candidate_markdown_in_dir(outputs, "rejected-lessons", retired)
@@ -944,6 +1166,7 @@ def _refine_existing_accepted_lessons(outputs: Path) -> dict[str, Any]:
             "keywords": list(refinement.keywords),
             "refined_at": utc_now_iso(),
             "refinement_action": refinement.action,
+            **_candidate_contract_fields(signal_type, topic, group, refinement.action),
         })
         validate_candidate(updated)
         _write_json(path, updated)
@@ -952,12 +1175,52 @@ def _refine_existing_accepted_lessons(outputs: Path) -> dict[str, Any]:
     return counts
 
 
+def _refine_existing_helper_work_items(outputs: Path) -> dict[str, Any]:
+    """Normalize helper work items created before the route/quality contract."""
+    counts = {"refined": 0}
+    helper_dir = knowledge_root(outputs) / "helper-work-items"
+    for path in sorted(helper_dir.glob("*.json")):
+        helper = _load_json(path, {})
+        if not isinstance(helper, dict) or not helper:
+            continue
+        signals = _signals_for_candidate(outputs, helper)
+        pseudo_candidate = {
+            "candidate_id": helper.get("source_candidate_id") or helper.get("work_item_id") or path.stem,
+            "source_signal_ids": helper.get("source_signal_ids") or [],
+            "topic": helper.get("topic") or "general",
+            "lesson": helper.get("lesson") or helper.get("summary") or "",
+        }
+        signal_type, topic = _signal_type_topic_from_candidate(pseudo_candidate, signals)
+        group = signals or [{
+            "summary": helper.get("summary") or helper.get("lesson") or "",
+            "evidence": helper.get("evidence") or [],
+            "signal_type": signal_type or "helper_work_item",
+            "topic": topic,
+        }]
+        contract_fields = _candidate_contract_fields(signal_type or "helper_work_item", topic, group, "helper_work_item")
+        updated = copy.deepcopy(helper)
+        updated["schema_version"] = int(updated.get("schema_version") or KNOWLEDGE_SCHEMA_VERSION)
+        updated["topic"] = topic or str(updated.get("topic") or "general")
+        updated["status"] = str(updated.get("status") or "pending")
+        updated["created_at"] = str(updated.get("created_at") or utc_now_iso())
+        for key, value in contract_fields.items():
+            if updated.get(key) in (None, "", [], {}):
+                updated[key] = value
+        if updated != helper:
+            _write_json(path, updated)
+            counts["refined"] += 1
+    return counts
+
+
 def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any]:
     """Review signal/log artifacts and create pending lesson/helper candidates."""
     ensure_knowledge_defaults(outputs)
+    started_at = utc_now_iso()
     pending_refinement = _refine_existing_pending_candidates(outputs)
     accepted_refinement = _refine_existing_accepted_lessons(outputs)
-    log_signals_created = derive_signals_from_pipeline_logs(outputs)
+    helper_refinement = _refine_existing_helper_work_items(outputs)
+    log_scope = derive_signals_from_pipeline_logs(outputs)
+    log_signals_created = int(log_scope.get("signals_created") or 0)
     state = _read_auditor_state(outputs)
     processed = set(state.get("processed_signal_ids") or [])
     signals = [item for item in _read_signal_files(outputs) if item.get("signal_id") not in processed]
@@ -992,6 +1255,7 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
                 if len(evidence) >= 8:
                     break
         refinement = _refine_lesson_candidate(signal_type, topic, group)
+        contract_fields = _candidate_contract_fields(signal_type, topic, group, refinement.action)
         candidate = {
             "schema_version": KNOWLEDGE_SCHEMA_VERSION,
             "candidate_id": f"lesson-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{safe_slug(signal_type)}-{safe_slug(topic)}",
@@ -1008,23 +1272,50 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
             "recurrence_count": len(group),
             "risk": refinement.risk,
             "keywords": list(refinement.keywords),
+            **contract_fields,
             "created_at": utc_now_iso(),
             "status": "pending",
         }
-        validate_candidate(candidate)
         if refinement.action == "suppress":
             suppressed_groups += 1
             consumed_signal_ids.update(source_ids)
             continue
         if refinement.action == "helper_work_item":
+            candidate["status"] = "rejected"
+            validate_candidate(candidate)
             helper = _helper_work_item_from_candidate(candidate)
             _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper['work_item_id']}.json", helper)
+            write_decision_artifact(
+                outputs,
+                issue_key="__global__",
+                decision_type="helper_work_item_created",
+                belief=f"{signal_type} for {topic} should become deterministic helper work.",
+                evidence=[f"signals={len(group)}", f"work_item_id={helper['work_item_id']}"],
+                action_or_refusal="Created helper work item; did not create pending lesson.",
+                next_need="Developer reviews and implements helper/code change.",
+                failure_class=str(candidate.get("failure_class") or "missing_helper"),
+                source="knowledge_auditor",
+                related_artifacts=[f"org-knowledge/helper-work-items/{helper['work_item_id']}.json"],
+            )
             helper_items.append(helper)
             helper_only_groups += 1
             consumed_signal_ids.update(source_ids)
             continue
+        validate_candidate(candidate)
         _write_json(knowledge_root(outputs) / "pending-lessons" / f"{candidate['candidate_id']}.json", candidate)
         _write_candidate_markdown(outputs, candidate)
+        write_decision_artifact(
+            outputs,
+            issue_key="__global__",
+            decision_type="pending_lesson_created",
+            belief=f"{signal_type} for {topic} is a reusable org lesson candidate.",
+            evidence=[f"signals={len(group)}", f"candidate_id={candidate['candidate_id']}"],
+            action_or_refusal="Created pending lesson for operator review.",
+            next_need="Operator accepts, rejects, or converts the candidate.",
+            failure_class=str(candidate.get("failure_class") or "noise"),
+            source="knowledge_auditor",
+            related_artifacts=[f"org-knowledge/pending-lessons/{candidate['candidate_id']}.json"],
+        )
         candidates.append(candidate)
         consumed_signal_ids.update(source_ids)
         if signal_type in {"helper_failure", "helper_available_not_used", "invalid_command_pattern"}:
@@ -1045,7 +1336,20 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
         "schema_version": KNOWLEDGE_SCHEMA_VERSION,
         "created_at": utc_now_iso(),
         "audit_id": audit_id,
+        "started_at": started_at,
+        "completed_at": utc_now_iso(),
+        "issue_logs_scanned": int(log_scope.get("issue_logs_scanned") or 0),
+        "global_logs_scanned": int(log_scope.get("global_logs_scanned") or 0),
+        "global_logs_excluded_reason": str(log_scope.get("global_logs_excluded_reason") or ""),
+        "scan_started_at": str(log_scope.get("scan_started_at") or ""),
+        "scan_completed_at": str(log_scope.get("scan_completed_at") or ""),
+        "since_cursor": str(log_scope.get("since_cursor") or ""),
+        "until_cursor": str(log_scope.get("until_cursor") or ""),
+        "scope_limitations": list(log_scope.get("scope_limitations") or []),
+        "redaction_status": "not_needed",
         "signals_reviewed": len(signals),
+        "signals_considered": len(signals),
+        "signals_skipped": max(0, len(signals) - len(consumed_signal_ids)),
         "log_signals_created": log_signals_created,
         "signals_consumed": len(consumed_signal_ids),
         "groups_considered": len(grouped),
@@ -1058,6 +1362,7 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
         "pending_lessons_suppressed": pending_refinement["suppressed"],
         "accepted_lessons_refined": accepted_refinement["refined"],
         "accepted_lessons_retired": accepted_refinement["retired"],
+        "helper_work_items_refined": helper_refinement["refined"],
         "candidates_created": len(candidates),
         "helper_work_items_created": len(helper_items) + int(pending_refinement["converted_to_helper"]) + len(accepted_refinement["helper_work_item_ids"]),
         "candidate_ids": [item["candidate_id"] for item in candidates],
@@ -1096,10 +1401,6 @@ def _public_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def accept_lesson(outputs: Path, candidate_id: str, *, edit: dict[str, Any] | None = None) -> dict[str, Any]:
     candidate = _load_candidate(outputs, "pending-lessons", candidate_id)
     updated = copy.deepcopy(candidate)
-    if edit:
-        for key in ("topic", "trigger", "lesson", "evidence", "knowledge_type", "org_specific", "confidence", "risk", "keywords"):
-            if key in edit:
-                updated[key] = edit[key]
     updated["status"] = "accepted"
     updated["accepted_at"] = utc_now_iso()
     validate_candidate(updated)
@@ -1140,6 +1441,30 @@ def convert_to_helper_work_item(outputs: Path, candidate_id: str) -> dict[str, A
     helper = _helper_work_item_from_candidate(candidate)
     helper["converted_at"] = utc_now_iso()
     _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper['work_item_id']}.json", helper)
+    rejected = copy.deepcopy(candidate)
+    rejected["status"] = "rejected"
+    rejected["rejected_at"] = utc_now_iso()
+    rejected["rejection_reason"] = "Converted to helper work item."
+    rejected["refinement_action"] = "helper_work_item"
+    validate_candidate(rejected)
+    _write_json(knowledge_root(outputs) / "rejected-lessons" / f"{candidate_id}.json", rejected)
+    _write_candidate_markdown_in_dir(outputs, "rejected-lessons", rejected)
+    _move_candidate_to_status(outputs, candidate_id, "pending-lessons", delete_only=True)
+    write_decision_artifact(
+        outputs,
+        issue_key="__global__",
+        decision_type="pending_lesson_converted_to_helper",
+        belief="Pending lesson represents mechanical helper/code work rather than active prompt knowledge.",
+        evidence=[f"candidate_id={candidate_id}", f"work_item_id={helper['work_item_id']}"],
+        action_or_refusal="Created helper work item and closed pending lesson lifecycle.",
+        next_need="Developer reviews helper work item.",
+        failure_class=str(helper.get("failure_class") or "missing_helper"),
+        source="knowledge_review",
+        related_artifacts=[
+            f"org-knowledge/helper-work-items/{helper['work_item_id']}.json",
+            f"org-knowledge/rejected-lessons/{candidate_id}.json",
+        ],
+    )
     return helper
 
 
@@ -1284,6 +1609,11 @@ def _helper_work_item_from_candidate(candidate: dict[str, Any]) -> dict[str, Any
         "summary": f"Evaluate helper/guardrail support for: {candidate['trigger']}",
         "lesson": candidate.get("lesson") or "",
         "evidence": candidate.get("evidence") or [],
+        "failure_class": candidate.get("failure_class") or classify_failure_class(str(candidate.get("knowledge_type") or ""), str(candidate.get("topic") or ""), str(candidate.get("lesson") or "")),
+        "route": "helper_work_item",
+        "quality": candidate.get("quality") or "medium",
+        "quality_reason": candidate.get("quality_reason") or "Mechanical lesson converted to helper work item.",
+        "redaction_status": candidate.get("redaction_status") or redaction_status_for_payload(candidate),
         "status": "pending",
         "created_at": utc_now_iso(),
     }
@@ -1299,6 +1629,17 @@ def _write_audit_markdown(
     lines = [
         f"# CaseOps Knowledge Audit {audit_id}",
         "",
+        "## Scope",
+        "",
+        f"- Issue logs scanned: {summary.get('issue_logs_scanned', 0)}",
+        f"- Global logs scanned: {summary.get('global_logs_scanned', 0)}",
+        f"- Global logs excluded reason: {summary.get('global_logs_excluded_reason') or 'None'}",
+        f"- Signals considered: {summary.get('signals_considered', 0)}",
+        f"- Signals skipped: {summary.get('signals_skipped', 0)}",
+        f"- Redaction status: {summary.get('redaction_status', 'not_needed')}",
+        "",
+        "## Summary",
+        "",
         f"- Signals reviewed: {summary['signals_reviewed']}",
         f"- Pending lesson candidates created: {summary['candidates_created']}",
         f"- Helper work items created: {summary['helper_work_items_created']}",
@@ -1309,13 +1650,17 @@ def _write_audit_markdown(
         f"- Existing pending lessons suppressed: {summary.get('pending_lessons_suppressed', 0)}",
         f"- Existing accepted lessons refined: {summary.get('accepted_lessons_refined', 0)}",
         f"- Existing accepted lessons retired: {summary.get('accepted_lessons_retired', 0)}",
+        f"- Existing helper work items normalized: {summary.get('helper_work_items_refined', 0)}",
         "",
         "## Pending Lesson Candidates",
         "",
     ]
     if candidates:
         for candidate in candidates:
-            lines.append(f"- {candidate['candidate_id']}: {candidate['trigger']}")
+            lines.append(
+                f"- {candidate['candidate_id']}: {candidate['trigger']} "
+                f"(route={candidate.get('route', '')}, quality={candidate.get('quality', '')}, failure_class={candidate.get('failure_class', '')})"
+            )
     else:
         lines.append("- None")
     lines.extend(["", "## Helper Work Items", ""])

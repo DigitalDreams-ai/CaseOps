@@ -9408,9 +9408,8 @@ def api_knowledge_review():
 
 @app.post("/api/knowledge/review/<candidate_id>/accept")
 def api_knowledge_accept(candidate_id: str):
-    body = request.get_json(silent=True) or {}
     try:
-        item = knowledge_service.accept_lesson(OUTPUTS, candidate_id, edit=body.get("edit") if isinstance(body.get("edit"), dict) else None)
+        item = knowledge_service.accept_lesson(OUTPUTS, candidate_id)
     except FileNotFoundError:
         return jsonify({"ok": False, "error": "candidate not found"}), 404
     except Exception as exc:
