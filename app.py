@@ -9452,6 +9452,24 @@ def api_knowledge_helper_work_item(candidate_id: str):
     return jsonify({"ok": True, "item": item})
 
 
+@app.post("/api/knowledge/helper-work/<work_item_id>/status")
+def api_knowledge_helper_work_status(work_item_id: str):
+    body = request.get_json(silent=True) or {}
+    try:
+        item = knowledge_service.update_helper_work_item_status(
+            OUTPUTS,
+            work_item_id,
+            str(body.get("status") or ""),
+            reference=str(body.get("reference") or ""),
+            reason=str(body.get("reason") or ""),
+        )
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "helper work item not found"}), 404
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    return jsonify({"ok": True, "item": item})
+
+
 @app.post("/api/knowledge/guardrail-check")
 def api_knowledge_guardrail_check():
     body = request.get_json(silent=True)

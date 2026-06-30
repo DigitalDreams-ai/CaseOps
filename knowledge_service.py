@@ -40,6 +40,14 @@ ROUTES = {"org_lesson", "helper_work_item", "developer_review", "report_only"}
 DEVELOPER_REVIEW_TYPES = {"core_knowledge", "guardrail", "template", "code", "queue_policy"}
 QUALITY_LABELS = {"high", "medium", "low", "report_only"}
 REDACTION_STATUSES = {"not_needed", "redacted", "blocked_unsafe", "unknown"}
+HELPER_WORK_STATUSES = {"pending", "accepted_for_work", "implemented", "verified", "retired"}
+HELPER_WORK_TRANSITIONS = {
+    "pending": {"accepted_for_work", "retired"},
+    "accepted_for_work": {"implemented", "retired"},
+    "implemented": {"verified", "retired"},
+    "verified": {"retired"},
+    "retired": set(),
+}
 FAILURE_CLASSES = {
     "bad_context",
     "missing_helper",
@@ -106,6 +114,11 @@ def safe_slug(value: str, default: str = "item") -> str:
     return cleaned or default
 
 
+def helper_work_filename(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(value or "").strip()).strip(".-")
+    return cleaned or "helper-work-item"
+
+
 def file_signature(path: Path) -> str:
     if not path.exists() or not path.is_file():
         return ""
@@ -148,14 +161,14 @@ def classify_failure_class(signal_type: str, topic: str = "", text: str = "") ->
         return "missing_helper"
     if any(item in value for item in ("template", "markdown", "jira-message", "issue-brief", "handoff")):
         return "weak_template"
+    if any(item in value for item in ("invalid_query", "invalid_type", "invalid field", "no such column", "salesforce")):
+        return "invalid_salesforce_assumption"
     if any(item in value for item in ("prod", "production", "unsafe_prod", "frontdoor")):
         return "unsafe_prod_request"
     if any(item in value for item in ("queue_policy", "closed", "resolved", "engineering")):
         return "queue_policy_skip"
     if any(item in value for item in ("stale", "retry", "blocked", "state")):
         return "stale_state"
-    if any(item in value for item in ("invalid_query", "invalid_type", "invalid field", "no such column", "salesforce")):
-        return "invalid_salesforce_assumption"
     if any(item in value for item in ("missing_file", "missing file", "no such file")):
         return "noise"
     return "noise"
@@ -221,7 +234,7 @@ def write_decision_artifact(
     clean_evidence = [redact_text(item) for item in evidence[:12]]
     payload = {
         "schema_version": KNOWLEDGE_SCHEMA_VERSION,
-        "artifact_id": f"{safe_slug(issue_key, '__global__')}-{safe_slug(decision_type, 'decision')}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}",
+        "artifact_id": f"{safe_slug(issue_key, '__global__')}-{safe_slug(decision_type, 'decision')}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}",
         "decision_type": safe_slug(decision_type, "decision"),
         "belief": redact_text(belief),
         "evidence": clean_evidence,
@@ -671,6 +684,42 @@ def validate_candidate(payload: dict[str, Any]) -> None:
         raise ValueError("Lesson candidate contains secret-like content")
 
 
+def validate_helper_work_item(payload: dict[str, Any]) -> None:
+    required = (
+        "work_item_id",
+        "source_candidate_id",
+        "topic",
+        "summary",
+        "lesson",
+        "failure_class",
+        "route",
+        "quality",
+        "redaction_status",
+        "status",
+    )
+    missing = [field for field in required if payload.get(field) in (None, "", [])]
+    if missing:
+        raise ValueError(f"Helper work item missing required fields: {', '.join(missing)}")
+    if payload.get("status") not in HELPER_WORK_STATUSES:
+        raise ValueError("Helper work item has invalid status")
+    if payload.get("route") != "helper_work_item":
+        raise ValueError("Helper work item must use helper_work_item route")
+    if payload.get("quality") not in QUALITY_LABELS:
+        raise ValueError("Helper work item has invalid quality")
+    if payload.get("failure_class") not in FAILURE_CLASSES:
+        raise ValueError("Helper work item has invalid failure_class")
+    if payload.get("redaction_status") not in REDACTION_STATUSES:
+        raise ValueError("Helper work item has invalid redaction_status")
+    if payload.get("status") == "implemented" and not payload.get("implementation_reference"):
+        raise ValueError("Implemented helper work items require an implementation_reference")
+    if payload.get("status") == "verified" and not payload.get("verification_reference"):
+        raise ValueError("Verified helper work items require a verification_reference")
+    if payload.get("status") == "retired" and not payload.get("retirement_reason"):
+        raise ValueError("Retired helper work items require a retirement_reason")
+    if contains_secret(json.dumps(payload, ensure_ascii=False)):
+        raise ValueError("Helper work item contains secret-like content")
+
+
 def _read_signal_files(outputs: Path) -> list[dict[str, Any]]:
     return _read_json_files(knowledge_root(outputs) / "signals")
 
@@ -1061,7 +1110,7 @@ def _refine_existing_pending_candidates(outputs: Path) -> dict[str, Any]:
         if refinement.action == "helper_work_item":
             helper = _helper_work_item_from_candidate(updated)
             helper["converted_at"] = utc_now_iso()
-            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper['work_item_id']}.json", helper)
+            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper_work_filename(helper['work_item_id'])}.json", helper)
             counts["helper_work_item_ids"].append(helper["work_item_id"])
             rejected = copy.deepcopy(updated)
             rejected["status"] = "rejected"
@@ -1121,7 +1170,7 @@ def _refine_existing_accepted_lessons(outputs: Path) -> dict[str, Any]:
                 "keywords": list(refinement.keywords),
                 **_candidate_contract_fields(signal_type, topic, group, refinement.action),
             })
-            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper['work_item_id']}.json", helper)
+            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper_work_filename(helper['work_item_id'])}.json", helper)
             retired = copy.deepcopy(lesson)
             retired["status"] = "retired"
             retired["retired_at"] = utc_now_iso()
@@ -1207,6 +1256,7 @@ def _refine_existing_helper_work_items(outputs: Path) -> dict[str, Any]:
             if updated.get(key) in (None, "", [], {}):
                 updated[key] = value
         if updated != helper:
+            validate_helper_work_item(updated)
             _write_json(path, updated)
             counts["refined"] += 1
     return counts
@@ -1284,7 +1334,7 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
             candidate["status"] = "rejected"
             validate_candidate(candidate)
             helper = _helper_work_item_from_candidate(candidate)
-            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper['work_item_id']}.json", helper)
+            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper_work_filename(helper['work_item_id'])}.json", helper)
             write_decision_artifact(
                 outputs,
                 issue_key="__global__",
@@ -1295,7 +1345,7 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
                 next_need="Developer reviews and implements helper/code change.",
                 failure_class=str(candidate.get("failure_class") or "missing_helper"),
                 source="knowledge_auditor",
-                related_artifacts=[f"org-knowledge/helper-work-items/{helper['work_item_id']}.json"],
+                related_artifacts=[f"org-knowledge/helper-work-items/{helper_work_filename(helper['work_item_id'])}.json"],
             )
             helper_items.append(helper)
             helper_only_groups += 1
@@ -1320,7 +1370,7 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
         consumed_signal_ids.update(source_ids)
         if signal_type in {"helper_failure", "helper_available_not_used", "invalid_command_pattern"}:
             helper = _helper_work_item_from_candidate(candidate)
-            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper['work_item_id']}.json", helper)
+            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper_work_filename(helper['work_item_id'])}.json", helper)
             helper_items.append(helper)
 
     processed.update(consumed_signal_ids)
@@ -1440,7 +1490,8 @@ def convert_to_helper_work_item(outputs: Path, candidate_id: str) -> dict[str, A
     candidate = _load_candidate(outputs, "pending-lessons", candidate_id)
     helper = _helper_work_item_from_candidate(candidate)
     helper["converted_at"] = utc_now_iso()
-    _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper['work_item_id']}.json", helper)
+    validate_helper_work_item(helper)
+    _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper_work_filename(helper['work_item_id'])}.json", helper)
     rejected = copy.deepcopy(candidate)
     rejected["status"] = "rejected"
     rejected["rejected_at"] = utc_now_iso()
@@ -1461,11 +1512,102 @@ def convert_to_helper_work_item(outputs: Path, candidate_id: str) -> dict[str, A
         failure_class=str(helper.get("failure_class") or "missing_helper"),
         source="knowledge_review",
         related_artifacts=[
-            f"org-knowledge/helper-work-items/{helper['work_item_id']}.json",
+            f"org-knowledge/helper-work-items/{helper_work_filename(helper['work_item_id'])}.json",
             f"org-knowledge/rejected-lessons/{candidate_id}.json",
         ],
     )
     return helper
+
+
+def update_helper_work_item_status(
+    outputs: Path,
+    work_item_id: str,
+    status: str,
+    *,
+    reference: str = "",
+    reason: str = "",
+) -> dict[str, Any]:
+    clean_status = str(status or "").strip().lower()
+    if clean_status not in HELPER_WORK_STATUSES:
+        raise ValueError("Invalid helper work item status")
+
+    item = _load_helper_work_item(outputs, work_item_id)
+    current_status = str(item.get("status") or "pending")
+    if current_status not in HELPER_WORK_STATUSES:
+        current_status = "pending"
+    if clean_status != current_status and clean_status not in HELPER_WORK_TRANSITIONS[current_status]:
+        raise ValueError(f"Invalid helper work item transition: {current_status} -> {clean_status}")
+
+    updated = copy.deepcopy(item)
+    now = utc_now_iso()
+    updated["status"] = clean_status
+    if clean_status == "accepted_for_work":
+        updated["accepted_for_work_at"] = now
+        if reason:
+            updated["acceptance_note"] = redact_text(reason)
+    elif clean_status == "implemented":
+        clean_reference = redact_text(reference.strip())
+        if not clean_reference:
+            raise ValueError("implementation_reference is required")
+        updated["implemented_at"] = now
+        updated["implementation_reference"] = clean_reference
+    elif clean_status == "verified":
+        clean_reference = redact_text(reference.strip())
+        if not clean_reference:
+            raise ValueError("verification_reference is required")
+        updated["verified_at"] = now
+        updated["verification_reference"] = clean_reference
+    elif clean_status == "retired":
+        clean_reason = redact_text(reason.strip())
+        if not clean_reason:
+            raise ValueError("retirement_reason is required")
+        updated["retired_at"] = now
+        updated["retirement_reason"] = clean_reason
+
+    validate_helper_work_item(updated)
+    _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper_work_filename(work_item_id)}.json", updated)
+    write_decision_artifact(
+        outputs,
+        issue_key="__global__",
+        decision_type="helper_work_item_status_changed",
+        belief="Helper work item lifecycle changed.",
+        evidence=[
+            f"work_item_id={work_item_id}",
+            f"from={current_status}",
+            f"to={clean_status}",
+            f"reference={reference}" if reference else "",
+            f"reason={reason}" if reason else "",
+        ],
+        action_or_refusal=f"Updated helper work item status from {current_status} to {clean_status}.",
+        next_need=_helper_work_item_next_need(clean_status),
+        failure_class=str(updated.get("failure_class") or "missing_helper"),
+        source="knowledge_review",
+        related_artifacts=[f"org-knowledge/helper-work-items/{helper_work_filename(work_item_id)}.json"],
+    )
+    return updated
+
+
+def _helper_work_item_next_need(status: str) -> str:
+    if status == "accepted_for_work":
+        return "Developer implements the referenced helper or guardrail fix."
+    if status == "implemented":
+        return "Operator verifies with a test, NAS audit, or observed run."
+    if status == "verified":
+        return "No further action unless the weakness recurs."
+    if status == "retired":
+        return "No further action."
+    return "Operator decides whether to accept for work, retire, or leave pending."
+
+
+def _load_helper_work_item(outputs: Path, work_item_id: str) -> dict[str, Any]:
+    path = knowledge_root(outputs) / "helper-work-items" / f"{helper_work_filename(work_item_id)}.json"
+    data = _load_json(path, {})
+    if not isinstance(data, dict) or not data:
+        raise FileNotFoundError(f"Helper work item not found: {work_item_id}")
+    if data.get("status") not in HELPER_WORK_STATUSES:
+        data["status"] = "pending"
+    validate_helper_work_item(data)
+    return data
 
 
 def _load_candidate(outputs: Path, directory: str, candidate_id: str) -> dict[str, Any]:
@@ -1599,7 +1741,7 @@ def _write_candidate_markdown(outputs: Path, candidate: dict[str, Any]) -> None:
 
 
 def _helper_work_item_from_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
-    return {
+    helper = {
         "schema_version": KNOWLEDGE_SCHEMA_VERSION,
         "work_item_id": f"helper-{candidate['candidate_id']}",
         "source_candidate_id": candidate["candidate_id"],
@@ -1617,6 +1759,8 @@ def _helper_work_item_from_candidate(candidate: dict[str, Any]) -> dict[str, Any
         "status": "pending",
         "created_at": utc_now_iso(),
     }
+    validate_helper_work_item(helper)
+    return helper
 
 
 def _write_audit_markdown(

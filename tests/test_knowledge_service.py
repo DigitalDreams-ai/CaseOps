@@ -9,6 +9,15 @@ import knowledge_service
 
 
 class KnowledgeServiceTests(unittest.TestCase):
+    def test_invalid_salesforce_query_classification_wins_over_production_wording(self):
+        failure_class = knowledge_service.classify_failure_class(
+            "invalid_query_type",
+            "salesforce-query",
+            "Repeated Salesforce INVALID_TYPE errors while querying optional metadata in Production.",
+        )
+
+        self.assertEqual(failure_class, "invalid_salesforce_assumption")
+
     def test_seed_core_knowledge_preserves_runtime_edits(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"
@@ -628,6 +637,75 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(helper["source_candidate_id"], "lesson-review-1")
         self.assertEqual(rejected["status"], "rejected")
 
+    def test_helper_work_item_lifecycle_requires_references(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            candidate = {
+                "schema_version": 1,
+                "candidate_id": "lesson-helper-lifecycle",
+                "source_signal_ids": ["sig-1", "sig-2"],
+                "affected_issue_keys": ["OPEN-1", "OPEN-2"],
+                "topic": "salesforce-query",
+                "trigger": "Repeated INVALID_TYPE",
+                "lesson": "Verify object existence before retrying broad Salesforce queries.",
+                "evidence": ["INVALID_TYPE"],
+                "recommended_file": "query-patterns/object-existence.md",
+                "knowledge_type": "helper_contract",
+                "org_specific": False,
+                "confidence": "medium",
+                "recurrence_count": 2,
+                "risk": "low",
+                "keywords": ["INVALID_TYPE"],
+                "created_at": "2026-06-27T00:00:00+00:00",
+                "status": "pending",
+                "route": "helper_work_item",
+                "quality": "high",
+                "quality_reason": "Repeated helper failure.",
+                "failure_class": "invalid_salesforce_assumption",
+                "redaction_status": "not_needed",
+            }
+            pending_path = outputs / "org-knowledge" / "pending-lessons" / "lesson-helper-lifecycle.json"
+            pending_path.parent.mkdir(parents=True, exist_ok=True)
+            pending_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+            helper = knowledge_service.convert_to_helper_work_item(outputs, "lesson-helper-lifecycle")
+            accepted = knowledge_service.update_helper_work_item_status(
+                outputs,
+                helper["work_item_id"],
+                "accepted_for_work",
+                reason="valid platform gap",
+            )
+            with self.assertRaises(ValueError):
+                knowledge_service.update_helper_work_item_status(outputs, helper["work_item_id"], "verified", reference="test")
+            with self.assertRaises(ValueError):
+                knowledge_service.update_helper_work_item_status(outputs, helper["work_item_id"], "implemented")
+            implemented = knowledge_service.update_helper_work_item_status(
+                outputs,
+                helper["work_item_id"],
+                "implemented",
+                reference="scripts/sf_caseops_helper.py in 0.1.54",
+            )
+            verified = knowledge_service.update_helper_work_item_status(
+                outputs,
+                helper["work_item_id"],
+                "verified",
+                reference="tests.test_knowledge_service",
+            )
+            retired = knowledge_service.update_helper_work_item_status(
+                outputs,
+                helper["work_item_id"],
+                "retired",
+                reason="covered by core helper guardrail",
+            )
+            decisions = list((outputs / "org-knowledge" / "decision-artifacts").glob("*helper_work_item_status_changed*.json"))
+
+        self.assertEqual(accepted["status"], "accepted_for_work")
+        self.assertEqual(implemented["implementation_reference"], "scripts/sf_caseops_helper.py in 0.1.54")
+        self.assertEqual(verified["status"], "verified")
+        self.assertEqual(retired["retirement_reason"], "covered by core helper guardrail")
+        self.assertGreaterEqual(len(decisions), 4)
+
     def test_guardrail_command_classification(self):
         legacy = knowledge_service.classify_guardrail_command("sfdx force:source:deploy -p force-app")
         manifest = knowledge_service.classify_guardrail_command("sf project deploy start --manifest package.xml")
@@ -692,6 +770,52 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(accepted.get_json()["item"]["keywords"], ["UserShare"])
         self.assertEqual(len(review_after.get_json()["items"]["pending_lessons"]), 0)
         self.assertEqual(len(review_after.get_json()["items"]["accepted_lessons"]), 1)
+
+    def test_knowledge_review_api_updates_helper_work_item_status(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            helper = {
+                "schema_version": 1,
+                "work_item_id": "helper-api-1",
+                "source_candidate_id": "lesson-api-1",
+                "source_signal_ids": ["sig-1"],
+                "affected_issue_keys": ["OPEN-1"],
+                "topic": "deploy-command",
+                "summary": "Evaluate helper work.",
+                "lesson": "Run deploy commands inside an issue-scoped workspace.",
+                "evidence": ["InvalidProjectWorkspaceError"],
+                "failure_class": "bad_context",
+                "route": "helper_work_item",
+                "quality": "high",
+                "quality_reason": "Repeated helper failure.",
+                "redaction_status": "not_needed",
+                "status": "pending",
+                "created_at": "2026-06-27T00:00:00+00:00",
+            }
+            path = outputs / "org-knowledge" / "helper-work-items" / "helper-api-1.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(helper), encoding="utf-8")
+
+            with patch.object(app, "OUTPUTS", outputs):
+                client = app.app.test_client()
+                accepted = client.post(
+                    "/api/knowledge/helper-work/helper-api-1/status",
+                    json={"status": "accepted_for_work", "reason": "will fix"},
+                )
+                missing_ref = client.post(
+                    "/api/knowledge/helper-work/helper-api-1/status",
+                    json={"status": "implemented"},
+                )
+                implemented = client.post(
+                    "/api/knowledge/helper-work/helper-api-1/status",
+                    json={"status": "implemented", "reference": "commit abc123"},
+                )
+
+        self.assertEqual(accepted.status_code, 200)
+        self.assertEqual(accepted.get_json()["item"]["status"], "accepted_for_work")
+        self.assertEqual(missing_ref.status_code, 400)
+        self.assertEqual(implemented.status_code, 200)
+        self.assertEqual(implemented.get_json()["item"]["implementation_reference"], "commit abc123")
 
     def test_issue_detail_exposes_selected_knowledge_tab(self):
         with tempfile.TemporaryDirectory() as tmp:

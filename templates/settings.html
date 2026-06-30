@@ -170,6 +170,7 @@
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 14px;
+            align-items: start;
             min-width: 0;
         }
 
@@ -1553,17 +1554,7 @@
             const metric = (count, label) => `<div class="health-metric"><strong>${escapeHtml(String(count))}</strong><span>${escapeHtml(label)}</span></div>`;
             const pendingHtml = pending.length ? pending.map(renderPendingLessonCard).join('') : '<div class="field-note">No pending lessons.</div>';
             const acceptedHtml = accepted.length ? accepted.slice(0, 8).map(renderAcceptedLessonCard).join('') : '<div class="field-note">No accepted lessons.</div>';
-            const helperHtml = helpers.length ? helpers.slice(0, 8).map(item => `
-                <div class="knowledge-review-card">
-                    <h3>${escapeHtml(item.work_item_id || item.source_candidate_id || 'helper work item')}</h3>
-                    <div>${escapeHtml(item.summary || '')}</div>
-                    ${item.lesson ? `<div class="field-note" style="margin-top:8px;">${escapeHtml(item.lesson)}</div>` : ''}
-                    <div class="knowledge-review-meta">
-                        status: ${escapeHtml(item.status || 'pending')} · topic: ${escapeHtml(item.topic || '')}
-                        ${Array.isArray(item.affected_issue_keys) && item.affected_issue_keys.length ? ` · issues: ${escapeHtml(item.affected_issue_keys.slice(0, 5).join(', '))}${item.affected_issue_keys.length > 5 ? '...' : ''}` : ''}
-                    </div>
-                </div>
-            `).join('') : '<div class="field-note">No helper work items.</div>';
+            const helperHtml = helpers.length ? helpers.slice(0, 8).map(renderHelperWorkItemCard).join('') : '<div class="field-note">No helper work items.</div>';
             panel.innerHTML = `
                 <div class="health-metric-grid">
                     ${metric(pending.length, 'Pending lessons')}
@@ -1610,6 +1601,60 @@
             `;
         }
 
+        function renderHelperWorkItemCard(item) {
+            const rawId = String(item.work_item_id || item.source_candidate_id || '');
+            const id = escapeHtml(rawId || 'helper work item');
+            const attrId = escapeAttr(rawId);
+            const status = String(item.status || 'pending');
+            const issues = Array.isArray(item.affected_issue_keys) && item.affected_issue_keys.length
+                ? ` · issues: ${escapeHtml(item.affected_issue_keys.slice(0, 5).join(', '))}${item.affected_issue_keys.length > 5 ? '...' : ''}`
+                : '';
+            const meta = [
+                `status: ${escapeHtml(status)}`,
+                `topic: ${escapeHtml(item.topic || '')}`,
+                item.failure_class ? `class: ${escapeHtml(item.failure_class)}` : '',
+                item.quality ? `quality: ${escapeHtml(item.quality)}` : '',
+                item.redaction_status ? `redaction: ${escapeHtml(item.redaction_status)}` : '',
+            ].filter(Boolean).join(' · ');
+            const references = [
+                item.implementation_reference ? `<div class="knowledge-review-meta">implemented: ${escapeHtml(item.implementation_reference)}</div>` : '',
+                item.verification_reference ? `<div class="knowledge-review-meta">verified: ${escapeHtml(item.verification_reference)}</div>` : '',
+                item.retirement_reason ? `<div class="knowledge-review-meta">retired: ${escapeHtml(item.retirement_reason)}</div>` : '',
+            ].join('');
+            const actions = renderHelperWorkItemActions(attrId, status);
+            return `
+                <div class="knowledge-review-card">
+                    <h3>${id}</h3>
+                    <div>${escapeHtml(item.summary || '')}</div>
+                    ${item.lesson ? `<div class="field-note" style="margin-top:8px;">${escapeHtml(item.lesson)}</div>` : ''}
+                    <div class="knowledge-review-meta">${meta}${issues}</div>
+                    ${references}
+                    ${actions}
+                </div>
+            `;
+        }
+
+        function renderHelperWorkItemActions(attrId, status) {
+            if (!attrId || status === 'retired') return '';
+            const buttons = [];
+            if (status === 'pending') {
+                buttons.push(`<button type="button" class="button-secondary" onclick="helperWorkAction('${attrId}', 'accepted_for_work')">Accept for Work</button>`);
+            }
+            if (status === 'accepted_for_work') {
+                buttons.push(`<button type="button" class="button-secondary" onclick="helperWorkAction('${attrId}', 'implemented')">Mark Implemented</button>`);
+            }
+            if (status === 'implemented') {
+                buttons.push(`<button type="button" class="button-secondary" onclick="helperWorkAction('${attrId}', 'verified')">Mark Verified</button>`);
+            }
+            if (status !== 'verified') {
+                buttons.push(`<button type="button" class="button-danger" onclick="helperWorkAction('${attrId}', 'retired')">Retire</button>`);
+            }
+            if (status === 'verified') {
+                buttons.push(`<button type="button" class="button-secondary" onclick="helperWorkAction('${attrId}', 'retired')">Retire</button>`);
+            }
+            return buttons.length ? `<div class="knowledge-review-actions">${buttons.join('')}</div>` : '';
+        }
+
         function renderAcceptedLessonCard(item) {
             const rawId = String(item.candidate_id || '');
             const id = escapeHtml(rawId);
@@ -1645,6 +1690,38 @@
             } catch (e) {
                 if (status) status.textContent = '';
                 showBanner('Knowledge action failed: ' + (e.message || String(e)), 'error');
+            }
+        }
+
+        async function helperWorkAction(workItemId, statusValue) {
+            const status = document.getElementById('knowledge-audit-status');
+            let reference = '';
+            let reason = '';
+            if (statusValue === 'implemented') {
+                reference = window.prompt('Implementation reference, such as commit, file path, PR, or version:') || '';
+                if (!reference.trim()) return;
+            } else if (statusValue === 'verified') {
+                reference = window.prompt('Verification reference, such as test, NAS audit result, or observed run:') || '';
+                if (!reference.trim()) return;
+            } else if (statusValue === 'retired') {
+                reason = window.prompt('Retirement reason:') || '';
+                if (!reason.trim()) return;
+            } else if (statusValue === 'accepted_for_work') {
+                reason = 'Accepted for CaseOps helper/core work from Settings review.';
+            }
+            try {
+                const resp = await fetch(`/api/knowledge/helper-work/${encodeURIComponent(workItemId)}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: statusValue, reference, reason }),
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+                if (status) status.textContent = `Helper work item updated: ${statusValue}`;
+                await refreshKnowledgeReview();
+            } catch (e) {
+                if (status) status.textContent = '';
+                showBanner('Helper work action failed: ' + (e.message || String(e)), 'error');
             }
         }
 
