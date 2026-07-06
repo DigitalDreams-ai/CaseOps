@@ -48,6 +48,19 @@ HELPER_WORK_TRANSITIONS = {
     "verified": {"retired"},
     "retired": set(),
 }
+HIGH_VALUE_SINGLE_LESSON_TYPES = {
+    "deploy_pattern_gap",
+    "deploy_tooling_gotcha",
+    "org_gotcha",
+    "salesforce_behavior_gotcha",
+    "validation_pattern",
+}
+PENDING_LESSON_SIGNAL_TYPES = {
+    "helper_failure",
+    "helper_available_not_used",
+    "invalid_query_field",
+    *HIGH_VALUE_SINGLE_LESSON_TYPES,
+}
 FAILURE_CLASSES = {
     "bad_context",
     "missing_helper",
@@ -153,6 +166,13 @@ def contains_secret(text: str) -> bool:
 
 def classify_failure_class(signal_type: str, topic: str = "", text: str = "") -> str:
     value = " ".join([signal_type or "", topic or "", text or ""]).lower()
+    signal = (signal_type or "").lower()
+    if signal in {"deploy_pattern_gap", "deploy_tooling_gotcha", "salesforce_behavior_gotcha", "validation_pattern", "org_gotcha"}:
+        if "deploy" in signal or "deploy" in value:
+            return "invalid_salesforce_assumption"
+        if "validation" in signal:
+            return "invalid_salesforce_assumption"
+        return "bad_context"
     if any(item in value for item in ("invalidprojectworkspace", "invalid_sfdx_workspace", "sfdx workspace", "sfdx-project")):
         return "bad_context"
     if any(item in value for item in ("json_decode", "jsondecode", "json_parse", "expecting value", "helper_failure")):
@@ -175,6 +195,8 @@ def classify_failure_class(signal_type: str, topic: str = "", text: str = "") ->
 
 
 def route_for_failure_class(failure_class: str, signal_type: str = "") -> tuple[str, str]:
+    if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES or signal_type in {"invalid_query_field"}:
+        return "org_lesson", ""
     if failure_class in {"missing_helper", "helper_failure"} or signal_type in {"helper_available_not_used", "invalid_command_pattern"}:
         return "helper_work_item", ""
     if failure_class in {"weak_template", "unsafe_prod_request", "bad_context", "invalid_salesforce_assumption", "stale_state"}:
@@ -602,6 +624,9 @@ def write_signal(
     failure_class = classify_failure_class(signal_type, topic, " ".join([redacted_summary, *redacted_evidence]))
     route, developer_review_type = route_for_failure_class(failure_class, signal_type)
     quality, quality_reason = quality_for_group(failure_class, 1)
+    if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES and quality in {"low", "report_only"}:
+        quality = "medium"
+        quality_reason = "Explicit high-value gotcha/deploy/validation signal is eligible for operator review."
     payload = {
         "schema_version": KNOWLEDGE_SCHEMA_VERSION,
         "signal_id": f"{issue}-{safe_slug(source_step, 'step')}-{timestamp}-{signal}",
@@ -931,6 +956,7 @@ def _signal_type_topic_from_candidate(candidate: dict[str, Any], signals: list[d
 def _refine_lesson_candidate(signal_type: str, topic: str, group: list[dict[str, Any]]) -> LessonRefinement:
     """Turn raw grouped signals into review-ready lesson or helper decisions."""
     recurrence = len(group)
+    summaries = [str(item.get("summary")) for item in group if item.get("summary")]
     if signal_type == "invalid_query_type":
         return LessonRefinement(
             action="helper_work_item",
@@ -1018,7 +1044,17 @@ def _refine_lesson_candidate(signal_type: str, topic: str, group: list[dict[str,
             knowledge_type=_candidate_type(signal_type),
             confidence="medium",
         )
-    summaries = [str(item.get("summary")) for item in group if item.get("summary")]
+    if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES:
+        return LessonRefinement(
+            action="pending_lesson",
+            trigger=f"{signal_type.replace('_', ' ').title()} observed for {topic}.",
+            lesson=_candidate_lesson_text(signal_type, topic, summaries),
+            recommended_file=_recommended_file(signal_type, topic),
+            knowledge_type=_candidate_type(signal_type),
+            confidence="high" if recurrence >= 2 else "medium",
+            keywords=tuple(_keywords_from_group(signal_type, topic, group)),
+            reason="Explicit high-value CaseOps lesson signal; eligible for operator review even before recurrence reaches the default threshold.",
+        )
     return LessonRefinement(
         action="pending_lesson",
         trigger=f"Repeated {signal_type.replace('_', ' ')} signal for {topic}.",
@@ -1041,6 +1077,9 @@ def _candidate_contract_fields(signal_type: str, topic: str, group: list[dict[st
     if action == "pending_lesson":
         route = "org_lesson"
         developer_review_type = ""
+        if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES and quality in {"low", "report_only"}:
+            quality = "medium"
+            quality_reason = "Explicit high-value gotcha/deploy/validation signal is eligible for operator review."
     elif action == "helper_work_item":
         route = "helper_work_item"
         developer_review_type = ""
@@ -1059,6 +1098,89 @@ def _candidate_contract_fields(signal_type: str, topic: str, group: list[dict[st
     if developer_review_type:
         fields["developer_review_type"] = developer_review_type
     return fields
+
+
+def _keywords_from_group(signal_type: str, topic: str, group: list[dict[str, Any]], *, limit: int = 8) -> list[str]:
+    words: list[str] = []
+    seed_text = " ".join(
+        [
+            signal_type,
+            topic,
+            *[
+                " ".join([str(item.get("summary") or ""), " ".join(str(ev) for ev in (item.get("evidence") or [])[:3])])
+                for item in group
+            ],
+        ]
+    )
+    for token in re.findall(r"\b[A-Za-z][A-Za-z0-9_]{3,}\b", seed_text):
+        if token.lower() in {"caseops", "salesforce", "metadata", "deploy", "query", "signal", "issue"}:
+            continue
+        if token not in words:
+            words.append(token)
+        if len(words) >= limit:
+            break
+    return words
+
+
+def _group_meets_lesson_threshold(signal_type: str, group: list[dict[str, Any]], min_recurrence: int) -> tuple[bool, str]:
+    if len(group) >= min_recurrence:
+        return True, "recurrence"
+    if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES and group:
+        return True, "explicit_single_signal"
+    return False, "below_recurrence"
+
+
+def _normalize_existing_signals(outputs: Path) -> dict[str, Any]:
+    """Backfill route/quality/failure contract fields for older signal files."""
+    counts = {"normalized": 0, "blocked": 0}
+    for path in sorted((knowledge_root(outputs) / "signals").glob("*.json")):
+        signal = _load_json(path, {})
+        if not isinstance(signal, dict) or not signal:
+            continue
+        signal_type = str(signal.get("signal_type") or "").strip() or "unknown"
+        topic = str(signal.get("topic") or "").strip() or "general"
+        summary = str(signal.get("summary") or "")
+        evidence = [str(item) for item in (signal.get("evidence") or []) if item is not None]
+        text = " ".join([summary, *evidence])
+        failure_class = classify_failure_class(signal_type, topic, text)
+        route, developer_review_type = route_for_failure_class(failure_class, signal_type)
+        quality, quality_reason = quality_for_group(failure_class, 1)
+        if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES and quality in {"low", "report_only"}:
+            quality = "medium"
+            quality_reason = "Explicit high-value gotcha/deploy/validation signal is eligible for operator review."
+
+        updated = copy.deepcopy(signal)
+        changed = False
+        defaults = {
+            "schema_version": KNOWLEDGE_SCHEMA_VERSION,
+            "topic": topic,
+            "failure_class": failure_class,
+            "route": route,
+            "quality": quality,
+            "quality_reason": quality_reason,
+            "redaction_status": redaction_status_for_payload(signal),
+        }
+        if developer_review_type:
+            defaults["developer_review_type"] = developer_review_type
+        for key, value in defaults.items():
+            should_override_legacy_high_value = (
+                signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES
+                and key in {"failure_class", "route", "quality", "quality_reason"}
+                and updated.get(key) != value
+            )
+            if updated.get(key) in (None, "", [], {}) or should_override_legacy_high_value:
+                updated[key] = value
+                changed = True
+        if not changed:
+            continue
+        try:
+            validate_signal(updated)
+        except ValueError:
+            counts["blocked"] += 1
+            continue
+        _write_json(path, updated)
+        counts["normalized"] += 1
+    return counts
 
 
 def _refine_existing_pending_candidates(outputs: Path) -> dict[str, Any]:
@@ -1266,6 +1388,7 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
     """Review signal/log artifacts and create pending lesson/helper candidates."""
     ensure_knowledge_defaults(outputs)
     started_at = utc_now_iso()
+    signal_normalization = _normalize_existing_signals(outputs)
     pending_refinement = _refine_existing_pending_candidates(outputs)
     accepted_refinement = _refine_existing_accepted_lessons(outputs)
     helper_refinement = _refine_existing_helper_work_items(outputs)
@@ -1284,9 +1407,19 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
     existing_candidate_groups = 0
     suppressed_groups = 0
     helper_only_groups = 0
+    below_threshold_details: list[dict[str, Any]] = []
+    helper_only_details: list[dict[str, Any]] = []
+    suppressed_details: list[dict[str, Any]] = []
     consumed_signal_ids: set[str] = set()
     for (signal_type, topic), group in grouped.items():
-        if len(group) < min_recurrence:
+        eligible, eligibility_reason = _group_meets_lesson_threshold(signal_type, group, min_recurrence)
+        if not eligible:
+            below_threshold_details.append({
+                "signal_type": signal_type,
+                "topic": topic,
+                "count": len(group),
+                "reason": eligibility_reason,
+            })
             continue
         source_ids = [str(item.get("signal_id")) for item in group if item.get("signal_id")]
         if not source_ids:
@@ -1325,9 +1458,18 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
             **contract_fields,
             "created_at": utc_now_iso(),
             "status": "pending",
+            "eligibility_reason": eligibility_reason,
         }
+        if refinement.reason:
+            candidate["refinement_reason"] = refinement.reason
         if refinement.action == "suppress":
             suppressed_groups += 1
+            suppressed_details.append({
+                "signal_type": signal_type,
+                "topic": topic,
+                "count": len(group),
+                "reason": refinement.reason or "Suppressed by audit quality gate.",
+            })
             consumed_signal_ids.update(source_ids)
             continue
         if refinement.action == "helper_work_item":
@@ -1349,6 +1491,13 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
             )
             helper_items.append(helper)
             helper_only_groups += 1
+            helper_only_details.append({
+                "signal_type": signal_type,
+                "topic": topic,
+                "count": len(group),
+                "reason": refinement.reason or "Routed to helper work item.",
+                "work_item_id": helper["work_item_id"],
+            })
             consumed_signal_ids.update(source_ids)
             continue
         validate_candidate(candidate)
@@ -1400,13 +1549,18 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
         "signals_reviewed": len(signals),
         "signals_considered": len(signals),
         "signals_skipped": max(0, len(signals) - len(consumed_signal_ids)),
+        "signals_normalized": signal_normalization["normalized"],
+        "signals_normalization_blocked": signal_normalization["blocked"],
         "log_signals_created": log_signals_created,
         "signals_consumed": len(consumed_signal_ids),
         "groups_considered": len(grouped),
-        "below_threshold_groups": sum(1 for group in grouped.values() if len(group) < min_recurrence),
+        "below_threshold_groups": len(below_threshold_details),
+        "below_threshold_details": below_threshold_details,
         "existing_candidate_groups": existing_candidate_groups,
         "suppressed_groups": suppressed_groups,
+        "suppressed_group_details": suppressed_details,
         "helper_only_groups": helper_only_groups,
+        "helper_only_group_details": helper_only_details,
         "pending_lessons_refined": pending_refinement["refined"],
         "pending_lessons_converted_to_helper": pending_refinement["converted_to_helper"],
         "pending_lessons_suppressed": pending_refinement["suppressed"],
@@ -1805,6 +1959,8 @@ def _write_audit_markdown(
         f"- Global logs excluded reason: {summary.get('global_logs_excluded_reason') or 'None'}",
         f"- Signals considered: {summary.get('signals_considered', 0)}",
         f"- Signals skipped: {summary.get('signals_skipped', 0)}",
+        f"- Signals normalized: {summary.get('signals_normalized', 0)}",
+        f"- Signal normalization blocked: {summary.get('signals_normalization_blocked', 0)}",
         f"- Redaction status: {summary.get('redaction_status', 'not_needed')}",
         "",
         "## Summary",
@@ -1812,6 +1968,7 @@ def _write_audit_markdown(
         f"- Signals reviewed: {summary['signals_reviewed']}",
         f"- Pending lesson candidates created: {summary['candidates_created']}",
         f"- Helper work items created: {summary['helper_work_items_created']}",
+        f"- Below-threshold groups: {summary.get('below_threshold_groups', 0)}",
         f"- Helper-only groups: {summary.get('helper_only_groups', 0)}",
         f"- Suppressed noisy groups: {summary.get('suppressed_groups', 0)}",
         f"- Existing pending lessons refined: {summary.get('pending_lessons_refined', 0)}",
@@ -1838,6 +1995,27 @@ def _write_audit_markdown(
             lines.append(f"- {item['work_item_id']}: {item['summary']}")
     else:
         lines.append("- None")
+    lines.extend(["", "## Groups Not Promoted", ""])
+    below = summary.get("below_threshold_details") or []
+    helper_only = summary.get("helper_only_group_details") or []
+    suppressed = summary.get("suppressed_group_details") or []
+    if not below and not helper_only and not suppressed:
+        lines.append("- None")
+    for item in below[:20]:
+        lines.append(
+            f"- Below threshold: {item.get('signal_type')} / {item.get('topic')} "
+            f"(count={item.get('count')}, reason={item.get('reason')})"
+        )
+    for item in helper_only[:20]:
+        lines.append(
+            f"- Helper work: {item.get('signal_type')} / {item.get('topic')} "
+            f"(count={item.get('count')}, reason={item.get('reason')})"
+        )
+    for item in suppressed[:20]:
+        lines.append(
+            f"- Suppressed: {item.get('signal_type')} / {item.get('topic')} "
+            f"(count={item.get('count')}, reason={item.get('reason')})"
+        )
     (knowledge_root(outputs) / "audit-reports" / f"audit-summary-{audit_id}.md").write_text(
         "\n".join(lines).rstrip() + "\n",
         encoding="utf-8",

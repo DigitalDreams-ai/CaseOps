@@ -1270,7 +1270,7 @@ class GlobalQueueTests(unittest.TestCase):
             self.assertFalse(flags["is_complete_no_deploy"])
             self.assertEqual(contract["primary_tag"], "data only")
 
-    def test_unexecuted_operator_action_verdict_stays_in_progress_not_data_only(self):
+    def test_unexecuted_operator_action_verdict_without_final_drafts_stays_in_progress(self):
         with tempfile.TemporaryDirectory() as tmp:
             test_dir = Path(tmp) / "test-reports"
             test_dir.mkdir(parents=True)
@@ -1312,6 +1312,73 @@ class GlobalQueueTests(unittest.TestCase):
             self.assertFalse(flags["is_data_only"])
             self.assertFalse(flags["is_complete_no_deploy"])
             self.assertEqual(contract["primary_tag"], "in progress")
+
+    def test_operator_owned_no_deploy_action_with_final_drafts_is_data_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            files = {
+                "issue-briefs/TODO-1.md": (
+                    "Problem\n\n"
+                    "- User is missing an existing permission set assignment.\n\n"
+                    "Reproduce\n\n"
+                    "1. Log in as the affected user.\n\n"
+                    "Expected behavior\n\n"
+                    "- User can export the requested data.\n\n"
+                    "Affected record IDs\n\n"
+                    "- User 005xx\n\n"
+                    "Proposed Solution\n\n"
+                    "- Assign the existing permission set in Production.\n"
+                ),
+                "internal-notes/TODO-1.md": "Assign existing permission set in Production; no metadata deploy.\n",
+                "jira-messages/TODO-1.md": "I found the needed access change. Please assign the existing permission set.\n",
+                "test-reports/TODO-1.md": "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: not-run",
+                        "- Fixed?: unknown",
+                        "- Production deploy required: n/a",
+                        "- Evidence: Operator action has not been executed by CaseOps.",
+                    ]
+                ),
+            }
+            for name, text in files.items():
+                path = outputs / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+            state = {
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "routing": {"path": "support_resolvable"},
+                "deliverable": {
+                    "type": "admin_action",
+                    "production_deploy_required": "n/a",
+                    "no_deploy_reason": "Operator assigns an existing permission set in Production.",
+                },
+                "steps": [
+                    {"step": 3, "status": "complete"},
+                    {"step": 9, "status": "stale"},
+                    {"step": 10, "status": "complete"},
+                ],
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_read_pipeline_state", return_value=state),
+                patch.object(app, "_test_report_is_data_only", return_value=False),
+                patch.object(app, "_calculate_pipeline_state", return_value=app.PipelineState.VALIDATED),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+                patch.object(app, "_issue_has_similar_issue_context", return_value=False),
+                patch.object(app, "_issue_needs_customer_reply", return_value=False),
+                patch.object(app, "_investigation_indicates_blocked", return_value=False),
+            ):
+                flags = app._pipeline_file_flags("TODO-1", "Open")
+                contract = app._derive_issue_tag_contract("Open", flags)
+
+            self.assertTrue(flags["is_operator_owned_data_action"])
+            self.assertTrue(flags["is_data_only"])
+            self.assertFalse(flags["is_complete_no_deploy"])
+            self.assertEqual(contract["primary_tag"], "data only")
+            self.assertNotIn("stale", contract["condition_tags"])
+            self.assertNotIn("partial run", contract["condition_tags"])
 
     def test_test_report_file_api_returns_parsed_validation_verdict(self):
         with tempfile.TemporaryDirectory() as tmp:

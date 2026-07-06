@@ -8277,11 +8277,28 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
     verdict_passed = test_report_verdict.get("validation_status") == "passed"
     verdict_fixed = test_report_verdict.get("fixed") == "yes"
     verdict_contract_present = bool(test_report_verdict.get("contract_present"))
+    verdict_contract_complete = bool(test_report_verdict.get("contract_complete"))
     validation_confirmed = bool(
         has_confirmed_solution
         and (not verdict_contract_present or (verdict_passed and verdict_fixed))
     )
-    is_data_only = bool(is_data_admin_action and has_confirmed_solution)
+    needs_escalation = (
+        (has_schema and routing["path"] == "engineering_required")
+        or (not has_schema and has_eng_handoff)
+    ) and not is_jira_escalated_any
+    is_operator_owned_data_action = bool(
+        is_data_admin_action
+        and has_issue_brief
+        and has_solution
+        and verdict_contract_complete
+        and test_report_verdict.get("validation_status") == "not-run"
+        and test_report_verdict.get("fixed") == "unknown"
+        and production_deploy_required == "n/a"
+        and not is_blocked
+        and not needs_escalation
+        and not is_jira_escalated_any
+    )
+    is_data_only = bool(is_data_admin_action and (has_confirmed_solution or is_operator_owned_data_action))
     has_generated_files = bool(_generated_files_for_issue(key))
     has_similar_issues = _issue_has_similar_issue_context(key)
     needs_customer_reply = _issue_needs_customer_reply(key)
@@ -8290,10 +8307,6 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
     has_stale_pipeline_step = _pipeline_state_has_stale_step(state_payload)
     has_partial_pipeline_run = _pipeline_state_has_partial_issue_run(state_payload)
 
-    needs_escalation = (
-        (has_schema and routing["path"] == "engineering_required")
-        or (not has_schema and has_eng_handoff)
-    ) and not is_jira_escalated_any
     is_complete_no_deploy = bool(
         pipeline_state == PipelineState.VALIDATED.value
         and validation_confirmed
@@ -8338,6 +8351,7 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         "is_escalation_path": routing["path"] == "engineering_required",  # Source of truth: routing state
         "is_blocked": is_blocked,
         "is_data_only": is_data_only,
+        "is_operator_owned_data_action": is_operator_owned_data_action,
         "is_data_admin_action": is_data_admin_action,
         "has_generated_files": has_generated_files,
         "has_similar_issues": has_similar_issues,
@@ -8382,12 +8396,20 @@ def _derive_issue_tag_contract(status: str, flags: dict[str, Any], *, has_new_co
     else:
         primary = "not triaged"
 
+    terminal_primary_tags = {
+        "closed",
+        "escalated to engineering",
+        "needs engineering",
+        "data only",
+        "ready to deploy",
+        "complete no deploy",
+    }
     conditions: list[str] = []
     if has_new_comments:
         conditions.append("new comments")
-    if flags.get("has_partial_pipeline_run") and not flags.get("has_failed_validation"):
+    if primary not in terminal_primary_tags and flags.get("has_partial_pipeline_run") and not flags.get("has_failed_validation"):
         conditions.append("partial run")
-    if flags.get("has_stale_pipeline_step"):
+    if primary not in terminal_primary_tags and flags.get("has_stale_pipeline_step"):
         conditions.append("stale")
     if flags.get("has_failed_validation"):
         conditions.append("failed validation")

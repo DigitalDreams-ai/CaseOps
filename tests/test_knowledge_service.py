@@ -103,6 +103,63 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(accepted, [])
         self.assertEqual(second["candidates_created"], 0)
 
+    def test_manual_auditor_creates_pending_lesson_for_high_value_single_signal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            knowledge_service.write_signal(
+                outputs,
+                issue_key="OPEN-1",
+                run_id="OPEN-1",
+                source_step="STEP_9",
+                signal_type="deploy_pattern_gap",
+                topic="permission-set-deploy",
+                summary="Deploy permission set assignments with a post-deploy verification query.",
+                evidence=["Permission set assignment deploys can validate while user assignment verification still fails."],
+            )
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            pending_path = next((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+            pending = json.loads(pending_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(summary["candidates_created"], 1)
+        self.assertEqual(summary["below_threshold_groups"], 0)
+        self.assertEqual(pending["route"], "org_lesson")
+        self.assertEqual(pending["quality"], "medium")
+        self.assertEqual(pending["recurrence_count"], 1)
+        self.assertEqual(pending["eligibility_reason"], "explicit_single_signal")
+
+    def test_manual_auditor_normalizes_legacy_signal_contract_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            signal_path = outputs / "org-knowledge" / "signals" / "legacy-signal.json"
+            signal_path.write_text(
+                json.dumps({
+                    "schema_version": 1,
+                    "signal_id": "legacy-signal",
+                    "issue_key": "OPEN-1",
+                    "run_id": "OPEN-1",
+                    "source_step": "STEP_5",
+                    "signal_type": "deploy_tooling_gotcha",
+                    "topic": "deploy-troubleshooting",
+                    "summary": "Use mdapi deploy fallback when source tracking reports no changes.",
+                    "evidence": ["No local changes to deploy, but package.xml deploy succeeds."],
+                    "created_at": "2026-06-28T00:00:00+00:00",
+                }),
+                encoding="utf-8",
+            )
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            signal = json.loads(signal_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(summary["signals_normalized"], 1)
+        self.assertEqual(summary["candidates_created"], 1)
+        self.assertEqual(signal["failure_class"], "invalid_salesforce_assumption")
+        self.assertEqual(signal["route"], "org_lesson")
+        self.assertEqual(signal["quality"], "medium")
+        self.assertEqual(signal["redaction_status"], "not_needed")
+
     def test_manual_auditor_derives_signals_from_pipeline_logs(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"

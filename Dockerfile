@@ -1,7 +1,7 @@
 FROM node:20-slim
 
 WORKDIR /app
-ENV CASEOPS_VERSION=0.1.56
+ENV CASEOPS_VERSION=0.1.58
 
 # Install system deps + Python runtime.
 RUN apt-get update && apt-get install -y --no-install-recommends \

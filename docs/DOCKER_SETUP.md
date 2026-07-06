@@ -7,7 +7,7 @@ This is the generic Docker setup for someone testing or running CaseOps from a p
 Current image:
 
 ```text
-ghcr.io/digitaldreams-ai/caseops:0.1.56
+ghcr.io/digitaldreams-ai/caseops:0.1.58
 ```
 
 You can also use `ghcr.io/digitaldreams-ai/caseops:latest`, but a numbered tag is easier to support.
@@ -29,7 +29,7 @@ Example:
 ```yaml
 services:
   caseops:
-    image: ghcr.io/digitaldreams-ai/caseops:0.1.56
+    image: ghcr.io/digitaldreams-ai/caseops:0.1.58
     ports:
       - "${CASEOPS_HOST_PORT:-5350}:8080"
     env_file:
@@ -91,7 +91,7 @@ Before deploying a newly built or newly pulled image, you can verify that the
 image contains the required CaseOps modules, scripts, and knowledge files:
 
 ```bash
-docker run --rm --entrypoint python3 ghcr.io/digitaldreams-ai/caseops:0.1.56 /app/scripts/docker_image_smoke.py
+docker run --rm --entrypoint python3 ghcr.io/digitaldreams-ai/caseops:0.1.58 /app/scripts/docker_image_smoke.py
 ```
 
 Use `--entrypoint python3` so Docker runs the smoke test directly instead of
@@ -135,13 +135,13 @@ Then open Settings and confirm the displayed CaseOps version matches the image t
 Switch to a specific version:
 
 ```bash
-CASEOPS_IMAGE=ghcr.io/digitaldreams-ai/caseops:0.1.56 docker compose up -d
+CASEOPS_IMAGE=ghcr.io/digitaldreams-ai/caseops:0.1.58 docker compose up -d
 ```
 
 On Windows PowerShell:
 
 ```powershell
-$env:CASEOPS_IMAGE="ghcr.io/digitaldreams-ai/caseops:0.1.56"
+$env:CASEOPS_IMAGE="ghcr.io/digitaldreams-ai/caseops:0.1.58"
 docker compose up -d
 ```
 
