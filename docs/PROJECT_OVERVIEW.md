@@ -9,7 +9,7 @@ CaseOps does not deploy to Salesforce Production. Production access is read-only
 CaseOps is intended to run from a published Docker image:
 
 ```text
-ghcr.io/digitaldreams-ai/caseops:0.1.58
+ghcr.io/digitaldreams-ai/caseops:0.1.59
 ```
 
 The container uses:

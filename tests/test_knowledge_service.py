@@ -321,6 +321,33 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(len(helpers), 1)
         self.assertEqual(second["helper_work_items_created"], 0)
 
+    def test_manual_auditor_routes_helper_related_failure_to_helper_work(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            for key in ("OPEN-1", "OPEN-2"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="STEP_9",
+                    signal_type="helper_related_failure",
+                    topic="sub-agent",
+                    summary="Pipeline captured a timeout while running a sub-agent helper path.",
+                    evidence=["timeout_total while sub-agent was validating metadata"],
+                )
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+            helper = json.loads(next((outputs / "org-knowledge" / "helper-work-items").glob("*.json")).read_text(encoding="utf-8"))
+
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(summary["helper_only_groups"], 1)
+        self.assertEqual(summary["helper_work_items_created"], 1)
+        self.assertEqual(pending, [])
+        self.assertEqual(helper["route"], "helper_work_item")
+        self.assertEqual(helper["failure_class"], "helper_failure")
+
     def test_manual_auditor_normalizes_legacy_helper_work_items(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"

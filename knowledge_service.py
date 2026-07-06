@@ -61,6 +61,10 @@ PENDING_LESSON_SIGNAL_TYPES = {
     "invalid_query_field",
     *HIGH_VALUE_SINGLE_LESSON_TYPES,
 }
+HELPER_WORK_SIGNAL_TYPES = {
+    "helper_related_failure",
+    "invalid_command_pattern",
+}
 FAILURE_CLASSES = {
     "bad_context",
     "missing_helper",
@@ -175,6 +179,8 @@ def classify_failure_class(signal_type: str, topic: str = "", text: str = "") ->
         return "bad_context"
     if any(item in value for item in ("invalidprojectworkspace", "invalid_sfdx_workspace", "sfdx workspace", "sfdx-project")):
         return "bad_context"
+    if signal in {"helper_related_failure", "helper_failure"}:
+        return "helper_failure"
     if any(item in value for item in ("json_decode", "jsondecode", "json_parse", "expecting value", "helper_failure")):
         return "helper_failure"
     if any(item in value for item in ("helper_available_not_used", "missing_helper")):
@@ -197,7 +203,7 @@ def classify_failure_class(signal_type: str, topic: str = "", text: str = "") ->
 def route_for_failure_class(failure_class: str, signal_type: str = "") -> tuple[str, str]:
     if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES or signal_type in {"invalid_query_field"}:
         return "org_lesson", ""
-    if failure_class in {"missing_helper", "helper_failure"} or signal_type in {"helper_available_not_used", "invalid_command_pattern"}:
+    if failure_class in {"missing_helper", "helper_failure"} or signal_type in {"helper_available_not_used", *HELPER_WORK_SIGNAL_TYPES}:
         return "helper_work_item", ""
     if failure_class in {"weak_template", "unsafe_prod_request", "bad_context", "invalid_salesforce_assumption", "stale_state"}:
         review_type = {
@@ -1043,6 +1049,21 @@ def _refine_lesson_candidate(signal_type: str, topic: str, group: list[dict[str,
             recommended_file=_recommended_file(signal_type, topic),
             knowledge_type=_candidate_type(signal_type),
             confidence="medium",
+        )
+    if signal_type == "helper_related_failure":
+        return LessonRefinement(
+            action="helper_work_item",
+            trigger=f"Repeated helper related failure signal for {topic}.",
+            lesson=(
+                f"CaseOps should classify and handle recurring {topic} helper failures deterministically. "
+                "Preserve the failure class, command, stderr/stdout excerpt, and next action so the pipeline "
+                "does not convert helper/runtime failures into reusable org lessons."
+            ),
+            recommended_file="lessons-learned/general.md",
+            knowledge_type="helper_contract",
+            confidence="medium" if recurrence < 3 else "high",
+            keywords=tuple(_keywords_from_group(signal_type, topic, group)),
+            reason="Helper-related failures are runtime/helper guardrail work, not org-specific knowledge.",
         )
     if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES:
         return LessonRefinement(
