@@ -50,10 +50,12 @@ HELPER_WORK_TRANSITIONS = {
 }
 HIGH_VALUE_SINGLE_LESSON_TYPES = {
     "deploy_pattern_gap",
-    "deploy_tooling_gotcha",
     "org_gotcha",
     "salesforce_behavior_gotcha",
     "validation_pattern",
+}
+HIGH_VALUE_SINGLE_HELPER_TYPES = {
+    "deploy_tooling_gotcha",
 }
 PENDING_LESSON_SIGNAL_TYPES = {
     "helper_failure",
@@ -62,6 +64,7 @@ PENDING_LESSON_SIGNAL_TYPES = {
     *HIGH_VALUE_SINGLE_LESSON_TYPES,
 }
 HELPER_WORK_SIGNAL_TYPES = {
+    *HIGH_VALUE_SINGLE_HELPER_TYPES,
     "helper_related_failure",
     "invalid_command_pattern",
 }
@@ -1010,6 +1013,17 @@ def _refine_lesson_candidate(signal_type: str, topic: str, group: list[dict[str,
             keywords=("JSONDecodeError", "Expecting value", "non-JSON", "stderr", "stdout"),
             reason="This is a tooling robustness issue, so it should become helper work instead of runtime knowledge.",
         )
+    if signal_type == "deploy_tooling_gotcha":
+        return LessonRefinement(
+            action="helper_work_item",
+            trigger=f"Salesforce deploy tooling gotcha observed for {topic}.",
+            lesson=_candidate_lesson_text(signal_type, topic, summaries),
+            recommended_file="salesforce-gotchas/deploy-and-sandbox.md",
+            knowledge_type="helper_contract",
+            confidence="high" if recurrence >= 2 else "medium",
+            keywords=tuple(_keywords_from_group(signal_type, topic, group)),
+            reason="Deploy tooling gotchas are core helper behavior unless the operator explicitly promotes them as org-specific knowledge.",
+        )
     if signal_type == "missing_file_or_directory":
         return LessonRefinement(
             action="suppress",
@@ -1146,7 +1160,7 @@ def _keywords_from_group(signal_type: str, topic: str, group: list[dict[str, Any
 def _group_meets_lesson_threshold(signal_type: str, group: list[dict[str, Any]], min_recurrence: int) -> tuple[bool, str]:
     if len(group) >= min_recurrence:
         return True, "recurrence"
-    if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES and group:
+    if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES | HIGH_VALUE_SINGLE_HELPER_TYPES and group:
         return True, "explicit_single_signal"
     return False, "below_recurrence"
 
@@ -1955,6 +1969,7 @@ def _helper_work_item_from_candidate(candidate: dict[str, Any]) -> dict[str, Any
         "route": "helper_work_item",
         "quality": candidate.get("quality") or "medium",
         "quality_reason": candidate.get("quality_reason") or "Mechanical lesson converted to helper work item.",
+        "eligibility_reason": candidate.get("eligibility_reason") or "",
         "redaction_status": candidate.get("redaction_status") or redaction_status_for_payload(candidate),
         "status": "pending",
         "created_at": utc_now_iso(),

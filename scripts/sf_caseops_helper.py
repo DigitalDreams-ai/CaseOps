@@ -15,6 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -249,6 +250,60 @@ def _describe_sobject(org: str, sobject: str, *, timeout: int = 90) -> dict[str,
         "label": result.get("label"),
         "queryable": result.get("queryable"),
         "retrieveable": result.get("retrieveable"),
+    }
+
+
+def _verify_tooling_sobject(org: str, sobject: str, *, timeout: int = 90) -> dict[str, Any]:
+    escaped = sobject.replace("\\", "\\\\").replace("'", "\\'")
+    query = f"SELECT QualifiedApiName FROM EntityDefinition WHERE QualifiedApiName = '{escaped}' LIMIT 1"
+    result = _query(org, query, tooling=True, timeout=timeout)
+    if not result.get("ok"):
+        return {
+            "ok": False,
+            "sobject": sobject,
+            "query": query,
+            "failure_class": result.get("failure_class") or "sf_cli_error",
+            "retryable": result.get("retryable", True),
+            "next_action": result.get("next_action") or "Verify Tooling API access before retrying the original query.",
+            "result": result,
+        }
+    exists = bool(result.get("totalSize"))
+    response = {
+        "ok": exists,
+        "sobject": sobject,
+        "query": query,
+        "exists": exists,
+        "records": result.get("records", []),
+    }
+    if not exists:
+        response.update({
+            "failure_class": "invalid_query_type",
+            "retryable": False,
+            "next_action": (
+                f"Tooling object {sobject} was not found via EntityDefinition. Treat the absence as evidence "
+                "or choose a supported object/helper instead of retrying broad Tooling API queries."
+            ),
+        })
+    return response
+
+
+def _zip_directory(source_dir: Path, zip_path: Path) -> dict[str, Any]:
+    source_dir = source_dir.resolve()
+    zip_path = zip_path.resolve()
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
+    if zip_path.exists():
+        zip_path.unlink()
+    file_count = 0
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(source_dir.rglob("*")):
+            if not path.is_file():
+                continue
+            archive.write(path, path.relative_to(source_dir).as_posix())
+            file_count += 1
+    return {
+        "path": str(zip_path),
+        "fileCount": file_count,
+        "hasPackageXml": (source_dir / "package.xml").is_file(),
     }
 
 
@@ -600,9 +655,28 @@ def query_data(args: argparse.Namespace) -> int:
 
 
 def query_tooling(args: argparse.Namespace) -> int:
+    primary_sobject = _extract_primary_sobject(args.soql)
+    if not args.skip_existence_check and primary_sobject:
+        precheck = _verify_tooling_sobject(args.org, primary_sobject, timeout=args.timeout)
+        if not precheck.get("ok"):
+            result = {
+                "kind": "query-tooling",
+                "org": args.org,
+                "query": args.soql,
+                "ok": False,
+                "failure_class": precheck.get("failure_class") or "invalid_query_type",
+                "retryable": precheck.get("retryable", False),
+                "next_action": precheck.get("next_action") or "Verify the Tooling API object exists before retrying the query.",
+                "precheck": precheck,
+            }
+            _write_output(args.out_dir, f"{_safe_name(args.name or 'query-tooling')}.json", result)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1
     result = _query(args.org, args.soql, tooling=True, timeout=args.timeout)
     result["kind"] = "query-tooling"
     result["org"] = args.org
+    if primary_sobject:
+        result["primarySObject"] = primary_sobject
     _write_output(args.out_dir, f"{_safe_name(args.name or 'query-tooling')}.json", result)
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0 if result.get("ok") else 1
@@ -818,33 +892,56 @@ def deploy_mdapi(args: argparse.Namespace) -> int:
         result["mdapiDir"] = str(mdapi_dir)
         result["convert"] = {"skipped": True, "reason": "candidate has no force-app directory; treating candidate as metadata-dir"}
 
-    deploy = _run([
+    if mdapi_dir.suffix.lower() == ".zip" and mdapi_dir.is_file():
+        deploy_target = mdapi_dir
+        result["mdapiZip"] = str(deploy_target)
+        result["zip"] = {"skipped": True, "reason": "candidate is already a zip file"}
+    elif mdapi_dir.is_dir():
+        package_xml = mdapi_dir / "package.xml"
+        if not package_xml.is_file():
+            result["failure_class"] = "missing_package_xml"
+            result["retryable"] = False
+            result["next_action"] = "The MDAPI deploy directory must contain package.xml at its root before zip deploy."
+            _write_json(summary_path, result)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1
+        zip_info = _zip_directory(mdapi_dir, attempt / "mdapi-deploy.zip")
+        result["zip"] = zip_info
+        result["mdapiZip"] = zip_info["path"]
+        if not zip_info["fileCount"] or not zip_info["hasPackageXml"]:
+            result["failure_class"] = "empty_or_invalid_mdapi_zip"
+            result["retryable"] = False
+            result["next_action"] = "The generated MDAPI zip is empty or missing package.xml. Fix the candidate package before deploy."
+            _write_json(summary_path, result)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1
+        deploy_target = Path(zip_info["path"])
+    else:
+        result["failure_class"] = "missing_metadata_dir"
+        result["retryable"] = False
+        result["next_action"] = "Candidate metadata path does not exist. Rebuild the issue-scoped candidate before deploy."
+        _write_json(summary_path, result)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 1
+
+    deploy_cmd = [
         "sf",
         "project",
         "deploy",
         "start",
         "--metadata-dir",
-        str(mdapi_dir),
+        str(deploy_target),
         "--single-package",
         "--target-org",
         args.sandbox_org,
         "--json",
-    ], timeout=args.timeout, cwd=project_root)
+    ]
+    result["deployTarget"] = str(deploy_target)
+    deploy = _run(deploy_cmd, timeout=args.timeout, cwd=project_root)
     deploy_json = _json_from_stdout(deploy.stdout)
     deploy_result = deploy_json.get("result", {}) if isinstance(deploy_json, dict) else {}
     result["deploy"] = {
-        **_command_result(kind="deploy-mdapi-command", proc=deploy, command=[
-            "sf",
-            "project",
-            "deploy",
-            "start",
-            "--metadata-dir",
-            str(mdapi_dir),
-            "--single-package",
-            "--target-org",
-            args.sandbox_org,
-            "--json",
-        ]),
+        **_command_result(kind="deploy-mdapi-command", proc=deploy, command=deploy_cmd),
         "id": deploy_result.get("id") or deploy_result.get("deployId"),
         "status": deploy_result.get("status"),
         "success": deploy_result.get("success"),
@@ -922,6 +1019,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--name")
     p.add_argument("--out-dir")
     p.add_argument("--timeout", type=int, default=90)
+    p.add_argument("--skip-existence-check", action="store_true")
     p.set_defaults(func=query_tooling)
 
     p = sub.add_parser("retrieve-metadata", help="Retrieve targeted metadata to an issue-scoped output directory")

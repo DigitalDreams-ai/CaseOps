@@ -141,10 +141,10 @@ class KnowledgeServiceTests(unittest.TestCase):
                     "issue_key": "OPEN-1",
                     "run_id": "OPEN-1",
                     "source_step": "STEP_5",
-                    "signal_type": "deploy_tooling_gotcha",
-                    "topic": "deploy-troubleshooting",
-                    "summary": "Use mdapi deploy fallback when source tracking reports no changes.",
-                    "evidence": ["No local changes to deploy, but package.xml deploy succeeds."],
+                    "signal_type": "deploy_pattern_gap",
+                    "topic": "permission-set-deploy",
+                    "summary": "Deploy permission set assignments with a post-deploy verification query.",
+                    "evidence": ["Permission set assignment deploys can validate while user assignment verification still fails."],
                     "created_at": "2026-06-28T00:00:00+00:00",
                 }),
                 encoding="utf-8",
@@ -159,6 +159,32 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(signal["route"], "org_lesson")
         self.assertEqual(signal["quality"], "medium")
         self.assertEqual(signal["redaction_status"], "not_needed")
+
+    def test_manual_auditor_routes_deploy_tooling_gotcha_to_helper_work(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            knowledge_service.write_signal(
+                outputs,
+                issue_key="OPEN-1",
+                run_id="OPEN-1",
+                source_step="STEP_9",
+                signal_type="deploy_tooling_gotcha",
+                topic="deploy-troubleshooting",
+                summary="MDAPI directory deploy failed with No package.xml found, but zipped MDAPI deploy succeeded.",
+                evidence=["sf project deploy start --metadata-dir mdapi-converted failed; mdapi.zip succeeded."],
+            )
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+            helper = json.loads(next((outputs / "org-knowledge" / "helper-work-items").glob("*.json")).read_text(encoding="utf-8"))
+
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(summary["helper_work_items_created"], 1)
+        self.assertEqual(pending, [])
+        self.assertEqual(helper["route"], "helper_work_item")
+        self.assertEqual(helper["topic"], "deploy-troubleshooting")
+        self.assertEqual(helper["eligibility_reason"], "explicit_single_signal")
 
     def test_manual_auditor_derives_signals_from_pipeline_logs(self):
         with tempfile.TemporaryDirectory() as tmp:

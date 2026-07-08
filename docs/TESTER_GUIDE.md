@@ -9,7 +9,7 @@ This guide is safe to share. Do not include private hostnames, internal filesyst
 Use the published image tag provided by the maintainer. Prefer a numbered tag over `latest` when reporting issues:
 
 ```text
-ghcr.io/digitaldreams-ai/caseops:0.1.59
+ghcr.io/digitaldreams-ai/caseops:0.1.60
 ```
 
 Start from a clean Docker folder containing:

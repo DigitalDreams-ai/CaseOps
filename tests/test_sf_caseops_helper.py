@@ -2,6 +2,7 @@ import json
 import subprocess
 import tempfile
 import unittest
+import zipfile
 from contextlib import redirect_stdout
 from io import StringIO
 from argparse import Namespace
@@ -181,6 +182,73 @@ class SalesforceHelperTests(unittest.TestCase):
         self.assertEqual(summary["precheck"]["sobject"], "Missing_Object__c")
         describe_mock.assert_called_once()
         query_mock.assert_not_called()
+
+    def test_query_tooling_prechecks_primary_object_existence(self):
+        precheck = {
+            "ok": False,
+            "sobject": "MissingToolingObject",
+            "failure_class": "invalid_query_type",
+            "retryable": False,
+            "next_action": "Tooling object MissingToolingObject was not found via EntityDefinition.",
+        }
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.object(helper, "_verify_tooling_sobject", return_value=precheck) as precheck_mock,
+            patch.object(helper, "_query") as query_mock,
+        ):
+            with redirect_stdout(StringIO()):
+                rc = helper.query_tooling(Namespace(
+                    org="prod",
+                    soql="SELECT Id FROM MissingToolingObject LIMIT 1",
+                    name=None,
+                    out_dir=tmp,
+                    timeout=10,
+                    skip_existence_check=False,
+                ))
+            summary = json.loads((Path(tmp) / "query-tooling.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(rc, 1)
+        self.assertFalse(summary["ok"])
+        self.assertEqual(summary["failure_class"], "invalid_query_type")
+        self.assertEqual(summary["precheck"]["sobject"], "MissingToolingObject")
+        precheck_mock.assert_called_once()
+        query_mock.assert_not_called()
+
+    def test_deploy_mdapi_zips_metadata_dir_before_deploy(self):
+        proc = subprocess.CompletedProcess(
+            args=["sf"],
+            returncode=0,
+            stdout=json.dumps({"status": 0, "result": {"id": "0Af123", "status": "Succeeded", "success": True}}),
+            stderr="",
+        )
+        with tempfile.TemporaryDirectory() as tmp, patch.object(helper, "_run", return_value=proc) as run_mock:
+            root = Path(tmp)
+            candidate = root / "candidate"
+            attempt = root / "attempt-001"
+            (candidate / "objects" / "Account").mkdir(parents=True)
+            (candidate / "package.xml").write_text("<Package></Package>\n", encoding="utf-8")
+            (candidate / "objects" / "Account" / "Account.object-meta.xml").write_text("<CustomObject></CustomObject>\n", encoding="utf-8")
+
+            with redirect_stdout(StringIO()):
+                rc = helper.deploy_mdapi(Namespace(
+                    sandbox_org="sandbox",
+                    candidate=str(candidate),
+                    attempt=str(attempt),
+                    timeout=10,
+                ))
+            summary = json.loads((attempt / "deploy-summary.json").read_text(encoding="utf-8"))
+            deploy_command = run_mock.call_args.args[0]
+            metadata_dir_arg = deploy_command[deploy_command.index("--metadata-dir") + 1]
+
+            with zipfile.ZipFile(metadata_dir_arg) as archive:
+                names = set(archive.namelist())
+
+        self.assertEqual(rc, 0)
+        self.assertTrue(summary["ok"])
+        self.assertTrue(metadata_dir_arg.endswith(".zip"))
+        self.assertEqual(summary["deployTarget"], metadata_dir_arg)
+        self.assertIn("package.xml", names)
+        self.assertIn("objects/Account/Account.object-meta.xml", names)
 
 
 if __name__ == "__main__":
