@@ -183,7 +183,7 @@ Before publishing a new image, verify:
 
 ```bash
 python -m unittest discover tests
-python -m py_compile app.py jira_sync.py skill_registry.py caseops_paths.py scripts/sf_caseops_helper.py issue_clusters.py
+python -m py_compile app.py jira_sync.py knowledge_service.py skill_registry.py caseops_paths.py scripts/sf_caseops_helper.py issue_clusters.py
 ```
 
 Also run a container smoke test and confirm `/health` returns `{"ok": true}` before pushing a numbered image tag and `latest`.

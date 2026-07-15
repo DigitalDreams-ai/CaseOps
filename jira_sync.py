@@ -587,6 +587,8 @@ def load_env_file(path: Path) -> None:
 
 
 class JiraClient:
+    REQUEST_TIMEOUT_SECONDS = 60
+
     def __init__(self, base_url: str, auth_header: str) -> None:
         self.base_url = base_url
         self.auth_header = auth_header
@@ -609,11 +611,13 @@ class JiraClient:
         )
 
         try:
-            with urllib.request.urlopen(request) as response:
+            with urllib.request.urlopen(request, timeout=self.REQUEST_TIMEOUT_SECONDS) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as error:
             details = error.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"Jira API error {error.code} for {path}: {details}") from error
+        except (urllib.error.URLError, TimeoutError) as error:
+            raise RuntimeError(f"Jira network error for {path}: {error}") from error
 
     def request_absolute(
         self,
@@ -634,7 +638,7 @@ class JiraClient:
         request = urllib.request.Request(url, headers=headers, method=method)
 
         try:
-            with urllib.request.urlopen(request) as response:
+            with urllib.request.urlopen(request, timeout=self.REQUEST_TIMEOUT_SECONDS) as response:
                 raw_body = response.read()
                 if not raw_body:
                     return None
@@ -649,6 +653,8 @@ class JiraClient:
                 }
             details = error.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"Jira API error {error.code} for {url}: {details}") from error
+        except (urllib.error.URLError, TimeoutError) as error:
+            raise RuntimeError(f"Jira network error for {url}: {error}") from error
 
     def download(self, url: str) -> bytes:
         request = urllib.request.Request(
@@ -661,11 +667,13 @@ class JiraClient:
         )
 
         try:
-            with urllib.request.urlopen(request) as response:
+            with urllib.request.urlopen(request, timeout=self.REQUEST_TIMEOUT_SECONDS) as response:
                 return response.read()
         except urllib.error.HTTPError as error:
             details = error.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"Jira attachment download error {error.code} for {url}: {details}") from error
+        except (urllib.error.URLError, TimeoutError) as error:
+            raise RuntimeError(f"Jira network error downloading {url}: {error}") from error
 
     def get_field_map(self) -> dict[str, str]:
         fields = self.request("GET", "/rest/api/3/field")
@@ -820,11 +828,13 @@ class JiraClient:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request) as response:
+            with urllib.request.urlopen(request, timeout=self.REQUEST_TIMEOUT_SECONDS) as response:
                 pass  # 204 No Content response, no body to parse
         except urllib.error.HTTPError as error:
             details = error.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"Jira API error {error.code} for transitions: {details}") from error
+        except (urllib.error.URLError, TimeoutError) as error:
+            raise RuntimeError(f"Jira network error for transitions: {error}") from error
 
     def get_attached_forms(self, issue_key: str, cloud_id: str) -> list[dict[str, Any]]:
         forms = []

@@ -15,7 +15,7 @@
 | 7 | Orchestrator | Engineering escalation gate |
 | 8 | Orchestrator | Implement (both paths: propose fix) |
 | 9 | **Sub-agent** | Deploy + test in allowlisted Sandbox (both paths: validate proposed solution) |
-| 10 | **Sub-agent** | Internal notes + Jira message + escalation handoff (if needed) |
+| 10 | **Sub-agent** | Issue brief + internal notes + Jira message + escalation handoff (if needed) |
 | 11 | Orchestrator | Dated issue summary |
 | 12 | Orchestrator | Inform the user |
 
@@ -57,7 +57,7 @@ Read `outputs/jira/manifest.csv` and route **every** issue **before** loading fu
 
 | Condition | Action |
 |-----------|--------|
-| Status is `Closed` or `Resolved` | Copy summary to `outputs/closed-resolved/<KEY>.md` using `assets/closed-resolved-log-template.md`. Log in the dated summary (Step 10). **Stop for this key — do not process further.** |
+| Status is `Closed` or `Resolved` | Copy summary to `outputs/closed-resolved/<KEY>.md` using `assets/closed-resolved-log-template.md`. Log in the dated summary (Step 11). **Stop for this key — do not process further.** |
 | Status is `Escalated to Engineering` (pre-existing Jira status) | Copy summary to `outputs/engineering-escalations/<KEY>.md`. Log in dated summary as pre-escalated. **Stop for this key.** |
 | All other statuses | Add to the active list. Process **one key at a time** through Steps 3–11. |
 

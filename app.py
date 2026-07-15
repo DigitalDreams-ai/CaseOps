@@ -9625,7 +9625,7 @@ def api_post_comment(key: str):
             },
             method="POST",
         )
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             result = json.loads(resp.read().decode("utf-8"))
         return jsonify({"ok": True, "id": result.get("id", ""), "sync": _issue_sync_result(key)})
     except urllib.error.HTTPError as exc:
@@ -9799,7 +9799,7 @@ def api_send_canned_message(key: str):
             },
             method="POST",
         )
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             result = json.loads(resp.read().decode("utf-8"))
 
         # Auto-transition to Resolved for closing-response message
