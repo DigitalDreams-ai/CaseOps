@@ -207,6 +207,7 @@ class GlobalQueueTests(unittest.TestCase):
         rows = [
             {"Key": "OPEN-1", "Status": "Open"},
             {"Key": "ENG-1", "Status": "Escalated to Engineering"},
+            {"Key": "CLOSED-1", "Status": "Resolved"},
             {"Key": "DONE-1", "Status": "Open"},
         ]
 
@@ -221,6 +222,14 @@ class GlobalQueueTests(unittest.TestCase):
                     "status": "Escalated to Engineering",
                     "next_step": {"step": 2, "name": "Triage pre-escalated issue", "status": "pending"},
                     "steps": [{"step": 2, "name": "Triage pre-escalated issue", "status": "pending"}],
+                }
+            if key == "CLOSED-1":
+                return False, "incomplete; next STEP_2 (Triage closed/resolved issue, pending)", f"fp-{key}", {
+                    "key": key,
+                    "mode": "closed",
+                    "status": "Resolved",
+                    "next_step": {"step": 2, "name": "Triage closed/resolved issue", "status": "pending"},
+                    "steps": [{"step": 2, "name": "Triage closed/resolved issue", "status": "pending"}],
                 }
             return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", f"fp-{key}", {
                 "key": key,
@@ -241,9 +250,232 @@ class GlobalQueueTests(unittest.TestCase):
 
         self.assertEqual(queued, ["OPEN-1"])
         self.assertIn(("ENG-1", "skip_escalated_to_engineering"), dispositions)
+        self.assertIn(("CLOSED-1", "skip_closed_or_resolved"), dispositions)
         self.assertIn(("DONE-1", "skip_unchanged_success"), dispositions)
-        self.assertTrue(any("escalated to engineering=1" in msg for msg in messages))
+        self.assertTrue(any("Queue skip: 1 issue — escalated to engineering;" in msg for msg in messages))
+        self.assertTrue(any("Queue skip: 1 issue — closed/resolved;" in msg for msg in messages))
+        self.assertFalse(any("Queue skip: ENG-1" in msg for msg in messages))
+        self.assertFalse(any("Queue skip: CLOSED-1" in msg for msg in messages))
         self.assertTrue(any("already current=1" in msg for msg in messages))
+
+    def test_global_queue_skips_on_hold_engineering_required_issue(self):
+        rows = [
+            {"Key": "OPEN-1", "Status": "Open"},
+            {"Key": "ENG-HOLD-1", "Status": "On Hold"},
+        ]
+
+        def snapshot_for(row):
+            key = row["Key"]
+            if key == "ENG-HOLD-1":
+                return False, "incomplete; next STEP_9 (Deploy and test in Sandbox, stale)", f"fp-{key}", {
+                    "key": key,
+                    "mode": "active",
+                    "status": "On Hold",
+                    "routing": {"path": "engineering_required"},
+                    "next_step": {"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"},
+                    "steps": [{"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"}],
+                }
+            return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", f"fp-{key}", {
+                "key": key,
+                "mode": "active",
+                "status": row.get("Status", ""),
+                "next_step": {"step": 5, "name": "Retrieve relevant Production metadata", "status": "pending"},
+                "steps": [{"step": 5, "name": "Retrieve relevant Production metadata", "status": "pending"}],
+            }
+
+        messages = []
+        dispositions = []
+        with (
+            patch.object(app, "_read_manifest", return_value=rows),
+            patch.object(app, "_global_issue_queue_snapshot_from_row", side_effect=snapshot_for),
+            patch.object(app, "_write_queue_disposition", side_effect=lambda key, payload: dispositions.append((key, payload["disposition"], payload["reason"]))),
+            patch.object(app, "_log_emit_line", side_effect=lambda _run_key, msg: messages.append(msg)),
+        ):
+            queued = app._select_global_issue_queue("__global__")
+
+        self.assertEqual(queued, ["OPEN-1"])
+        self.assertTrue(any(item[0] == "ENG-HOLD-1" and item[1] == "blocked_by_engineering" for item in dispositions))
+        self.assertTrue(any("Queue skip: ENG-HOLD-1 — blocked by engineering;" in msg for msg in messages))
+        self.assertTrue(any("blocked by engineering=1" in msg for msg in messages))
+
+    def test_dated_summary_prompt_includes_authoritative_queue_outcomes(self):
+        captured = {}
+
+        def fake_stream(prompt, run_key, key):
+            captured["prompt"] = prompt
+            captured["run_key"] = run_key
+            captured["key"] = key
+            return True
+
+        with (
+            patch.object(app, "_today_issue_summary_path", return_value=Path("outputs/summaries/2026-06-29/issue-summary-2026-06-29.md")),
+            patch.object(app, "_do_stream_claude", side_effect=fake_stream),
+            patch.object(app, "_log_emit_line"),
+        ):
+            ok = app._stream_global_dated_summary(
+                ["OPEN-1", "BLOCKED-1"],
+                "__global__",
+                {
+                    "OPEN-1": "complete",
+                    "BLOCKED-1": "stalled/no progress in pass 3; incomplete; next STEP_9 (Deploy and test in Sandbox, blocked)",
+                },
+            )
+
+        self.assertTrue(ok)
+        self.assertEqual(captured["run_key"], "__global__")
+        self.assertEqual(captured["key"], "__global__")
+        self.assertIn("Authoritative queue outcome facts", captured["prompt"])
+        self.assertIn("BLOCKED-1: stalled/no progress in pass 3", captured["prompt"])
+        self.assertIn("do not summarize it as complete", captured["prompt"])
+        self.assertIn("Validation Status: passed", captured["prompt"])
+        self.assertIn("Fixed?: yes", captured["prompt"])
+        self.assertIn("Partial Pass", captured["prompt"])
+        self.assertIn("routing.path is unknown", captured["prompt"])
+        self.assertIn("Do not run `ls`, `find`, `rg`, or broad directory scans under the CaseOps output directory.", captured["prompt"])
+        self.assertIn("outputs/pipeline-state/OPEN-1.json", captured["prompt"])
+        self.assertIn("outputs/investigations/BLOCKED-1.md", captured["prompt"])
+        self.assertNotIn("outputs/pipeline-state/<KEY>.json", captured["prompt"])
+
+    def test_dated_summary_prompt_uses_instance_routed_output_paths(self):
+        captured = {}
+
+        with (
+            patch.object(app, "OUTPUTS", Path("/data/outputs")),
+            patch.object(app, "_today_issue_summary_path", return_value=Path("/data/outputs/summaries/2026-06-29/issue-summary-2026-06-29.md")),
+            patch.object(app, "_do_stream_claude", side_effect=lambda prompt, _run_key, _key: captured.setdefault("prompt", prompt) or True),
+            patch.object(app, "_log_emit_line"),
+        ):
+            ok = app._stream_global_dated_summary(
+                ["OPEN-1"],
+                "__global__",
+                {"OPEN-1": "incomplete; next STEP_5 (Retrieve relevant Production metadata, stale)"},
+            )
+
+        self.assertTrue(ok)
+        self.assertIn("/data/outputs/pipeline-state/OPEN-1.json", captured["prompt"])
+        self.assertIn("/data/outputs/investigations/OPEN-1.md", captured["prompt"])
+        self.assertNotIn("\n- outputs/pipeline-state/OPEN-1.json", captured["prompt"])
+
+    def test_outputs_dir_resolver_uses_docker_runtime_env(self):
+        with patch.dict(os.environ, {"CASEOPS_OUTPUTS_DIR": "/data/outputs"}, clear=False):
+            self.assertEqual(app._resolve_outputs_dir(), Path("/data/outputs"))
+
+        with patch.dict(os.environ, {"CASEOPS_OUTPUTS_DIR": "", "CASEOPS_DATA_DIR": "/data"}, clear=False):
+            self.assertEqual(app._resolve_outputs_dir(), Path("/data/outputs"))
+
+    def test_global_queue_stall_counts_only_active_requeued_issue(self):
+        rows = [
+            {"Key": "ISSUE-A", "Status": "Open"},
+            {"Key": "ISSUE-B", "Status": "Open"},
+        ]
+        snapshot_calls = {"ISSUE-A": 0, "ISSUE-B": 0}
+
+        def snapshot_for_key(key):
+            snapshot_calls[key] += 1
+            if key == "ISSUE-A":
+                if snapshot_calls[key] == 1:
+                    return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", "a0"
+                return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, stale)", "a1"
+            return False, "incomplete; next STEP_9 (Deploy and test in Sandbox, pending)", "b0"
+
+        def snapshot_from_row(row):
+            key = row["Key"]
+            _complete, detail, fingerprint = snapshot_for_key(key)
+            status = "stale" if "stale" in detail else "pending"
+            step_no = 5 if key == "ISSUE-A" else 9
+            plan = {
+                "key": key,
+                "mode": "active",
+                "next_step": {"step": step_no, "name": "Step", "status": status},
+                "steps": [{"step": step_no, "name": "Step", "status": status}],
+            }
+            return False, detail, fingerprint, plan
+
+        worker_results = [
+            ("ISSUE-A", False, "incomplete"),
+            ("ISSUE-B", False, "incomplete"),
+            ("ISSUE-A", False, "incomplete"),
+        ]
+        messages = []
+        summary = {}
+
+        with (
+            patch.object(app, "_issue_pipeline_runtime_ready", return_value=True),
+            patch.object(app, "_select_global_issue_queue", return_value=["ISSUE-A", "ISSUE-B"]),
+            patch.object(app, "_global_issue_queue_snapshot", side_effect=snapshot_for_key),
+            patch.object(app, "_global_issue_queue_snapshot_from_row", side_effect=snapshot_from_row),
+            patch.object(app, "_run_global_issue_worker", side_effect=worker_results),
+            patch.object(app, "_read_manifest", return_value=rows),
+            patch.object(app, "_global_max_parallel", return_value=1),
+            patch.object(app, "_global_max_queue_passes", return_value=12),
+            patch.object(app, "_run_stop_requested", return_value=False),
+            patch.object(app, "_stream_global_dated_summary", side_effect=lambda keys, _run_key, outcomes: summary.update({"keys": keys, "outcomes": outcomes}) or True),
+            patch.object(app, "_write_queue_disposition"),
+            patch.object(app, "manifest_changed"),
+            patch.object(app, "_log_emit_line", side_effect=lambda _run_key, msg: messages.append(msg)),
+            patch.object(app, "_log_emit_done"),
+            patch.object(app, "_finish_run_control"),
+        ):
+            app._stream_global_skill("reprocess all active issues without re-syncing from Jira", "__global__")
+
+        self.assertTrue(any("Queue: requeueing 1 issue(s)" in msg for msg in messages))
+        self.assertTrue(any("Queue stalled: 1 active issue(s) still incomplete" in msg for msg in messages))
+        self.assertTrue(any("Queue: finished. complete=0, incomplete=2, reason=stalled" in msg for msg in messages))
+        self.assertEqual(summary["keys"], ["ISSUE-A", "ISSUE-B"])
+        self.assertIn("stalled/no progress in pass 1", summary["outcomes"]["ISSUE-B"])
+        self.assertIn("stalled/no progress in pass 2", summary["outcomes"]["ISSUE-A"])
+
+    def test_global_queue_does_not_requeue_same_blocked_step_for_artifact_churn(self):
+        rows = [{"Key": "BLOCKED-1", "Status": "Waiting for customer"}]
+        detail = "incomplete; next STEP_9 (Deploy and test in Sandbox, blocked)"
+        snapshot_calls = {"BLOCKED-1": 0}
+
+        def snapshot_for_key(key):
+            snapshot_calls[key] += 1
+            fingerprint = "fp-before" if snapshot_calls[key] == 1 else "fp-after-test-report-write"
+            return False, detail, fingerprint
+
+        def snapshot_from_row(row):
+            return False, detail, "fp-after-test-report-write", {
+                "key": row["Key"],
+                "mode": "active",
+                "status": row.get("Status", ""),
+                "next_step": {"step": 9, "name": "Deploy and test in Sandbox", "status": "blocked"},
+                "steps": [{"step": 9, "name": "Deploy and test in Sandbox", "status": "blocked"}],
+            }
+
+        messages = []
+        summary = {}
+        worker_calls = []
+
+        def worker(key, index, total, *, reprocess):
+            worker_calls.append(key)
+            return key, False, detail
+
+        with (
+            patch.object(app, "_issue_pipeline_runtime_ready", return_value=True),
+            patch.object(app, "_select_global_issue_queue", return_value=["BLOCKED-1"]),
+            patch.object(app, "_global_issue_queue_snapshot", side_effect=snapshot_for_key),
+            patch.object(app, "_global_issue_queue_snapshot_from_row", side_effect=snapshot_from_row),
+            patch.object(app, "_run_global_issue_worker", side_effect=worker),
+            patch.object(app, "_read_manifest", return_value=rows),
+            patch.object(app, "_global_max_parallel", return_value=1),
+            patch.object(app, "_global_max_queue_passes", return_value=12),
+            patch.object(app, "_run_stop_requested", return_value=False),
+            patch.object(app, "_stream_global_dated_summary", side_effect=lambda keys, _run_key, outcomes: summary.update({"keys": keys, "outcomes": outcomes}) or True),
+            patch.object(app, "_write_queue_disposition"),
+            patch.object(app, "manifest_changed"),
+            patch.object(app, "_log_emit_line", side_effect=lambda _run_key, msg: messages.append(msg)),
+            patch.object(app, "_log_emit_done"),
+            patch.object(app, "_finish_run_control"),
+        ):
+            app._stream_global_skill("reprocess all active issues without re-syncing from Jira", "__global__")
+
+        self.assertEqual(worker_calls, ["BLOCKED-1"])
+        self.assertFalse(any("Queue: requeueing" in msg for msg in messages))
+        self.assertTrue(any("Queue stalled: 1 active issue(s) still incomplete" in msg for msg in messages))
+        self.assertEqual(summary["keys"], ["BLOCKED-1"])
+        self.assertIn("artifact updated without planner advancement", summary["outcomes"]["BLOCKED-1"])
 
     def test_queue_disposition_skips_prior_unchanged_failure(self):
         row = {"Key": "FAIL-1", "Status": "Open", "Updated": "2026-06-08T00:00:00.000+0000"}
@@ -311,6 +543,110 @@ class GlobalQueueTests(unittest.TestCase):
 
         self.assertEqual(same["disposition"], "stale_state_needs_repair")
         self.assertEqual(changed["disposition"], "ready_to_process")
+
+    def test_queue_disposition_prior_reason_is_not_recursively_wrapped(self):
+        row = {"Key": "STALE-1", "Status": "Open"}
+        plan = {
+            "key": "STALE-1",
+            "mode": "active",
+            "next_step": {"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"},
+            "steps": [{"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"}],
+        }
+        state = {
+            "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+            "queue_disposition": {
+                "disposition": "stale_state_needs_repair",
+                "fingerprint": "fp-same",
+                "reason": "Previous queue result is unchanged: stalled/no progress in pass 4",
+            },
+        }
+
+        with patch.object(app, "_read_pipeline_state", return_value=state):
+            disposition = app._queue_disposition_for_plan(
+                row,
+                plan,
+                "incomplete; next STEP_9 (Deploy and test in Sandbox, stale)",
+                "fp-same",
+            )
+
+        self.assertEqual(
+            disposition["reason"],
+            "Previous queue result is unchanged: stalled/no progress in pass 4",
+        )
+
+    def test_completed_run_metrics_clear_queue_disposition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            state_dir = outputs / "pipeline-state"
+            state_dir.mkdir(parents=True)
+            (state_dir / "DONE-1.json").write_text(
+                json.dumps({
+                    "key": "DONE-1",
+                    "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                    "signatures": {},
+                    "queue_disposition": {
+                        "disposition": "stale_state_needs_repair",
+                        "fingerprint": "old",
+                        "reason": "stalled/no progress",
+                    },
+                }),
+                encoding="utf-8",
+            )
+            now = app.datetime.now(app.timezone.utc)
+            metrics = {
+                "start": now.isoformat(),
+                "end": now.isoformat(),
+                "duration_seconds": 0.1,
+                "status": "completed",
+                "loop_events": {},
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_parse_run_metrics_from_logs", return_value=metrics),
+            ):
+                app._update_pipeline_run_metrics("DONE-1", "DONE-1", now, now, status="completed")
+
+            stored = json.loads((state_dir / "DONE-1.json").read_text(encoding="utf-8"))
+
+        self.assertNotIn("queue_disposition", stored)
+        self.assertEqual(stored["run_metrics"]["latest"]["status"], "completed")
+
+    def test_completed_reprocess_refreshes_state_from_artifacts_before_metrics(self):
+        plan = {
+            "key": "DONE-1",
+            "next_step": {"step": 5, "name": "Retrieve relevant Production metadata", "status": "pending"},
+            "steps": [{"step": 5, "name": "Retrieve relevant Production metadata", "status": "pending"}],
+        }
+        events = []
+
+        def record_repair(*args, **kwargs):
+            events.append(("repair", kwargs.get("reason"), kwargs.get("ignore_previous_state")))
+
+        def record_metrics(*args, **kwargs):
+            events.append(("metrics", kwargs.get("status")))
+            return {"status": kwargs.get("status"), "step_timings": {}, "duration_seconds": 0.1}
+
+        with (
+            patch.object(app, "_log_emit_run_start"),
+            patch.object(app, "_log_emit_line"),
+            patch.object(app, "_issue_pipeline_runtime_ready", return_value=True),
+            patch.object(app, "_read_manifest", return_value=[{"Key": "DONE-1", "Status": "Open", "Updated": "2026-06-29T00:00:00.000+0000"}]),
+            patch.object(app, "_prepare_resume_plan", return_value=(plan, Path("pipeline-state/DONE-1.json"), "resume")),
+            patch.object(app, "_log_resume_plan_summary"),
+            patch.object(app, "_resume_plan_short_circuit", return_value=False),
+            patch.object(app, "_build_claude_prompt", return_value="prompt"),
+            patch.object(app, "_do_stream_claude", return_value=True),
+            patch.object(app, "_repair_pipeline_state_from_artifacts_after_run", side_effect=record_repair),
+            patch.object(app, "_update_pipeline_run_metrics", side_effect=record_metrics),
+            patch.object(app, "_finish_run_control"),
+            patch.object(app, "_invalidate_jira_summary_cache"),
+            patch.object(app, "_invalidate_issues_api_cache"),
+            patch.object(app, "_log_emit_done"),
+        ):
+            app._stream_reprocess_issue("DONE-1", "DONE-1", run_preflight=True)
+
+        self.assertEqual(events[:2], [("repair", "completed", False), ("metrics", "completed")])
 
     def test_pipeline_failure_artifact_records_timeout_context(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -431,6 +767,18 @@ class GlobalQueueTests(unittest.TestCase):
             app._queue_incomplete_summary_bucket(detail),
             "STEP_9 Deploy and test in Sandbox (stale)",
         )
+
+    def test_step4_transition_contract_accepts_problem_hypothesis_heading(self):
+        contract = app._evaluate_transition_contract_step4_to_step5(
+            "## Problem Hypothesis (Active)\n\n"
+            "**Problem focus:** No Case Auto-Response Rule exists in Production.\n\n"
+            "The candidate solution is an operator Setup action."
+        )
+
+        self.assertEqual(contract["status"], "pass")
+        self.assertEqual(contract["missing"], [])
+        self.assertTrue(contract["observed"]["hypothesis_h2"])
+        self.assertTrue(contract["observed"]["problem_focus"])
 
     def test_ready_to_deploy_flag_requires_validated_confirmed_production_deploy(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -874,6 +1222,11 @@ class GlobalQueueTests(unittest.TestCase):
             self.assertTrue(flags["is_complete_no_deploy"])
             self.assertEqual(contract["primary_tag"], "complete no deploy")
 
+    def test_no_gearset_deployment_needed_does_not_require_production_deploy(self):
+        self.assertFalse(app._text_requires_production_deploy("No Gearset deployment needed."))
+        self.assertFalse(app._text_requires_production_deploy("No Gearset promotion required."))
+        self.assertTrue(app._text_requires_production_deploy("Gearset deployment required."))
+
     def test_data_only_requires_data_or_admin_action_evidence_and_confirmed_verdict(self):
         with tempfile.TemporaryDirectory() as tmp:
             test_dir = Path(tmp) / "test-reports"
@@ -917,7 +1270,7 @@ class GlobalQueueTests(unittest.TestCase):
             self.assertFalse(flags["is_complete_no_deploy"])
             self.assertEqual(contract["primary_tag"], "data only")
 
-    def test_unexecuted_operator_action_verdict_stays_in_progress_not_data_only(self):
+    def test_unexecuted_operator_action_verdict_without_final_drafts_stays_in_progress(self):
         with tempfile.TemporaryDirectory() as tmp:
             test_dir = Path(tmp) / "test-reports"
             test_dir.mkdir(parents=True)
@@ -959,6 +1312,73 @@ class GlobalQueueTests(unittest.TestCase):
             self.assertFalse(flags["is_data_only"])
             self.assertFalse(flags["is_complete_no_deploy"])
             self.assertEqual(contract["primary_tag"], "in progress")
+
+    def test_operator_owned_no_deploy_action_with_final_drafts_is_data_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            files = {
+                "issue-briefs/TODO-1.md": (
+                    "Problem\n\n"
+                    "- User is missing an existing permission set assignment.\n\n"
+                    "Reproduce\n\n"
+                    "1. Log in as the affected user.\n\n"
+                    "Expected behavior\n\n"
+                    "- User can export the requested data.\n\n"
+                    "Affected record IDs\n\n"
+                    "- User 005xx\n\n"
+                    "Proposed Solution\n\n"
+                    "- Assign the existing permission set in Production.\n"
+                ),
+                "internal-notes/TODO-1.md": "Assign existing permission set in Production; no metadata deploy.\n",
+                "jira-messages/TODO-1.md": "I found the needed access change. Please assign the existing permission set.\n",
+                "test-reports/TODO-1.md": "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: not-run",
+                        "- Fixed?: unknown",
+                        "- Production deploy required: n/a",
+                        "- Evidence: Operator action has not been executed by CaseOps.",
+                    ]
+                ),
+            }
+            for name, text in files.items():
+                path = outputs / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+            state = {
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "routing": {"path": "support_resolvable"},
+                "deliverable": {
+                    "type": "admin_action",
+                    "production_deploy_required": "n/a",
+                    "no_deploy_reason": "Operator assigns an existing permission set in Production.",
+                },
+                "steps": [
+                    {"step": 3, "status": "complete"},
+                    {"step": 9, "status": "stale"},
+                    {"step": 10, "status": "complete"},
+                ],
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_read_pipeline_state", return_value=state),
+                patch.object(app, "_test_report_is_data_only", return_value=False),
+                patch.object(app, "_calculate_pipeline_state", return_value=app.PipelineState.VALIDATED),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+                patch.object(app, "_issue_has_similar_issue_context", return_value=False),
+                patch.object(app, "_issue_needs_customer_reply", return_value=False),
+                patch.object(app, "_investigation_indicates_blocked", return_value=False),
+            ):
+                flags = app._pipeline_file_flags("TODO-1", "Open")
+                contract = app._derive_issue_tag_contract("Open", flags)
+
+            self.assertTrue(flags["is_operator_owned_data_action"])
+            self.assertTrue(flags["is_data_only"])
+            self.assertFalse(flags["is_complete_no_deploy"])
+            self.assertEqual(contract["primary_tag"], "data only")
+            self.assertNotIn("stale", contract["condition_tags"])
+            self.assertNotIn("partial run", contract["condition_tags"])
 
     def test_test_report_file_api_returns_parsed_validation_verdict(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1339,6 +1759,78 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertEqual(contract["primary_tag"], "in progress")
         self.assertNotIn("partial run", contract["condition_tags"])
 
+    def test_no_deploy_operator_report_recovers_from_unknown_durable_deliverable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            files = {
+                "jira/summary/OPEN-1.md": "# Jira Summary\n",
+                "investigations/OPEN-1.md": (
+                    "## Problem Location\n"
+                    "Specific artifact: Case Auto-Response Rule.\n"
+                    "Failure point: missing Production Setup admin action.\n"
+                    "Root cause: no active rule exists.\n"
+                    "Support-resolvable classification complete.\n"
+                ),
+                "hypothesis/OPEN-1.md": (
+                    "## Hypothesis\n"
+                    "Problem focus: missing Production Setup admin action.\n"
+                    "Root cause hypothesis: no active auto-response rule exists.\n"
+                ),
+                "test-reports/OPEN-1.md": "\n".join(
+                    [
+                        "## Validation Verdict",
+                        "- Validation Status: not-run",
+                        "- Fixed?: unknown",
+                        "- Production deploy required: n/a",
+                        "- Evidence: Operator action has not been executed by CaseOps.",
+                        "",
+                        "## Next Step",
+                        "Configure the rule in Production Setup, then run the final email receipt check.",
+                    ]
+                ),
+            }
+            for name, text in files.items():
+                path = outputs / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+            prod_org = app._safe_path_component(os.environ.get("CASEOPS_PRODUCTION_READ_ORG") or "production", "production")
+            api_version_raw = os.environ.get("CASEOPS_SALESFORCE_API_VERSION") or os.environ.get("SF_API_VERSION") or "v66.0"
+            api_version = app._safe_path_component(api_version_raw if str(api_version_raw).startswith("v") else f"v{api_version_raw}", "v66.0")
+            raw_metadata = outputs / "metadata-cache" / "production" / prod_org / api_version / "raw" / "OPEN-1" / "fixture.txt"
+            raw_metadata.parent.mkdir(parents=True, exist_ok=True)
+            raw_metadata.write_text("metadata evidence", encoding="utf-8")
+            degraded_state = {
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "routing": {
+                    "path": "support_resolvable",
+                    "confidence": "low",
+                    "reason": "Routing not yet persisted.",
+                },
+                "deliverable": {
+                    "type": "unknown",
+                    "production_deploy_required": "unknown",
+                    "no_deploy_reason": "",
+                },
+                "signatures": {},
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_read_pipeline_state", return_value=degraded_state),
+                patch.object(app, "_latest_issue_summary_path", return_value=None),
+                patch.object(app, "_issue_has_similar_issue_context", return_value=False),
+                patch.object(app, "_generated_files_for_issue", return_value=[]),
+            ):
+                plan = app._build_pipeline_resume_plan("OPEN-1", status="Open")
+
+        step9 = next(step for step in plan["steps"] if step["step"] == 9)
+        step10 = next(step for step in plan["steps"] if step["step"] == 10)
+        self.assertEqual(step9["status"], "complete")
+        self.assertEqual(step10["status"], "pending")
+        self.assertEqual(plan["quality_gates"]["step_9_test_report"], "operator_action_pending")
+        self.assertEqual(plan["deliverable"]["type"], "admin_action")
+        self.assertEqual(plan["deliverable"]["production_deploy_required"], "n/a")
+
     def test_bulk_pipeline_state_repair_repairs_only_stale_states(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
@@ -1379,6 +1871,37 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertEqual(payload["skipped_count"], 1)
         self.assertEqual(calls, [("STALE-1", False)])
         manifest_changed_mock.assert_called_once_with(["STALE-1"])
+
+    def test_pipeline_state_repair_clears_queue_disposition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            plan = {
+                "key": "STALE-1",
+                "schema_version": app.PIPELINE_STATE_SCHEMA_VERSION,
+                "queue_disposition": {
+                    "disposition": "stale_state_needs_repair",
+                    "fingerprint": "old",
+                    "reason": "stalled/no progress",
+                },
+                "next_step": {"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"},
+                "quality_gates": {},
+                "steps": [{"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"}],
+            }
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_find_manifest_row", return_value={"Key": "STALE-1", "Status": "Open", "Updated": ""}),
+                patch.object(app, "_build_pipeline_resume_plan", return_value=dict(plan)),
+                patch.object(app, "_invalidate_jira_summary_cache"),
+                patch.object(app, "manifest_changed"),
+            ):
+                result = app._repair_pipeline_state_key("STALE-1")
+
+            stored = json.loads((outputs / "pipeline-state" / "STALE-1.json").read_text(encoding="utf-8"))
+
+        self.assertTrue(result["ok"])
+        self.assertNotIn("queue_disposition", stored)
+        self.assertTrue(stored["repair"]["queue_disposition_cleared"])
 
     def test_legacy_escalated_status_aliases_normalize_to_one_canonical_tag(self):
         for status in ("Escalated to Engineering", "Escalated to Eng", "Jira Escalated"):

@@ -15,6 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +38,7 @@ def _sf_env() -> dict[str, str]:
     return env
 
 
-def _run(cmd: list[str], timeout: int = 90) -> subprocess.CompletedProcess[str]:
+def _run(cmd: list[str], timeout: int = 90, cwd: str | Path | None = None) -> subprocess.CompletedProcess[str]:
     sf = shutil.which("sf")
     if not sf:
         raise RuntimeError("Salesforce CLI `sf` is not on PATH")
@@ -51,6 +52,7 @@ def _run(cmd: list[str], timeout: int = 90) -> subprocess.CompletedProcess[str]:
         errors="replace",
         env=_sf_env(),
         timeout=timeout,
+        cwd=str(cwd) if cwd else None,
     )
 
 
@@ -88,6 +90,8 @@ def _classify_failure(text: str, *, returncode: int | None = None, operation: st
     lower = (text or "").lower()
     if "invalidprojectworkspaceerror" in lower or "does not contain a valid salesforce dx project" in lower:
         return "invalid_project_workspace", False, "Run workspace-init or execute the command from an issue-scoped Salesforce DX project."
+    if "invalid_type" in lower or "invalid type:" in lower:
+        return "invalid_query_type", False, "Verify the object or metadata type exists before retrying. Use verify-sobject, sobject-fields, describe, or a focused helper check first."
     if "permission denied" in lower and ("/app" in lower or "\\app" in lower):
         return "permission_denied_app_path", False, "Use /data or the configured CaseOps metadata workspace, not /app."
     if "invalid_field" in lower or "no such column" in lower or "didn't understand relationship" in lower:
@@ -149,6 +153,13 @@ def _write_output(out_dir: str | None, filename: str, data: dict[str, Any]) -> N
     if not out_dir:
         return
     _write_json(Path(out_dir) / filename, data)
+
+
+def _extract_primary_sobject(soql: str) -> str | None:
+    match = re.search(r"\bfrom\s+([A-Za-z0-9_]+(?:__c|__mdt|__Share|Share|History)?)\b", soql or "", flags=re.IGNORECASE)
+    if not match:
+        return None
+    return match.group(1)
 
 
 def _query(org: str, soql: str, *, tooling: bool = False, timeout: int = 90) -> dict[str, Any]:
@@ -242,11 +253,83 @@ def _describe_sobject(org: str, sobject: str, *, timeout: int = 90) -> dict[str,
     }
 
 
+def _verify_tooling_sobject(org: str, sobject: str, *, timeout: int = 90) -> dict[str, Any]:
+    escaped = sobject.replace("\\", "\\\\").replace("'", "\\'")
+    query = f"SELECT QualifiedApiName FROM EntityDefinition WHERE QualifiedApiName = '{escaped}' LIMIT 1"
+    result = _query(org, query, tooling=True, timeout=timeout)
+    if not result.get("ok"):
+        return {
+            "ok": False,
+            "sobject": sobject,
+            "query": query,
+            "failure_class": result.get("failure_class") or "sf_cli_error",
+            "retryable": result.get("retryable", True),
+            "next_action": result.get("next_action") or "Verify Tooling API access before retrying the original query.",
+            "result": result,
+        }
+    exists = bool(result.get("totalSize"))
+    response = {
+        "ok": exists,
+        "sobject": sobject,
+        "query": query,
+        "exists": exists,
+        "records": result.get("records", []),
+    }
+    if not exists:
+        response.update({
+            "failure_class": "invalid_query_type",
+            "retryable": False,
+            "next_action": (
+                f"Tooling object {sobject} was not found via EntityDefinition. Treat the absence as evidence "
+                "or choose a supported object/helper instead of retrying broad Tooling API queries."
+            ),
+        })
+    return response
+
+
+def _zip_directory(source_dir: Path, zip_path: Path) -> dict[str, Any]:
+    source_dir = source_dir.resolve()
+    zip_path = zip_path.resolve()
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
+    if zip_path.exists():
+        zip_path.unlink()
+    file_count = 0
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(source_dir.rglob("*")):
+            if not path.is_file():
+                continue
+            archive.write(path, path.relative_to(source_dir).as_posix())
+            file_count += 1
+    return {
+        "path": str(zip_path),
+        "fileCount": file_count,
+        "hasPackageXml": (source_dir / "package.xml").is_file(),
+    }
+
+
 def _write_json(path: Path | None, data: dict[str, Any]) -> None:
     if not path:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _ensure_sfdx_project(project_root: Path) -> Path:
+    project_root.mkdir(parents=True, exist_ok=True)
+    force_app = project_root / "force-app"
+    force_app.mkdir(parents=True, exist_ok=True)
+    project_file = project_root / "sfdx-project.json"
+    if not project_file.exists():
+        _write_json(project_file, {
+            "packageDirectories": [{"path": "force-app", "default": True}],
+            "sourceApiVersion": "66.0",
+        })
+    return project_root
+
+
+def _default_helper_project_root(name: str) -> Path:
+    base = Path(os.environ.get("CASEOPS_TEMP_DIR") or os.environ.get("TMPDIR") or "/tmp/caseops")
+    return base / name
 
 
 def _normalize_field_name(field: str) -> tuple[str, str]:
@@ -450,6 +533,34 @@ def sobject_fields(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def verify_sobject(args: argparse.Namespace) -> int:
+    describe = _describe_sobject(args.org, args.sobject, timeout=args.timeout)
+    result: dict[str, Any] = {
+        "kind": "verify-sobject",
+        "org": args.org,
+        "sobject": args.sobject,
+        "ok": bool(describe.get("ok")),
+        "exists": bool(describe.get("ok")),
+        "queryable": describe.get("queryable"),
+        "retrieveable": describe.get("retrieveable"),
+        "label": describe.get("label"),
+        "name": describe.get("name"),
+    }
+    if not describe.get("ok"):
+        result["failure_class"] = describe.get("failure_class") or "sf_cli_error"
+        result["retryable"] = describe.get("retryable", False)
+        result["next_action"] = describe.get("next_action") or "Verify the object API name before retrying the query."
+        result["describe"] = describe
+    elif describe.get("queryable") is False:
+        result["ok"] = False
+        result["failure_class"] = "not_queryable"
+        result["retryable"] = False
+        result["next_action"] = "The object exists but is not queryable. Use describe output to choose a different access path."
+    _write_output(args.out_dir, f"{_safe_name(args.sobject)}.verify-sobject.json", result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
 def workspace_init(args: argparse.Namespace) -> int:
     root = Path(args.root or os.environ.get("CASEOPS_METADATA_SANDBOX_WORK_DIR") or ".").resolve()
     attempt_name = args.attempt or "attempt-001"
@@ -493,18 +604,79 @@ def workspace_init(args: argparse.Namespace) -> int:
 
 
 def query_data(args: argparse.Namespace) -> int:
+    primary_sobject = _extract_primary_sobject(args.soql)
+    if not args.skip_existence_check and primary_sobject:
+        precheck = _describe_sobject(args.org, primary_sobject, timeout=args.timeout)
+        if not precheck.get("ok"):
+            result = {
+                "kind": "query-data",
+                "org": args.org,
+                "query": args.soql,
+                "ok": False,
+                "failure_class": precheck.get("failure_class") or "invalid_query_type",
+                "retryable": precheck.get("retryable", False),
+                "next_action": precheck.get("next_action") or "Verify the object exists before retrying the query.",
+                "precheck": {
+                    "kind": "verify-sobject",
+                    "sobject": primary_sobject,
+                    "ok": False,
+                },
+            }
+            _write_output(args.out_dir, f"{_safe_name(args.name or 'query-data')}.json", result)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1
+        if precheck.get("queryable") is False:
+            result = {
+                "kind": "query-data",
+                "org": args.org,
+                "query": args.soql,
+                "ok": False,
+                "failure_class": "not_queryable",
+                "retryable": False,
+                "next_action": "The object exists but is not queryable. Use describe output to choose a different access path.",
+                "precheck": {
+                    "kind": "verify-sobject",
+                    "sobject": primary_sobject,
+                    "ok": True,
+                    "queryable": False,
+                },
+            }
+            _write_output(args.out_dir, f"{_safe_name(args.name or 'query-data')}.json", result)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1
     result = _query(args.org, args.soql, tooling=False, timeout=args.timeout)
     result["kind"] = "query-data"
     result["org"] = args.org
+    if primary_sobject:
+        result["primarySObject"] = primary_sobject
     _write_output(args.out_dir, f"{_safe_name(args.name or 'query-data')}.json", result)
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0 if result.get("ok") else 1
 
 
 def query_tooling(args: argparse.Namespace) -> int:
+    primary_sobject = _extract_primary_sobject(args.soql)
+    if not args.skip_existence_check and primary_sobject:
+        precheck = _verify_tooling_sobject(args.org, primary_sobject, timeout=args.timeout)
+        if not precheck.get("ok"):
+            result = {
+                "kind": "query-tooling",
+                "org": args.org,
+                "query": args.soql,
+                "ok": False,
+                "failure_class": precheck.get("failure_class") or "invalid_query_type",
+                "retryable": precheck.get("retryable", False),
+                "next_action": precheck.get("next_action") or "Verify the Tooling API object exists before retrying the query.",
+                "precheck": precheck,
+            }
+            _write_output(args.out_dir, f"{_safe_name(args.name or 'query-tooling')}.json", result)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1
     result = _query(args.org, args.soql, tooling=True, timeout=args.timeout)
     result["kind"] = "query-tooling"
     result["org"] = args.org
+    if primary_sobject:
+        result["primarySObject"] = primary_sobject
     _write_output(args.out_dir, f"{_safe_name(args.name or 'query-tooling')}.json", result)
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0 if result.get("ok") else 1
@@ -513,6 +685,7 @@ def query_tooling(args: argparse.Namespace) -> int:
 def retrieve_metadata(args: argparse.Namespace) -> int:
     out_dir = Path(args.out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
+    project_root = _ensure_sfdx_project(out_dir / "_caseops-sfdx-project")
     metadata = args.metadata or []
     source_dirs = args.source_dir or []
     result: dict[str, Any] = {
@@ -538,7 +711,7 @@ def retrieve_metadata(args: argparse.Namespace) -> int:
         cmd.extend(["--metadata", item])
     for item in source_dirs:
         cmd.extend(["--source-dir", item])
-    proc = _run(cmd, timeout=args.timeout)
+    proc = _run(cmd, timeout=args.timeout, cwd=project_root)
     result["retrieve"] = _command_result(kind="retrieve-metadata-command", proc=proc, command=cmd)
     result["ok"] = bool(result["retrieve"].get("ok"))
     if not result["ok"]:
@@ -553,6 +726,7 @@ def retrieve_metadata(args: argparse.Namespace) -> int:
 def deploy_source(args: argparse.Namespace) -> int:
     source_dir = Path(args.source_dir).resolve()
     attempt = Path(args.attempt).resolve() if args.attempt else source_dir.parent
+    project_root = _ensure_sfdx_project(source_dir.parent if source_dir.name == "force-app" else attempt / "_caseops-sfdx-project")
     summary_path = attempt / "deploy-source-summary.json"
     result: dict[str, Any] = {
         "kind": "deploy-source",
@@ -576,7 +750,7 @@ def deploy_source(args: argparse.Namespace) -> int:
         cmd.extend(["--test-level", args.test_level])
     for test_name in args.tests or []:
         cmd.extend(["--tests", test_name])
-    proc = _run(cmd, timeout=args.timeout)
+    proc = _run(cmd, timeout=args.timeout, cwd=project_root)
     result["deploy"] = _command_result(kind="deploy-source-command", proc=proc, command=cmd)
     result["ok"] = bool(result["deploy"].get("ok"))
     if not result["ok"]:
@@ -590,7 +764,12 @@ def deploy_source(args: argparse.Namespace) -> int:
 
 def deploy_report(args: argparse.Namespace) -> int:
     cmd = ["sf", "project", "deploy", "report", "--target-org", args.org, "--job-id", args.deploy_id, "--json"]
-    proc = _run(cmd, timeout=args.timeout)
+    project_root = _ensure_sfdx_project(
+        Path(args.out_dir).resolve() / "_caseops-sfdx-project"
+        if args.out_dir
+        else _default_helper_project_root("deploy-report-sfdx-project")
+    )
+    proc = _run(cmd, timeout=args.timeout, cwd=project_root)
     result = _command_result(kind="deploy-report", proc=proc, command=cmd)
     result["org"] = args.org
     result["deployId"] = args.deploy_id
@@ -667,6 +846,7 @@ def verify_flow(args: argparse.Namespace) -> int:
 def deploy_mdapi(args: argparse.Namespace) -> int:
     candidate = Path(args.candidate).resolve()
     attempt = Path(args.attempt).resolve()
+    project_root = _ensure_sfdx_project(candidate if (candidate / "force-app").is_dir() else attempt / "_caseops-sfdx-project")
     mdapi_dir = attempt / "mdapi-converted"
     summary_path = attempt / "deploy-summary.json"
     result: dict[str, Any] = {
@@ -689,7 +869,7 @@ def deploy_mdapi(args: argparse.Namespace) -> int:
             str(source_dir),
             "--output-dir",
             str(mdapi_dir),
-        ], timeout=120)
+        ], timeout=120, cwd=project_root)
         result["convert"] = {
             "returncode": convert.returncode,
             "stdout": _redact(convert.stdout)[-2000:],
@@ -712,33 +892,56 @@ def deploy_mdapi(args: argparse.Namespace) -> int:
         result["mdapiDir"] = str(mdapi_dir)
         result["convert"] = {"skipped": True, "reason": "candidate has no force-app directory; treating candidate as metadata-dir"}
 
-    deploy = _run([
+    if mdapi_dir.suffix.lower() == ".zip" and mdapi_dir.is_file():
+        deploy_target = mdapi_dir
+        result["mdapiZip"] = str(deploy_target)
+        result["zip"] = {"skipped": True, "reason": "candidate is already a zip file"}
+    elif mdapi_dir.is_dir():
+        package_xml = mdapi_dir / "package.xml"
+        if not package_xml.is_file():
+            result["failure_class"] = "missing_package_xml"
+            result["retryable"] = False
+            result["next_action"] = "The MDAPI deploy directory must contain package.xml at its root before zip deploy."
+            _write_json(summary_path, result)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1
+        zip_info = _zip_directory(mdapi_dir, attempt / "mdapi-deploy.zip")
+        result["zip"] = zip_info
+        result["mdapiZip"] = zip_info["path"]
+        if not zip_info["fileCount"] or not zip_info["hasPackageXml"]:
+            result["failure_class"] = "empty_or_invalid_mdapi_zip"
+            result["retryable"] = False
+            result["next_action"] = "The generated MDAPI zip is empty or missing package.xml. Fix the candidate package before deploy."
+            _write_json(summary_path, result)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 1
+        deploy_target = Path(zip_info["path"])
+    else:
+        result["failure_class"] = "missing_metadata_dir"
+        result["retryable"] = False
+        result["next_action"] = "Candidate metadata path does not exist. Rebuild the issue-scoped candidate before deploy."
+        _write_json(summary_path, result)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 1
+
+    deploy_cmd = [
         "sf",
         "project",
         "deploy",
         "start",
         "--metadata-dir",
-        str(mdapi_dir),
+        str(deploy_target),
         "--single-package",
         "--target-org",
         args.sandbox_org,
         "--json",
-    ], timeout=args.timeout)
+    ]
+    result["deployTarget"] = str(deploy_target)
+    deploy = _run(deploy_cmd, timeout=args.timeout, cwd=project_root)
     deploy_json = _json_from_stdout(deploy.stdout)
     deploy_result = deploy_json.get("result", {}) if isinstance(deploy_json, dict) else {}
     result["deploy"] = {
-        **_command_result(kind="deploy-mdapi-command", proc=deploy, command=[
-            "sf",
-            "project",
-            "deploy",
-            "start",
-            "--metadata-dir",
-            str(mdapi_dir),
-            "--single-package",
-            "--target-org",
-            args.sandbox_org,
-            "--json",
-        ]),
+        **_command_result(kind="deploy-mdapi-command", proc=deploy, command=deploy_cmd),
         "id": deploy_result.get("id") or deploy_result.get("deployId"),
         "status": deploy_result.get("status"),
         "success": deploy_result.get("success"),
@@ -788,6 +991,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out-dir")
     p.set_defaults(func=sobject_fields)
 
+    p = sub.add_parser("verify-sobject", help="Verify an sObject exists and is queryable before writing SOQL")
+    p.add_argument("--org", required=True)
+    p.add_argument("--sobject", required=True)
+    p.add_argument("--out-dir")
+    p.add_argument("--timeout", type=int, default=90)
+    p.set_defaults(func=verify_sobject)
+
     p = sub.add_parser("workspace-init", help="Create an issue-scoped metadata attempt workspace")
     p.add_argument("--issue-key", required=True)
     p.add_argument("--attempt", default="attempt-001")
@@ -800,6 +1010,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--name")
     p.add_argument("--out-dir")
     p.add_argument("--timeout", type=int, default=90)
+    p.add_argument("--skip-existence-check", action="store_true")
     p.set_defaults(func=query_data)
 
     p = sub.add_parser("query-tooling", help="Run a Tooling API SOQL query and return structured JSON")
@@ -808,6 +1019,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--name")
     p.add_argument("--out-dir")
     p.add_argument("--timeout", type=int, default=90)
+    p.add_argument("--skip-existence-check", action="store_true")
     p.set_defaults(func=query_tooling)
 
     p = sub.add_parser("retrieve-metadata", help="Retrieve targeted metadata to an issue-scoped output directory")

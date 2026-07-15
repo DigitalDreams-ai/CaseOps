@@ -19,6 +19,10 @@
       "type": "query_pattern",
       "layer": "core"
     },
+    "query-patterns/object-existence.md": {
+      "type": "query_pattern",
+      "layer": "core"
+    },
     "query-patterns/custom-field.md": {
       "type": "query_pattern",
       "layer": "core"

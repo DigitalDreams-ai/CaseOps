@@ -9,7 +9,7 @@ This guide is safe to share. Do not include private hostnames, internal filesyst
 Use the published image tag provided by the maintainer. Prefer a numbered tag over `latest` when reporting issues:
 
 ```text
-ghcr.io/digitaldreams-ai/caseops:0.1.32
+ghcr.io/digitaldreams-ai/caseops:0.1.60
 ```
 
 Start from a clean Docker folder containing:
@@ -61,6 +61,8 @@ Verify issue filtering by:
 In Select mode, confirm `Sync Selected` and `Run Pipeline` are visible immediately, even before selecting issues, and disabled until at least one issue is selected.
 
 When a test issue has a confirmed Sandbox validation and `production_deploy_required=yes`, confirm the dashboard shows/searches the `Ready to Deploy` tag and does not show `Validated` as the active-list state label.
+
+When a no-deploy operator/admin/data action has a `not-run / unknown / n/a` Test Report verdict and the issue brief, internal notes, and Jira message are complete, confirm the dashboard shows/searches the `Data Only` tag. It should not show `In Progress`, `partial run`, or `stale` just because CaseOps intentionally did not execute the Production action.
 
 Confirm every issue has exactly one primary tag. Confirm `partial run` finds issues in `In Progress` or `Analyzed` state, and `needs engineering` finds issues requiring Engineering ownership.
 

@@ -34,7 +34,7 @@ Each issue has exactly one primary tag:
 | `in progress` | Pipeline work has started but has not reached a terminal outcome |
 | `analyzed` | Analysis/draft work exists, but Sandbox validation is not complete |
 | `blocked` | CaseOps found an explicit blocker or on-hold state |
-| `data only` | Test Report confirms a completed no-deploy data/admin action |
+| `data only` | CaseOps identified a no-deploy data/admin/operator action and finished the operator-facing artifacts, or the Test Report confirms the action is already completed |
 | `ready to deploy` | Test Report confirms the fix and says Production deployment is required |
 | `complete no deploy` | Test Report confirms the fix and says Production deployment is not required for a non-data/admin outcome |
 | `needs engineering` | CaseOps determined Engineering ownership is required |
@@ -72,6 +72,8 @@ Run pipeline actions only on approved issues.
 `Auto-Process All` and `Reprocess All (No Sync)` skip issues already marked `Escalated to Engineering` in Jira. Use a single-issue run only when you intentionally want to inspect or override one escalated issue.
 
 The final queue summary includes the stop reason, such as all queued issues complete, stalled/no progress, max passes reached, or stop requested. Incomplete issue lines include the reason CaseOps stopped retrying that issue, and grouped counts summarize repeated blockers by step and status.
+
+`Data Only` means no metadata/code deployment is needed. This includes operator-owned Production admin/data/config actions that CaseOps intentionally does not execute without explicit one-run Production approval. When the Test Report says `Validation Status: not-run`, `Fixed?: unknown`, and `Production deploy required: n/a`, CaseOps may still show `Data Only` after the issue brief, internal notes, and Jira message are complete because CaseOps has finished its part and the remaining work belongs to the operator.
 
 `Ready to Deploy` means Sandbox validation is current, the solution is confirmed, and the Test Report verdict says a Production deployment is required. Legacy reports fall back to the persisted deliverable state only when they do not contain a `Validation Verdict` section. This is the tag to use when looking for issues ready for your Production deployment process.
 

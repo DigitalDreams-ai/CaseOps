@@ -29,6 +29,7 @@ tests/*
 !tests/test_global_queue.py
 !tests/test_jira_sync.py
 !tests/test_knowledge_service.py
+!tests/test_sf_caseops_helper.py
 caseops/__pycache__/
 caseops/**/__pycache__/
 caseops/**/*.pyc
