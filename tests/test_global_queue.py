@@ -10,7 +10,12 @@ import caseops_paths
 
 
 class GlobalQueueTests(unittest.TestCase):
+    def setUp(self):
+        self._model_env = patch.dict(os.environ, {"CASEOPS_ANTHROPIC_MODEL": "claude-sonnet-4-6"}, clear=False)
+        self._model_env.start()
+
     def tearDown(self):
+        self._model_env.stop()
         with app._state_lock:
             app._active_keys.clear()
             app._active_run_actions.clear()
@@ -2079,6 +2084,132 @@ class GlobalQueueTests(unittest.TestCase):
             )
         with patch.dict(os.environ, {"CASEOPS_ENV_FILE": "/data/.env", "CASEOPS_JIRA_ENV_FILE": "/legacy/.env.jira"}, clear=True):
             self.assertEqual(caseops_paths.default_jira_env_file(), "/data/.env")
+
+    def test_plan_builder_gate_demotes_step_five_to_step_four(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            hypothesis = outputs / "hypothesis" / "GATE-1.md"
+            hypothesis.parent.mkdir(parents=True)
+            hypothesis.write_text("## Problem Hypothesis\nTBD", encoding="utf-8")
+            steps = [
+                app._resume_step(4, "Synthesize problem hypothesis", "complete", "done", "skip"),
+                app._resume_step(5, "Retrieve relevant Production metadata", "pending", "next", "run"),
+            ]
+            plan = {
+                "key": "GATE-1",
+                "mode": "active",
+                "routing": {"path": "support_resolvable"},
+                "steps": steps,
+                "next_step": steps[1],
+            }
+            with patch.object(app, "OUTPUTS", outputs):
+                updated = app._apply_artifact_gates_to_plan(plan)
+
+        self.assertEqual(updated["next_step"]["step"], 4)
+        self.assertIn("Step 4 gate failed", updated["why_next_step"])
+        self.assertEqual(updated["gate_failures"][-1]["gate"], "step4_hypothesis")
+
+    def test_queue_snapshot_rejects_invalid_escalation_handoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            handoff = outputs / "engineering-escalations" / "GATE-2.md"
+            handoff.parent.mkdir(parents=True)
+            handoff.write_text("Problem\nUnknown", encoding="utf-8")
+            plan = {"key": "GATE-2", "steps": [], "next_step": {}, "fsm_violation": {}}
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_build_pipeline_resume_plan", return_value=plan),
+            ):
+                complete, detail, _fingerprint, _plan = app._global_issue_queue_snapshot_from_row({"Key": "GATE-2", "Status": "Open"})
+
+        self.assertFalse(complete)
+        self.assertIn("Step 7 gate", detail)
+
+    def test_queue_snapshot_marks_fsm_loop_cap_on_hold(self):
+        plan = {
+            "key": "FSM-1",
+            "steps": [],
+            "next_step": {},
+            "fsm_violation": {"step": 5, "violation": "loop_cap_exceeded"},
+        }
+        with patch.object(app, "_build_pipeline_resume_plan", return_value=plan):
+            complete, detail, _fingerprint, _plan = app._global_issue_queue_snapshot_from_row({"Key": "FSM-1", "Status": "Open"})
+        self.assertFalse(complete)
+        self.assertIn("on-hold", detail)
+
+    def test_fsm_transition_history_is_recorded_from_explicit_markers(self):
+        metrics = {
+            "start": "2026-07-16T11:59:00+00:00",
+            "step_sequence": [
+                {"step": 3, "at": "2026-07-16T12:00:00+00:00"},
+                {"step": 4, "at": "2026-07-16T12:01:00+00:00"},
+                {"step": 6, "at": "2026-07-16T12:02:00+00:00"},
+            ]
+        }
+        state = app._record_run_fsm_transitions({}, metrics, "FSM-2")
+        self.assertEqual([item["step"] for item in state["transitions"]], [3, 4, 6])
+        self.assertEqual(state["transitions"][-1]["violation"], "illegal_transition")
+        self.assertEqual(state["transitions"][-1]["run_id"], "FSM-2:2026-07-16T11:59:00+00:00")
+
+    def test_pipeline_transition_api_is_read_only_and_separate_from_jira_transitions(self):
+        state = {
+            "transitions": [{"step": 5, "at": "now", "violation": None, "run_id": "FSM-API:run"}],
+            "loop_counts": {"6->5": 1},
+        }
+        with patch.object(app, "_read_pipeline_state", return_value=state):
+            response = app.app.test_client().get("/api/issue/FSM-API/pipeline-transitions")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["transitions"][0]["step"], 5)
+        self.assertEqual(response.get_json()["loop_counts"], {"6->5": 1})
+
+    def test_fsm_violation_does_not_bleed_into_a_later_run(self):
+        state = app._record_run_fsm_transitions(
+            {},
+            {
+                "start": "2026-07-16T10:00:00+00:00",
+                "step_sequence": [
+                    {"step": 3, "at": "2026-07-16T10:00:00+00:00"},
+                    {"step": 6, "at": "2026-07-16T10:01:00+00:00"},
+                ],
+            },
+            "FSM-3",
+        )
+        self.assertIsNotNone(app._latest_run_fsm_violation(state))
+
+        state = app._record_run_fsm_transitions(
+            state,
+            {
+                "start": "2026-07-16T11:00:00+00:00",
+                "step_sequence": [{"step": 7, "at": "2026-07-16T11:00:00+00:00"}],
+            },
+            "FSM-3",
+        )
+        self.assertIsNone(app._latest_run_fsm_violation(state))
+
+    def test_existing_gate_failure_remains_visible_until_artifact_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            stored = {
+                "key": "GATE-3",
+                "gate_failures": [{"gate": "step4_hypothesis", "reason": "Artifact is missing", "at": "earlier"}],
+            }
+            plan = {
+                "key": "GATE-3",
+                "mode": "active",
+                "steps": [{"step": 4, "name": "Synthesize problem hypothesis", "status": "pending"}],
+                "next_step": {"step": 4, "name": "Synthesize problem hypothesis", "status": "pending"},
+            }
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_read_pipeline_state", return_value=stored),
+                patch.object(app, "_build_step", return_value=plan["next_step"]),
+                patch.object(app, "_build_step_tool_permissions", return_value={}),
+            ):
+                result = app._apply_artifact_gates_to_plan(plan)
+
+        self.assertEqual(result["next_step"]["step"], 4)
+        self.assertTrue(result["gate_failures"])
+        self.assertIn("Step 4 gate failed", result["why_next_step"])
 
 if __name__ == "__main__":
     unittest.main()

@@ -30,6 +30,10 @@ tests/*
 !tests/test_jira_sync.py
 !tests/test_knowledge_service.py
 !tests/test_sf_caseops_helper.py
+!tests/test_pipeline_gates.py
+!tests/test_pipeline_fsm.py
+!tests/test_output_evals.py
+!tests/test_model_pinning.py
 caseops/__pycache__/
 caseops/**/__pycache__/
 caseops/**/*.pyc
@@ -119,6 +123,7 @@ outputs/engineering-escalations/
 outputs/closed-resolved/
 outputs/issue-summary-*.md
 outputs/pipeline-logs/
+outputs/eval-reports/
 
 # Editors
 *.sublime-project

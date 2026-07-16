@@ -42,6 +42,10 @@ from flask import Flask, Response, jsonify, render_template, request, send_file,
 
 from caseops_paths import default_jira_dir
 import knowledge_service
+import output_evals
+from model_config import validate_pinned_model
+from pipeline_fsm import record_transition
+from pipeline_gates import validate_escalation_handoff, validate_hypothesis_artifact
 from issue_clusters import (
     CLUSTER_DIR_NAME,
     CLUSTER_INDEX_FILE,
@@ -521,6 +525,12 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
     "JIRA_AUTH_HEADER_COMMAND",
     "JIRA_BEARER_TOKEN",
     "CASEOPS_ANTHROPIC_MODEL",
+    "CASEOPS_OUTPUT_EVALS_ENABLED",
+    "CASEOPS_OUTPUT_EVALS_INTERVAL_MINUTES",
+    "CASEOPS_EVAL_LOOKBACK_DAYS",
+    "CASEOPS_EVAL_MAX_ARTIFACTS",
+    "CASEOPS_EVAL_LLM_ENABLED",
+    "CASEOPS_EVAL_ALERT_THRESHOLD",
     "CASEOPS_GLOBAL_MAX_PARALLEL",
     "CASEOPS_GLOBAL_MAX_QUEUE_PASSES",
     "CASEOPS_GLOBAL_QUEUE_PROGRESS_SECONDS",
@@ -558,6 +568,8 @@ _ENV_KEYS_RELOAD_FROM_FILE = {
 TEMP_ROOT = None  # Path | None — Set in __main__
 _KNOWLEDGE_AUDITOR_THREAD_STARTED = False
 _KNOWLEDGE_AUDITOR_LOCK = threading.Lock()
+_OUTPUT_EVALS_THREAD_STARTED = False
+_OUTPUT_EVALS_LOCK = threading.Lock()
 
 
 # Source-controlled CaseOps core knowledge lives under skills/caseops-pipeline/knowledge/core/.
@@ -681,6 +693,66 @@ def _start_knowledge_auditor_scheduler_if_needed() -> None:
         return
     _KNOWLEDGE_AUDITOR_THREAD_STARTED = True
     thread = threading.Thread(target=_knowledge_auditor_scheduler_loop, daemon=True, name="caseops-knowledge-auditor")
+    thread.start()
+
+
+def _output_evals_settings(settings: dict[str, str] | None = None) -> dict[str, Any]:
+    settings = settings or _read_env_file(Path(app.config.get("ENV_FILE_PATH", "")) if app.config.get("ENV_FILE_PATH") else None)
+    try:
+        alert_threshold = float(settings.get("CASEOPS_EVAL_ALERT_THRESHOLD") or os.environ.get("CASEOPS_EVAL_ALERT_THRESHOLD") or "0.9")
+    except (TypeError, ValueError):
+        alert_threshold = 0.9
+    return {
+        "enabled": _env_flag_from_map("CASEOPS_OUTPUT_EVALS_ENABLED", default=False, settings=settings),
+        "interval_minutes": _env_int_from_map(
+            "CASEOPS_OUTPUT_EVALS_INTERVAL_MINUTES", default=1440, min_value=1, max_value=43_200, settings=settings
+        ),
+        "lookback_days": _env_int_from_map("CASEOPS_EVAL_LOOKBACK_DAYS", default=7, min_value=0, max_value=3650, settings=settings),
+        "max_artifacts": _env_int_from_map("CASEOPS_EVAL_MAX_ARTIFACTS", default=25, min_value=1, max_value=500, settings=settings),
+        "llm_enabled": _env_flag_from_map("CASEOPS_EVAL_LLM_ENABLED", default=False, settings=settings),
+        "alert_threshold": max(0.0, min(1.0, alert_threshold)),
+    }
+
+
+def _run_output_evals_once(*, reason: str) -> dict[str, Any]:
+    with _OUTPUT_EVALS_LOCK:
+        settings = _output_evals_settings()
+        model_id = _pinned_model()
+        grader = None
+        if settings["llm_enabled"]:
+            grader = output_evals.claude_cli_grader(model_id, env=_claude_process_env())
+        return output_evals.run_output_evals(
+            OUTPUTS,
+            model_id=model_id,
+            lookback_days=settings["lookback_days"],
+            max_artifacts=settings["max_artifacts"],
+            llm_enabled=settings["llm_enabled"],
+            llm_grader=grader,
+            alert_threshold=settings["alert_threshold"],
+            signal_writer=knowledge_service.write_signal,
+            reason=reason,
+        )
+
+
+def _output_evals_scheduler_loop() -> None:
+    while True:
+        settings = _output_evals_settings()
+        if settings["enabled"]:
+            try:
+                _run_output_evals_once(reason="scheduled")
+            except Exception as exc:
+                print(f"WARNING: scheduled output evaluation failed: {exc}", file=sys.stderr)
+            time.sleep(max(60, int(settings["interval_minutes"]) * 60))
+        else:
+            time.sleep(60)
+
+
+def _start_output_evals_scheduler_if_needed() -> None:
+    global _OUTPUT_EVALS_THREAD_STARTED
+    if _OUTPUT_EVALS_THREAD_STARTED:
+        return
+    _OUTPUT_EVALS_THREAD_STARTED = True
+    thread = threading.Thread(target=_output_evals_scheduler_loop, daemon=True, name="caseops-output-evals")
     thread.start()
 
 
@@ -1324,6 +1396,56 @@ def _env_int(key: str, default: int, *, min_value: int | None = None, max_value:
     if max_value is not None:
         value = min(max_value, value)
     return value
+
+
+def _validate_pinned_model_value(value: str) -> str:
+    return validate_pinned_model(value)
+
+
+def _pinned_model(settings: dict[str, str] | None = None) -> str:
+    return _validate_pinned_model_value(_env_first("CASEOPS_ANTHROPIC_MODEL", settings=settings))
+
+
+def _model_pin_status(settings: dict[str, str] | None = None) -> dict[str, Any]:
+    try:
+        model_id = _pinned_model(settings)
+        return {"pinned": True, "model_id": model_id, "error": ""}
+    except ValueError as exc:
+        return {"pinned": False, "model_id": "", "error": str(exc)}
+
+
+def _detect_model_change(*, run_key: str | None = None, trigger_eval: bool = True) -> dict[str, Any]:
+    model_id = _pinned_model()
+    path = OUTPUTS / "settings" / "last-model.json"
+    previous = ""
+    if path.is_file():
+        try:
+            previous = str(json.loads(path.read_text(encoding="utf-8")).get("model_id") or "")
+        except (OSError, json.JSONDecodeError, AttributeError):
+            previous = ""
+    changed = bool(previous and previous != model_id)
+    if previous != model_id:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps({"model_id": model_id, "previous_model_id": previous, "updated_at": datetime.now(timezone.utc).isoformat()}, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    if changed:
+        banner = f"MODEL CHANGE: {previous} -> {model_id}"
+        if run_key:
+            _log_emit_line(run_key, banner)
+        else:
+            print(banner)
+        if trigger_eval and _output_evals_settings().get("enabled"):
+            try:
+                _run_output_evals_once(reason="model_change")
+            except Exception as exc:
+                message = f"WARNING: model-change output evaluation failed: {exc}"
+                if run_key:
+                    _log_emit_line(run_key, message)
+                else:
+                    print(message, file=sys.stderr)
+    return {"changed": changed, "previous_model_id": previous, "model_id": model_id}
 
 
 def _env_flag_from_map(
@@ -3034,6 +3156,101 @@ def _apply_loop_state_to_plan(
 _build_pipeline_resume_plan_legacy = _build_pipeline_resume_plan
 
 
+def _set_plan_gate_failure(plan: dict[str, Any], gate: str, reason: str | None) -> None:
+    state = _read_pipeline_state(str(plan.get("key") or ""))
+    if isinstance(plan.get("gate_failures"), list):
+        failures = plan["gate_failures"]
+    else:
+        failures = state.get("gate_failures") if isinstance(state.get("gate_failures"), list) else []
+    failures = [item for item in failures if isinstance(item, dict) and item.get("gate") != gate]
+    if reason:
+        failures.append({"gate": gate, "reason": reason, "at": datetime.now(timezone.utc).isoformat()})
+    plan["gate_failures"] = failures[-25:]
+
+
+def _plan_has_gate_failure(plan: dict[str, Any], gate: str) -> bool:
+    failures = plan.get("gate_failures") if isinstance(plan.get("gate_failures"), list) else []
+    if not failures:
+        state = _read_pipeline_state(str(plan.get("key") or ""))
+        failures = state.get("gate_failures") if isinstance(state.get("gate_failures"), list) else []
+    return any(isinstance(item, dict) and item.get("gate") == gate for item in failures)
+
+
+def _force_plan_to_step(plan: dict[str, Any], step_no: int, reason: str) -> None:
+    step = _build_step(plan, step_no)
+    if step is None:
+        return
+    step["status"] = "stale" if step.get("status") == "complete" else step.get("status", "pending")
+    if step["status"] in {"complete", "skipped", "blocked"}:
+        step["status"] = "stale"
+    step["reason"] = reason
+    step["action"] = "Repair the failed code-level artifact gate before continuing."
+    plan["next_step"] = step
+    plan["why_next_step"] = reason
+    plan["tool_permissions"] = _build_step_tool_permissions(step_no)
+
+
+def _apply_artifact_gates_to_plan(plan: dict[str, Any]) -> dict[str, Any]:
+    key = str(plan.get("key") or "")
+    mode = str(plan.get("mode") or "").lower()
+    next_step = plan.get("next_step") if isinstance(plan.get("next_step"), dict) else {}
+    try:
+        next_step_no = int(next_step.get("step") or 0)
+    except (TypeError, ValueError):
+        next_step_no = 0
+    step4_gate_required = next_step_no >= 5 or _plan_has_gate_failure(plan, "step4_hypothesis")
+    if mode not in {"closed", "escalated"} and step4_gate_required:
+        result = validate_hypothesis_artifact(OUTPUTS, key)
+        _set_plan_gate_failure(plan, result.gate, None if result.passed else result.reason)
+        if not result.passed:
+            _force_plan_to_step(plan, 4, f"Step 4 gate failed: {result.reason}")
+            next_step_no = 4
+    else:
+        _set_plan_gate_failure(plan, "step4_hypothesis", None)
+
+    routing = plan.get("routing") if isinstance(plan.get("routing"), dict) else {}
+    handoff_path = OUTPUTS / "engineering-escalations" / f"{key}.md"
+    escalation_path = routing.get("path") == "engineering_required" or handoff_path.is_file()
+    step7_gate_required = next_step_no >= 8 or _plan_has_gate_failure(plan, "step7_problem_location")
+    if mode not in {"closed", "escalated"} and escalation_path and step7_gate_required:
+        result = validate_escalation_handoff(OUTPUTS, key)
+        _set_plan_gate_failure(plan, result.gate, None if result.passed else result.reason)
+        if not result.passed:
+            target = 5 if "concrete salesforce artifact" in result.reason.lower() else 7
+            _force_plan_to_step(plan, target, f"Step 7 gate failed: {result.reason}")
+    else:
+        _set_plan_gate_failure(plan, "step7_problem_location", None)
+    return plan
+
+
+def _latest_run_fsm_violation(state: dict[str, Any], violation: str | None = None) -> dict[str, Any] | None:
+    transitions = state.get("transitions") if isinstance(state.get("transitions"), list) else []
+    if not transitions:
+        return None
+    latest_run_id = str((transitions[-1] or {}).get("run_id") or "") if isinstance(transitions[-1], dict) else ""
+    for item in reversed(transitions):
+        if not isinstance(item, dict):
+            continue
+        if latest_run_id and str(item.get("run_id") or "") != latest_run_id:
+            break
+        if item.get("violation") and (violation is None or item.get("violation") == violation):
+            return item
+    return None
+
+
+def _apply_fsm_state_to_plan(plan: dict[str, Any]) -> dict[str, Any]:
+    state = _read_pipeline_state(str(plan.get("key") or ""))
+    plan["transitions"] = state.get("transitions") if isinstance(state.get("transitions"), list) else []
+    plan["loop_counts"] = state.get("loop_counts") if isinstance(state.get("loop_counts"), dict) else {}
+    violation = _latest_run_fsm_violation(state)
+    plan["fsm_violation"] = violation or {}
+    if violation and violation.get("violation") == "loop_cap_exceeded":
+        routing = dict(plan.get("routing") or {})
+        routing.update({"path": "on_hold", "confidence": "high", "reason": "FSM loop cap exceeded; operator review required."})
+        plan["routing"] = routing
+    return plan
+
+
 def _build_pipeline_resume_plan(
     key: str,
     status: str = "",
@@ -3057,16 +3274,24 @@ def _build_pipeline_resume_plan(
         similarity_lookup.get("selected_mode") or "full_investigation"
     )
     plan["pipeline_similarity_mode_reason"] = str(similarity_lookup.get("selected_mode_reason") or "No similarity context selected.")
-    return _apply_loop_state_to_plan(
+    plan = _apply_loop_state_to_plan(
         plan,
         key,
         status=status,
         rebuild_from_artifacts=rebuild_from_artifacts,
     )
+    plan = _apply_artifact_gates_to_plan(plan)
+    return _apply_fsm_state_to_plan(plan)
 
 
 def _write_pipeline_resume_plan(plan: dict[str, Any]) -> Path:
     key = str(plan.get("key") or "unknown")
+    model_status = _model_pin_status()
+    plan["model_id"] = model_status["model_id"]
+    if model_status["error"]:
+        plan["model_pin_error"] = model_status["error"]
+    else:
+        plan.pop("model_pin_error", None)
     path = OUTPUTS / "pipeline-state" / f"{key}.json"
     _validate_instance_path(path, "write")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -3087,6 +3312,16 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
         "- Rule: recent evidence below is run history, not a prompt. Use it to avoid rediscovering confirmed facts; if it proves a route, update the durable artifact and continue.",
         "",
     ]
+    gate_failures = plan.get("gate_failures") if isinstance(plan.get("gate_failures"), list) else []
+    if gate_failures:
+        latest_gate = gate_failures[-1]
+        lines.extend([
+            "## Gate Failure (must fix first)",
+            f"- Gate: `{latest_gate.get('gate') or 'unknown'}`",
+            f"- Reason: {latest_gate.get('reason') or 'Artifact validation failed.'}",
+            "- The code-level gate forced this plan backward. Repair the artifact before attempting downstream work.",
+            "",
+        ])
     if plan.get("force_active"):
         lines.extend([
             "## Operator Force-Run Override",
@@ -3734,6 +3969,7 @@ def _parse_run_metrics_from_logs(run_key: str, run_started: datetime, run_ended:
         filtered.append((ts, str(row.get("text") or "")))
 
     step_markers: list[tuple[int, datetime]] = []
+    step_sequence: list[dict[str, Any]] = []
     step_token_usage: dict[str, dict[str, int]] = {}
     step_subagent_calls: dict[str, int] = {}
     step_tool_calls: dict[str, int] = {}
@@ -3765,6 +4001,14 @@ def _parse_run_metrics_from_logs(run_key: str, run_started: datetime, run_ended:
                     step_subagent_calls[str(step_no)] = 0
                 if str(step_no) not in step_tool_calls:
                     step_tool_calls[str(step_no)] = 0
+        explicit_marker = _PIPELINE_EXPLICIT_STEP_MARKER_RE.search(text)
+        if explicit_marker:
+            try:
+                explicit_step = int(explicit_marker.group(1))
+            except ValueError:
+                explicit_step = 0
+            if explicit_step:
+                step_sequence.append({"step": explicit_step, "at": ts.isoformat()})
         if _PIPELINE_LOOP_REASON_REASONS["repeat_metadata"].search(text):
             last_stop_code = STEP_LOOP_MARKER_REASONS["metadata"]
             loop_events["repeat_metadata"] += 1
@@ -3857,7 +4101,39 @@ def _parse_run_metrics_from_logs(run_key: str, run_started: datetime, run_ended:
         "cost_usd": cost_usd,
         "last_stop_code": last_stop_code,
         "loop_events": loop_events,
+        "step_sequence": step_sequence,
     }
+
+
+def _record_run_fsm_transitions(state: dict[str, Any], metrics: dict[str, Any], run_key: str) -> dict[str, Any]:
+    updated = dict(state)
+    run_id = f"{run_key}:{metrics.get('start') or datetime.now(timezone.utc).isoformat()}"
+    sequence = metrics.get("step_sequence") if isinstance(metrics.get("step_sequence"), list) else []
+    for index, marker in enumerate(sequence):
+        if not isinstance(marker, dict):
+            continue
+        try:
+            to_step = int(marker.get("step"))
+        except (TypeError, ValueError):
+            continue
+        transitions = updated.get("transitions") if isinstance(updated.get("transitions"), list) else []
+        prior_step = transitions[-1].get("step") if transitions and isinstance(transitions[-1], dict) else None
+        prior_run = str(transitions[-1].get("run_id") or "") if transitions and isinstance(transitions[-1], dict) else ""
+        new_lifecycle = index == 0 and prior_run != run_id and prior_step == 12
+        working = dict(updated)
+        if new_lifecycle:
+            working["transitions"] = []
+            working["loop_counts"] = {}
+        recorded = record_transition(
+            working,
+            to_step,
+            str(marker.get("at") or datetime.now(timezone.utc).isoformat()),
+        )
+        new_entry = dict(recorded["transitions"][-1])
+        new_entry["run_id"] = run_id
+        updated["transitions"] = [*transitions, new_entry]
+        updated["loop_counts"] = recorded.get("loop_counts", updated.get("loop_counts", {}))
+    return updated
 
 
 def _infer_command_family(text: str) -> str:
@@ -4192,6 +4468,7 @@ def _update_pipeline_run_metrics(
 
     if status == "completed":
         state = _clear_queue_disposition(key, state)
+    state = _record_run_fsm_transitions(state, latest, run_key)
     state["run_metrics"] = {
         "latest": latest,
         "history": history,
@@ -4216,6 +4493,7 @@ _active_run_controls: dict[str, dict[str, Any]] = {}
 _log_q: queue.Queue[str] = queue.Queue()  # tagged messages: "key|line" or "__done__|key"
 _manifest_q: queue.Queue[str] = queue.Queue()  # manifest change notifications
 _PIPELINE_STEP_MARKER_RE = re.compile(r"\bSTEP_(\d+)(?:\s+[^\n\r]*)?", re.IGNORECASE)
+_PIPELINE_EXPLICIT_STEP_MARKER_RE = re.compile(r"^\s*STEP_(\d+)\b", re.IGNORECASE)
 _PIPELINE_TOOL_CALL_RE = re.compile(r"^\[(?P<tool>[^]\s]+)")
 _PIPELINE_LOOP_REASON_REASONS = {
     "repeat_metadata": re.compile(r"(?i)repeat_metadata"),
@@ -5442,6 +5720,12 @@ def _run_issue_evidence_branches(key: str, run_soql: bool = True) -> dict[str, A
 
 def _emit_runtime_preflight_or_stop(run_key: str, run_soql: bool = True, preflight: dict[str, Any] | None = None) -> bool:
     """Log and enforce runtime preflight before Claude-backed pipeline work starts."""
+    try:
+        model_id = _pinned_model()
+    except ValueError as exc:
+        _log_emit_line(run_key, f"ERROR: {exc}")
+        return False
+    _log_emit_line(run_key, f"Preflight: pinned model `{model_id}`")
     _log_emit_line(run_key, "Preflight: validating Claude runtime, Salesforce CLI auth, and SOQL access")
     try:
         preflight = preflight or _collect_runtime_preflight(run_soql=run_soql)
@@ -5633,7 +5917,11 @@ def _do_stream_anthropic_messages_api(prompt: str, run_key: str, issue_key: str 
             "ERROR: ANTHROPIC_API_KEY is empty. Set it in `.env` when using CASEOPS_LLM_AUTH=api_key.",
         )
         return False
-    model = (os.environ.get("CASEOPS_ANTHROPIC_MODEL") or "claude-sonnet-4-6").strip()
+    try:
+        model = _pinned_model()
+    except ValueError as exc:
+        _log_emit_line(run_key, f"ERROR: {exc}")
+        return False
     max_raw = (os.environ.get("CASEOPS_ANTHROPIC_MAX_TOKENS") or "16384").strip()
     try:
         max_tokens = max(256, min(int(max_raw), 64_000))
@@ -5761,11 +6049,18 @@ def _do_stream_claude_code_cli(
         "--dangerously-skip-permissions",
     ]
     try:
+        model = _pinned_model()
+    except ValueError as exc:
+        _log_emit_line(run_key, f"ERROR: {exc}")
+        return False
+    cmd.extend(["--model", model])
+    try:
         _log_emit_line(
             run_key,
             "CaseOps LLM: Claude Code CLI (CASEOPS_LLM_AUTH=claude_code).",
         )
         _log_emit_line(run_key, f"Claude binary: {claude_bin}")
+        _log_emit_line(run_key, f"model={model}")
 
         # Check auth availability before invoking CLI. Do not log token values.
         if not caseops_llm_auth_uses_anthropic_api_key():
@@ -6574,6 +6869,7 @@ def _queue_disposition_skip_label(disposition: str) -> str:
         "blocked_by_engineering": "blocked by engineering",
         "stale_state_needs_repair": "stale state needs repair",
         "failed_retry_budget_exhausted": "failed retry budget exhausted",
+        "on_hold": "on hold",
     }
     return labels.get(disposition, disposition.replace("_", " "))
 
@@ -6609,6 +6905,16 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
     mode = str(plan.get("mode") or "").strip().lower()
     routing = plan.get("routing") if isinstance(plan.get("routing"), dict) else {}
     normalized_status = _normalized_jira_status(status)
+    fsm_violation = plan.get("fsm_violation") if isinstance(plan.get("fsm_violation"), dict) else {}
+    if fsm_violation.get("violation") == "loop_cap_exceeded":
+        return _queue_disposition_payload(
+            disposition="on_hold",
+            reason="FSM loop cap exceeded; operator review is required before another automatic attempt.",
+            fingerprint=fingerprint,
+            detail=detail,
+            row=row,
+            plan=plan,
+        )
     if _disposition(status) == "closed" or mode == "closed":
         return _queue_disposition_payload(
             disposition="skip_closed_or_resolved",
@@ -6658,6 +6964,7 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
         "blocked_by_engineering",
         "stale_state_needs_repair",
         "failed_retry_budget_exhausted",
+        "on_hold",
     }
     if prior_disposition in skip_dispositions and prior_fingerprint and prior_fingerprint == fingerprint:
         prior_reason = _queue_disposition_prior_reason(prior, prior_disposition)
@@ -6707,6 +7014,19 @@ def _global_issue_queue_snapshot_from_row(row: dict[str, str]) -> tuple[bool, st
     key = row.get("Key", "")
     plan = _build_pipeline_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
     fingerprint = _global_issue_queue_fingerprint(plan)
+    handoff = OUTPUTS / "engineering-escalations" / f"{key}.md"
+    if handoff.is_file():
+        gate = validate_escalation_handoff(OUTPUTS, key)
+        if not gate.passed:
+            return False, f"incomplete; Step 7 gate: {gate.reason}", fingerprint, plan
+    fsm_violation = plan.get("fsm_violation") if isinstance(plan.get("fsm_violation"), dict) else {}
+    if fsm_violation.get("violation") == "loop_cap_exceeded":
+        return False, "on-hold; FSM loop cap exceeded", fingerprint, plan
+    if fsm_violation.get("violation") == "illegal_transition":
+        transitions = plan.get("transitions") if isinstance(plan.get("transitions"), list) else []
+        current = transitions[-1].get("step") if transitions and isinstance(transitions[-1], dict) else "?"
+        previous = transitions[-2].get("step") if len(transitions) > 1 and isinstance(transitions[-2], dict) else "?"
+        return False, f"incomplete; FSM violation: STEP_{previous} -> STEP_{current}", fingerprint, plan
     pending = _plan_pending_issue_steps(plan)
     if pending:
         next_step = pending[0]
@@ -6943,6 +7263,12 @@ def _stream_global_skill(instruction: str, run_key: str) -> None:
     """Run global CaseOps pipeline as a CaseOps-owned issue queue."""
     try:
         _log_emit_line(run_key, f"-- Running CaseOps pipeline: {instruction.split(':')[1].strip() if ':' in instruction else instruction} --")
+
+        try:
+            _detect_model_change(run_key=run_key)
+        except ValueError as exc:
+            _log_emit_line(run_key, f"ERROR: {exc}")
+            return
 
         if not _issue_pipeline_runtime_ready(run_key):
             return
@@ -9123,6 +9449,12 @@ def api_run():
     else:
         return jsonify({"error": "unknown action"}), 400
 
+    if action in {"reprocess", "full", "full_issue", "reprocess_issue", "force_reprocess_issue", "claude_instruction"}:
+        try:
+            _pinned_model()
+        except ValueError as exc:
+            return jsonify({"error": str(exc), "code": "model_not_pinned"}), 400
+
     # Guard against stale callers still trying to run deprecated scripts.
     if cmd is not None:
         if _is_legacy_pipeline_cmd(cmd):
@@ -9284,6 +9616,17 @@ def api_pipeline_state_repair():
     return jsonify(result)
 
 
+@app.get("/api/issue/<key>/pipeline-transitions")
+def api_issue_pipeline_transitions(key: str):
+    state = _read_pipeline_state(key)
+    return jsonify({
+        "key": key,
+        "transitions": state.get("transitions") if isinstance(state.get("transitions"), list) else [],
+        "loop_counts": state.get("loop_counts") if isinstance(state.get("loop_counts"), dict) else {},
+        "latest_violation": _latest_run_fsm_violation(state) or {},
+    })
+
+
 def _repair_pipeline_state_key(key: str, row: dict[str, str] | None = None, *, emit_manifest: bool = True) -> dict[str, Any]:
     row = row or _find_manifest_row(key)
     status = row.get("Status", "") if isinstance(row, dict) else ""
@@ -9419,6 +9762,28 @@ def api_knowledge_audit():
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
     return jsonify({"ok": True, "summary": summary})
+
+
+@app.post("/api/evals/run")
+def api_output_evals_run():
+    try:
+        report = _run_output_evals_once(reason="manual")
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "model_not_pinned"}), 400
+    except Exception as exc:
+        return jsonify({"error": f"Output evaluation failed: {type(exc).__name__}: {exc}"}), 500
+    return jsonify({
+        "ok": True,
+        "artifact_count": report.get("artifact_count", 0),
+        "pass_rates": report.get("pass_rates", {}),
+        "regressions": report.get("regressions", {}),
+        "latest_path": report.get("latest_path", ""),
+    })
+
+
+@app.get("/api/evals/latest")
+def api_output_evals_latest():
+    return jsonify({"ok": True, **output_evals.read_latest_report(OUTPUTS)})
 
 
 @app.get("/api/knowledge/review")
@@ -10180,6 +10545,12 @@ def api_get_settings():
         "CASEOPS_KNOWLEDGE_AUDITOR_ENABLED",
         "CASEOPS_KNOWLEDGE_AUDITOR_INTERVAL_MINUTES",
         "CASEOPS_KNOWLEDGE_AUDITOR_MIN_RECURRENCE",
+        "CASEOPS_OUTPUT_EVALS_ENABLED",
+        "CASEOPS_OUTPUT_EVALS_INTERVAL_MINUTES",
+        "CASEOPS_EVAL_LOOKBACK_DAYS",
+        "CASEOPS_EVAL_MAX_ARTIFACTS",
+        "CASEOPS_EVAL_LLM_ENABLED",
+        "CASEOPS_EVAL_ALERT_THRESHOLD",
         "CASEOPS_FLASK_DEBUG",
         "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
         "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
@@ -10208,6 +10579,12 @@ def api_get_settings():
         "CASEOPS_KNOWLEDGE_AUDITOR_ENABLED": "false",
         "CASEOPS_KNOWLEDGE_AUDITOR_INTERVAL_MINUTES": "0",
         "CASEOPS_KNOWLEDGE_AUDITOR_MIN_RECURRENCE": "2",
+        "CASEOPS_OUTPUT_EVALS_ENABLED": "false",
+        "CASEOPS_OUTPUT_EVALS_INTERVAL_MINUTES": "1440",
+        "CASEOPS_EVAL_LOOKBACK_DAYS": "7",
+        "CASEOPS_EVAL_MAX_ARTIFACTS": "25",
+        "CASEOPS_EVAL_LLM_ENABLED": "false",
+        "CASEOPS_EVAL_ALERT_THRESHOLD": "0.9",
         "CASEOPS_FLASK_DEBUG": "false",
         "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS": "240",
         "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS": "1200",
@@ -10262,6 +10639,12 @@ def api_post_settings():
                 "CASEOPS_KNOWLEDGE_AUDITOR_ENABLED",
                 "CASEOPS_KNOWLEDGE_AUDITOR_INTERVAL_MINUTES",
                 "CASEOPS_KNOWLEDGE_AUDITOR_MIN_RECURRENCE",
+                "CASEOPS_OUTPUT_EVALS_ENABLED",
+                "CASEOPS_OUTPUT_EVALS_INTERVAL_MINUTES",
+                "CASEOPS_EVAL_LOOKBACK_DAYS",
+                "CASEOPS_EVAL_MAX_ARTIFACTS",
+                "CASEOPS_EVAL_LLM_ENABLED",
+                "CASEOPS_EVAL_ALERT_THRESHOLD",
                 "CASEOPS_FLASK_DEBUG",
                 "CASEOPS_CLAUDE_IDLE_TIMEOUT_SECONDS",
                 "CASEOPS_CLAUDE_TOTAL_TIMEOUT_SECONDS",
@@ -10274,6 +10657,14 @@ def api_post_settings():
         if value.startswith("••••"):
             continue
         updates[key] = value
+
+    if "CASEOPS_ANTHROPIC_MODEL" in updates:
+        try:
+            updates["CASEOPS_ANTHROPIC_MODEL"] = _validate_pinned_model_value(
+                updates["CASEOPS_ANTHROPIC_MODEL"]
+            )
+        except ValueError as exc:
+            return jsonify({"error": str(exc), "code": "model_not_pinned"}), 400
 
     try:
         env_file_path = app.config.get("ENV_FILE_PATH")
@@ -10403,6 +10794,7 @@ def _settings_status_skeleton() -> dict[str, Any]:
             "installed": bool(shutil.which("claude")),
             "authenticated": False,
             "token_configured": bool((os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or "").strip()),
+            **_model_pin_status(settings),
         },
         "sf_installed": bool(shutil.which("sf")),
         "sf_prod": {"authenticated": False, "alias": prod_alias},
@@ -10468,6 +10860,8 @@ def _build_settings_status() -> dict[str, Any]:
             "ok": False,
             "issues": [f"Runtime preflight status failed: {type(e).__name__}: {e}"],
         }
+
+    status.setdefault("claude", {}).update(_model_pin_status(settings))
 
     status["cache"] = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -10875,6 +11269,7 @@ if __name__ == "__main__":
     for subdir in [
         "jira", "investigations", "internal-notes", "jira-messages", "issue-briefs", "test-reports",
         "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state", "pipeline-failures",
+        "eval-reports",
         "issue-clusters",
         "closed-resolved", "not-assigned", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces",
         "production-approvals", "summaries"
@@ -10882,6 +11277,7 @@ if __name__ == "__main__":
         _ensure_directory_writable(OUTPUTS / subdir, f"outputs/{subdir}")
     _ensure_org_knowledge_defaults()
     _start_knowledge_auditor_scheduler_if_needed()
+    _start_output_evals_scheduler_if_needed()
 
     JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "").rstrip("/")
     app.config["WORKSPACE"] = WORKSPACE
@@ -10926,6 +11322,7 @@ if __name__ == "__main__":
     required_subdirs = [
         "jira", "investigations", "internal-notes", "jira-messages", "issue-briefs", "test-reports",
         "engineering-escalations", "hypothesis", "pipeline-logs", "pipeline-state", "pipeline-failures",
+        "eval-reports",
         "issue-clusters",
         "closed-resolved", "not-assigned", "generated-files", "org-knowledge", "metadata-cache", "metadata-workspaces",
         "production-approvals", _SUMMARY_DIR
@@ -10937,6 +11334,13 @@ if __name__ == "__main__":
         if not subdir_path.is_dir():
             raise RuntimeError(f"Subdirectory is not a directory: {subdir_path}")
     print(f"[OK] All required subdirectories exist ({len(required_subdirs)} dirs)")
+
+    model_status = _model_pin_status()
+    if model_status["pinned"]:
+        print(f"[OK] Claude model pinned: {model_status['model_id']}")
+        _detect_model_change(trigger_eval=True)
+    else:
+        print(f"[WARN] {model_status['error']}")
 
     _rebuild_similarity_clusters_if_enabled(
         run_key="startup",

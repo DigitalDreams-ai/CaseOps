@@ -384,6 +384,8 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
 
 **Validation gate (mandatory, runs BEFORE the decision):** the Step 6 output must contain all four problem-location fields — problem type, specific artifact, location, failure point. If any is missing or generic ("somewhere in the flow", "possibly a permission issue"), do not decide; loop back to Step 5/6 with the missing fields as the refined request. An Engineering escalation created from an incomplete problem location is a defect: the handoff must never ask Engineering to discover what CaseOps should have pinpointed. The decision itself must be recorded verbatim as `Support-resolvable` or `Engineering-escalated` together with the problem type that drove it.
 
+These gates are also enforced in code (`pipeline_gates.py`); a failed gate forces the resume plan back regardless of what the current model run attempted.
+
 ---
 
 ## Loop-Back Conditions

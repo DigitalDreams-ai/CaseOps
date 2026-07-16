@@ -749,6 +749,7 @@
                 <a href="#runtime-tuning-section">Runtime Tuning</a>
                 <a href="#similarity-section">Similar Issues</a>
                 <a href="#knowledge-section">Knowledge</a>
+                <a href="#output-evals-section">Output Quality</a>
                 <a href="#content-section">Content</a>
                 <a href="#instance-section">Instance</a>
                 <a href="#system-section">System</a>
@@ -846,6 +847,12 @@
                         <div class="button-row">
                             <button type="button" class="button-primary" id="save-claude-token">Save Claude Token</button>
                             <span id="claude-save-status" class="field-note"></span>
+                        </div>
+
+                        <div class="settings-field" style="margin-top:14px;">
+                            <label for="anthropic-model">Pinned Claude Model</label>
+                            <input id="anthropic-model" name="CASEOPS_ANTHROPIC_MODEL" type="text" placeholder="claude-sonnet-4-6" autocomplete="off" />
+                            <div class="field-note">Use a full versioned model id. Aliases such as sonnet or claude-sonnet are rejected because they can drift.</div>
                         </div>
                     </section>
 
@@ -1212,6 +1219,56 @@
                         </div>
                     </section>
 
+                    <section class="settings-section" id="output-evals-section">
+                        <div class="section-header">
+                            <div>
+                                <h2>Output Quality</h2>
+                                <p>Score recent CaseOps artifacts and track quality regressions without writing to Jira or Salesforce.</p>
+                            </div>
+                            <button type="button" class="button-secondary" id="refresh-output-evals-btn">Refresh</button>
+                        </div>
+
+                        <div class="settings-grid">
+                            <div class="settings-field">
+                                <label for="output-evals-enabled">Scheduled Evaluations</label>
+                                <select id="output-evals-enabled" name="CASEOPS_OUTPUT_EVALS_ENABLED">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                            </div>
+                            <div class="settings-field">
+                                <label for="output-evals-minutes">Interval Minutes</label>
+                                <input id="output-evals-minutes" name="CASEOPS_OUTPUT_EVALS_INTERVAL_MINUTES" type="number" min="1" max="43200" step="1" />
+                            </div>
+                            <div class="settings-field">
+                                <label for="eval-lookback-days">Lookback Days</label>
+                                <input id="eval-lookback-days" name="CASEOPS_EVAL_LOOKBACK_DAYS" type="number" min="0" max="3650" step="1" />
+                            </div>
+                            <div class="settings-field">
+                                <label for="eval-max-artifacts">Maximum Artifacts</label>
+                                <input id="eval-max-artifacts" name="CASEOPS_EVAL_MAX_ARTIFACTS" type="number" min="1" max="500" step="1" />
+                            </div>
+                            <div class="settings-field">
+                                <label for="eval-llm-enabled">Optional Model Grading</label>
+                                <select id="eval-llm-enabled" name="CASEOPS_EVAL_LLM_ENABLED">
+                                    <option value="false">Disabled</option>
+                                    <option value="true">Enabled</option>
+                                </select>
+                                <div class="field-note">Deterministic checks always run. Model grading adds rubric scores and uses the pinned model.</div>
+                            </div>
+                            <div class="settings-field">
+                                <label for="eval-alert-threshold">Regression Alert Threshold</label>
+                                <input id="eval-alert-threshold" name="CASEOPS_EVAL_ALERT_THRESHOLD" type="number" min="0" max="1" step="0.01" />
+                            </div>
+                        </div>
+
+                        <div class="button-row">
+                            <button type="button" class="button-primary" id="run-output-evals-btn">Run Evaluation</button>
+                            <span id="output-evals-status" class="field-note"></span>
+                        </div>
+                        <pre id="output-evals-latest" class="knowledge-audit-result" style="margin-top:14px; white-space:pre-wrap;" hidden></pre>
+                    </section>
+
                     <section class="settings-section" id="content-section">
                         <div class="section-header">
                             <div>
@@ -1432,8 +1489,14 @@
         function renderClaudeStatus(status) {
             const el = document.getElementById('claude-status');
             if (!el) return;
+            if (status.claude && status.claude.pinned === false) {
+                const message = status.claude.error || 'CASEOPS_ANTHROPIC_MODEL is not pinned';
+                el.innerHTML = `<span class="status-badge not-ok">Model not pinned</span><div class="field-note" style="margin-top:8px;">${escapeHtml(message)}</div>`;
+                return;
+            }
             if (status.claude && status.claude.installed && status.claude.authenticated) {
-                el.innerHTML = `<span class="status-badge ok">Authenticated</span><div class="field-note" style="margin-top:8px;">${escapeHtml(status.claude.version || 'Claude CLI available')}</div>`;
+                const model = status.claude.model_id ? ` · ${status.claude.model_id}` : '';
+                el.innerHTML = `<span class="status-badge ok">Authenticated</span><div class="field-note" style="margin-top:8px;">${escapeHtml((status.claude.version || 'Claude CLI available') + model)}</div>`;
             } else if (status.claude && status.claude.installed) {
                 const msg = status.cache && status.cache.refreshing
                     ? 'Checking authentication'
@@ -1754,6 +1817,47 @@
                 showBanner('Knowledge audit failed: ' + (e.message || String(e)), 'error');
             } finally {
                 if (btn) btn.disabled = false;
+            }
+        }
+
+        async function refreshOutputEvals() {
+            const status = document.getElementById('output-evals-status');
+            const report = document.getElementById('output-evals-latest');
+            try {
+                const resp = await fetch('/api/evals/latest');
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+                const headline = data.headline || {};
+                if (status) {
+                    status.textContent = headline.generated_at
+                        ? `Latest: ${headline.generated_at} · ${headline.artifact_count || 0} artifacts`
+                        : 'No evaluation report yet.';
+                }
+                if (report) {
+                    report.textContent = data.summary_markdown || '';
+                    report.hidden = !data.summary_markdown;
+                }
+            } catch (e) {
+                if (status) status.textContent = `Unable to load report: ${e.message || String(e)}`;
+            }
+        }
+
+        async function runOutputEvals() {
+            const button = document.getElementById('run-output-evals-btn');
+            const status = document.getElementById('output-evals-status');
+            if (button) button.disabled = true;
+            if (status) status.textContent = 'Running evaluation...';
+            try {
+                const resp = await fetch('/api/evals/run', { method: 'POST' });
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+                showBanner(`Output evaluation complete: ${data.artifact_count || 0} artifacts.`, 'success');
+                await refreshOutputEvals();
+            } catch (e) {
+                if (status) status.textContent = '';
+                showBanner('Output evaluation failed: ' + (e.message || String(e)), 'error');
+            } finally {
+                if (button) button.disabled = false;
             }
         }
 
@@ -2308,6 +2412,8 @@
         document.getElementById('refresh-similarity-health-btn').addEventListener('click', refreshSimilarityHealth);
         document.getElementById('refresh-knowledge-btn').addEventListener('click', refreshKnowledgeReview);
         document.getElementById('run-knowledge-audit-btn').addEventListener('click', runKnowledgeAudit);
+        document.getElementById('refresh-output-evals-btn').addEventListener('click', refreshOutputEvals);
+        document.getElementById('run-output-evals-btn').addEventListener('click', runOutputEvals);
         document.getElementById('refresh-status-btn').addEventListener('click', async () => {
             const btn = document.getElementById('refresh-status-btn');
             btn.disabled = true;
@@ -2356,6 +2462,7 @@
         refreshStatusPanels();
         refreshSimilarityHealth();
         refreshKnowledgeReview();
+        refreshOutputEvals();
         refreshRunControlStatus();
         loadDisplayLabel();
         loadCannedMessages();
