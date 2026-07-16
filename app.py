@@ -3227,15 +3227,17 @@ def _apply_artifact_gates_to_plan(plan: dict[str, Any]) -> dict[str, Any]:
 
 
 def _latest_run_fsm_violation(state: dict[str, Any], violation: str | None = None) -> dict[str, Any] | None:
-    transitions = state.get("transitions") if isinstance(state.get("transitions"), list) else []
+    transitions = [item for item in (state.get("transitions") or []) if isinstance(item, dict)] if isinstance(state.get("transitions"), list) else []
     if not transitions:
         return None
-    latest_run_id = str((transitions[-1] or {}).get("run_id") or "") if isinstance(transitions[-1], dict) else ""
+    # Latest run = the run containing the newest marker timestamp, not the
+    # last list entry: re-recording an older run appends its entries after
+    # newer runs' entries.
+    latest = max(transitions, key=lambda item: str(item.get("at") or ""))
+    latest_run_id = str(latest.get("run_id") or "")
     for item in reversed(transitions):
-        if not isinstance(item, dict):
-            continue
         if latest_run_id and str(item.get("run_id") or "") != latest_run_id:
-            break
+            continue
         if item.get("violation") and (violation is None or item.get("violation") == violation):
             return item
     return None

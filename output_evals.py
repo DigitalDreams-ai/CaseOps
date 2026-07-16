@@ -33,6 +33,10 @@ RUBRIC_DIMENSIONS = {
     "jira_message": ("voice", "clarity", "next_step_clear"),
     "hypothesis": ("concrete_root_cause", "fix_smallest_viable"),
 }
+# Persistent regressions re-signal on this cooldown so the review queue is
+# reminded without a signal file per nightly run (write_signal has no dedup,
+# and per-run signals would inflate the knowledge auditor's recurrence count).
+RESIGNAL_AFTER_DAYS = 7
 _SENTENCE_START_RE = re.compile(r"(?im)(?:^|[.!?]\s+)(?:This is|That is|It is)\b")
 _SF_LINK_RE = re.compile(r"sf://\S+", re.IGNORECASE)
 
@@ -316,10 +320,20 @@ def run_output_evals(
         "mean_rubric_scores": _mean_rubric_scores(results),
         "results": results,
     }
-    # Signal ALL regressions every run, not just new ones: a persistently
-    # failing check must keep reappearing in the knowledge review queue, and
-    # repeated signals feed the knowledge auditor's recurrence grouping.
-    if regressions and signal_writer:
+    # Signal new regressions immediately; persistent ones re-signal on a
+    # cooldown so a still-degraded pipeline keeps reappearing in the review
+    # queue without a duplicate signal file per nightly run.
+    previous_signalled_at = str(previous.get("signalled_at") or "")
+    resignal_due = True
+    if previous_signalled_at:
+        try:
+            last_signal = datetime.fromisoformat(previous_signalled_at)
+            resignal_due = (now - last_signal) >= timedelta(days=RESIGNAL_AFTER_DAYS)
+        except ValueError:
+            resignal_due = True
+    should_signal = bool(regressions) and bool(new_regressions or resignal_due)
+    report_signalled_at = previous_signalled_at
+    if should_signal and signal_writer:
         try:
             signal_writer(
                 outputs,
@@ -331,8 +345,12 @@ def run_output_evals(
                 evidence=[f"{name}={rate:.1%}" for name, rate in regressions.items()],
                 topic="output-quality",
             )
+            report_signalled_at = now.astimezone(timezone.utc).isoformat()
         except Exception as exc:
             report["signal_error"] = f"{type(exc).__name__}: {exc}"
+    # Reset the cooldown when quality recovers so a future regression
+    # signals immediately.
+    report["signalled_at"] = report_signalled_at if regressions else ""
     report_path = report_dir / f"{timestamp}.json"
     report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     history_entry = {key: value for key, value in report.items() if key != "results"}

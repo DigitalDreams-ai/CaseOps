@@ -104,33 +104,43 @@ class OutputEvalTests(unittest.TestCase):
             self.assertEqual(json.loads(lines[0])["reason"], "first")
             self.assertEqual(json.loads(lines[1])["reason"], "second")
 
-    def test_regression_emits_knowledge_signal_on_every_failing_run(self):
-        # A persistently failing check must keep signalling: repeated signals
-        # feed the knowledge auditor's recurrence grouping, and going silent
-        # after run 1 would hide a still-degraded pipeline.
+    def test_persistent_regression_resignals_on_cooldown(self):
+        # New regressions signal immediately. Persistent ones stay quiet
+        # inside the cooldown window (no signal-file spam, no recurrence
+        # inflation) but re-signal once the cooldown elapses, so a
+        # still-degraded pipeline keeps reappearing in the review queue.
+        from datetime import datetime, timedelta, timezone
+
+        start = datetime(2026, 7, 16, 12, 0, tzinfo=timezone.utc)
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
             self._write(outputs, "jira-messages", "BAD-1", "[INTERNAL] We leverage a robust solution — now.")
             writer = Mock()
-            report = output_evals.run_output_evals(
-                outputs,
-                model_id="claude-sonnet-4-6",
-                alert_threshold=0.9,
-                signal_writer=writer,
+
+            first = output_evals.run_output_evals(
+                outputs, model_id="claude-sonnet-4-6", alert_threshold=0.9, lookback_days=30,
+                signal_writer=writer, now=start,
             )
-            self.assertTrue(report["regressions"])
+            self.assertTrue(first["regressions"])
             writer.assert_called_once()
             self.assertEqual(writer.call_args.kwargs["signal_type"], "output_quality_regression")
 
+            # Next day, same persistent regression: inside cooldown, no signal.
             second = output_evals.run_output_evals(
-                outputs,
-                model_id="claude-sonnet-4-6",
-                alert_threshold=0.9,
-                signal_writer=writer,
+                outputs, model_id="claude-sonnet-4-6", alert_threshold=0.9, lookback_days=30,
+                signal_writer=writer, now=start + timedelta(days=1),
             )
-            self.assertEqual(writer.call_count, 2)
+            self.assertEqual(writer.call_count, 1)
             self.assertTrue(second["regressions"])
             self.assertEqual(second["new_regressions"], {})
+
+            # Cooldown elapsed: persistent regression re-signals.
+            third = output_evals.run_output_evals(
+                outputs, model_id="claude-sonnet-4-6", alert_threshold=0.9, lookback_days=30,
+                signal_writer=writer, now=start + timedelta(days=output_evals.RESIGNAL_AFTER_DAYS + 1),
+            )
+            self.assertEqual(writer.call_count, 2)
+            self.assertTrue(third["regressions"])
 
     def test_generic_greeting_is_not_treated_as_reporter_name(self):
         message = (

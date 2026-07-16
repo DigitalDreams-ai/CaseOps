@@ -173,6 +173,10 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
         # failure point is ask-to-discover debt — Engineering ends up doing
         # CaseOps' investigation.
         step_7_gate = validate_problem_location(step_6_result)
+        # NOTE: validate_problem_location is orchestrator pseudocode (the model
+        # checks the four fields itself). The corresponding code-level gate is
+        # pipeline_gates.validate_escalation_handoff, enforced by the app on
+        # the escalation artifact after this run.
         # Gate checks (all required in step_6_result):
         #   1. Problem type (Data / Config / Validation Rule / Flow / Apex /
         #      Approval Process / Integration API / Access-Role).

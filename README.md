@@ -155,6 +155,8 @@ Do not commit runtime outputs, credentials, Salesforce metadata retrievals, Jira
 
 ```text
 app.py                         Flask app, APIs, Settings, pipeline launcher
+knowledge_service.py           Org-knowledge lifecycle, signals, lessons, helper work
+issue_clusters.py              Similar-issue clustering
 pipeline_gates.py              Deterministic hypothesis and handoff gates
 pipeline_fsm.py                Pipeline transition validation and loop caps
 model_config.py                Shared versioned-model validation
