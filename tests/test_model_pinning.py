@@ -28,6 +28,23 @@ class ModelPinningTests(unittest.TestCase):
         with patch.dict(os.environ, {"CASEOPS_ANTHROPIC_MODEL": "claude-sonnet-4-6"}, clear=False):
             self.assertEqual(app._pinned_model(), "claude-sonnet-4-6")
 
+    def test_legacy_and_gateway_versioned_ids_are_accepted(self):
+        for model_id in (
+            "claude-3-5-sonnet-20241022",
+            "claude-3-opus-20240229",
+            "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            "anthropic.claude-3-5-sonnet-20241022-v2:0",
+            "claude-3-5-sonnet-v2@20241022",
+        ):
+            with patch.dict(os.environ, {"CASEOPS_ANTHROPIC_MODEL": model_id}, clear=False):
+                self.assertEqual(app._pinned_model(), model_id)
+
+    def test_latest_tags_are_rejected(self):
+        for model_id in ("claude-3-5-sonnet-latest", "claude-sonnet-latest"):
+            with patch.dict(os.environ, {"CASEOPS_ANTHROPIC_MODEL": model_id}, clear=False):
+                with self.assertRaises(ValueError):
+                    app._pinned_model()
+
     def test_settings_rejects_alias_before_writing_env_file(self):
         writer = Mock()
         with patch.object(app, "_write_env_file", writer):

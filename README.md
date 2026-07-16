@@ -158,6 +158,7 @@ app.py                         Flask app, APIs, Settings, pipeline launcher
 pipeline_gates.py              Deterministic hypothesis and handoff gates
 pipeline_fsm.py                Pipeline transition validation and loop caps
 model_config.py                Shared versioned-model validation
+message_rules.py               Shared voice/artifact text-rule constants
 output_evals.py                Output-quality checks, reports, and trends
 jira_sync.py                   Jira sync helper
 caseops_paths.py               Runtime path helpers
@@ -191,7 +192,7 @@ Before publishing a new image, verify:
 
 ```bash
 python -m unittest discover tests
-python -m py_compile app.py jira_sync.py knowledge_service.py skill_registry.py caseops_paths.py model_config.py pipeline_gates.py pipeline_fsm.py output_evals.py scripts/sf_caseops_helper.py scripts/run_output_evals.py issue_clusters.py
+python -m py_compile app.py jira_sync.py knowledge_service.py skill_registry.py caseops_paths.py model_config.py message_rules.py pipeline_gates.py pipeline_fsm.py output_evals.py scripts/sf_caseops_helper.py scripts/run_output_evals.py issue_clusters.py
 ```
 
 Also run a container smoke test and confirm `/health` returns `{"ok": true}` before pushing a numbered image tag and `latest`.

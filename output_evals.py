@@ -5,11 +5,19 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from message_rules import (
+    BANNED_CORPORATE_PATTERNS,
+    BANNED_CORPORATE_WORDS,
+    FIRST_PERSON_PLURAL_RE,
+    GENERIC_GREETING_WORDS,
+    SALESFORCE_ID_ANY_RE,
+)
 from model_config import validate_pinned_model
 from pipeline_gates import validate_escalation_handoff, validate_hypothesis_artifact
 
@@ -20,29 +28,12 @@ ARTIFACT_DIRS = {
     "hypothesis": "hypothesis",
     "internal_notes": "internal-notes",
 }
-BANNED_CORPORATE_WORDS = (
-    "seamless",
-    "robust",
-    "leverage",
-    "optimize",
-    "utilize",
-    "stakeholder",
-    "unlock",
-    "game-changing",
-    "transformation",
-    "scalable solution",
-    "end-to-end",
-    "strategic alignment",
-    "operational excellence",
-)
 RUBRIC_DIMENSIONS = {
     "engineering_escalation": ("artifact_pinpointed", "reproducible", "actionable"),
     "jira_message": ("voice", "clarity", "next_step_clear"),
     "hypothesis": ("concrete_root_cause", "fix_smallest_viable"),
 }
-_FIRST_PERSON_PLURAL_RE = re.compile(r"(?i)\b(?:we|we've|we're|we’ll|we'd|us|let\s+us)\b")
 _SENTENCE_START_RE = re.compile(r"(?im)(?:^|[.!?]\s+)(?:This is|That is|It is)\b")
-_SALESFORCE_ID_RE = re.compile(r"\b[A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?\b")
 _SF_LINK_RE = re.compile(r"sf://\S+", re.IGNORECASE)
 
 
@@ -58,7 +49,7 @@ def _check(passed: bool, reason: str = "") -> dict[str, Any]:
 
 
 def _contains_salesforce_id(text: str) -> bool:
-    for match in _SALESFORCE_ID_RE.finditer(text):
+    for match in SALESFORCE_ID_ANY_RE.finditer(text):
         value = match.group(0)
         if any(char.isdigit() for char in value) and any(char.isalpha() for char in value):
             return True
@@ -68,12 +59,16 @@ def _contains_salesforce_id(text: str) -> bool:
 def _jira_message_checks(text: str) -> dict[str, dict[str, Any]]:
     greeting = re.search(r"(?im)^\s*Hi\s+([^,\r\n]+),", text)
     reporter = greeting.group(1).strip() if greeting else ""
+    if reporter.casefold() in GENERIC_GREETING_WORDS:
+        reporter = ""
     reporter_occurrences = len(re.findall(rf"(?i)\b{re.escape(reporter)}\b", text)) if reporter else 0
     without_sf_links = _SF_LINK_RE.sub("", text)
-    corporate = [word for word in BANNED_CORPORATE_WORDS if re.search(rf"(?i)\b{re.escape(word)}\b", text)]
+    corporate = [
+        word for word, pattern in zip(BANNED_CORPORATE_WORDS, BANNED_CORPORATE_PATTERNS) if pattern.search(text)
+    ]
     return {
         "no_internal_marker": _check("[INTERNAL]" not in text.upper(), "Contains [INTERNAL] content"),
-        "no_first_person_plural": _check(not _FIRST_PERSON_PLURAL_RE.search(text), "Contains we/us language"),
+        "no_first_person_plural": _check(not FIRST_PERSON_PLURAL_RE.search(text), "Contains we/us language"),
         "no_em_dash": _check("—" not in text, "Contains an em dash"),
         "sentence_start_variety": _check(len(_SENTENCE_START_RE.findall(text)) <= 1, "More than one sentence starts with This is/That is/It is"),
         "reporter_name_once": _check(reporter_occurrences <= 1, "Reporter name appears more than once"),
@@ -94,12 +89,11 @@ def _internal_notes_checks(text: str) -> dict[str, dict[str, Any]]:
 
 
 def evaluate_artifact(outputs: Path, artifact_type: str, path: Path) -> dict[str, Any]:
-    text = _read_text(path)
     key = path.stem
     if artifact_type == "jira_message":
-        checks = _jira_message_checks(text)
+        checks = _jira_message_checks(_read_text(path))
     elif artifact_type == "internal_notes":
-        checks = _internal_notes_checks(text)
+        checks = _internal_notes_checks(_read_text(path))
     elif artifact_type == "engineering_escalation":
         gate = validate_escalation_handoff(outputs, key)
         checks = {"artifact_gate": _check(gate.passed, gate.reason)}
@@ -166,9 +160,11 @@ def _parse_llm_grade(raw: Any, dimensions: tuple[str, ...]) -> dict[str, Any]:
 def claude_cli_grader(model_id: str, *, env: dict[str, str] | None = None, timeout: int = 180) -> Callable[[str], str]:
     model_id = validate_pinned_model(model_id)
 
+    claude_cmd = shutil.which("claude") or "/usr/local/bin/claude"
+
     def grade(prompt: str) -> str:
         completed = subprocess.run(
-            ["claude", "-p", "--output-format", "json", "--model", model_id],
+            [claude_cmd, "-p", "--output-format", "json", "--model", model_id],
             input=prompt,
             text=True,
             capture_output=True,
@@ -320,7 +316,10 @@ def run_output_evals(
         "mean_rubric_scores": _mean_rubric_scores(results),
         "results": results,
     }
-    if new_regressions and signal_writer:
+    # Signal ALL regressions every run, not just new ones: a persistently
+    # failing check must keep reappearing in the knowledge review queue, and
+    # repeated signals feed the knowledge auditor's recurrence grouping.
+    if regressions and signal_writer:
         try:
             signal_writer(
                 outputs,
@@ -328,8 +327,8 @@ def run_output_evals(
                 run_id=timestamp,
                 source_step="OUTPUT_EVALS",
                 signal_type="output_quality_regression",
-                summary=f"Output quality pass rate fell below {alert_threshold:.0%} for {len(new_regressions)} check(s).",
-                evidence=[f"{name}={rate:.1%}" for name, rate in new_regressions.items()],
+                summary=f"Output quality pass rate below {alert_threshold:.0%} for {len(regressions)} check(s) ({len(new_regressions)} new).",
+                evidence=[f"{name}={rate:.1%}" for name, rate in regressions.items()],
                 topic="output-quality",
             )
         except Exception as exc:

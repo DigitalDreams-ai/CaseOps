@@ -104,7 +104,10 @@ class OutputEvalTests(unittest.TestCase):
             self.assertEqual(json.loads(lines[0])["reason"], "first")
             self.assertEqual(json.loads(lines[1])["reason"], "second")
 
-    def test_regression_emits_knowledge_signal(self):
+    def test_regression_emits_knowledge_signal_on_every_failing_run(self):
+        # A persistently failing check must keep signalling: repeated signals
+        # feed the knowledge auditor's recurrence grouping, and going silent
+        # after run 1 would hide a still-degraded pipeline.
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
             self._write(outputs, "jira-messages", "BAD-1", "[INTERNAL] We leverage a robust solution — now.")
@@ -119,13 +122,30 @@ class OutputEvalTests(unittest.TestCase):
             writer.assert_called_once()
             self.assertEqual(writer.call_args.kwargs["signal_type"], "output_quality_regression")
 
-            output_evals.run_output_evals(
+            second = output_evals.run_output_evals(
                 outputs,
                 model_id="claude-sonnet-4-6",
                 alert_threshold=0.9,
                 signal_writer=writer,
             )
-            writer.assert_called_once()
+            self.assertEqual(writer.call_count, 2)
+            self.assertTrue(second["regressions"])
+            self.assertEqual(second["new_regressions"], {})
+
+    def test_generic_greeting_is_not_treated_as_reporter_name(self):
+        message = (
+            "Hi team,\n\nThe report filter was excluding the team's records. "
+            "I fixed it in our test environment and confirmed the team can see them now.\n"
+        )
+        checks = output_evals._jira_message_checks(message)
+        self.assertTrue(checks["reporter_name_once"]["passed"])
+
+    def test_named_reporter_repetition_still_fails(self):
+        message = (
+            "Hi Ashlee,\n\nAshlee, the filter was wrong. I fixed it, Ashlee.\n"
+        )
+        checks = output_evals._jira_message_checks(message)
+        self.assertFalse(checks["reporter_name_once"]["passed"])
 
     def test_regression_signal_is_accepted_by_knowledge_service(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -203,13 +223,15 @@ class OutputEvalTests(unittest.TestCase):
         self.assertEqual(settings["interval_minutes"], 1440)
 
         thread = Mock()
-        with patch.object(app.threading, "Thread", return_value=thread) as factory:
+        try:
+            with patch.object(app.threading, "Thread", return_value=thread) as factory:
+                app._OUTPUT_EVALS_THREAD_STARTED = False
+                app._start_output_evals_scheduler_if_needed()
+            factory.assert_called_once()
+            self.assertIs(factory.call_args.kwargs["target"], app._output_evals_scheduler_loop)
+            thread.start.assert_called_once()
+        finally:
             app._OUTPUT_EVALS_THREAD_STARTED = False
-            app._start_output_evals_scheduler_if_needed()
-        factory.assert_called_once()
-        self.assertIs(factory.call_args.kwargs["target"], app._output_evals_scheduler_loop)
-        thread.start.assert_called_once()
-        app._OUTPUT_EVALS_THREAD_STARTED = False
 
     def test_settings_template_exposes_eval_controls(self):
         template = (Path(__file__).resolve().parents[1] / "templates" / "settings.html").read_text(encoding="utf-8")

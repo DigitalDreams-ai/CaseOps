@@ -20,10 +20,36 @@ load_env_value_if_unset() {
   fi
 }
 
+# One-time migration for installs whose mounted .env predates model pinning
+# (0.1.60 and earlier). An unpinned model refuses all pipeline runs, so seed an
+# explicit pin into the env file rather than silently defaulting in code — the
+# operator can see and change it in Settings.
+migrate_model_pin_if_missing() {
+  if [ -n "${CASEOPS_ANTHROPIC_MODEL:-}" ] || [ ! -f "$env_file_path" ]; then
+    return
+  fi
+  if grep -q "^CASEOPS_ANTHROPIC_MODEL=" "$env_file_path"; then
+    return
+  fi
+  if [ -w "$env_file_path" ]; then
+    default_model="claude-sonnet-4-6"
+    printf '\n# Added by CaseOps upgrade migration: model pinning is now required.\nCASEOPS_ANTHROPIC_MODEL=%s\n' "$default_model" >> "$env_file_path"
+    echo "========================================"
+    echo "MIGRATION: pinned CASEOPS_ANTHROPIC_MODEL=$default_model in $env_file_path"
+    echo "Review this pin in Settings and change it if you were using a different model."
+    echo "========================================"
+  else
+    echo "WARNING: CASEOPS_ANTHROPIC_MODEL is not set and $env_file_path is not writable."
+    echo "Pipeline runs will refuse until a full versioned model id is pinned in Settings."
+  fi
+}
+
 # Load selected runtime secrets from the mounted env file. Do not source the
 # entire file; values such as Windows paths and comments can break shell parsing.
 load_env_value_if_unset "CLAUDE_CODE_OAUTH_TOKEN"
 load_env_value_if_unset "CASEOPS_LLM_AUTH"
+migrate_model_pin_if_missing
+load_env_value_if_unset "CASEOPS_ANTHROPIC_MODEL"
 
 # Initialize Claude Code settings directory.
 # Use a guaranteed writable home for Claude metadata and avoid relying on inherited
@@ -61,6 +87,7 @@ while true; do
   env_file_path="${CASEOPS_ENV_FILE:-/app/.env}"
   load_env_value_if_unset "CLAUDE_CODE_OAUTH_TOKEN"
   load_env_value_if_unset "CASEOPS_LLM_AUTH"
+  load_env_value_if_unset "CASEOPS_ANTHROPIC_MODEL"
 
   # Reinitialize Claude Code settings directory.
   if [ -z "$caseops_home" ] || [ "$caseops_home" = "/" ] || [ "$caseops_home" = "//" ]; then

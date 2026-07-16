@@ -119,6 +119,21 @@ class PipelineGateTests(unittest.TestCase):
             self._write(outputs, "engineering-escalations", "ISSUE-1", FILLED_HANDOFF)
             self.assertTrue(validate_escalation_handoff(outputs, "ISSUE-1").passed)
 
+    def test_escalation_passes_when_only_artifact_is_a_case_or_custom_object_id(self):
+        # Case (500) and custom-object (aXX) key prefixes must count as
+        # concrete artifacts.
+        for record_id in ("500Ql00000ujeSTIAY", "a0X8d000001AbCdEAV"):
+            handoff = FILLED_HANDOFF.replace(
+                "- Flow: Account_Update_Region updates Account.Region__c with an unsupported value.",
+                f"- Record {record_id} is stuck in the broken state.",
+            ).replace("Account.Region__c value.", "record value.")
+            handoff = handoff.replace("Flow Account_Update_Region", "the automation")
+            with tempfile.TemporaryDirectory() as tmp:
+                outputs = Path(tmp)
+                self._write(outputs, "engineering-escalations", "ISSUE-1", handoff)
+                result = validate_escalation_handoff(outputs, "ISSUE-1")
+                self.assertTrue(result.passed, f"{record_id}: {result.reason}")
+
     def test_escalation_fails_when_section_missing(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)

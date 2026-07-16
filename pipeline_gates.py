@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from message_rules import ASK_TO_DISCOVER_PATTERNS, ASK_TO_DISCOVER_PHRASES, SALESFORCE_ID_PREFIXED_RE
+
 
 MIN_ARTIFACT_BYTES = 400
 HYPOTHESIS_HEADINGS = (
@@ -34,15 +36,8 @@ ESCALATION_EXEMPT_MARKERS = (
     "NO ESCALATION REQUIRED",
     "NOT ESCALATED",
 )
-ASK_TO_DISCOVER_PHRASES = (
-    "TBD",
-    "search the codebase",
-    "search codebase",
-    "which specific",
-)
-
 _HEADING_LINE_RE = re.compile(r"(?m)^\s*(?P<marks>#{1,6}\s*)?(?P<text>[^\r\n]+?)\s*$")
-_SALESFORCE_ID_RE = re.compile(r"\b(?:00[0-9A-Za-z]|301|300|0PS)[A-Za-z0-9]{12,15}\b")
+_SALESFORCE_ID_RE = SALESFORCE_ID_PREFIXED_RE
 _API_NAME_RE = re.compile(r"\b[A-Za-z][A-Za-z0-9_]*(?:__c|__r)\b")
 _COMPONENT_RE = re.compile(r"(?i)\b(?:Flow\s*[:\s]|Apex|trigger|ValidationRule|PermissionSet)\b")
 _BACKTICKED_COMPONENT_RE = re.compile(r"`[^`\r\n]{3,}`")
@@ -201,7 +196,10 @@ def validate_escalation_handoff(outputs: Path, key: str) -> GateResult:
         return GateResult(False, gate, "Problem section does not name a concrete Salesforce artifact", details)
 
     searchable = _without_open_questions(text)
-    found_phrase = next((phrase for phrase in ASK_TO_DISCOVER_PHRASES if re.search(re.escape(phrase), searchable, re.IGNORECASE)), "")
+    found_phrase = next(
+        (phrase for phrase, pattern in zip(ASK_TO_DISCOVER_PHRASES, ASK_TO_DISCOVER_PATTERNS) if pattern.search(searchable)),
+        "",
+    )
     details["ask_to_discover_absent"] = not found_phrase
     if found_phrase:
         return GateResult(False, gate, f"Ask-to-discover language remains outside Open Questions: {found_phrase}", details)

@@ -3216,7 +3216,10 @@ def _apply_artifact_gates_to_plan(plan: dict[str, Any]) -> dict[str, Any]:
         result = validate_escalation_handoff(OUTPUTS, key)
         _set_plan_gate_failure(plan, result.gate, None if result.passed else result.reason)
         if not result.passed:
-            target = 5 if "concrete salesforce artifact" in result.reason.lower() else 7
+            # Missing artifact specifics means metadata drilling is incomplete
+            # (back to Step 5); anything else is a decision/structure problem
+            # (back to Step 7).
+            target = 5 if result.details.get("concrete_artifact") is False else 7
             _force_plan_to_step(plan, target, f"Step 7 gate failed: {result.reason}")
     else:
         _set_plan_gate_failure(plan, "step7_problem_location", None)
@@ -4105,34 +4108,51 @@ def _parse_run_metrics_from_logs(run_key: str, run_started: datetime, run_ended:
     }
 
 
+_FSM_TRANSITIONS_LIMIT = 100
+
+
 def _record_run_fsm_transitions(state: dict[str, Any], metrics: dict[str, Any], run_key: str) -> dict[str, Any]:
+    """Record this run's step markers as validated FSM transitions.
+
+    FSM validation and loop counters are scoped to a single run: each run
+    starts from a clean slate, so a resumed run whose first marker is any
+    step never validates against the previous run's last step, and loop
+    caps cannot accumulate across runs. The persisted ``transitions`` list
+    keeps a trimmed cross-run history for audit; only this run's entries
+    participate in validation. Rebuilding this run's entries from scratch
+    also makes repeated calls for the same run idempotent.
+    """
     updated = dict(state)
     run_id = f"{run_key}:{metrics.get('start') or datetime.now(timezone.utc).isoformat()}"
     sequence = metrics.get("step_sequence") if isinstance(metrics.get("step_sequence"), list) else []
-    for index, marker in enumerate(sequence):
+    prior_transitions = updated.get("transitions") if isinstance(updated.get("transitions"), list) else []
+    other_run_transitions = [
+        item for item in prior_transitions
+        if isinstance(item, dict) and str(item.get("run_id") or "") != run_id
+    ]
+    working: dict[str, Any] = {"transitions": [], "loop_counts": {}}
+    run_transitions: list[dict[str, Any]] = []
+    for marker in sequence:
         if not isinstance(marker, dict):
             continue
         try:
             to_step = int(marker.get("step"))
         except (TypeError, ValueError):
             continue
-        transitions = updated.get("transitions") if isinstance(updated.get("transitions"), list) else []
-        prior_step = transitions[-1].get("step") if transitions and isinstance(transitions[-1], dict) else None
-        prior_run = str(transitions[-1].get("run_id") or "") if transitions and isinstance(transitions[-1], dict) else ""
-        new_lifecycle = index == 0 and prior_run != run_id and prior_step == 12
-        working = dict(updated)
-        if new_lifecycle:
-            working["transitions"] = []
-            working["loop_counts"] = {}
-        recorded = record_transition(
+        from_step = run_transitions[-1].get("step") if run_transitions else None
+        working = record_transition(
             working,
             to_step,
             str(marker.get("at") or datetime.now(timezone.utc).isoformat()),
         )
-        new_entry = dict(recorded["transitions"][-1])
+        new_entry = dict(working["transitions"][-1])
         new_entry["run_id"] = run_id
-        updated["transitions"] = [*transitions, new_entry]
-        updated["loop_counts"] = recorded.get("loop_counts", updated.get("loop_counts", {}))
+        if new_entry.get("violation") and from_step is not None:
+            new_entry["from_step"] = from_step
+        run_transitions.append(new_entry)
+    if run_transitions:
+        updated["transitions"] = (other_run_transitions + run_transitions)[-_FSM_TRANSITIONS_LIMIT:]
+        updated["loop_counts"] = working.get("loop_counts", {})
     return updated
 
 
@@ -6906,15 +6926,6 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
     routing = plan.get("routing") if isinstance(plan.get("routing"), dict) else {}
     normalized_status = _normalized_jira_status(status)
     fsm_violation = plan.get("fsm_violation") if isinstance(plan.get("fsm_violation"), dict) else {}
-    if fsm_violation.get("violation") == "loop_cap_exceeded":
-        return _queue_disposition_payload(
-            disposition="on_hold",
-            reason="FSM loop cap exceeded; operator review is required before another automatic attempt.",
-            fingerprint=fingerprint,
-            detail=detail,
-            row=row,
-            plan=plan,
-        )
     if _disposition(status) == "closed" or mode == "closed":
         return _queue_disposition_payload(
             disposition="skip_closed_or_resolved",
@@ -6928,6 +6939,15 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
         return _queue_disposition_payload(
             disposition="skip_escalated_to_engineering",
             reason="Jira status is escalated to engineering; Auto-Process should not reprocess it.",
+            fingerprint=fingerprint,
+            detail=detail,
+            row=row,
+            plan=plan,
+        )
+    if fsm_violation.get("violation") == "loop_cap_exceeded":
+        return _queue_disposition_payload(
+            disposition="on_hold",
+            reason="FSM loop cap exceeded; operator review is required before another automatic attempt.",
             fingerprint=fingerprint,
             detail=detail,
             row=row,
@@ -7023,9 +7043,8 @@ def _global_issue_queue_snapshot_from_row(row: dict[str, str]) -> tuple[bool, st
     if fsm_violation.get("violation") == "loop_cap_exceeded":
         return False, "on-hold; FSM loop cap exceeded", fingerprint, plan
     if fsm_violation.get("violation") == "illegal_transition":
-        transitions = plan.get("transitions") if isinstance(plan.get("transitions"), list) else []
-        current = transitions[-1].get("step") if transitions and isinstance(transitions[-1], dict) else "?"
-        previous = transitions[-2].get("step") if len(transitions) > 1 and isinstance(transitions[-2], dict) else "?"
+        current = fsm_violation.get("step", "?")
+        previous = fsm_violation.get("from_step", "?")
         return False, f"incomplete; FSM violation: STEP_{previous} -> STEP_{current}", fingerprint, plan
     pending = _plan_pending_issue_steps(plan)
     if pending:

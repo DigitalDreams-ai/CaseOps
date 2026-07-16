@@ -106,6 +106,8 @@ Use the reporter's name once at most (greeting). Do not repeat it through the bo
 
 Unless the reporter used them first: seamless, robust, leverage, optimize, utilize, stakeholder, unlock, game-changing, transformation, scalable solution, end-to-end, strategic alignment, operational excellence.
 
+> Machine-enforced copy of this list lives in `message_rules.py` (used by the output-quality evals). When editing this list, update that module in the same change.
+
 ### Boundary language — firm, not defensive
 
 Bad:

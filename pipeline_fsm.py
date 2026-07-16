@@ -80,13 +80,3 @@ def record_transition(state: dict[str, Any], to_step: int, at: str) -> dict[str,
         counts[key] = _counter_value(counts, key) + 1
     updated["loop_counts"] = counts
     return updated
-
-
-def latest_violation(state: dict[str, Any], violation: str | None = None) -> dict[str, Any] | None:
-    transitions = state.get("transitions") if isinstance(state.get("transitions"), list) else []
-    for item in reversed(transitions):
-        if not isinstance(item, dict) or not item.get("violation"):
-            continue
-        if violation is None or item.get("violation") == violation:
-            return item
-    return None

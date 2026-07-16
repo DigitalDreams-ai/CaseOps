@@ -2132,10 +2132,57 @@ class GlobalQueueTests(unittest.TestCase):
             "next_step": {},
             "fsm_violation": {"step": 5, "violation": "loop_cap_exceeded"},
         }
-        with patch.object(app, "_build_pipeline_resume_plan", return_value=plan):
-            complete, detail, _fingerprint, _plan = app._global_issue_queue_snapshot_from_row({"Key": "FSM-1", "Status": "Open"})
+        with tempfile.TemporaryDirectory() as tmp:
+            with (
+                patch.object(app, "OUTPUTS", Path(tmp)),
+                patch.object(app, "_build_pipeline_resume_plan", return_value=plan),
+            ):
+                complete, detail, _fingerprint, _plan = app._global_issue_queue_snapshot_from_row({"Key": "FSM-1", "Status": "Open"})
         self.assertFalse(complete)
         self.assertIn("on-hold", detail)
+
+    def test_step7_gate_routes_missing_artifact_to_step5_and_structure_to_step7(self):
+        from pipeline_gates import GateResult
+
+        base_handoff = (
+            "Problem\n\n- Something is wrong somewhere in the org when users try to save updates.\n"
+            "- The behavior started recently and affects several users on the same team every day.\n\n"
+            "Reproduce\n\n1. Log in as one of the affected users with the standard profile.\n"
+            "2. Open any affected record from the list view and edit the primary field.\n"
+            "3. Save and observe the error message text displayed at the top of the page.\n\n"
+            "Expected behavior\n\n- The record saves successfully without any error message.\n\n"
+            "Affected record IDs\n\n- None confirmed yet; the reporter provided screenshots only.\n\n"
+            "Proposed Solution\n\n- Investigate the failing automation and correct its entry condition so the save completes.\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            handoff_dir = outputs / "engineering-escalations"
+            handoff_dir.mkdir(parents=True)
+            plan_template = {
+                "key": "GATE-7",
+                "mode": "active",
+                "routing": {"path": "engineering_required"},
+                "steps": [
+                    {"step": 5, "name": "Retrieve relevant Production metadata", "status": "complete"},
+                    {"step": 7, "name": "Engineering escalation gate", "status": "complete"},
+                    {"step": 10, "name": "Draft", "status": "pending"},
+                ],
+                "next_step": {"step": 10, "name": "Draft", "status": "pending"},
+            }
+            with patch.object(app, "OUTPUTS", outputs), patch.object(app, "validate_hypothesis_artifact") as hypo:
+                hypo.return_value = GateResult(True, "step4_hypothesis", "", {})
+                # No concrete artifact in Problem -> metadata drilling incomplete -> step 5.
+                (handoff_dir / "GATE-7.md").write_text(base_handoff, encoding="utf-8")
+                plan = app._apply_artifact_gates_to_plan(json.loads(json.dumps(plan_template)))
+                self.assertEqual(plan["next_step"]["step"], 5)
+                # Structure problem (missing section) with a concrete artifact -> step 7.
+                structural = base_handoff.replace(
+                    "- Something is wrong somewhere in the org when users try to save updates.",
+                    "- Flow: Account_Update_Region sets an unsupported value.",
+                ).replace("Expected behavior\n\n- The record saves successfully without any error message.\n\n", "")
+                (handoff_dir / "GATE-7.md").write_text(structural, encoding="utf-8")
+                plan = app._apply_artifact_gates_to_plan(json.loads(json.dumps(plan_template)))
+                self.assertEqual(plan["next_step"]["step"], 7)
 
     def test_fsm_transition_history_is_recorded_from_explicit_markers(self):
         metrics = {
@@ -2185,6 +2232,96 @@ class GlobalQueueTests(unittest.TestCase):
             "FSM-3",
         )
         self.assertIsNone(app._latest_run_fsm_violation(state))
+
+    def test_resumed_run_first_marker_never_validates_against_prior_run(self):
+        # Prior run ends mid-pipeline at step 6 (the normal case for
+        # stalls/stops); the resumed run starts at step 2. Cross-run 6->2
+        # must NOT be recorded as an illegal transition.
+        state = app._record_run_fsm_transitions(
+            {},
+            {
+                "start": "2026-07-16T10:00:00+00:00",
+                "step_sequence": [
+                    {"step": 5, "at": "2026-07-16T10:00:00+00:00"},
+                    {"step": 6, "at": "2026-07-16T10:01:00+00:00"},
+                ],
+            },
+            "FSM-RESUME",
+        )
+        state = app._record_run_fsm_transitions(
+            state,
+            {
+                "start": "2026-07-16T11:00:00+00:00",
+                "step_sequence": [
+                    {"step": 2, "at": "2026-07-16T11:00:00+00:00"},
+                    {"step": 3, "at": "2026-07-16T11:01:00+00:00"},
+                ],
+            },
+            "FSM-RESUME",
+        )
+        self.assertIsNone(app._latest_run_fsm_violation(state))
+        self.assertTrue(all(item.get("violation") is None for item in state["transitions"]))
+
+    def test_loop_counts_do_not_accumulate_across_runs(self):
+        # One 6->5 loop per run across three separate runs must not reach
+        # the per-run cap of 3.
+        state: dict = {}
+        for hour in (10, 11, 12):
+            state = app._record_run_fsm_transitions(
+                state,
+                {
+                    "start": f"2026-07-16T{hour}:00:00+00:00",
+                    "step_sequence": [
+                        {"step": 5, "at": f"2026-07-16T{hour}:00:00+00:00"},
+                        {"step": 6, "at": f"2026-07-16T{hour}:01:00+00:00"},
+                        {"step": 5, "at": f"2026-07-16T{hour}:02:00+00:00"},
+                    ],
+                },
+                "FSM-LOOPS",
+            )
+        self.assertIsNone(app._latest_run_fsm_violation(state, "loop_cap_exceeded"))
+        self.assertEqual(state["loop_counts"], {"6->5": 1})
+
+    def test_fsm_transitions_history_is_trimmed_and_idempotent(self):
+        state: dict = {}
+        for hour in range(10, 20):
+            metrics = {
+                "start": f"2026-07-16T{hour}:00:00+00:00",
+                "step_sequence": [
+                    {"step": step, "at": f"2026-07-16T{hour}:0{i}:00+00:00"}
+                    for i, step in enumerate((1, 2, 3, 4, 5, 6, 7, 8, 9))
+                ],
+            }
+            state = app._record_run_fsm_transitions(state, metrics, "FSM-TRIM")
+            # Re-recording the same run must not duplicate entries.
+            state = app._record_run_fsm_transitions(state, metrics, "FSM-TRIM")
+        self.assertLessEqual(len(state["transitions"]), app._FSM_TRANSITIONS_LIMIT)
+        last_run_entries = [
+            item for item in state["transitions"]
+            if item["run_id"].endswith("T19:00:00+00:00")
+        ]
+        self.assertEqual(len(last_run_entries), 9)
+
+    def test_illegal_transition_detail_names_the_violating_edge(self):
+        # A violation followed by later legal markers must still be reported
+        # with the edge that actually violated, not transitions[-1]/[-2].
+        state = app._record_run_fsm_transitions(
+            {},
+            {
+                "start": "2026-07-16T10:00:00+00:00",
+                "step_sequence": [
+                    {"step": 3, "at": "2026-07-16T10:00:00+00:00"},
+                    {"step": 6, "at": "2026-07-16T10:01:00+00:00"},
+                    {"step": 5, "at": "2026-07-16T10:02:00+00:00"},
+                    {"step": 6, "at": "2026-07-16T10:03:00+00:00"},
+                ],
+            },
+            "FSM-EDGE",
+        )
+        violation = app._latest_run_fsm_violation(state)
+        self.assertEqual(violation["violation"], "illegal_transition")
+        self.assertEqual(violation["from_step"], 3)
+        self.assertEqual(violation["step"], 6)
 
     def test_existing_gate_failure_remains_visible_until_artifact_passes(self):
         with tempfile.TemporaryDirectory() as tmp:
