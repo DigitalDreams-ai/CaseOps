@@ -477,6 +477,115 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertEqual(summary["keys"], ["BLOCKED-1"])
         self.assertIn("artifact updated without planner advancement", summary["outcomes"]["BLOCKED-1"])
 
+    def test_global_queue_bounded_concurrency_processes_all_issues(self):
+        import threading
+        import time as time_module
+
+        keys = [f"PAR-{i}" for i in range(1, 9)]
+        rows = [{"Key": key, "Status": "Open"} for key in keys]
+
+        lock = threading.Lock()
+        state = {"active": 0, "max_active": 0}
+        worker_calls: list[str] = []
+
+        def worker(key, index, total, *, reprocess):
+            with lock:
+                state["active"] += 1
+                state["max_active"] = max(state["max_active"], state["active"])
+                worker_calls.append(key)
+            time_module.sleep(0.05)
+            with lock:
+                state["active"] -= 1
+            return key, True, "complete"
+
+        def snapshot_for_key(key):
+            return True, "complete", f"fp-{key}"
+
+        def snapshot_from_row(row):
+            return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", f"fp0-{row['Key']}", {
+                "key": row["Key"],
+                "mode": "active",
+                "next_step": {"step": 5, "name": "Step", "status": "pending"},
+                "steps": [{"step": 5, "name": "Step", "status": "pending"}],
+            }
+
+        messages = []
+        summary = {}
+
+        with (
+            patch.object(app, "_issue_pipeline_runtime_ready", return_value=True),
+            patch.object(app, "_select_global_issue_queue", return_value=list(keys)),
+            patch.object(app, "_global_issue_queue_snapshot", side_effect=snapshot_for_key),
+            patch.object(app, "_global_issue_queue_snapshot_from_row", side_effect=snapshot_from_row),
+            patch.object(app, "_run_global_issue_worker", side_effect=worker),
+            patch.object(app, "_read_manifest", return_value=rows),
+            patch.object(app, "_global_max_parallel", return_value=3),
+            patch.object(app, "_global_max_queue_passes", return_value=12),
+            patch.object(app, "_run_stop_requested", return_value=False),
+            patch.object(app, "_stream_global_dated_summary", side_effect=lambda summary_keys, _run_key, outcomes: summary.update({"keys": summary_keys, "outcomes": outcomes}) or True),
+            patch.object(app, "_write_queue_disposition"),
+            patch.object(app, "manifest_changed"),
+            patch.object(app, "_log_emit_line", side_effect=lambda _run_key, msg: messages.append(msg)),
+            patch.object(app, "_log_emit_done"),
+            patch.object(app, "_finish_run_control"),
+        ):
+            app._stream_global_skill("reprocess all active issues without re-syncing from Jira", "__global__")
+
+        self.assertEqual(sorted(worker_calls), sorted(keys))
+        self.assertLessEqual(state["max_active"], 3)
+        self.assertGreaterEqual(state["max_active"], 2)
+        self.assertEqual(state["active"], 0)
+        self.assertTrue(any("complete=8, incomplete=0" in msg for msg in messages))
+
+    def test_global_queue_stop_request_cancels_pending_submissions(self):
+        keys = [f"STOP-{i}" for i in range(1, 7)]
+        rows = [{"Key": key, "Status": "Open"} for key in keys]
+
+        worker_calls: list[str] = []
+        stop_state = {"stop": False}
+
+        def worker(key, index, total, *, reprocess):
+            worker_calls.append(key)
+            stop_state["stop"] = True
+            return key, True, "complete"
+
+        def snapshot_for_key(key):
+            return True, "complete", f"fp-{key}"
+
+        def snapshot_from_row(row):
+            return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", f"fp0-{row['Key']}", {
+                "key": row["Key"],
+                "mode": "active",
+                "next_step": {"step": 5, "name": "Step", "status": "pending"},
+                "steps": [{"step": 5, "name": "Step", "status": "pending"}],
+            }
+
+        messages = []
+
+        with (
+            patch.object(app, "_issue_pipeline_runtime_ready", return_value=True),
+            patch.object(app, "_select_global_issue_queue", return_value=list(keys)),
+            patch.object(app, "_global_issue_queue_snapshot", side_effect=snapshot_for_key),
+            patch.object(app, "_global_issue_queue_snapshot_from_row", side_effect=snapshot_from_row),
+            patch.object(app, "_run_global_issue_worker", side_effect=worker),
+            patch.object(app, "_read_manifest", return_value=rows),
+            patch.object(app, "_global_max_parallel", return_value=2),
+            patch.object(app, "_global_max_queue_passes", return_value=12),
+            patch.object(app, "_run_stop_requested", side_effect=lambda _run_key: stop_state["stop"]),
+            patch.object(app, "_stream_global_dated_summary", return_value=True),
+            patch.object(app, "_write_queue_disposition"),
+            patch.object(app, "manifest_changed"),
+            patch.object(app, "_log_emit_line", side_effect=lambda _run_key, msg: messages.append(msg)),
+            patch.object(app, "_log_emit_done"),
+            patch.object(app, "_finish_run_control"),
+        ):
+            app._stream_global_skill("reprocess all active issues without re-syncing from Jira", "__global__")
+
+        # Stop flips after the first worker starts; the refill loop must not
+        # keep submitting the remaining queue once stop is observed.
+        self.assertLess(len(worker_calls), len(keys))
+        self.assertTrue(any("stop requested" in msg for msg in messages))
+
     def test_queue_disposition_skips_prior_unchanged_failure(self):
         row = {"Key": "FAIL-1", "Status": "Open", "Updated": "2026-06-08T00:00:00.000+0000"}
         signatures = {

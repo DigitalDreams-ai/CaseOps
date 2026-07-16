@@ -98,6 +98,8 @@ Generated supporting files such as spreadsheets, CSV exports, PDFs, or screensho
 
 **Input to Step 5:** Pass the Hypothesis (from file or inline) as the "Problem hypothesis" input to Step 5 sub-agent prompt. Steps 5 and 6 will use this to scope metadata retrieval and problem location drilling.
 
+**Validation gate (mandatory):** Before spawning the Step 5 sub-agent, verify the hypothesis exists and is substantive: core sections present (Problem Hypothesis, Smallest Viable Fix, Sandbox Validation Plan), root cause hypothesis filled in (names a concrete Salesforce component/config/data/permission/integration — not a template placeholder), and the fix names an exact artifact. If the gate fails, redo Step 4 once with the failure as feedback; if it fails again, put the issue on hold. Never pass an empty or placeholder hypothesis to Step 5. See `references/orchestration-loop-controller.md` (STEP 4 VALIDATION GATE).
+
 ---
 
 ## Salesforce metadata workspace
@@ -224,6 +226,8 @@ The orchestrator retains **only** the returned compact summary. Do not read the 
 ---
 
 ## Step 7 — Engineering escalation gate [ORCHESTRATOR]
+
+**Validation gate (mandatory, before classifying):** The Step 6 output must contain all four problem-location fields — problem type, specific artifact, location, failure point. If any is missing or generic, do not classify; loop back to Step 5/6 with the missing fields as the refined request (same 3-iteration cap). An escalation built from an incomplete problem location asks Engineering to do CaseOps' investigation — that is a defect, not a handoff. Record the decision verbatim as `Support-resolvable` or `Engineering-escalated` plus the problem type that drove it. See `references/orchestration-loop-controller.md` (STEP 7 VALIDATION GATE).
 
 Using the Step 6 problem location (exact artifact + failure point), classify:
 
