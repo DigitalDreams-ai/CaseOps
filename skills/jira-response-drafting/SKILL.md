@@ -55,6 +55,77 @@ Every customer-facing draft must pass **all** of these:
 
 ---
 
+## Writing Style Rules (customer-facing Jira messages)
+
+The message should sound like a thoughtful admin talking to a busy colleague: clear, direct, warm but not chatty, confident but not over-certain. Not a corporate ticket template, not a meeting recap, not a transcript summary.
+
+### Write from the current position, not the investigation history
+
+State what is true now. Do not narrate how you got there or rehash earlier back-and-forth.
+
+Bad:
+> After first suspecting a record type issue and then checking the permission sets, it turned out the real cause was the validation rule.
+
+Better:
+> The validation rule was blocking that update.
+
+### Sentence rhythm — avoid repetitive LLM patterns
+
+Watch for these sentence starts. One is fine; several in one message is a rewrite:
+
+- "This is not..."
+- "That is why..."
+- "That does not mean..."
+- "It is important to..."
+- "The key is..."
+- "In practical terms..."
+
+Prefer natural variation: short statement → specific fact → next step or boundary.
+
+Bad:
+> This is not a missing feature. It is a permission gap that prevents the button from rendering.
+
+Better:
+> The Edit button is hidden because your account doesn't have report editing permissions.
+
+### First person — sparingly
+
+Use "I" when reporting an action or a judgment call ("I fixed it in our test environment"). Drop it when the sentence stands on its own.
+
+Too much:
+> I would say the field should now appear on the layout.
+
+Better:
+> The field now appears on the layout.
+
+### Names and direct address
+
+Use the reporter's name once at most (greeting). Do not repeat it through the body.
+
+### Words to avoid
+
+Unless the reporter used them first: seamless, robust, leverage, optimize, utilize, stakeholder, unlock, game-changing, transformation, scalable solution, end-to-end, strategic alignment, operational excellence.
+
+> Machine-enforced copy of this list lives in `message_rules.py` (used by the output-quality evals). When editing this list, update that module in the same change.
+
+### Boundary language — firm, not defensive
+
+Bad:
+> That doesn't mean your idea for an Opportunity-level field is bad.
+
+Better:
+> The Account checkbox covers that automatically, so no Opportunity-level field is needed.
+
+### Revision checklist (before saving the Jira message)
+
+- Does it answer what the reporter actually needs to decide or do next?
+- Does it avoid replaying the investigation?
+- Are there several "This/That/It is..." sentence starts? Rewrite.
+- Is anything oversold or over-certain?
+- Could a human admin imagine sending this exact text?
+
+---
+
 ## Workflow
 
 1. Read the investigation record and test report.

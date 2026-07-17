@@ -7,7 +7,7 @@ CaseOps is built for workflows where Salesforce Production must stay read-only a
 ## Status
 
 - Distribution: Docker image
-- Current image: `ghcr.io/digitaldreams-ai/caseops:0.1.60`
+- Current image: `ghcr.io/digitaldreams-ai/caseops:0.1.61`
 - Default URL: `http://localhost:5350`
 - Runtime data: Docker-mounted `/data`
 - Production Salesforce: read-only
@@ -20,6 +20,9 @@ CaseOps is built for workflows where Salesforce Production must stay read-only a
 - Similar Issues clustering for current-user issues, including open and closed/resolved issue context.
 - Settings UI for Jira, Salesforce, Claude Code, canned messages, pipeline controls, and runtime status.
 - Claude Code powered 12-step investigation pipeline.
+- Code-enforced hypothesis and Engineering handoff quality gates.
+- Machine-readable pipeline transition history with loop-cap detection.
+- Scheduled output-quality evaluations with trend reports and knowledge signals.
 - Read-only Production Salesforce metadata and SOQL investigation.
 - Sandbox deploy/test/revert workflow for candidate fixes.
 - Generated artifacts for investigations, hypotheses, internal notes, Jira drafts, test reports, pipeline logs, metadata workspaces, and generated files.
@@ -92,6 +95,7 @@ Start from [.env.example](.env.example). The main values are:
 | `JIRA_EMAIL` | Jira account email. |
 | `JIRA_API_TOKEN` | Jira API token. |
 | `CASEOPS_LLM_AUTH` | Usually `claude_code`. |
+| `CASEOPS_ANTHROPIC_MODEL` | Required full versioned Claude model id; aliases are rejected. |
 | `CASEOPS_PRODUCTION_READ_ORG` | Salesforce Production alias for read-only investigation. |
 | `CASEOPS_SANDBOX_TARGET_ORG` | Only Salesforce org CaseOps may write/deploy to. |
 | `CASEOPS_PRODUCTION_INSTANCE_URL` | Production Salesforce instance URL. |
@@ -151,6 +155,13 @@ Do not commit runtime outputs, credentials, Salesforce metadata retrievals, Jira
 
 ```text
 app.py                         Flask app, APIs, Settings, pipeline launcher
+knowledge_service.py           Org-knowledge lifecycle, signals, lessons, helper work
+issue_clusters.py              Similar-issue clustering
+pipeline_gates.py              Deterministic hypothesis and handoff gates
+pipeline_fsm.py                Pipeline transition validation and loop caps
+model_config.py                Shared versioned-model validation
+message_rules.py               Shared voice/artifact text-rule constants
+output_evals.py                Output-quality checks, reports, and trends
 jira_sync.py                   Jira sync helper
 caseops_paths.py               Runtime path helpers
 skill_registry.py              Skill metadata loader
@@ -183,7 +194,7 @@ Before publishing a new image, verify:
 
 ```bash
 python -m unittest discover tests
-python -m py_compile app.py jira_sync.py skill_registry.py caseops_paths.py scripts/sf_caseops_helper.py issue_clusters.py
+python -m py_compile app.py jira_sync.py knowledge_service.py skill_registry.py caseops_paths.py model_config.py message_rules.py pipeline_gates.py pipeline_fsm.py output_evals.py scripts/sf_caseops_helper.py scripts/run_output_evals.py issue_clusters.py
 ```
 
 Also run a container smoke test and confirm `/health` returns `{"ok": true}` before pushing a numbered image tag and `latest`.

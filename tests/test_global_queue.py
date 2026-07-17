@@ -10,7 +10,12 @@ import caseops_paths
 
 
 class GlobalQueueTests(unittest.TestCase):
+    def setUp(self):
+        self._model_env = patch.dict(os.environ, {"CASEOPS_ANTHROPIC_MODEL": "claude-sonnet-4-6"}, clear=False)
+        self._model_env.start()
+
     def tearDown(self):
+        self._model_env.stop()
         with app._state_lock:
             app._active_keys.clear()
             app._active_run_actions.clear()
@@ -476,6 +481,115 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertTrue(any("Queue stalled: 1 active issue(s) still incomplete" in msg for msg in messages))
         self.assertEqual(summary["keys"], ["BLOCKED-1"])
         self.assertIn("artifact updated without planner advancement", summary["outcomes"]["BLOCKED-1"])
+
+    def test_global_queue_bounded_concurrency_processes_all_issues(self):
+        import threading
+        import time as time_module
+
+        keys = [f"PAR-{i}" for i in range(1, 9)]
+        rows = [{"Key": key, "Status": "Open"} for key in keys]
+
+        lock = threading.Lock()
+        state = {"active": 0, "max_active": 0}
+        worker_calls: list[str] = []
+
+        def worker(key, index, total, *, reprocess):
+            with lock:
+                state["active"] += 1
+                state["max_active"] = max(state["max_active"], state["active"])
+                worker_calls.append(key)
+            time_module.sleep(0.05)
+            with lock:
+                state["active"] -= 1
+            return key, True, "complete"
+
+        def snapshot_for_key(key):
+            return True, "complete", f"fp-{key}"
+
+        def snapshot_from_row(row):
+            return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", f"fp0-{row['Key']}", {
+                "key": row["Key"],
+                "mode": "active",
+                "next_step": {"step": 5, "name": "Step", "status": "pending"},
+                "steps": [{"step": 5, "name": "Step", "status": "pending"}],
+            }
+
+        messages = []
+        summary = {}
+
+        with (
+            patch.object(app, "_issue_pipeline_runtime_ready", return_value=True),
+            patch.object(app, "_select_global_issue_queue", return_value=list(keys)),
+            patch.object(app, "_global_issue_queue_snapshot", side_effect=snapshot_for_key),
+            patch.object(app, "_global_issue_queue_snapshot_from_row", side_effect=snapshot_from_row),
+            patch.object(app, "_run_global_issue_worker", side_effect=worker),
+            patch.object(app, "_read_manifest", return_value=rows),
+            patch.object(app, "_global_max_parallel", return_value=3),
+            patch.object(app, "_global_max_queue_passes", return_value=12),
+            patch.object(app, "_run_stop_requested", return_value=False),
+            patch.object(app, "_stream_global_dated_summary", side_effect=lambda summary_keys, _run_key, outcomes: summary.update({"keys": summary_keys, "outcomes": outcomes}) or True),
+            patch.object(app, "_write_queue_disposition"),
+            patch.object(app, "manifest_changed"),
+            patch.object(app, "_log_emit_line", side_effect=lambda _run_key, msg: messages.append(msg)),
+            patch.object(app, "_log_emit_done"),
+            patch.object(app, "_finish_run_control"),
+        ):
+            app._stream_global_skill("reprocess all active issues without re-syncing from Jira", "__global__")
+
+        self.assertEqual(sorted(worker_calls), sorted(keys))
+        self.assertLessEqual(state["max_active"], 3)
+        self.assertGreaterEqual(state["max_active"], 2)
+        self.assertEqual(state["active"], 0)
+        self.assertTrue(any("complete=8, incomplete=0" in msg for msg in messages))
+
+    def test_global_queue_stop_request_cancels_pending_submissions(self):
+        keys = [f"STOP-{i}" for i in range(1, 7)]
+        rows = [{"Key": key, "Status": "Open"} for key in keys]
+
+        worker_calls: list[str] = []
+        stop_state = {"stop": False}
+
+        def worker(key, index, total, *, reprocess):
+            worker_calls.append(key)
+            stop_state["stop"] = True
+            return key, True, "complete"
+
+        def snapshot_for_key(key):
+            return True, "complete", f"fp-{key}"
+
+        def snapshot_from_row(row):
+            return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", f"fp0-{row['Key']}", {
+                "key": row["Key"],
+                "mode": "active",
+                "next_step": {"step": 5, "name": "Step", "status": "pending"},
+                "steps": [{"step": 5, "name": "Step", "status": "pending"}],
+            }
+
+        messages = []
+
+        with (
+            patch.object(app, "_issue_pipeline_runtime_ready", return_value=True),
+            patch.object(app, "_select_global_issue_queue", return_value=list(keys)),
+            patch.object(app, "_global_issue_queue_snapshot", side_effect=snapshot_for_key),
+            patch.object(app, "_global_issue_queue_snapshot_from_row", side_effect=snapshot_from_row),
+            patch.object(app, "_run_global_issue_worker", side_effect=worker),
+            patch.object(app, "_read_manifest", return_value=rows),
+            patch.object(app, "_global_max_parallel", return_value=2),
+            patch.object(app, "_global_max_queue_passes", return_value=12),
+            patch.object(app, "_run_stop_requested", side_effect=lambda _run_key: stop_state["stop"]),
+            patch.object(app, "_stream_global_dated_summary", return_value=True),
+            patch.object(app, "_write_queue_disposition"),
+            patch.object(app, "manifest_changed"),
+            patch.object(app, "_log_emit_line", side_effect=lambda _run_key, msg: messages.append(msg)),
+            patch.object(app, "_log_emit_done"),
+            patch.object(app, "_finish_run_control"),
+        ):
+            app._stream_global_skill("reprocess all active issues without re-syncing from Jira", "__global__")
+
+        # Stop flips after the first worker starts; the refill loop must not
+        # keep submitting the remaining queue once stop is observed.
+        self.assertLess(len(worker_calls), len(keys))
+        self.assertTrue(any("stop requested" in msg for msg in messages))
 
     def test_queue_disposition_skips_prior_unchanged_failure(self):
         row = {"Key": "FAIL-1", "Status": "Open", "Updated": "2026-06-08T00:00:00.000+0000"}
@@ -1970,6 +2084,269 @@ class GlobalQueueTests(unittest.TestCase):
             )
         with patch.dict(os.environ, {"CASEOPS_ENV_FILE": "/data/.env", "CASEOPS_JIRA_ENV_FILE": "/legacy/.env.jira"}, clear=True):
             self.assertEqual(caseops_paths.default_jira_env_file(), "/data/.env")
+
+    def test_plan_builder_gate_demotes_step_five_to_step_four(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            hypothesis = outputs / "hypothesis" / "GATE-1.md"
+            hypothesis.parent.mkdir(parents=True)
+            hypothesis.write_text("## Problem Hypothesis\nTBD", encoding="utf-8")
+            steps = [
+                app._resume_step(4, "Synthesize problem hypothesis", "complete", "done", "skip"),
+                app._resume_step(5, "Retrieve relevant Production metadata", "pending", "next", "run"),
+            ]
+            plan = {
+                "key": "GATE-1",
+                "mode": "active",
+                "routing": {"path": "support_resolvable"},
+                "steps": steps,
+                "next_step": steps[1],
+            }
+            with patch.object(app, "OUTPUTS", outputs):
+                updated = app._apply_artifact_gates_to_plan(plan)
+
+        self.assertEqual(updated["next_step"]["step"], 4)
+        self.assertIn("Step 4 gate failed", updated["why_next_step"])
+        self.assertEqual(updated["gate_failures"][-1]["gate"], "step4_hypothesis")
+
+    def test_queue_snapshot_rejects_invalid_escalation_handoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            handoff = outputs / "engineering-escalations" / "GATE-2.md"
+            handoff.parent.mkdir(parents=True)
+            handoff.write_text("Problem\nUnknown", encoding="utf-8")
+            plan = {"key": "GATE-2", "steps": [], "next_step": {}, "fsm_violation": {}}
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_build_pipeline_resume_plan", return_value=plan),
+            ):
+                complete, detail, _fingerprint, _plan = app._global_issue_queue_snapshot_from_row({"Key": "GATE-2", "Status": "Open"})
+
+        self.assertFalse(complete)
+        self.assertIn("Step 7 gate", detail)
+
+    def test_queue_snapshot_marks_fsm_loop_cap_on_hold(self):
+        plan = {
+            "key": "FSM-1",
+            "steps": [],
+            "next_step": {},
+            "fsm_violation": {"step": 5, "violation": "loop_cap_exceeded"},
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            with (
+                patch.object(app, "OUTPUTS", Path(tmp)),
+                patch.object(app, "_build_pipeline_resume_plan", return_value=plan),
+            ):
+                complete, detail, _fingerprint, _plan = app._global_issue_queue_snapshot_from_row({"Key": "FSM-1", "Status": "Open"})
+        self.assertFalse(complete)
+        self.assertIn("on-hold", detail)
+
+    def test_step7_gate_routes_missing_artifact_to_step5_and_structure_to_step7(self):
+        from pipeline_gates import GateResult
+
+        base_handoff = (
+            "Problem\n\n- Something is wrong somewhere in the org when users try to save updates.\n"
+            "- The behavior started recently and affects several users on the same team every day.\n\n"
+            "Reproduce\n\n1. Log in as one of the affected users with the standard profile.\n"
+            "2. Open any affected record from the list view and edit the primary field.\n"
+            "3. Save and observe the error message text displayed at the top of the page.\n\n"
+            "Expected behavior\n\n- The record saves successfully without any error message.\n\n"
+            "Affected record IDs\n\n- None confirmed yet; the reporter provided screenshots only.\n\n"
+            "Proposed Solution\n\n- Investigate the failing automation and correct its entry condition so the save completes.\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            handoff_dir = outputs / "engineering-escalations"
+            handoff_dir.mkdir(parents=True)
+            plan_template = {
+                "key": "GATE-7",
+                "mode": "active",
+                "routing": {"path": "engineering_required"},
+                "steps": [
+                    {"step": 5, "name": "Retrieve relevant Production metadata", "status": "complete"},
+                    {"step": 7, "name": "Engineering escalation gate", "status": "complete"},
+                    {"step": 10, "name": "Draft", "status": "pending"},
+                ],
+                "next_step": {"step": 10, "name": "Draft", "status": "pending"},
+            }
+            with patch.object(app, "OUTPUTS", outputs), patch.object(app, "validate_hypothesis_artifact") as hypo:
+                hypo.return_value = GateResult(True, "step4_hypothesis", "", {})
+                # No concrete artifact in Problem -> metadata drilling incomplete -> step 5.
+                (handoff_dir / "GATE-7.md").write_text(base_handoff, encoding="utf-8")
+                plan = app._apply_artifact_gates_to_plan(json.loads(json.dumps(plan_template)))
+                self.assertEqual(plan["next_step"]["step"], 5)
+                # Structure problem (missing section) with a concrete artifact -> step 7.
+                structural = base_handoff.replace(
+                    "- Something is wrong somewhere in the org when users try to save updates.",
+                    "- Flow: Account_Update_Region sets an unsupported value.",
+                ).replace("Expected behavior\n\n- The record saves successfully without any error message.\n\n", "")
+                (handoff_dir / "GATE-7.md").write_text(structural, encoding="utf-8")
+                plan = app._apply_artifact_gates_to_plan(json.loads(json.dumps(plan_template)))
+                self.assertEqual(plan["next_step"]["step"], 7)
+
+    def test_fsm_transition_history_is_recorded_from_explicit_markers(self):
+        metrics = {
+            "start": "2026-07-16T11:59:00+00:00",
+            "step_sequence": [
+                {"step": 3, "at": "2026-07-16T12:00:00+00:00"},
+                {"step": 4, "at": "2026-07-16T12:01:00+00:00"},
+                {"step": 6, "at": "2026-07-16T12:02:00+00:00"},
+            ]
+        }
+        state = app._record_run_fsm_transitions({}, metrics, "FSM-2")
+        self.assertEqual([item["step"] for item in state["transitions"]], [3, 4, 6])
+        self.assertEqual(state["transitions"][-1]["violation"], "illegal_transition")
+        self.assertEqual(state["transitions"][-1]["run_id"], "FSM-2:2026-07-16T11:59:00+00:00")
+
+    def test_pipeline_transition_api_is_read_only_and_separate_from_jira_transitions(self):
+        state = {
+            "transitions": [{"step": 5, "at": "now", "violation": None, "run_id": "FSM-API:run"}],
+            "loop_counts": {"6->5": 1},
+        }
+        with patch.object(app, "_read_pipeline_state", return_value=state):
+            response = app.app.test_client().get("/api/issue/FSM-API/pipeline-transitions")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["transitions"][0]["step"], 5)
+        self.assertEqual(response.get_json()["loop_counts"], {"6->5": 1})
+
+    def test_fsm_violation_does_not_bleed_into_a_later_run(self):
+        state = app._record_run_fsm_transitions(
+            {},
+            {
+                "start": "2026-07-16T10:00:00+00:00",
+                "step_sequence": [
+                    {"step": 3, "at": "2026-07-16T10:00:00+00:00"},
+                    {"step": 6, "at": "2026-07-16T10:01:00+00:00"},
+                ],
+            },
+            "FSM-3",
+        )
+        self.assertIsNotNone(app._latest_run_fsm_violation(state))
+
+        state = app._record_run_fsm_transitions(
+            state,
+            {
+                "start": "2026-07-16T11:00:00+00:00",
+                "step_sequence": [{"step": 7, "at": "2026-07-16T11:00:00+00:00"}],
+            },
+            "FSM-3",
+        )
+        self.assertIsNone(app._latest_run_fsm_violation(state))
+
+    def test_resumed_run_first_marker_never_validates_against_prior_run(self):
+        # Prior run ends mid-pipeline at step 6 (the normal case for
+        # stalls/stops); the resumed run starts at step 2. Cross-run 6->2
+        # must NOT be recorded as an illegal transition.
+        state = app._record_run_fsm_transitions(
+            {},
+            {
+                "start": "2026-07-16T10:00:00+00:00",
+                "step_sequence": [
+                    {"step": 5, "at": "2026-07-16T10:00:00+00:00"},
+                    {"step": 6, "at": "2026-07-16T10:01:00+00:00"},
+                ],
+            },
+            "FSM-RESUME",
+        )
+        state = app._record_run_fsm_transitions(
+            state,
+            {
+                "start": "2026-07-16T11:00:00+00:00",
+                "step_sequence": [
+                    {"step": 2, "at": "2026-07-16T11:00:00+00:00"},
+                    {"step": 3, "at": "2026-07-16T11:01:00+00:00"},
+                ],
+            },
+            "FSM-RESUME",
+        )
+        self.assertIsNone(app._latest_run_fsm_violation(state))
+        self.assertTrue(all(item.get("violation") is None for item in state["transitions"]))
+
+    def test_loop_counts_do_not_accumulate_across_runs(self):
+        # One 6->5 loop per run across three separate runs must not reach
+        # the per-run cap of 3.
+        state: dict = {}
+        for hour in (10, 11, 12):
+            state = app._record_run_fsm_transitions(
+                state,
+                {
+                    "start": f"2026-07-16T{hour}:00:00+00:00",
+                    "step_sequence": [
+                        {"step": 5, "at": f"2026-07-16T{hour}:00:00+00:00"},
+                        {"step": 6, "at": f"2026-07-16T{hour}:01:00+00:00"},
+                        {"step": 5, "at": f"2026-07-16T{hour}:02:00+00:00"},
+                    ],
+                },
+                "FSM-LOOPS",
+            )
+        self.assertIsNone(app._latest_run_fsm_violation(state, "loop_cap_exceeded"))
+        self.assertEqual(state["loop_counts"], {"6->5": 1})
+
+    def test_fsm_transitions_history_is_trimmed_and_idempotent(self):
+        state: dict = {}
+        for hour in range(10, 20):
+            metrics = {
+                "start": f"2026-07-16T{hour}:00:00+00:00",
+                "step_sequence": [
+                    {"step": step, "at": f"2026-07-16T{hour}:0{i}:00+00:00"}
+                    for i, step in enumerate((1, 2, 3, 4, 5, 6, 7, 8, 9))
+                ],
+            }
+            state = app._record_run_fsm_transitions(state, metrics, "FSM-TRIM")
+            # Re-recording the same run must not duplicate entries.
+            state = app._record_run_fsm_transitions(state, metrics, "FSM-TRIM")
+        self.assertLessEqual(len(state["transitions"]), app._FSM_TRANSITIONS_LIMIT)
+        last_run_entries = [
+            item for item in state["transitions"]
+            if item["run_id"].endswith("T19:00:00+00:00")
+        ]
+        self.assertEqual(len(last_run_entries), 9)
+
+    def test_illegal_transition_detail_names_the_violating_edge(self):
+        # A violation followed by later legal markers must still be reported
+        # with the edge that actually violated, not transitions[-1]/[-2].
+        state = app._record_run_fsm_transitions(
+            {},
+            {
+                "start": "2026-07-16T10:00:00+00:00",
+                "step_sequence": [
+                    {"step": 3, "at": "2026-07-16T10:00:00+00:00"},
+                    {"step": 6, "at": "2026-07-16T10:01:00+00:00"},
+                    {"step": 5, "at": "2026-07-16T10:02:00+00:00"},
+                    {"step": 6, "at": "2026-07-16T10:03:00+00:00"},
+                ],
+            },
+            "FSM-EDGE",
+        )
+        violation = app._latest_run_fsm_violation(state)
+        self.assertEqual(violation["violation"], "illegal_transition")
+        self.assertEqual(violation["from_step"], 3)
+        self.assertEqual(violation["step"], 6)
+
+    def test_existing_gate_failure_remains_visible_until_artifact_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            stored = {
+                "key": "GATE-3",
+                "gate_failures": [{"gate": "step4_hypothesis", "reason": "Artifact is missing", "at": "earlier"}],
+            }
+            plan = {
+                "key": "GATE-3",
+                "mode": "active",
+                "steps": [{"step": 4, "name": "Synthesize problem hypothesis", "status": "pending"}],
+                "next_step": {"step": 4, "name": "Synthesize problem hypothesis", "status": "pending"},
+            }
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "_read_pipeline_state", return_value=stored),
+                patch.object(app, "_build_step", return_value=plan["next_step"]),
+                patch.object(app, "_build_step_tool_permissions", return_value={}),
+            ):
+                result = app._apply_artifact_gates_to_plan(plan)
+
+        self.assertEqual(result["next_step"]["step"], 4)
+        self.assertTrue(result["gate_failures"])
+        self.assertIn("Step 4 gate failed", result["why_next_step"])
 
 if __name__ == "__main__":
     unittest.main()

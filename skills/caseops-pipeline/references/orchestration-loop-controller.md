@@ -97,6 +97,33 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
         write_file(f"outputs/hypothesis/{issue_key}.md", hypothesis)
         log(f"STEP_4 {issue_key} ✓ outputs/hypothesis/{issue_key}.md")
         
+        # ====== STEP 4 VALIDATION GATE (mandatory before Step 5) ======
+        # The hypothesis artifact MUST exist and be substantive before any
+        # Step 5 sub-agent is spawned. Do not pass an empty or placeholder
+        # hypothesis downstream — that is the root cause of empty
+        # investigations and ask-to-discover escalations.
+        step_4_gate = validate_hypothesis_artifact(f"outputs/hypothesis/{issue_key}.md")
+        # Gate checks (all required):
+        #   1. File exists and is non-empty.
+        #   2. Contains the template's core sections: "Problem Hypothesis",
+        #      "Smallest Viable Fix", "Sandbox Validation Plan"
+        #      (see assets/problem-hypothesis-template.md).
+        #   3. "Root cause hypothesis" is filled in — a one-sentence statement
+        #      naming a Salesforce component/config/data/permission/integration,
+        #      not a template placeholder ("[One-sentence statement...]").
+        #   4. "Artifact" under Smallest Viable Fix names a concrete component.
+        IF NOT step_4_gate.passed:
+            log(f"STEP_4 {issue_key} ✗ GATE FAILED: {step_4_gate.reason}")
+            # Redo Step 4 once with the gate failure as context; if it still
+            # fails, hold the issue — do NOT proceed to Step 5.
+            hypothesis = synthesize_hypothesis(issue_key, step_3_summary, gate_feedback=step_4_gate.reason)
+            write_file(f"outputs/hypothesis/{issue_key}.md", hypothesis)
+            IF NOT validate_hypothesis_artifact(f"outputs/hypothesis/{issue_key}.md").passed:
+                log(f"END {issue_key} disposition=on-hold (Step 4 hypothesis gate failed twice)")
+                ADD_TO_SUMMARY(issue_key, disposition="on-hold", reason="Step 4 gate failure")
+                CONTINUE
+        log(f"STEP_4_GATE {issue_key} ✓ hypothesis validated")
+        
         # Step 5 → 6 Metadata Loop
         step_6_metadata_loop = True
         loop_iteration = 0
@@ -140,12 +167,41 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
             ADD_TO_SUMMARY(issue_key, disposition="on-hold", reason="Metadata loop blocker")
             CONTINUE
         
+        # ====== STEP 7 VALIDATION GATE (mandatory before branching) ======
+        # Step 6 output must contain a complete problem location BEFORE the
+        # escalation decision is made. An escalation without a pinpointed
+        # failure point is ask-to-discover debt — Engineering ends up doing
+        # CaseOps' investigation.
+        step_7_gate = validate_problem_location(step_6_result)
+        # NOTE: validate_problem_location is orchestrator pseudocode (the model
+        # checks the four fields itself). The corresponding code-level gate is
+        # pipeline_gates.validate_escalation_handoff, enforced by the app on
+        # the escalation artifact after this run.
+        # Gate checks (all required in step_6_result):
+        #   1. Problem type (Data / Config / Validation Rule / Flow / Apex /
+        #      Approval Process / Integration API / Access-Role).
+        #   2. Specific artifact (exact component name, not a guess or category).
+        #   3. Location (object, org area, or code path where it lives).
+        #   4. Failure point (what exactly breaks and under what condition).
+        IF NOT step_7_gate.passed:
+            # Treat as incomplete metadata discovery — loop back, not forward.
+            log(f"STEP_7 {issue_key} ✗ GATE FAILED: {step_7_gate.reason} — looping back to Step 5/6")
+            # Re-enter Step 5→6 loop with the missing fields as the refined
+            # request (counts against the same 3-iteration cap). If the cap is
+            # already exhausted, hold the issue.
+            log(f"END {issue_key} disposition=on-hold (problem location incomplete)")
+            ADD_TO_SUMMARY(issue_key, disposition="on-hold", reason="Step 7 gate: incomplete problem location")
+            CONTINUE
+        
         # Step 7: Escalation gate
         escalation_decision = determine_escalation(
             issue_key=issue_key,
             problem_location=step_6_result
         )
-        log(f"STEP_7 {issue_key} DECISION: {escalation_decision}")
+        # Decision MUST be explicit — exactly "Support-resolvable" or
+        # "Engineering-escalated" — and MUST record the decision criteria row
+        # (problem type) that produced it. No implicit/default routing.
+        log(f"STEP_7 {issue_key} DECISION: {escalation_decision} (type={step_7_gate.problem_type})")
         
         # ====== BRANCHING PATH ======
         
@@ -329,6 +385,10 @@ FUNCTION process_active_issues(active_issue_list, manifest_metadata):
 | **Access / Role** | User role permission missing | Support-resolvable | Steps 8–10 |
 
 **Note:** If uncertain, escalate to Engineering. Support team can resolve data/access/read-only config issues; code/automation changes belong to Engineering.
+
+**Validation gate (mandatory, runs BEFORE the decision):** the Step 6 output must contain all four problem-location fields — problem type, specific artifact, location, failure point. If any is missing or generic ("somewhere in the flow", "possibly a permission issue"), do not decide; loop back to Step 5/6 with the missing fields as the refined request. An Engineering escalation created from an incomplete problem location is a defect: the handoff must never ask Engineering to discover what CaseOps should have pinpointed. The decision itself must be recorded verbatim as `Support-resolvable` or `Engineering-escalated` together with the problem type that drove it.
+
+These gates are also enforced in code (`pipeline_gates.py`); a failed gate forces the resume plan back regardless of what the current model run attempted.
 
 ---
 

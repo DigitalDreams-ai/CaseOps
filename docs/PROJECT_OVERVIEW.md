@@ -9,7 +9,7 @@ CaseOps does not deploy to Salesforce Production. Production access is read-only
 CaseOps is intended to run from a published Docker image:
 
 ```text
-ghcr.io/digitaldreams-ai/caseops:0.1.60
+ghcr.io/digitaldreams-ai/caseops:0.1.61
 ```
 
 The container uses:
@@ -37,6 +37,8 @@ Issue artifacts are stored in persistent appdata:
 - `test-reports/` - Sandbox validation results.
 - `engineering-escalations/` - Engineering handoffs when required.
 - `pipeline-logs/` - streamed run logs.
+- `pipeline-state/` - resume plans, transition history, loop counts, and gate diagnostics.
+- `eval-reports/` - timestamped output-quality reports, append-only history, and the latest summary.
 - `generated-files/` - issue-specific generated reports and files.
 - `issue-clusters/` - public-safe similar-issue summaries, deterministic cluster state, local corrections, adjudication records, and safety-validation records.
 - `settings/` - persistent Settings overrides, including canned messages.
@@ -65,6 +67,14 @@ CaseOps runs a 12-step pipeline:
 | 12 | Orchestrator | Return action report |
 
 Engineering handoffs should include evidence, not just a hypothesis.
+
+## Pipeline Hardening
+
+`pipeline_gates.py` validates Step 4 hypotheses and Step 7 Engineering handoffs before downstream work can count as complete. `pipeline_fsm.py` records explicit step markers, rejects illegal transitions, and moves loop-cap violations on hold for operator review.
+
+`CASEOPS_ANTHROPIC_MODEL` is required and must contain a versioned Claude model id. `model_config.py` provides the shared validator used by the app and evaluation CLI. CaseOps stamps the id into pipeline state and evaluation reports. A model change is logged and triggers an immediate evaluation when scheduled evaluations are enabled.
+
+`output_evals.py` evaluates recent Jira messages, internal notes, hypotheses, and Engineering handoffs. Deterministic checks always run; optional model grading uses the pinned model. Configure the scheduler and sample using `CASEOPS_OUTPUT_EVALS_ENABLED`, `CASEOPS_OUTPUT_EVALS_INTERVAL_MINUTES`, `CASEOPS_EVAL_LOOKBACK_DAYS`, `CASEOPS_EVAL_MAX_ARTIFACTS`, `CASEOPS_EVAL_LLM_ENABLED`, and `CASEOPS_EVAL_ALERT_THRESHOLD`.
 
 ## Similar Issues
 

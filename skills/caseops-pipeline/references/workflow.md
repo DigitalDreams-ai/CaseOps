@@ -15,7 +15,7 @@
 | 7 | Orchestrator | Engineering escalation gate |
 | 8 | Orchestrator | Implement (both paths: propose fix) |
 | 9 | **Sub-agent** | Deploy + test in allowlisted Sandbox (both paths: validate proposed solution) |
-| 10 | **Sub-agent** | Internal notes + Jira message + escalation handoff (if needed) |
+| 10 | **Sub-agent** | Issue brief + internal notes + Jira message + escalation handoff (if needed) |
 | 11 | Orchestrator | Dated issue summary |
 | 12 | Orchestrator | Inform the user |
 
@@ -57,7 +57,7 @@ Read `outputs/jira/manifest.csv` and route **every** issue **before** loading fu
 
 | Condition | Action |
 |-----------|--------|
-| Status is `Closed` or `Resolved` | Copy summary to `outputs/closed-resolved/<KEY>.md` using `assets/closed-resolved-log-template.md`. Log in the dated summary (Step 10). **Stop for this key — do not process further.** |
+| Status is `Closed` or `Resolved` | Copy summary to `outputs/closed-resolved/<KEY>.md` using `assets/closed-resolved-log-template.md`. Log in the dated summary (Step 11). **Stop for this key — do not process further.** |
 | Status is `Escalated to Engineering` (pre-existing Jira status) | Copy summary to `outputs/engineering-escalations/<KEY>.md`. Log in dated summary as pre-escalated. **Stop for this key.** |
 | All other statuses | Add to the active list. Process **one key at a time** through Steps 3–11. |
 
@@ -97,6 +97,8 @@ Generated supporting files such as spreadsheets, CSV exports, PDFs, or screensho
 - "Apex integration payload is missing required address fields in JSON structure; Fix: update CMT mappings to emit flat root-level fields instead of nested objects."
 
 **Input to Step 5:** Pass the Hypothesis (from file or inline) as the "Problem hypothesis" input to Step 5 sub-agent prompt. Steps 5 and 6 will use this to scope metadata retrieval and problem location drilling.
+
+**Validation gate (mandatory):** Before spawning the Step 5 sub-agent, verify the hypothesis exists and is substantive: core sections present (Problem Hypothesis, Smallest Viable Fix, Sandbox Validation Plan), root cause hypothesis filled in (names a concrete Salesforce component/config/data/permission/integration — not a template placeholder), and the fix names an exact artifact. If the gate fails, redo Step 4 once with the failure as feedback; if it fails again, put the issue on hold. Never pass an empty or placeholder hypothesis to Step 5. See `references/orchestration-loop-controller.md` (STEP 4 VALIDATION GATE).
 
 ---
 
@@ -224,6 +226,8 @@ The orchestrator retains **only** the returned compact summary. Do not read the 
 ---
 
 ## Step 7 — Engineering escalation gate [ORCHESTRATOR]
+
+**Validation gate (mandatory, before classifying):** The Step 6 output must contain all four problem-location fields — problem type, specific artifact, location, failure point. If any is missing or generic, do not classify; loop back to Step 5/6 with the missing fields as the refined request (same 3-iteration cap). An escalation built from an incomplete problem location asks Engineering to do CaseOps' investigation — that is a defect, not a handoff. Record the decision verbatim as `Support-resolvable` or `Engineering-escalated` plus the problem type that drove it. See `references/orchestration-loop-controller.md` (STEP 7 VALIDATION GATE).
 
 Using the Step 6 problem location (exact artifact + failure point), classify:
 

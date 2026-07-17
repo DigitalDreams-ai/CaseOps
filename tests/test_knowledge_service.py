@@ -103,6 +103,32 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(accepted, [])
         self.assertEqual(second["candidates_created"], 0)
 
+    def test_manual_auditor_suppresses_report_only_generic_pending_lesson(self):
+        # Unrecognized signal_type + queue/noise text classifies to report-only
+        # quality; the generic pending-lesson branch must suppress the group
+        # instead of raising ValueError and aborting the audit run.
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            for key in ("OPEN-1", "OPEN-2"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="STEP_5",
+                    signal_type="unrecognized_signal",
+                    topic="queue-status",
+                    summary="engineering closed the queue",
+                    evidence=["queue closed by engineering"],
+                )
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
+
+        self.assertEqual(summary["candidates_created"], 0)
+        self.assertEqual(summary["suppressed_groups"], 1)
+        self.assertEqual(pending, [])
+
     def test_manual_auditor_creates_pending_lesson_for_high_value_single_signal(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"

@@ -259,6 +259,20 @@ VOICE RULES (mandatory — all must pass validation):
 ✓ Specific, concrete thanks when reporter provided good repro, screenshots, or detail.
 ✓ No Salesforce IDs, file paths, or admin jargon unless they asked.
 
+STYLE RULES (see skills/jira-response-drafting/SKILL.md "Writing Style Rules"):
+✓ Write from the current position — state what is true now; do not narrate the
+  investigation history or rehash earlier back-and-forth.
+✓ Sentence rhythm: no more than one "This is not... / That is why... / It is
+  important to... / The key is..." sentence start per message. Several = rewrite.
+✓ First person sparingly: "I" for actions and judgment calls only; drop it when
+  the sentence stands on its own ("The field now appears on the layout").
+✓ Reporter's name once at most (greeting); never repeated in the body.
+✓ Banned words unless the reporter used them first: seamless, robust, leverage,
+  optimize, utilize, stakeholder, unlock, game-changing, transformation,
+  scalable solution, end-to-end, strategic alignment, operational excellence.
+✓ Boundaries firm, not defensive: say what covers the need, not "that doesn't
+  mean your idea is bad."
+
 VOICE EXAMPLES:
 ✗ "We're excited to share the fix with you and we've tested it in Sandbox."
 ✓ "I found the issue and tested the fix in Sandbox."
@@ -317,6 +331,10 @@ VALIDATION BEFORE SAVING:
    - ✓ Tone is direct and human, not corporate? YES or STOP and rewrite.
    - ✓ Specific thanks for good repro/screenshots/detail? YES or N/A.
    - ✓ No unnecessary jargon or admin terms? YES or STOP and simplify.
+   - ✓ No investigation-history narration (message states current position)? YES or STOP and rewrite.
+   - ✓ At most one "This/That/It is..." sentence start? YES or STOP and vary rhythm.
+   - ✓ Reporter name appears once at most? YES or STOP and trim.
+   - ✓ No banned corporate words (seamless, robust, leverage, optimize, ...)? YES or STOP and replace.
 6. Only after validation, save to outputs/jira-messages/<KEY>.md
 
 SAVE DOCUMENT 2 TO DISK

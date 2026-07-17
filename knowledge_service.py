@@ -1535,6 +1535,19 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
             })
             consumed_signal_ids.update(source_ids)
             continue
+        if str(candidate.get("quality") or "") in {"low", "report_only"}:
+            # Pending lessons must be medium/high quality (validate_candidate rejects
+            # low/report_only); treat these groups as suppressed instead of aborting
+            # the whole audit run.
+            suppressed_groups += 1
+            suppressed_details.append({
+                "signal_type": signal_type,
+                "topic": topic,
+                "count": len(group),
+                "reason": str(candidate.get("quality_reason") or "Low/report-only quality; not eligible as a pending lesson."),
+            })
+            consumed_signal_ids.update(source_ids)
+            continue
         validate_candidate(candidate)
         _write_json(knowledge_root(outputs) / "pending-lessons" / f"{candidate['candidate_id']}.json", candidate)
         _write_candidate_markdown(outputs, candidate)
@@ -1641,7 +1654,7 @@ def _public_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return public
 
 
-def accept_lesson(outputs: Path, candidate_id: str, *, edit: dict[str, Any] | None = None) -> dict[str, Any]:
+def accept_lesson(outputs: Path, candidate_id: str) -> dict[str, Any]:
     candidate = _load_candidate(outputs, "pending-lessons", candidate_id)
     updated = copy.deepcopy(candidate)
     updated["status"] = "accepted"
