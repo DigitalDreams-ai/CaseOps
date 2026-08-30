@@ -48,26 +48,4 @@ GENERIC_GREETING_WORDS = frozenset(
 # Salesforce record Ids.
 # ANY: any 15/18-char token shaped like an Id (used to keep raw Ids out of
 # customer messages — deliberately broad).
-# PREFIXED: Id with a known key prefix (used to prove an escalation names a
-# concrete record — deliberately narrow). Covers standard-object prefixes
-# (00x), Case (500), Flow definition/version (300/301), permission sets
-# (0PS), and custom-object prefixes (aXX).
 SALESFORCE_ID_ANY_RE = re.compile(r"\b[A-Za-z0-9]{15}(?:[A-Za-z0-9]{3})?\b")
-# The digit lookahead keeps 15-18 char English words starting with "a"
-# (administratively, authoritatively, ...) from matching via the aXX
-# custom-object alternative; every real Salesforce Id contains digits.
-SALESFORCE_ID_PREFIXED_RE = re.compile(
-    r"\b(?=[A-Za-z0-9]*\d)(?:00[0-9A-Za-z]|301|300|500|0PS|a[0-9A-Za-z]{2})[A-Za-z0-9]{12,15}\b"
-)
-
-# Escalation quality: discovery-task language that must not reach
-# Engineering outside an explicit "Open Questions" section.
-ASK_TO_DISCOVER_PHRASES = (
-    "TBD",
-    "search the codebase",
-    "search codebase",
-    "which specific",
-)
-ASK_TO_DISCOVER_PATTERNS = tuple(
-    re.compile(re.escape(phrase), re.IGNORECASE) for phrase in ASK_TO_DISCOVER_PHRASES
-)

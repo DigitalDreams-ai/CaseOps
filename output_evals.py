@@ -19,17 +19,15 @@ from message_rules import (
     SALESFORCE_ID_ANY_RE,
 )
 from model_config import validate_pinned_model
-from pipeline_gates import validate_escalation_handoff, validate_hypothesis_artifact
+from pipeline_gates import validate_hypothesis_artifact
 
 
 ARTIFACT_DIRS = {
     "jira_message": "jira-messages",
-    "engineering_escalation": "engineering-escalations",
     "hypothesis": "hypothesis",
     "internal_notes": "internal-notes",
 }
 RUBRIC_DIMENSIONS = {
-    "engineering_escalation": ("artifact_pinpointed", "reproducible", "actionable"),
     "jira_message": ("voice", "clarity", "next_step_clear"),
     "hypothesis": ("concrete_root_cause", "fix_smallest_viable"),
 }
@@ -98,9 +96,6 @@ def evaluate_artifact(outputs: Path, artifact_type: str, path: Path) -> dict[str
         checks = _jira_message_checks(_read_text(path))
     elif artifact_type == "internal_notes":
         checks = _internal_notes_checks(_read_text(path))
-    elif artifact_type == "engineering_escalation":
-        gate = validate_escalation_handoff(outputs, key)
-        checks = {"artifact_gate": _check(gate.passed, gate.reason)}
     elif artifact_type == "hypothesis":
         gate = validate_hypothesis_artifact(outputs, key)
         checks = {"artifact_gate": _check(gate.passed, gate.reason)}

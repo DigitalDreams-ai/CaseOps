@@ -10,7 +10,7 @@
 ## Before deploying
 
 - Confirm the allowlisted Sandbox alias or username matches `CASEOPS_SANDBOX_TARGET_ORG`.
-- Confirm the change is Support-resolvable. If it requires Apex/code, flow, approval process, or validation rule changes, stop and produce an Engineering handoff unless the user explicitly overrides the escalation rule.
+- Confirm the candidate and expected behavior are specific enough to test. Apex, Flow, approval process, validation rule, and other metadata changes remain on the same full pipeline route.
 - Create a new attempt directory: `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/`.
 - Retrieve the current Sandbox baseline for every component you will change into `attempt-N/baseline-sandbox/`.
 - Put candidate metadata in `attempt-N/candidate/`.
@@ -66,6 +66,6 @@ If validation fails:
 
 If validation passes:
 
-- Copy the final deployable package to `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/support-owned/` for Support-owned fixes, or `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/engineering-proposal/` for Engineering handoff proposals.
+- Copy the final deployable package to `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/solution/`.
 - Record the confirmed package path in `outputs/test-reports/<KEY>.md`.
 - Mark the confirmed package path in `metadata-workspace.json`.

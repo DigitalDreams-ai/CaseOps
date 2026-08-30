@@ -1,36 +1,45 @@
-# Pipeline quality checklist
+# CaseOps Pipeline Quality Checklist
 
-Verify before treating a run as complete.
+Use this checklist before a run is considered complete.
 
-- `jira_sync.py` is run before any issue processing begins.
-- `manifest.csv` is read and all issues are routed before loading full issue content.
-- Closed/Resolved issues are archived to `outputs/closed-resolved/<KEY>.md` and not processed.
-- Issues with Jira status "Escalated to Engineering" are archived to `outputs/engineering-escalations/<KEY>.md` and not processed further.
-- Active issues are processed one at a time, sequentially.
-- Steps 3, 5, 6, 9, and 10 are always executed as sub-agents via the Agent tool — never inline in the orchestrator context.
-- Each sub-agent prompt is fully self-contained with the issue key, relevant file paths, task, and return format.
-- The orchestrator retains only the compact summary returned by each sub-agent, not the full contents of output files.
-- Production metadata retrieval (Steps 5 and 6) is read-only.
-- **Step 6 (Problem Location identification) is completed before escalation** — investigation record documents exact artifact, location, problem type, and failure point. No vague component discovery tasks delegated to Engineering.
-- Step 6 can loop back to Step 5 if additional metadata drilling is needed; iterations recorded in investigation record.
-- **Profile permissions were not modified** — no Salesforce Profile metadata or profile-level permission edits; use permission sets or escalate.
-- **Production vs Sandbox is explicit** in investigation, test report, internal notes, and Jira draft: what Production has (read-only proof), what is **Sandbox-only**, and **Production deploy required?** (**Yes — Gearset** / **No** / **N/A**). Never imply Production was updated when only Sandbox was deployed/validated.
-- The Salesforce problem statement is explicit before implementation.
-- The solution plan identifies affected metadata or code.
-- The Engineering escalation gate (Step 7) is evaluated before any implementation or Sandbox deployment.
-- Issue briefs are created for every processed issue under `outputs/issue-briefs/<KEY>.md`.
-- Issue briefs use the concise five-section format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
-- Issue briefs are informational only and do not imply Engineering escalation.
-- Issue briefs and Engineering handoffs contain no Markdown links, `sf://` links, `SB` suffixes, deploy IDs, package paths, local paths, NAS paths, metadata workspace paths, or duplicated facts.
-- Issue briefs and Engineering handoffs use sub-bullets for related component names and related record IDs.
-- Engineering handoffs use the concise five-section format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
-- Engineering handoffs do not include internal pipeline sections, metadata dumps, confidence scoring, or long investigation narrative.
-- Engineering handoff notes are stored under `outputs/engineering-escalations/` only for issues routed to Engineering.
-- Step 9 is **mandatory** for every Support-resolvable issue (after Step 8). It is skipped **only** when Step 7 routes to Engineering escalation.
-- **`CASEOPS_SANDBOX_TARGET_ORG`** from the active env file is the **only** writable deploy target for Step 9; production and other orgs must not receive deploys or writes from this pipeline.
-- The target Sandbox is explicit in the Step 9 sub-agent prompt and matches `CASEOPS_SANDBOX_TARGET_ORG` before deployment.
-- Tests map to Jira acceptance criteria.
-- Failed iterations are recorded in `outputs/investigations/<KEY>.md` before re-spawning sub-agents.
-- The dated issue summary `outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md` is created or updated after all issues are processed.
-- The summary includes Closed/Resolved skips, Engineering escalations, and active pipeline results.
-- Final Jira message is factual and avoids overclaiming.
+## Queue Scope
+
+- Only issues assigned to the configured Jira user were considered.
+- Closed, Resolved, Canceled, Cancelled, Hold, and On Hold issues were skipped.
+- Every other assigned issue, including one with a legacy `Escalated to Engineering` Jira status, used the full pipeline.
+- No Engineering escalation route, handoff, state, tag, or disposition was created.
+
+## Investigation And Routing
+
+- The hypothesis is evidence-backed and stored in the canonical hypothesis artifact.
+- Production investigation was read-only.
+- Step 6 identifies the problem type, exact artifact or data object, location, failure point, and evidence.
+- Step 7 persists `routing.path=full_pipeline`.
+- A blocker is specific and externally actionable. Difficulty or metadata ownership alone is not a blocker.
+- Historical files under `outputs/engineering-escalations/` did not influence current routing or state.
+
+## Solution And Validation
+
+- Step 8 records a concrete candidate solution, admin/data action, customer answer, or supported no-change conclusion.
+- Step 9 records Sandbox validation or an explicit no-deploy validation result for every active issue.
+- Failed Sandbox attempts were reverted before retrying.
+- Confirmed solution artifacts are stored under the issue-scoped `confirmed/solution/` path.
+- Profile permissions were not modified. Permission sets or documented admin actions were used instead.
+- Production was not mutated without valid issue-scoped temporary approval.
+
+## Outputs
+
+- `outputs/issue-briefs/<KEY>.md` exists and follows the five-section template.
+- `outputs/internal-notes/<KEY>.md` exists and contains a concise decision memo.
+- `outputs/jira-messages/<KEY>.md` exists and is customer-facing only.
+- No file under `outputs/engineering-escalations/` was created or updated.
+- Sandbox and Production state are clearly distinguished.
+- The dated summary reports validated, data-only, blocked, and in-progress outcomes without an escalation section.
+
+## State And Completion
+
+- A completed step has a durable checkpoint and required artifact.
+- The final disposition is one of `validated`, `data-only`, `blocked`, or `in-progress`.
+- Incomplete issues expose their next step and blocker.
+- Queue termination reports whether work completed, stalled, reached the pass limit, was stopped, or failed.
+- Unchanged failed work is not repeatedly reprocessed.

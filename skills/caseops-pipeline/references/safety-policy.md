@@ -65,7 +65,7 @@ Examples in docs may show org aliases like `sandbox` — your environment’s al
 - Ask before destructive operations.
 - Do not implement fixes that require Engineering ownership: Apex/code, flows, approval processes, validation rules, or other business-critical automation.
 - For every processed issue, draft a clear issue brief under `outputs/issue-briefs/<KEY>.md` using the five-section format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
-- For Engineering-owned fixes, also draft a clear handoff under `outputs/engineering-escalations/<KEY>.md` using the same five-section format. Do not create an Engineering handoff for Support-resolvable, no-deploy, data/admin, customer-reply, or closed/resolved issues.
+- Do not create or update files under `outputs/engineering-escalations/`. Historical handoffs are read-only evidence and never control current routing.
 
 ## Wording: Production vs Sandbox
 
@@ -108,7 +108,7 @@ If the intended name is already taken by something unrelated, propose an alterna
 
 ## Permissions
 
-- **Never modify Profile permissions** — do not deploy or edit Salesforce **Profile** metadata (including field-level security, tab visibility, app assignment, or any profile-level access changes). Use **permission sets** (or document admin steps). If the only valid fix is a profile change, stop and escalate; do not change profiles in Support-owned pipeline work.
+- **Never modify Profile permissions** — do not deploy or edit Salesforce **Profile** metadata (including field-level security, tab visibility, app assignment, or any profile-level access changes). Use **permission sets** or document the exact admin action. If no safe alternative exists, record the constraint as a blocker; do not change Profiles.
 - Never create a new permission set just to grant FLS for a single field or a small group of fields.
 - Always add FLS to existing permission sets. Find which permission sets already cover a similar field on the same object (e.g., a related date or lookup field) and match that access pattern exactly.
 - Query Production with: `SELECT Parent.Name, Parent.Label, PermissionsRead, PermissionsEdit FROM FieldPermissions WHERE SobjectType = '[Object]' AND Field = '[Object].[SimilarField__c]' ORDER BY Parent.Label`

@@ -1,6 +1,6 @@
 ---
 name: jira-response-drafting
-description: Drafts concise issue briefs, internal implementation notes, Engineering handoff notes when routed, and Jira responses after a Salesforce solution has been validated or escalated. Use when the user needs final notes, status details, handoff text, or text to paste into Jira.
+description: Drafts concise issue briefs, internal implementation notes, and Jira responses after a Salesforce solution or blocker has been established. Use when the user needs final notes, status details, or text to paste into Jira.
 ---
 
 # Jira Response Drafting
@@ -8,7 +8,7 @@ description: Drafts concise issue briefs, internal implementation notes, Enginee
 ## Use This Skill When
 
 - The Salesforce solution has been validated in Sandbox.
-- The issue has been diagnosed and needs Engineering escalation.
+- The issue has a supported solution, no-change conclusion, or documented blocker.
 - The user needs internal notes.
 - The user needs a concise issue brief.
 - The user needs a Jira-ready message.
@@ -19,10 +19,10 @@ description: Drafts concise issue briefs, internal implementation notes, Enginee
 CaseOps drafts three separate files, each with distinct purpose and voice. Do not combine them.
 
 ### Issue brief (neutral summary)
-- **Audience:** Operator/reviewer, and Engineering if the issue is routed there
+- **Audience:** Operator and reviewer
 - **Content:** Problem → Reproduce → Expected behavior → Affected record IDs → Proposed Solution
 - **Tone:** Concise, Jira-ready, factual
-- **Routing:** Informational only. Do not treat this as an Engineering escalation.
+- **Routing:** Informational only. This file never controls pipeline routing.
 - **Formatting:** Plain text only. No Markdown links, `sf://` links, `SB` suffixes, deploy IDs, package paths, repeated facts, or test-result narration.
 
 ### Jira message (customer-facing, for portal)
@@ -130,8 +130,8 @@ Better:
 
 1. Read the investigation record and test report.
 2. Summarize the root cause.
-3. Summarize the fix or Engineering escalation reason.
-4. List changed metadata/code, or affected metadata/code for Engineering.
+3. Summarize the solution, no-change conclusion, or blocker.
+4. List changed or affected metadata/code when relevant.
 5. Summarize Sandbox testing or read-only validation evidence.
 6. Draft `outputs/issue-briefs/<KEY>.md` for every processed issue using the canonical structure in `../caseops-pipeline/assets/issue-brief-template.md`:
    - **Problem**
@@ -139,18 +139,12 @@ Better:
    - **Expected behavior**
    - **Affected record IDs**
    - **Proposed Solution**
-7. **For Engineering escalations only:** read or create the handoff file at `outputs/engineering-escalations/<KEY>.md` created by the pipeline's escalation gate. Use the canonical structure in `../caseops-pipeline/assets/engineering-handoff-template.md`:
-   - **Problem**
-   - **Reproduce**
-   - **Expected behavior**
-   - **Affected record IDs**
-   - **Proposed Solution**
-8. Draft internal notes and append additional details that emerged, but do not recreate the handoff.
-9. **Draft all required files:**
+7. Draft internal notes with any additional decision details that emerged.
+8. **Draft all required files:**
    - `outputs/issue-briefs/<KEY>.md` (neutral issue brief) — every processed issue
    - `outputs/jira-messages/<KEY>.md` (customer message) — apply voice rules checklist
    - `outputs/internal-notes/<KEY>.md` (operator memo) — lean root-cause memo
-10. Follow `../caseops-pipeline/references/markdown-output-rules.md` for generated Markdown.
+9. Follow `../caseops-pipeline/references/markdown-output-rules.md` for generated Markdown.
 
 ## Production vs Sandbox (mandatory in drafts)
 
@@ -166,33 +160,18 @@ Never imply Production includes new metadata just because Sandbox validation pas
 
 - `../caseops-pipeline/assets/internal-notes-template.md`: canonical internal notes format.
 - `../caseops-pipeline/assets/issue-brief-template.md`: canonical issue brief format.
-- `../caseops-pipeline/assets/engineering-handoff-template.md`: canonical Engineering handoff format.
 - `../caseops-pipeline/assets/jira-message-template.md`: canonical Jira response format.
 
 ## Quality Checks
 
 - Keep the Jira message concise and factual.
 - Follow the canonical Markdown output rules.
-- Apply the stricter no-link/no-deploy-artifact formatting only to `outputs/issue-briefs/<KEY>.md` and `outputs/engineering-escalations/<KEY>.md`.
-- Do not apply the Issue Brief / Engineering Handoff formatting rules to Jira messages or internal notes.
+- Apply the stricter no-link/no-deploy-artifact formatting only to `outputs/issue-briefs/<KEY>.md`.
+- Do not apply the Issue Brief formatting rules to Jira messages or internal notes.
 - Do not claim Production deployment unless the operator **explicitly** performed or confirmed it.
 - Always separate **Sandbox-validated** work from **Production state**: say **Gearset (or deploy) required** vs **no Production metadata deploy** vs **N/A**.
 - Avoid phrasing that sounds like a component “is in Production” when it was only created/deployed in Sandbox.
 - Include Sandbox validation details.
-
-### Engineering Handoff Checklist (if escalating)
-
-- ✓ **Problem is specific** — identifies exact component/location and failure point.
-- ✓ **Reproduce is numbered and runnable** — includes user role, navigation/action, and observed result.
-- ✓ **Expected behavior is clear** — states the behavior Engineering should restore.
-- ✓ **Affected record IDs are concrete** — includes examples, report/list-view references, or "None confirmed".
-- ✓ **Proposed Solution is actionable** — names the component/element and the change Engineering should make.
-- ✓ **No verbose internal sections** — no metadata dumps, confidence scoring, full investigation replay, or pipeline-only notes.
-- ✓ **No rendered links or transient artifacts** — no Markdown links, `sf://` links, deploy IDs, confirmed package paths, `SB` suffixes, or local/NAS paths.
-- ✓ **Grouped details** — related component names and record IDs use sub-bullets instead of long link-heavy sentences.
-
-- The handoff file is created by the pipeline escalation gate, not this skill. Append details if new information emerged during drafting, but do not recreate it.
-- Include any remaining risks or follow-up.
 
 ## Examples: Good vs Bad Voice
 

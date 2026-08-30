@@ -7,7 +7,7 @@ CaseOps is built for workflows where Salesforce Production must stay read-only a
 ## Status
 
 - Distribution: Docker image
-- Current image: `ghcr.io/digitaldreams-ai/caseops:0.1.62`
+- Current image: `ghcr.io/digitaldreams-ai/caseops:0.1.64`
 - Default URL: `http://localhost:5350`
 - Runtime data: Docker-mounted `/data`
 - Production Salesforce: read-only
@@ -20,7 +20,8 @@ CaseOps is built for workflows where Salesforce Production must stay read-only a
 - Similar Issues clustering for current-user issues, including open and closed/resolved issue context.
 - Settings UI for Jira, Salesforce, Claude Code, canned messages, pipeline controls, and runtime status.
 - Claude Code powered 12-step investigation pipeline.
-- Code-enforced hypothesis and Engineering handoff quality gates.
+- One full pipeline route for every assigned issue except Closed/Resolved/Canceled and Hold issues.
+- Code-enforced hypothesis quality gates.
 - Machine-readable pipeline transition history with loop-cap detection.
 - Scheduled output-quality evaluations with trend reports and knowledge signals.
 - Read-only Production Salesforce metadata and SOQL investigation.
@@ -157,7 +158,7 @@ Do not commit runtime outputs, credentials, Salesforce metadata retrievals, Jira
 app.py                         Flask app, APIs, Settings, pipeline launcher
 knowledge_service.py           Org-knowledge lifecycle, signals, lessons, helper work
 issue_clusters.py              Similar-issue clustering
-pipeline_gates.py              Deterministic hypothesis and handoff gates
+pipeline_gates.py              Deterministic hypothesis gate
 pipeline_fsm.py                Pipeline transition validation and loop caps
 model_config.py                Shared versioned-model validation
 message_rules.py               Shared voice/artifact text-rule constants

@@ -1,6 +1,6 @@
 ---
 name: caseops-pipeline
-description: Runs the CaseOps pipeline. Use when the user asks to retrieve Jira issues, process assigned issues, diagnose Salesforce problems, investigate Production metadata, determine whether to escalate to Engineering, implement fixes or generate proposed solutions in the Sandbox named by CASEOPS_SANDBOX_TARGET_ORG in the active env file, iterate if needed, draft internal notes plus a Jira response, and produce a dated issue summary. Routes Closed/Resolved issues to outputs/closed-resolved/ and pre-escalated issues to outputs/engineering-escalations/ without processing. Both Support-resolvable and Engineering-escalation paths run implementation + testing to include proposed solutions.
+description: Runs the full CaseOps pipeline for assigned Jira issues. Use when the user asks to retrieve issues, diagnose Salesforce problems, investigate Production metadata, implement or prepare candidate solutions in the Sandbox named by CASEOPS_SANDBOX_TARGET_ORG, validate results, draft internal notes plus a Jira response, and produce a dated issue summary. Closed/Resolved issues are archived, Hold issues are skipped, and every other assigned issue follows the same full pipeline without Engineering escalation.
 compatibility: CaseOps repo root, active env file from CASEOPS_ENV_FILE, Python 3 for `jira_sync.py`, Salesforce CLI for Production read-only investigation and Sandbox deploy/test.
 ---
 
@@ -21,7 +21,7 @@ Supporting references (load when doing the step they support):
 - The user wants Jira issues taken through Salesforce diagnosis, implementation, Sandbox deployment, testing, and response drafting.
 - The user provides a Jira issue key, Jira URL, exported Jira issue data, or asks to retrieve Jira issues.
 - The work requires understanding a Salesforce problem before making metadata or code changes.
-- The work may need an Engineering escalation handoff instead of an implementation.
+- The work requires a candidate solution, no-deploy operator action, or explicit blocker to be documented and validated.
 
 ## Do Not Use This Skill When
 
@@ -55,7 +55,7 @@ This pipeline is an **orchestrator**. Steps **1, 2, 4, 7, 8, 11, and 12** run in
 - Use `python scripts/sf_caseops_helper.py ...` for known Salesforce mechanics before repeated ad hoc commands. This covers custom field/picklist summaries, layout placement, FLS checks, and deterministic MDAPI deploys.
 - Retrieve and deploy with modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands, and do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy.
 
-**Loop Control:** See **`references/orchestration-loop-controller.md`** for detailed pseudocode, loop-back conditions, blocker handling, and progress tracking logic. The loop processes issues sequentially (Steps 3–11), handles Step 5/6 metadata discovery, Step 8/9 hypothesis refinement, and escalation branching.
+**Loop Control:** See **`references/orchestration-loop-controller.md`** for detailed pseudocode, loop-back conditions, blocker handling, and progress tracking logic. The loop processes issues sequentially (Steps 3–11), handles Step 5/6 metadata discovery, and iterates Steps 8/9 until the candidate is validated or an explicit blocker is recorded.
 
 ## Available Scripts
 
@@ -111,8 +111,8 @@ Read `outputs/jira/manifest.csv` and classify every issue:
 | Condition | Action |
 |-----------|--------|
 | Status is `Closed`, `Resolved`, or `Canceled` | Archive to `outputs/closed-resolved/<KEY>.md`. **Stop for this key.** |
-| Status is `Escalated to Engineering` | Archive to `outputs/engineering-escalations/<KEY>.md`. **Stop for this key.** |
-| All other statuses | Add to active processing list. Process through Steps 3–11. |
+| Status is `Hold` or `On Hold` | Skip automatic processing. Preserve current artifacts and wait for the Jira status to change. |
+| All other statuses, including legacy `Escalated to Engineering` | Add to active processing list. Process through Steps 3–11. |
 
 Create progress tracking file: `outputs/pipeline-logs/<RUN_DATE>.log`
 
@@ -140,23 +140,22 @@ For each active issue:
 1. **Emit to stdout:** `STEP_6 <ISSUE_KEY>`
 2. Spawn salesforce-production-metadata-investigation sub-agent (drilling mode) using **Step 6 prompt** from `references/sub-agent-prompts.md`. Identify exact artifact, type, location, failure point. Retain summary only.
 
-**Step 7 — Escalation gate (Orchestrator)**
+**Step 7 — Confirm solution path (Orchestrator)**
 
 For each active issue:
 1. **Emit to stdout:** `STEP_7 <ISSUE_KEY>`
-2. Using Step 6 problem location, classify:
+2. Using the exact Step 6 problem location, select the solution approach and persist `routing.path=full_pipeline`.
+3. If direct evidence confirms an existing permission-set assignment, data correction, or other no-deploy admin action, stop unrelated investigation. Do not execute the Production action without explicit one-run approval; document the exact operator action and validation plan.
+4. If an external dependency makes implementation or validation impossible, persist `routing.path=on_hold` with the concrete blocker and required next action. Difficulty, code ownership, or metadata type alone are not blockers.
 
-- **Support-resolvable:** Mark as support path. Proceed to Step 8. If direct evidence confirms an existing permission-set assignment, data correction, or other no-deploy admin action, stop deep investigation and do not keep checking Apex/classes unless the evidence specifically points there. Do not execute the Production action; document it for the operator.
-- **Engineering-required:** Mark as escalation path. Proceed to Step 8 (both paths run implementation + test to generate proposed solution).
-
-Log decision in `outputs/pipeline-logs/<RUN_DATE>.log`.
+Log the solution-path decision in `outputs/pipeline-logs/<RUN_DATE>.log`.
 
 **Step 8 — Implement / prepare candidate (Orchestrator)**
 
-For all active issues (both Support-resolvable and Engineering-required):
+For every active issue:
 1. **Emit to stdout:** `STEP_8 <ISSUE_KEY>`
 2. For deployable metadata/code fixes, prepare the proposed solution package under `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/candidate/`. Never touch Production.
-3. For no-deploy Support actions, do not create a metadata candidate and do not execute the Production action. Document the exact admin/data/config action, expected validation, and Production deploy required = N/A.
+3. For no-deploy actions, do not create a metadata candidate and do not execute the Production action. Document the exact admin/data/config action, expected validation, and Production deploy required = N/A.
 4. Record changed files/components or no-deploy action details in `outputs/investigations/<KEY>.md`.
 
 **Step 9 — Deploy, test, and iterate (Sub-agent)**
@@ -174,19 +173,9 @@ For each active issue:
 
 For each active issue:
 1. **Emit to stdout:** `STEP_10 <ISSUE_KEY>`
-2. Spawn jira-response-drafting sub-agent using **Step 10 prompt** from `references/sub-agent-prompts.md`. Pass routing info (support vs. escalation). Creates `outputs/issue-briefs/<KEY>.md` (concise issue summary for every processed issue), `outputs/jira-messages/<KEY>.md` (customer-facing only), and `outputs/internal-notes/<KEY>.md` (internal diagnosis only).
+2. Spawn jira-response-drafting sub-agent using **Step 10 prompt** from `references/sub-agent-prompts.md`. Pass the solution, validation verdict, and next action. It creates `outputs/issue-briefs/<KEY>.md`, `outputs/jira-messages/<KEY>.md`, and `outputs/internal-notes/<KEY>.md`.
 
 **Validation checkpoint:** Verify file separation (no [INTERNAL] sections in jira-messages; no customer greetings in internal-notes).
-
-**For Engineering-escalation path:**
-After messaging, also create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with:
-- `Problem`
-- `Reproduce`
-- `Expected behavior`
-- `Affected record IDs`
-- `Proposed Solution`
-
-Keep the handoff concise and Jira-ready. Do not add internal pipeline sections, metadata dumps, confidence scoring, or long investigation narrative.
 
 **Step 11 — Generate dated summary (Orchestrator)**
 
@@ -202,8 +191,7 @@ Before writing the dated summary, check whether today's `outputs/summaries/YYYY-
    - Total issues in scope
    - Count of Closed/Resolved (skipped at triage)
    - Count of active issues processed
-   - Count of Engineering escalations (pre-escalated at sync + escalated during processing)
-   - Count of Sandbox deployments/validations (Support-resolvable fixes only)
+   - Count of Sandbox deployments/validations
    - Count of on-hold or blockers
 
 2. **Closed / Resolved (Skipped)**
@@ -211,22 +199,14 @@ Before writing the dated summary, check whether today's `outputs/summaries/YYYY-
    - Issues filtered at triage (no pipeline processing)
 
 3. **Issue Rollup**
-   - Table: Issue, Jira Status, Summary, Disposition (fixed/escalated/on-hold), Prod deploy? (Gearset/No/N/A), Next Step
-   - **Exclude** pre-escalated or escalated issues (they appear in Escalated to Engineering section below)
+   - Table: Issue, Jira Status, Summary, Disposition (validated/data-only/blocked/in-progress), Prod deploy? (Gearset/No/N/A), Next Step
 
 4. **Sandbox Deployments / Validations**
    - Table: Issue, Sandbox, Deploy/Validation, Prod deploy needed?
-   - Support-resolvable fixes only
+5. **Artifact Index**
+   - Links to: `outputs/jira/summary/`, `outputs/investigations/`, `outputs/issue-briefs/`, `outputs/closed-resolved/`, `outputs/internal-notes/`, `outputs/jira-messages/`, `outputs/test-reports/`
 
-5. **Escalated to Engineering**
-   - Unified table: Issue, Jira Status, Component, Handoff File, Problem, Proposed Solution
-   - Pre-escalated at sync + escalated during processing
-   - **Must not** appear in Issue Rollup or Sandbox sections
-
-6. **Artifact Index**
-   - Links to: `outputs/jira/summary/`, `outputs/investigations/`, `outputs/issue-briefs/`, `outputs/engineering-escalations/`, `outputs/closed-resolved/`, `outputs/internal-notes/`, `outputs/jira-messages/`, `outputs/test-reports/`
-
-**Progress tracking:** Log each issue's final disposition in `outputs/pipeline-logs/<RUN_DATE>.log` as: `END <KEY> disposition=<fixed|escalated|on-hold>`
+**Progress tracking:** Log each issue's final disposition in `outputs/pipeline-logs/<RUN_DATE>.log` as: `END <KEY> disposition=<validated|data-only|blocked|in-progress>`
 
 **Step 12 — Return to user (Orchestrator)**
 
@@ -243,8 +223,8 @@ CaseOps Pipeline Run Complete - YYYY-MM-DD
 
 Processing Summary:
 - Issues processed: N active
-- Support-fixed: N
-- Engineering-escalated: N
+- Validated: N
+- Data-only/operator action: N
 - On-hold / blockers: N
 - Closed/Resolved (skipped): N
 
@@ -259,13 +239,10 @@ NEXT STEPS FOR USER (Step 12 — Manual):
    - ISSUE-XXXXX: outputs/jira-messages/ISSUE-XXXXX.md
    - [Additional issues...]
 
-3. Promote confirmed Support packages via Gearset or standard change control (if needed)
+3. Promote confirmed packages via Gearset or standard change control (if needed)
    - [Issues requiring Gearset deployment]
 
-4. Coordinate with Engineering (if applicable)
-   - Engineering handoffs: outputs/engineering-escalations/
-
-5. Archive and document
+4. Archive and document
    - Pipeline run log: outputs/pipeline-logs/YYYYMMDD-HHMMSS.log
    - Internal notes: outputs/internal-notes/
 
@@ -274,8 +251,7 @@ Total runtime: H hours M minutes
 
 **What the user owns (final manual step):**
 - Post Jira message drafts to actual Jira issues (customer communication)
-- Coordinate Production promotion via Gearset or standard change control when confirmed Support packages need to be promoted
-- Review Engineering handoffs and coordinate with Engineering team (if applicable)
+- Coordinate Production promotion via Gearset or standard change control when confirmed packages need to be promoted
 - Archive run artifacts for audit trail
 
 ### Safety Constraints
@@ -298,7 +274,7 @@ Total runtime: H hours M minutes
 - ✓ Use `CASEOPS_METADATA_SANDBOX_WORK_DIR/<KEY>/attempt-N/` for Sandbox candidates, baselines, and revert packages
 - ✓ Capture `baseline-sandbox/` before every deploy attempt
 - ✓ Revert failed or abandoned attempts before trying another candidate
-- ✓ Copy the passed package to `CASEOPS_METADATA_CONFIRMED_DIR/<KEY>/confirmed/support-owned/` or `confirmed/engineering-proposal/`
+- ✓ Copy the passed package to `CASEOPS_METADATA_CONFIRMED_DIR/<KEY>/confirmed/solution/`
 - ✗ Do not use root-level `temp*`, `retrieve*`, `deploy*`, or `metadata*` directories
 
 **Mandatory safety checks:**
@@ -336,7 +312,7 @@ Total runtime: H hours M minutes
 - `assets/investigation-record-template.md` — working record per issue.
 - `assets/problem-hypothesis-template.md` — Hypothesis worksheet.
 - `assets/issue-brief-template.md` — concise issue brief for every processed issue.
-- `assets/engineering-handoff-template.md` — concise Engineering escalation handoff.
+- `assets/engineering-handoff-template.md` — legacy template retained only for reading historical artifacts; do not use for new runs.
 - `assets/internal-notes-template.md` — internal notes.
 - `assets/jira-message-template.md` — Jira response draft.
 - `assets/issue-summary-template.md` — dated rollup.

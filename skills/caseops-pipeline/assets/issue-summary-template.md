@@ -1,80 +1,44 @@
 # CaseOps Issue Summary - YYYY-MM-DD
 
-Generated: YYYY-MM-DD
-Last updated: YYYY-MM-DD
+## Run Summary
 
-<!-- Follow Markdown formatting rules in ../references/markdown-output-rules.md. -->
-
-## Executive Summary
-
-- Total issues in scope:
-- Escalated to Engineering (Jira status):
-- Active issues processed:
-- Engineering handoffs raised during processing:
-- Issue briefs created:
-- Sandbox-deployed or sandbox-validated:
-- Operational / data / access follow-up, no metadata deploy:
-
-Engineering escalation rule: if the fix requires Apex/code, a Salesforce Flow, an Approval Process, a Validation Rule, or other Engineering-owned automation, stop after diagnosis and provide an Engineering handoff using the concise format: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
-
-Issue briefs are organized in `outputs/issue-briefs/`.
-Engineering handoffs are organized in `outputs/engineering-escalations/` only for issues routed to Engineering.
-Closed/Resolved archives are organized in `outputs/closed-resolved/`.
-
-## Closed / Resolved (Skipped)
-
-Issues filtered at triage. No pipeline processing performed.
-
-| Issue | Jira Status | Summary |
-| --- | --- | --- |
+| Result | Count |
+|---|---:|
+| Validated | 0 |
+| Data Only | 0 |
+| Blocked | 0 |
+| In Progress | 0 |
+| Closed/Resolved skipped | 0 |
+| Hold skipped | 0 |
 
 ## Issue Rollup
 
-Active issues that entered the pipeline. Issues with Jira status "Escalated to Engineering" are listed separately in the Escalated to Engineering section below — do not include them here.
+| Issue | Jira Status | Summary | CaseOps Result | Production Action | Next Step |
+|---|---|---|---|---|---|
+| KEY-000 | In Progress | Short issue summary | Validated | Promote through the approved release process | Operator review |
 
-| Issue | Jira Status At Sync | Summary | Disposition | Prod deploy? (Gearset / No / N/A) | Next Step |
-| --- | --- | --- | --- | --- | --- |
+## Sandbox Validation
 
-## Issue Briefs
+| Issue | Candidate | Validation | Result | Evidence |
+|---|---|---|---|---|
+| KEY-000 | Concise candidate description | Sandbox or no-deploy check | Passed | `outputs/test-reports/KEY-000.md` |
 
-Concise problem and solution briefs created for every processed issue. These are informational and do not imply Engineering escalation.
+## Blocked Or Incomplete
 
-| Issue | Brief File | Problem | Proposed Solution |
-| --- | --- | --- | --- |
+| Issue | Current Step | Blocker | Required Action |
+|---|---|---|---|
+| KEY-000 | Step 9 | Specific external dependency | Named owner/action |
 
-## Sandbox Deployments / Validations
+## Artifacts
 
-Support-owned fixes validated in Sandbox. Do not include issues that are in the Escalated to Engineering section — their sandbox work is recorded in their handoff files.
-
-Only include issues whose test report has a structured Validation Verdict with `Validation Status: passed` and `Fixed?: yes`. Do not include partial passes, mixed results, blocked tests, failed tests, not-run tests, or unknown verdicts in this section. Keep those issues in the Issue Rollup with the precise next step.
-
-| Issue | Sandbox | Deploy / Validation | Prod deploy needed? |
-| --- | --- | --- | --- |
-
-## Escalated to Engineering
-
-All issues escalated to Engineering, whether pre-escalated in Jira at sync time or escalated during pipeline processing. These issues must not appear in the Issue Rollup or Sandbox Deployments sections.
-
-| Issue | Jira Status | Component | Handoff File | Problem | Proposed Solution |
-| --- | --- | --- | --- | --- | --- |
-
-## Artifact Index
-
-- Jira summaries: `outputs/jira/summary/`
 - Investigations: `outputs/investigations/`
-- Issue briefs: `outputs/issue-briefs/`
-- Engineering handoffs: `outputs/engineering-escalations/`
-- Closed/Resolved archives: `outputs/closed-resolved/`
-- Internal notes: `outputs/internal-notes/`
-- Jira message drafts: `outputs/jira-messages/`
+- Hypotheses: `outputs/hypothesis/`
 - Test reports: `outputs/test-reports/`
+- Issue briefs: `outputs/issue-briefs/`
+- Internal notes: `outputs/internal-notes/`
+- Jira messages: `outputs/jira-messages/`
+- Pipeline state: `outputs/pipeline-state/`
 
-## Summary Maintenance
+Historical files under `outputs/engineering-escalations/` are read-only legacy evidence and are not active pipeline deliverables.
 
-Create or update this file for the current day on every pipeline run:
-
-```text
-outputs/summaries/YYYY-MM-DD/issue-summary-YYYY-MM-DD.md
-```
-
-Update whenever an issue is processed, escalated, skipped, deployed to Sandbox, tested, or closed out.
+Update this summary when an issue is processed, skipped, validated, blocked, or closed out. Do not add a separate Engineering escalation section.

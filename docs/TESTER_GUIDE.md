@@ -9,7 +9,7 @@ This guide is safe to share. Do not include private hostnames, internal filesyst
 Use the published image tag provided by the maintainer. Prefer a numbered tag over `latest` when reporting issues:
 
 ```text
-ghcr.io/digitaldreams-ai/caseops:0.1.62
+ghcr.io/digitaldreams-ai/caseops:0.1.64
 ```
 
 Start from a clean Docker folder containing:
@@ -64,7 +64,7 @@ When a test issue has a confirmed Sandbox validation and `production_deploy_requ
 
 When a no-deploy operator/admin/data action has a `not-run / unknown / n/a` Test Report verdict and the issue brief, internal notes, and Jira message are complete, confirm the dashboard shows/searches the `Data Only` tag. It should not show `In Progress`, `partial run`, or `stale` just because CaseOps intentionally did not execute the Production action.
 
-Confirm every issue has exactly one primary tag. Confirm `partial run` finds issues in `In Progress` or `Analyzed` state, and `needs engineering` finds issues requiring Engineering ownership.
+Confirm every issue has exactly one primary tag. Confirm `partial run` finds issues in `In Progress` or `Analyzed` state.
 
 ## Issue Detail Check
 
@@ -77,7 +77,7 @@ Open a synced issue and verify available tabs render without errors:
 - Jira Message
 - Test Report
 - Generated Files, when present
-- Needs Engineering, when present
+- Legacy Handoff, when historical evidence is present
 - Pipeline Log
 
 Generated files must appear under an issue-specific directory, not directly under the root outputs directory.
@@ -109,7 +109,7 @@ Expected behavior:
 - Sandbox is the only writable Salesforce org.
 - The run log shows step progress.
 - Pipeline artifacts are written under `/data/outputs`.
-- `Auto-Process All` and `Reprocess All (No Sync)` skip Jira issues already marked `Escalated to Engineering`.
+- `Auto-Process All` and `Reprocess All (No Sync)` process assigned issues with a legacy `Escalated to Engineering` Jira status through the normal full pipeline.
 - The final global queue summary reports why the queue stopped, groups incomplete issues by repeated step/status blockers, and gives actionable incomplete reasons per issue.
 - Stop Current Run stops an active pipeline cleanly.
 - Pipeline State Repair/Rebuild is available for stale or inconsistent state after a stopped or failed run.

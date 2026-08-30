@@ -12,16 +12,16 @@
 | 4 | Orchestrator | Problem hypothesis and smallest viable fix |
 | 5 | **Sub-agent** | Production metadata (read-only) → investigation record |
 | 6 | **Sub-agent** | Identify problem location (type, artifact, failure point) |
-| 7 | Orchestrator | Engineering escalation gate |
-| 8 | Orchestrator | Implement (both paths: propose fix) |
-| 9 | **Sub-agent** | Deploy + test in allowlisted Sandbox (both paths: validate proposed solution) |
-| 10 | **Sub-agent** | Issue brief + internal notes + Jira message + escalation handoff (if needed) |
+| 7 | Orchestrator | Confirm solution path |
+| 8 | Orchestrator | Implement or prepare operator action |
+| 9 | **Sub-agent** | Deploy + test in allowlisted Sandbox, or record no-deploy validation plan |
+| 10 | **Sub-agent** | Issue brief + internal notes + Jira message |
 | 11 | Orchestrator | Dated issue summary |
 | 12 | Orchestrator | Inform the user |
 
 **Delegated skills:** Step 3 → `jira-issue-analysis`; Step 5 → `salesforce-production-metadata-investigation`; Step 6 → `salesforce-production-metadata-investigation` (drilling); Step 9 → `salesforce-sandbox-deploy-test`; Step 10 → `jira-response-drafting`.
 
-**Both paths run full Steps 1-12.** Escalation routing decision in Step 7 determines how Step 10 routes: Support issues produce Sandbox-validated packages ready for operator-controlled Production promotion; Escalation issues hand off to Engineering with Sandbox-validated proposed solutions. CaseOps does not deploy to Production.
+**Every assigned, non-Hold issue runs full Steps 1-12.** Step 7 confirms one solution path, Step 8 prepares the candidate or no-deploy action, and Step 9 validates it in the Sandbox when applicable. CaseOps does not deploy to Production without explicit issue-scoped approval.
 
 ---
 
@@ -58,8 +58,8 @@ Read `outputs/jira/manifest.csv` and route **every** issue **before** loading fu
 | Condition | Action |
 |-----------|--------|
 | Status is `Closed` or `Resolved` | Copy summary to `outputs/closed-resolved/<KEY>.md` using `assets/closed-resolved-log-template.md`. Log in the dated summary (Step 11). **Stop for this key — do not process further.** |
-| Status is `Escalated to Engineering` (pre-existing Jira status) | Copy summary to `outputs/engineering-escalations/<KEY>.md`. Log in dated summary as pre-escalated. **Stop for this key.** |
-| All other statuses | Add to the active list. Process **one key at a time** through Steps 3–11. |
+| Status is `Hold` or `On Hold` | Skip automatic processing until the Jira status changes. |
+| All other statuses, including legacy `Escalated to Engineering` | Add to the active list. Process **one key at a time** through Steps 3–11. |
 
 Only load full issue content (`raw/<KEY>.json` or `summary/<KEY>.md`) for **active** issues.
 
@@ -110,8 +110,7 @@ Use the environment-provided workspace instead of ad hoc root directories:
 | --- | --- |
 | Raw Production metadata, read-only | `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/` |
 | Sandbox test attempts | `${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/` |
-| Confirmed Support package | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/support-owned/` |
-| Confirmed Engineering proposal | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/engineering-proposal/` |
+| Confirmed solution package | `${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/solution/` |
 
 Raw Production metadata is stored in the persistent metadata cache and may be reused as read-only evidence, but it must not be edited. Every Sandbox attempt gets its own persistent issue-workspace directory with `baseline-sandbox/`, `candidate/`, and `revert/` subdirectories. Failed or abandoned attempts must be reverted in Sandbox before the next attempt starts.
 
@@ -204,7 +203,7 @@ The orchestrator retains **only** the returned compact summary.
 
 ## Step 6 — Identify problem location [SUB-AGENT]
 
-**Mandatory gate before escalation.** Spawn a sub-agent using **"Step 6 — Identify problem location"** in **`references/sub-agent-prompts.md`**. Drill down from Step 5 metadata to pinpoint the exact artifact causing the problem.
+**Mandatory gate before solution selection.** Spawn a sub-agent using **"Step 6 — Identify problem location"** in **`references/sub-agent-prompts.md`**. Drill down from Step 5 metadata to pinpoint the exact artifact causing the problem.
 
 **Must identify:**
 - **Problem type** (data / component / config / integration / access / setting / process)
@@ -225,35 +224,36 @@ The orchestrator retains **only** the returned compact summary. Do not read the 
 
 ---
 
-## Step 7 — Engineering escalation gate [ORCHESTRATOR]
+## Step 7 — Confirm solution path [ORCHESTRATOR]
 
-**Validation gate (mandatory, before classifying):** The Step 6 output must contain all four problem-location fields — problem type, specific artifact, location, failure point. If any is missing or generic, do not classify; loop back to Step 5/6 with the missing fields as the refined request (same 3-iteration cap). An escalation built from an incomplete problem location asks Engineering to do CaseOps' investigation — that is a defect, not a handoff. Record the decision verbatim as `Support-resolvable` or `Engineering-escalated` plus the problem type that drove it. See `references/orchestration-loop-controller.md` (STEP 7 VALIDATION GATE).
+**Validation gate (mandatory):** The Step 6 output must contain all four problem-location fields — problem type, specific artifact, location, failure point. If any is missing or generic, loop back to Step 5/6 with the missing fields as the refined request. Do not prepare a candidate from an unproven location.
 
-Using the Step 6 problem location (exact artifact + failure point), classify:
+Using the Step 6 problem location (exact artifact + failure point), confirm the solution approach:
 
-- **Escalate to Engineering** if the artifact requires Apex/code changes, Flow modifications, approval processes, validation rule updates, or other Engineering-owned automation to fix.
-- **Support-resolvable** only for data updates, permission assignments, config changes (like enabling a feature flag), or read-only metadata that do **not** require Engineering code ownership.
+- Persist `routing.path=full_pipeline` once the exact problem and solution approach are known.
+- Code, Flow, approval process, validation rule, permission, configuration, and data fixes all remain in the same pipeline.
+- Persist `routing.path=on_hold` only for a concrete external dependency that makes implementation or validation impossible. Include the blocker and required next action.
 
-**Stop condition:** Once direct evidence confirms a Support-resolvable permission assignment, data update, or existing-config action, stop deep investigation. Do not continue into Apex/class/automation checks unless the evidence specifically points to Apex, Flow modification, validation rules, or another Engineering-owned artifact.
+**Stop condition:** Once direct evidence confirms a permission assignment, data update, or existing-config action, stop unrelated investigation. Do not continue into Apex/class/automation checks unless the evidence specifically points there.
 
 **Permission-set assignment hard stop:** If the fix is assigning an existing permission set that comparable users already have, and that permission set supplies the missing object/field access, stop there. Do not perform additional Apex class access checks unless the issue text, flow fault, or debug evidence explicitly names Apex/class access as the failure.
 
-**Production write hard stop:** Normal pipeline runs must never execute Production data writes, permission-set assignments, deletes, Apex anonymous execution, or deploys. For Support-resolvable no-deploy actions, document the exact operator/admin action and validation plan only. Do not run `sf data create`, `sf data update`, `sf data delete`, or assignment commands against Production unless the operator explicitly starts a separate approved Production-write workflow with the configured approval phrase, such as `@prod_approval`, or `PRODUCTION_APPROVAL=<secret>` in a manual single-issue instruction.
+**Production write hard stop:** Normal pipeline runs must never execute Production data writes, permission-set assignments, deletes, Apex anonymous execution, or deploys. For no-deploy actions, document the exact operator/admin action and validation plan only. Do not run `sf data create`, `sf data update`, `sf data delete`, or assignment commands against Production unless the operator explicitly starts a separate approved Production-write workflow with the configured approval phrase, such as `@prod_approval`, or `PRODUCTION_APPROVAL=<secret>` in a manual single-issue instruction.
 
 **Routing:**
-- Support-resolvable metadata changes continue to Steps 8-9 for Sandbox validation.
-- Support-resolvable no-deploy admin actions (existing permission-set assignment, data correction, feature/config toggle) continue to Step 8, then create a no-deploy test report and skip Sandbox deploy in Step 9. These actions are operator instructions, not commands to execute in Production.
-- Engineering-required changes continue to Steps 8-9 when a Sandbox proposal can be safely built and tested.
+- Metadata/code changes continue to Steps 8-9 for Sandbox validation.
+- No-deploy admin actions continue to Step 8, then create a no-deploy test report and skip Sandbox deploy in Step 9. These actions are operator instructions, not commands to execute in Production.
+- A blocked issue stops with a visible reason and exact next action; it is not rerouted.
 
 ---
 
 ## Step 8 — Implement / Prepare Action [ORCHESTRATOR]
 
-Propose and document the fix. For Support issues, this becomes the Production fix. For Escalation issues, this becomes the proposed solution to hand to Engineering.
+Propose and document the fix. This becomes the candidate solution or exact no-deploy operator action.
 
 Make local changes scoped to the issue only when a metadata/code candidate is required. Avoid unrelated refactors. Record changed files in `outputs/investigations/<KEY>.md`.
 
-For no-deploy Support actions, do not create a metadata workspace attempt and do not execute the Production action. Document the exact admin/data action, why it is Support-resolvable, expected validation steps, and Production deploy state = **N/A**.
+For no-deploy actions, do not create a metadata workspace attempt and do not execute the Production action. Document the exact admin/data action, expected validation steps, and Production deploy state = **N/A**.
 
 Before creating new metadata, confirm it does not already exist in Production (Step 5 existence check and **`references/safety-policy.md`**). Extend existing components when possible.
 
@@ -261,7 +261,7 @@ Update **`Solution Plan` → Production vs sandbox deployment state** in the inv
 
 ## Step 9 — Deploy, test, and iterate [SUB-AGENT OR NO-DEPLOY TEST REPORT]
 
-Spawn this sub-agent after Step 8 only when there is a metadata/code candidate to deploy or a Sandbox-safe configuration change to test. Sandbox testing validates proposed metadata/code solutions so Engineering receives evidence-backed handoffs, not just hypotheses.
+Spawn this sub-agent after Step 8 only when there is a metadata/code candidate to deploy or a Sandbox-safe configuration change to test. Sandbox testing validates the proposed solution with evidence rather than relying on a plausible hypothesis.
 
 For no-deploy Support actions, do **not** spawn the deploy/test sub-agent. Create `outputs/test-reports/<KEY>.md` directly with:
 - The required **Validation Verdict** block using exact values:
@@ -289,9 +289,9 @@ Before returning Fail, the Step 9 sub-agent must revert non-viable Sandbox chang
 
 ---
 
-## Step 10 — Draft issue brief, internal notes, Jira message, and escalation handoff (if needed) [SUB-AGENT]
+## Step 10 — Draft issue brief, internal notes, and Jira message [SUB-AGENT]
 
-Spawn a sub-agent using **”Step 10 — Draft issue brief, internal notes, and Jira message”** in **`references/sub-agent-prompts.md`**. Pass the test results from Step 9, or the no-deploy test report for Support admin/data actions.
+Spawn a sub-agent using **”Step 10 — Draft issue brief, internal notes, and Jira message”** in **`references/sub-agent-prompts.md`**. Pass the test results from Step 9, or the no-deploy test report for admin/data actions.
 
 For **every processed issue**, create `outputs/issue-briefs/<KEY>.md` using `assets/issue-brief-template.md` with:
 - `Problem`
@@ -300,23 +300,14 @@ For **every processed issue**, create `outputs/issue-briefs/<KEY>.md` using `ass
 - `Affected record IDs`
 - `Proposed Solution`
 
-The Issue Brief is an informational summary. It must not affect routing, tags, or escalation state.
-Format it like a clean handoff note, not an investigation dump:
+The Issue Brief is an informational summary. It must not affect routing or tags.
+Format it like a clean decision brief, not an investigation dump:
 - No Markdown links, `sf://` links, Jira links, or clickable record/report links.
 - No `SB` suffixes, deploy IDs, package paths, local paths, NAS paths, or metadata workspace paths.
 - Use sub-bullets for related component names and related record IDs.
 - Use natural language and do not repeat the same fact in multiple sections.
 
-**If Support-resolvable:** Drafts are ready for operator-controlled Production action via Gearset, standard change control, or manual admin/data correction. CaseOps does not execute Production writes in normal pipeline runs.
-
-**If Engineering-escalation:** Also create `outputs/engineering-escalations/<KEY>.md` using `assets/engineering-handoff-template.md` with:
-- `Problem`
-- `Reproduce`
-- `Expected behavior`
-- `Affected record IDs`
-- `Proposed Solution`
-
-Keep the issue brief and handoff concise and Jira-ready. Do not add internal pipeline sections, metadata dumps, confidence scoring, or long investigation narrative.
+Drafts are ready for operator-controlled Production action via Gearset, standard change control, or manual admin/data correction. CaseOps does not execute Production writes in normal pipeline runs.
 
 **Production vs Sandbox in every customer-facing and internal summary:** Drafts must **never** read as if new metadata already exists in **Production** when it was only created or deployed in **Sandbox**. Always include an explicit line: **Production deploy required** (e.g. Gearset) vs **already in Production** vs **N/A** (no metadata change). This pipeline does not promote to Production unless the operator explicitly asks.
 
@@ -352,16 +343,13 @@ Before writing the dated summary, check whether `outputs/summaries/YYYY-MM-DD/is
 **The summary must include:**
 
 - Total issues in scope.
-- Escalated to Engineering (Jira status) count.
 - Active issues processed count.
-- Engineering handoffs raised during processing count.
-- Sandbox deployment/validation count (Support-owned issues only).
+- Sandbox deployment/validation count.
 - Operational/data/access follow-up count.
 - **Closed/Resolved** section: one row per skipped issue.
-- **Issue rollup** table: one row per active issue with Jira status, summary, disposition, **Production deploy?** (Gearset / No / N/A), next step. **Exclude** issues whose Jira status is already “Escalated to Engineering” from this table.
-- **Sandbox deployments / validations** section: Support-owned fixes only. Include **Prod deploy needed?** per row. **Only include issues whose test report has a structured Validation Verdict with `Validation Status: passed` and `Fixed?: yes`.** Treat partial passes, mixed results, blocked tests, failed tests, not-run tests, and unknown verdicts as not validated. Keep those issues in Issue Rollup with their precise next step. **Do not** duplicate pre-escalated or Engineering-only rows here.
-- **Escalated to Engineering** section: one unified table (pre-escalated at sync **and** escalated during processing). Columns: Issue, Jira Status, Component, Handoff File, Problem, Proposed Solution. **Only place** escalated issues appear together.
-- **Artifact index** for Jira summaries, investigations, issue briefs, engineering handoffs, closed/resolved logs, internal notes, Jira messages, and test reports.
+- **Issue rollup** table: one row per active issue with Jira status, summary, disposition, **Production deploy?** (Gearset / No / N/A), and next step.
+- **Sandbox deployments / validations** section: Include **Prod deploy needed?** per row. **Only include issues whose test report has a structured Validation Verdict with `Validation Status: passed` and `Fixed?: yes`.** Treat partial passes, mixed results, blocked tests, failed tests, not-run tests, and unknown verdicts as not validated. Keep those issues in Issue Rollup with their precise next step.
+- **Artifact index** for Jira summaries, investigations, issue briefs, closed/resolved logs, internal notes, Jira messages, and test reports.
 
 ---
 
@@ -377,7 +365,7 @@ Report is generated inline during skill execution. Reference the dated summary f
 
 - **Jira key and summary**
 - **Root cause** (from Hypothesis + Step 6 confirmation)
-- **Solution or escalation status** (Support-fixed / Engineering-escalated / On-hold pending customer response)
+- **Solution status** (validated / data-only / blocked / in-progress)
 - **Production vs Sandbox:** 
   - What exists in Production (verified read-only)
   - What is Sandbox-only (after fix deployed)

@@ -208,34 +208,22 @@ class GlobalQueueTests(unittest.TestCase):
 
         self.assertIn(r"Use A \| B carefully", repaired)
 
-    def test_global_queue_skips_escalated_to_engineering(self):
+    def test_global_queue_only_plans_active_jira_statuses(self):
         rows = [
             {"Key": "OPEN-1", "Status": "Open"},
             {"Key": "ENG-1", "Status": "Escalated to Engineering"},
+            {"Key": "HOLD-1", "Status": "Hold"},
             {"Key": "CLOSED-1", "Status": "Resolved"},
             {"Key": "DONE-1", "Status": "Open"},
         ]
 
+        snapshotted = []
+
         def snapshot_for(row):
             key = row["Key"]
+            snapshotted.append(key)
             if key == "DONE-1":
                 return True, "complete", f"fp-{key}", {"key": key, "mode": "active", "next_step": {"step": 12}}
-            if key == "ENG-1":
-                return False, "incomplete; next STEP_2 (Triage pre-escalated issue, pending)", f"fp-{key}", {
-                    "key": key,
-                    "mode": "escalated",
-                    "status": "Escalated to Engineering",
-                    "next_step": {"step": 2, "name": "Triage pre-escalated issue", "status": "pending"},
-                    "steps": [{"step": 2, "name": "Triage pre-escalated issue", "status": "pending"}],
-                }
-            if key == "CLOSED-1":
-                return False, "incomplete; next STEP_2 (Triage closed/resolved issue, pending)", f"fp-{key}", {
-                    "key": key,
-                    "mode": "closed",
-                    "status": "Resolved",
-                    "next_step": {"step": 2, "name": "Triage closed/resolved issue", "status": "pending"},
-                    "steps": [{"step": 2, "name": "Triage closed/resolved issue", "status": "pending"}],
-                }
             return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", f"fp-{key}", {
                 "key": key,
                 "mode": "active",
@@ -253,33 +241,27 @@ class GlobalQueueTests(unittest.TestCase):
         ):
             queued = app._select_global_issue_queue("__global__")
 
-        self.assertEqual(queued, ["OPEN-1"])
-        self.assertIn(("ENG-1", "skip_escalated_to_engineering"), dispositions)
+        self.assertEqual(queued, ["OPEN-1", "ENG-1"])
+        self.assertEqual(snapshotted, ["OPEN-1", "ENG-1", "DONE-1"])
+        self.assertIn(("HOLD-1", "skip_jira_hold"), dispositions)
         self.assertIn(("CLOSED-1", "skip_closed_or_resolved"), dispositions)
         self.assertIn(("DONE-1", "skip_unchanged_success"), dispositions)
-        self.assertTrue(any("Queue skip: 1 issue — escalated to engineering;" in msg for msg in messages))
+        self.assertTrue(any("Queue skip: 1 issue — hold;" in msg for msg in messages))
         self.assertTrue(any("Queue skip: 1 issue — closed/resolved;" in msg for msg in messages))
-        self.assertFalse(any("Queue skip: ENG-1" in msg for msg in messages))
+        self.assertFalse(any("escalated to engineering" in msg.lower() for msg in messages))
+        self.assertFalse(any("Queue skip: HOLD-1" in msg for msg in messages))
         self.assertFalse(any("Queue skip: CLOSED-1" in msg for msg in messages))
         self.assertTrue(any("already current=1" in msg for msg in messages))
 
-    def test_global_queue_skips_on_hold_engineering_required_issue(self):
+    def test_global_queue_skips_on_hold_alias_without_planning(self):
         rows = [
             {"Key": "OPEN-1", "Status": "Open"},
-            {"Key": "ENG-HOLD-1", "Status": "On Hold"},
+            {"Key": "HOLD-1", "Status": "On Hold"},
         ]
 
         def snapshot_for(row):
             key = row["Key"]
-            if key == "ENG-HOLD-1":
-                return False, "incomplete; next STEP_9 (Deploy and test in Sandbox, stale)", f"fp-{key}", {
-                    "key": key,
-                    "mode": "active",
-                    "status": "On Hold",
-                    "routing": {"path": "engineering_required"},
-                    "next_step": {"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"},
-                    "steps": [{"step": 9, "name": "Deploy and test in Sandbox", "status": "stale"}],
-                }
+            self.assertEqual(key, "OPEN-1")
             return False, "incomplete; next STEP_5 (Retrieve relevant Production metadata, pending)", f"fp-{key}", {
                 "key": key,
                 "mode": "active",
@@ -299,9 +281,9 @@ class GlobalQueueTests(unittest.TestCase):
             queued = app._select_global_issue_queue("__global__")
 
         self.assertEqual(queued, ["OPEN-1"])
-        self.assertTrue(any(item[0] == "ENG-HOLD-1" and item[1] == "blocked_by_engineering" for item in dispositions))
-        self.assertTrue(any("Queue skip: ENG-HOLD-1 — blocked by engineering;" in msg for msg in messages))
-        self.assertTrue(any("blocked by engineering=1" in msg for msg in messages))
+        self.assertTrue(any(item[0] == "HOLD-1" and item[1] == "skip_jira_hold" for item in dispositions))
+        self.assertTrue(any("Queue skip: 1 issue — hold;" in msg for msg in messages))
+        self.assertFalse(any("Queue skip: HOLD-1" in msg for msg in messages))
 
     def test_dated_summary_prompt_includes_authoritative_queue_outcomes(self):
         captured = {}
@@ -928,8 +910,6 @@ class GlobalQueueTests(unittest.TestCase):
             "is_ready_to_deploy": True,
             "is_data_only": False,
             "is_blocked": False,
-            "needs_escalation": False,
-            "is_jira_escalated_any": False,
             "has_stale_pipeline_step": False,
             "has_failed_validation": False,
             "has_similar_issues": True,
@@ -944,7 +924,7 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertIn("ready to deploy", contract["tags"])
         self.assertNotIn("validated", contract["tags"])
 
-    def test_issue_tag_contract_accounts_for_partial_and_engineering_states(self):
+    def test_issue_tag_contract_accounts_for_partial_state(self):
         partial = app._derive_issue_tag_contract(
             "Open",
             {
@@ -952,28 +932,12 @@ class GlobalQueueTests(unittest.TestCase):
                 "is_ready_to_deploy": False,
                 "is_data_only": False,
                 "is_blocked": False,
-                "needs_escalation": False,
-                "is_jira_escalated_any": False,
                 "has_stale_pipeline_step": True,
                 "has_partial_pipeline_run": True,
             },
         )
-        engineering = app._derive_issue_tag_contract(
-            "Open",
-            {
-                "pipeline_state": app.PipelineState.ENGINEERING_HANDOFF.value,
-                "is_ready_to_deploy": False,
-                "is_data_only": False,
-                "is_blocked": False,
-                "needs_escalation": True,
-                "is_jira_escalated_any": False,
-            },
-        )
-
         self.assertEqual(partial["primary_tag"], "analyzed")
         self.assertEqual(partial["condition_tags"], ["partial run", "stale"])
-        self.assertEqual(engineering["primary_tag"], "needs engineering")
-        self.assertNotIn("needs escalation", engineering["tags"])
 
     def test_partial_run_requires_mixed_issue_step_state(self):
         self.assertFalse(app._pipeline_state_has_partial_issue_run({}))
@@ -997,14 +961,12 @@ class GlobalQueueTests(unittest.TestCase):
             "is_ready_to_deploy": False,
             "is_data_only": False,
             "is_blocked": False,
-            "needs_escalation": False,
-            "is_jira_escalated_any": False,
         }
         cases = [
             ("Closed", {**base}, "closed"),
-            ("Escalated to Engineering", {**base}, "escalated to engineering"),
+            ("Hold", {**base}, "hold"),
+            ("Escalated to Engineering", {**base}, "not triaged"),
             ("Open", {**base, "is_blocked": True}, "blocked"),
-            ("Open", {**base, "needs_escalation": True}, "needs engineering"),
             ("Open", {**base, "is_data_only": True}, "data only"),
             ("Open", {**base, "pipeline_state": app.PipelineState.VALIDATED.value, "is_ready_to_deploy": True}, "ready to deploy"),
             ("Open", {**base, "pipeline_state": app.PipelineState.VALIDATED.value, "is_complete_no_deploy": True}, "complete no deploy"),
@@ -1019,14 +981,25 @@ class GlobalQueueTests(unittest.TestCase):
                 self.assertEqual(contract["primary_tag"], expected)
                 self.assertEqual(contract["tags"][0], expected)
 
+    def test_hold_statuses_are_excluded_from_active_issue_count(self):
+        issues = [
+            {"Status": "Open"},
+            {"Status": "Hold"},
+            {"Status": "On Hold"},
+            {"Status": "Escalated to Engineering"},
+            {"Status": "Resolved"},
+        ]
+
+        self.assertEqual(app._disposition("Hold"), "hold")
+        self.assertEqual(app._disposition("On Hold"), "hold")
+        self.assertEqual(app._count_open_issues(issues), 2)
+
     def test_issue_tag_contract_covers_all_condition_tags_without_legacy_synonyms(self):
         flags = {
             "pipeline_state": app.PipelineState.ANALYZED.value,
             "is_ready_to_deploy": False,
             "is_data_only": False,
             "is_blocked": False,
-            "needs_escalation": False,
-            "is_jira_escalated_any": False,
             "has_stale_pipeline_step": True,
             "has_partial_pipeline_run": True,
             "has_failed_validation": True,
@@ -1581,10 +1554,8 @@ class GlobalQueueTests(unittest.TestCase):
         )
 
         self.assertTrue(app._issue_brief_has_required_sections(valid))
-        self.assertTrue(app._engineering_handoff_has_required_sections(valid))
         self.assertFalse(app._issue_brief_has_required_sections(invalid))
         self.assertFalse(app._issue_brief_has_required_sections(noisy))
-        self.assertFalse(app._engineering_handoff_has_required_sections(noisy))
 
     def test_api_issues_includes_jira_summary_search_text_for_filtering(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -2017,10 +1988,10 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertNotIn("queue_disposition", stored)
         self.assertTrue(stored["repair"]["queue_disposition_cleared"])
 
-    def test_legacy_escalated_status_aliases_normalize_to_one_canonical_tag(self):
+    def test_legacy_escalated_status_aliases_remain_active_pipeline_work(self):
         for status in ("Escalated to Engineering", "Escalated to Eng", "Jira Escalated"):
             with self.subTest(status=status):
-                self.assertEqual(app._disposition(status), "escalated")
+                self.assertEqual(app._disposition(status), "active")
                 contract = app._derive_issue_tag_contract(
                     status,
                     {
@@ -2028,11 +1999,39 @@ class GlobalQueueTests(unittest.TestCase):
                         "is_ready_to_deploy": False,
                         "is_data_only": False,
                         "is_blocked": False,
-                        "needs_escalation": False,
-                        "is_jira_escalated_any": True,
                     },
                 )
-                self.assertEqual(contract["tags"], ["escalated to engineering"])
+                self.assertEqual(contract["tags"], ["not triaged"])
+
+    def test_retired_escalation_canned_message_is_hidden_from_legacy_instance_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            path = outputs / "settings" / "canned-messages.json"
+            path.parent.mkdir(parents=True)
+            path.write_text(
+                json.dumps(
+                    [
+                        {"id": "initial-response", "name": "Initial", "template": "Hello"},
+                        {"id": "engineering-escalation", "name": "Legacy", "template": "Escalate"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            with patch.object(app, "OUTPUTS", outputs):
+                messages = app._active_canned_messages()
+
+        self.assertEqual([item["id"] for item in messages], ["initial-response"])
+
+    def test_ui_has_no_active_escalation_controls_or_groups(self):
+        template = (app.ROOT / "templates" / "index.html").read_text(encoding="utf-8")
+
+        self.assertNotIn("force_reprocess_issue", template)
+        self.assertNotIn("Force Reprocess", template)
+        self.assertNotIn("disposition === 'escalated'", template)
+        self.assertNotIn("Escalations without handoff", template)
+
+    def test_active_output_evals_exclude_legacy_handoffs(self):
+        self.assertNotIn("engineering_escalation", app.output_evals.ARTIFACT_DIRS)
 
     def test_issue_apis_return_backend_tag_contract(self):
         flags = {
@@ -2040,9 +2039,6 @@ class GlobalQueueTests(unittest.TestCase):
             "is_ready_to_deploy": True,
             "is_data_only": False,
             "is_blocked": False,
-            "needs_escalation": False,
-            "is_jira_escalated": False,
-            "is_jira_escalated_any": False,
             "has_stale_pipeline_step": False,
             "has_failed_validation": False,
             "has_similar_issues": False,
@@ -2098,7 +2094,7 @@ class GlobalQueueTests(unittest.TestCase):
             plan = {
                 "key": "GATE-1",
                 "mode": "active",
-                "routing": {"path": "support_resolvable"},
+                "routing": {"path": "full_pipeline"},
                 "steps": steps,
                 "next_step": steps[1],
             }
@@ -2109,7 +2105,7 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertIn("Step 4 gate failed", updated["why_next_step"])
         self.assertEqual(updated["gate_failures"][-1]["gate"], "step4_hypothesis")
 
-    def test_queue_snapshot_rejects_invalid_escalation_handoff(self):
+    def test_queue_snapshot_ignores_historical_escalation_handoff(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp)
             handoff = outputs / "engineering-escalations" / "GATE-2.md"
@@ -2122,8 +2118,8 @@ class GlobalQueueTests(unittest.TestCase):
             ):
                 complete, detail, _fingerprint, _plan = app._global_issue_queue_snapshot_from_row({"Key": "GATE-2", "Status": "Open"})
 
-        self.assertFalse(complete)
-        self.assertIn("Step 7 gate", detail)
+        self.assertTrue(complete)
+        self.assertEqual(detail, "complete")
 
     def test_queue_snapshot_marks_fsm_loop_cap_on_hold(self):
         plan = {
@@ -2141,48 +2137,11 @@ class GlobalQueueTests(unittest.TestCase):
         self.assertFalse(complete)
         self.assertIn("on-hold", detail)
 
-    def test_step7_gate_routes_missing_artifact_to_step5_and_structure_to_step7(self):
-        from pipeline_gates import GateResult
-
-        base_handoff = (
-            "Problem\n\n- Something is wrong somewhere in the org when users try to save updates.\n"
-            "- The behavior started recently and affects several users on the same team every day.\n\n"
-            "Reproduce\n\n1. Log in as one of the affected users with the standard profile.\n"
-            "2. Open any affected record from the list view and edit the primary field.\n"
-            "3. Save and observe the error message text displayed at the top of the page.\n\n"
-            "Expected behavior\n\n- The record saves successfully without any error message.\n\n"
-            "Affected record IDs\n\n- None confirmed yet; the reporter provided screenshots only.\n\n"
-            "Proposed Solution\n\n- Investigate the failing automation and correct its entry condition so the save completes.\n"
-        )
-        with tempfile.TemporaryDirectory() as tmp:
-            outputs = Path(tmp)
-            handoff_dir = outputs / "engineering-escalations"
-            handoff_dir.mkdir(parents=True)
-            plan_template = {
-                "key": "GATE-7",
-                "mode": "active",
-                "routing": {"path": "engineering_required"},
-                "steps": [
-                    {"step": 5, "name": "Retrieve relevant Production metadata", "status": "complete"},
-                    {"step": 7, "name": "Engineering escalation gate", "status": "complete"},
-                    {"step": 10, "name": "Draft", "status": "pending"},
-                ],
-                "next_step": {"step": 10, "name": "Draft", "status": "pending"},
-            }
-            with patch.object(app, "OUTPUTS", outputs), patch.object(app, "validate_hypothesis_artifact") as hypo:
-                hypo.return_value = GateResult(True, "step4_hypothesis", "", {})
-                # No concrete artifact in Problem -> metadata drilling incomplete -> step 5.
-                (handoff_dir / "GATE-7.md").write_text(base_handoff, encoding="utf-8")
-                plan = app._apply_artifact_gates_to_plan(json.loads(json.dumps(plan_template)))
-                self.assertEqual(plan["next_step"]["step"], 5)
-                # Structure problem (missing section) with a concrete artifact -> step 7.
-                structural = base_handoff.replace(
-                    "- Something is wrong somewhere in the org when users try to save updates.",
-                    "- Flow: Account_Update_Region sets an unsupported value.",
-                ).replace("Expected behavior\n\n- The record saves successfully without any error message.\n\n", "")
-                (handoff_dir / "GATE-7.md").write_text(structural, encoding="utf-8")
-                plan = app._apply_artifact_gates_to_plan(json.loads(json.dumps(plan_template)))
-                self.assertEqual(plan["next_step"]["step"], 7)
+    def test_legacy_routes_normalize_to_full_pipeline(self):
+        for path in ("support_resolvable", "engineering_required"):
+            with self.subTest(path=path):
+                routing = app._infer_routing_state({"routing": {"path": path, "confidence": "high"}})
+                self.assertEqual(routing["path"], "full_pipeline")
 
     def test_fsm_transition_history_is_recorded_from_explicit_markers(self):
         metrics = {

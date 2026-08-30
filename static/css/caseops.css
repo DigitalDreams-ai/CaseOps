@@ -52,10 +52,6 @@ a:hover {
   display: inline-flex !important;
 }
 
-.force-hidden {
-  display: none !important;
-}
-
 select.desktop-only {
   display: block !important;
 }
@@ -121,11 +117,6 @@ select.desktop-only {
   color: var(--color-primary);
 }
 
-.badge.eng-escalation {
-  background: rgba(210, 153, 34, 0.2);
-  color: var(--color-warn);
-}
-
 .badge.solution {
   background: rgba(63, 185, 80, 0.3);
   color: var(--color-success);
@@ -167,15 +158,10 @@ select.desktop-only {
   font-weight: 600;
 }
 
-.badge.tag-needs-engineering {
-  background: rgba(210, 153, 34, 0.2);
-  color: #d29922;
-  font-weight: 600;
-}
-
-.badge.tag-escalated-engineering {
-  background: rgba(34, 180, 207, 0.2);
-  color: #22b4cf;
+.badge.hold,
+.badge.tag-hold {
+  background: rgba(139, 148, 158, 0.2);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
@@ -809,6 +795,10 @@ select.desktop-only {
   font-size: 12px;
 }
 
+.issue-key.hold {
+  color: var(--color-text-secondary);
+}
+
 .issue-summary {
   font-size: 12px;
   color: var(--color-text);
@@ -837,9 +827,9 @@ select.desktop-only {
   color: var(--color-success);
 }
 
-.disposition-badge.escalated {
-  background: rgba(210, 153, 34, 0.2);
-  color: var(--color-warn);
+.disposition-badge.hold {
+  background: rgba(139, 148, 158, 0.2);
+  color: var(--color-text-secondary);
 }
 
 .disposition-badge.active {
@@ -1255,10 +1245,6 @@ select.desktop-only {
   border-color: var(--color-primary);
 }
 
-.dash-card.c-escalated {
-  border-color: var(--color-warn);
-}
-
 .dash-card.c-ready {
   border-color: var(--color-success);
 }
@@ -1363,8 +1349,8 @@ select.desktop-only {
   flex-shrink: 0;
 }
 
-.overview-row-key.escalated {
-  color: var(--color-warn);
+.overview-row-key.hold {
+  color: var(--color-text-secondary);
 }
 
 .overview-row-hint {

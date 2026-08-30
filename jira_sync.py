@@ -485,7 +485,6 @@ DONE_MANIFEST_STATUSES = {
     "canceled",
     "cancelled",
     "done",
-    "escalated to engineering",
 }
 
 SYNC_EXCLUDED_STATUSES = {
@@ -551,7 +550,6 @@ def skipped_status_manifest_row(
         "CommentCount": old_row.get("CommentCount", "0"),
         "ExternalCommentCount": old_row.get("ExternalCommentCount", "0"),
         "HasNewComments": old_row.get("HasNewComments", "false"),
-        "EscalationReady": old_row.get("EscalationReady", ""),
     }
 
 
@@ -1148,7 +1146,6 @@ MANIFEST_FIELDNAMES = [
     "CommentCount",
     "ExternalCommentCount",
     "HasNewComments",
-    "EscalationReady",
 ]
 
 NUMERIC_COUNT_FIELDS = {"AttachmentCount", "FormCount", "CommentCount", "ExternalCommentCount"}

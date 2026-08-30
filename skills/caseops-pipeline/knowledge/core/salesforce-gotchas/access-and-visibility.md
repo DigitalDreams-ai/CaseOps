@@ -1,6 +1,6 @@
 # Salesforce Gotchas: Access And Visibility
 
-Use these checks before concluding an access issue is fixed or escalated.
+Use these checks before concluding an access issue has a supported solution or documented blocker.
 
 - Object CRUD, field-level security, record sharing, app visibility, tab visibility, page layout, and Lightning component visibility are separate gates.
 - Permission sets and permission set groups can combine access. Missing access may be caused by absent assignment, muted permission, or group-level behavior.

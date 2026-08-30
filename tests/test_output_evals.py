@@ -31,32 +31,6 @@ HYPOTHESIS = """# Problem Hypothesis
 - Restore the prior condition if validation fails.
 """
 
-HANDOFF = """Problem
-
-- Flow: Account_Update_Region sends an unsupported Account.Region__c value.
-- The save fails before downstream automation starts.
-
-Reproduce
-
-1. Log in as the affected user.
-2. Open the Account and update Region.
-3. Save and observe the validation error.
-
-Expected behavior
-
-- The supported Region value saves successfully.
-
-Affected record IDs
-
-- Example Account 001000000000001AAA.
-
-Proposed Solution
-
-- Update Flow Account_Update_Region to pass a supported Region__c value.
-- Run the Account update regression scenario in Sandbox.
-"""
-
-
 class OutputEvalTests(unittest.TestCase):
     def _write(self, outputs: Path, dirname: str, key: str, text: str) -> Path:
         path = outputs / dirname / f"{key}.md"
@@ -73,8 +47,6 @@ class OutputEvalTests(unittest.TestCase):
             bad_notes = self._write(outputs, "internal-notes", "BAD-1", "Looked at the issue and found some details.")
             self._write(outputs, "hypothesis", "GOOD-1", HYPOTHESIS)
             self._write(outputs, "hypothesis", "BAD-1", "## Problem Hypothesis\nTBD")
-            self._write(outputs, "engineering-escalations", "GOOD-1", HANDOFF)
-            self._write(outputs, "engineering-escalations", "BAD-1", "Problem\nUnknown")
 
             self.assertTrue(output_evals.evaluate_artifact(outputs, "jira_message", clean_jira)["deterministic_passed"])
             self.assertFalse(output_evals.evaluate_artifact(outputs, "jira_message", bad_jira)["deterministic_passed"])
@@ -82,8 +54,6 @@ class OutputEvalTests(unittest.TestCase):
             self.assertFalse(output_evals.evaluate_artifact(outputs, "internal_notes", bad_notes)["deterministic_passed"])
             self.assertTrue(output_evals.evaluate_artifact(outputs, "hypothesis", outputs / "hypothesis" / "GOOD-1.md")["deterministic_passed"])
             self.assertFalse(output_evals.evaluate_artifact(outputs, "hypothesis", outputs / "hypothesis" / "BAD-1.md")["deterministic_passed"])
-            self.assertTrue(output_evals.evaluate_artifact(outputs, "engineering_escalation", outputs / "engineering-escalations" / "GOOD-1.md")["deterministic_passed"])
-            self.assertFalse(output_evals.evaluate_artifact(outputs, "engineering_escalation", outputs / "engineering-escalations" / "BAD-1.md")["deterministic_passed"])
 
     def test_history_appends_across_runs(self):
         with tempfile.TemporaryDirectory() as tmp:

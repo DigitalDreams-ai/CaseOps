@@ -1,6 +1,6 @@
 ---
 name: salesforce-production-metadata-investigation
-description: Investigates Salesforce Production metadata read-only to identify objects, fields, flows, validation rules, permission sets, Apex, layouts, assignment rules, or other metadata relevant to a Jira issue. Use before deciding whether to implement a Support-owned fix or escalate to Engineering.
+description: Investigates Salesforce Production metadata read-only to identify objects, fields, flows, validation rules, permission sets, Apex, layouts, assignment rules, or other metadata relevant to a Jira issue. Use before selecting and validating a supported solution.
 ---
 
 # Salesforce Production Metadata Investigation

@@ -45,4 +45,4 @@ Validation
 
 Production next step
 
-- [Gearset/standard promote required, no deploy required, operator action required, customer reply needed, or Engineering handoff required.]
+- [Gearset/standard promote required, no deploy required, operator action required, customer reply needed, or a specific blocker.]

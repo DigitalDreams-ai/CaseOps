@@ -9,7 +9,7 @@ CaseOps does not deploy to Salesforce Production. Production access is read-only
 CaseOps is intended to run from a published Docker image:
 
 ```text
-ghcr.io/digitaldreams-ai/caseops:0.1.62
+ghcr.io/digitaldreams-ai/caseops:0.1.64
 ```
 
 The container uses:
@@ -35,7 +35,7 @@ Issue artifacts are stored in persistent appdata:
 - `internal-notes/` - internal diagnosis and operational notes.
 - `jira-messages/` - customer-facing draft responses.
 - `test-reports/` - Sandbox validation results.
-- `engineering-escalations/` - Engineering handoffs when required.
+- `engineering-escalations/` - read-only handoffs retained from older CaseOps versions.
 - `pipeline-logs/` - streamed run logs.
 - `pipeline-state/` - resume plans, transition history, loop counts, and gate diagnostics.
 - `eval-reports/` - timestamped output-quality reports, append-only history, and the latest summary.
@@ -62,19 +62,19 @@ CaseOps runs a 12-step pipeline:
 | 7 | Orchestrator | Decide Support-resolvable vs Engineering-owned |
 | 8 | Orchestrator | Prepare proposed solution |
 | 9 | Sub-agent | Deploy and test in allowlisted Sandbox |
-| 10 | Sub-agent | Draft internal notes, Jira message, and handoff |
+| 10 | Sub-agent | Draft issue brief, internal notes, and Jira message |
 | 11 | Orchestrator | Generate summary |
 | 12 | Orchestrator | Return action report |
 
-Engineering handoffs should include evidence, not just a hypothesis.
+All assigned issues outside Closed/Resolved/Canceled and Hold use the same full pipeline. Legacy Engineering handoffs remain readable but never control routing, tags, or completion.
 
 ## Pipeline Hardening
 
-`pipeline_gates.py` validates Step 4 hypotheses and Step 7 Engineering handoffs before downstream work can count as complete. `pipeline_fsm.py` records explicit step markers, rejects illegal transitions, and moves loop-cap violations on hold for operator review.
+`pipeline_gates.py` validates Step 4 hypotheses before downstream work can count as complete. `pipeline_fsm.py` records explicit step markers, rejects illegal transitions, and moves loop-cap violations on hold for operator review.
 
 `CASEOPS_ANTHROPIC_MODEL` is required and must contain a versioned Claude model id. `model_config.py` provides the shared validator used by the app and evaluation CLI. CaseOps stamps the id into pipeline state and evaluation reports. A model change is logged and triggers an immediate evaluation when scheduled evaluations are enabled.
 
-`output_evals.py` evaluates recent Jira messages, internal notes, hypotheses, and Engineering handoffs. Deterministic checks always run; optional model grading uses the pinned model. Configure the scheduler and sample using `CASEOPS_OUTPUT_EVALS_ENABLED`, `CASEOPS_OUTPUT_EVALS_INTERVAL_MINUTES`, `CASEOPS_EVAL_LOOKBACK_DAYS`, `CASEOPS_EVAL_MAX_ARTIFACTS`, `CASEOPS_EVAL_LLM_ENABLED`, and `CASEOPS_EVAL_ALERT_THRESHOLD`.
+`output_evals.py` evaluates recent Jira messages, internal notes, and hypotheses. Deterministic checks always run; optional model grading uses the pinned model. Configure the scheduler and sample using `CASEOPS_OUTPUT_EVALS_ENABLED`, `CASEOPS_OUTPUT_EVALS_INTERVAL_MINUTES`, `CASEOPS_EVAL_LOOKBACK_DAYS`, `CASEOPS_EVAL_MAX_ARTIFACTS`, `CASEOPS_EVAL_LLM_ENABLED`, and `CASEOPS_EVAL_ALERT_THRESHOLD`.
 
 ## Similar Issues
 

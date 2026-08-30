@@ -12,7 +12,7 @@
 - Assignee:
 - Link:
 
-## Reproduction Steps (top-level — used for escalations and validation)
+## Reproduction Steps (top-level - used for diagnosis and validation)
 
 1. [Step 1 — include login type, Salesforce UI navigation or API call]
 2. [Step 2]

@@ -17,8 +17,8 @@ class PipelineFsmTests(unittest.TestCase):
                 self.assertFalse(result.ok)
                 self.assertEqual(result.violation, "illegal_transition")
 
-    def test_engineering_and_support_paths(self):
-        self.assertTrue(validate_transition({}, 7, 10).ok)
+    def test_full_pipeline_cannot_skip_implementation_or_validation(self):
+        self.assertEqual(validate_transition({}, 7, 10).violation, "illegal_transition")
         self.assertTrue(validate_transition({}, 7, 8).ok)
         self.assertEqual(validate_transition({}, 8, 10).violation, "illegal_transition")
 

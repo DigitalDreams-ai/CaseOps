@@ -129,7 +129,7 @@ CRITICAL: Sandbox Attempt Workspace and Revert Contract
   ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N/revert/
 - If an attempt fails or is not viable, revert the Sandbox to the captured baseline before starting another attempt, then verify by retrieve/diff.
 - When an attempt passes, copy the final package to:
-  ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/support-owned/ or ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/engineering-proposal/
+  ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/solution/
 - Maintain ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/metadata-workspace.json with attempt number, components touched, baseline path, candidate path, revert status, and confirmed package path when applicable.
 - Do not write to root-level temp/retrieve/deploy/metadata directories.
 
@@ -167,7 +167,7 @@ Return a compact summary (max 400 tokens) containing:
 - Whether the issue is confirmed fixed
 - If failed: what broke, what hypothesis was wrong, what was reverted, what to try next
 - Attempt directory: ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-N
-- Confirmed package directory, if passed: ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/<support-owned|engineering-proposal>
+- Confirmed package directory, if passed: ${CASEOPS_METADATA_CONFIRMED_DIR}/<KEY>/confirmed/solution
 - Workspace manifest: ${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/metadata-workspace.json
 - Path written: outputs/test-reports/<KEY>.md
 ```
@@ -184,7 +184,7 @@ See also: `references/orchestration-loop-controller.md` for orchestrator-level S
 CONTEXT:
 Issue key: <KEY>
 Root cause: <from Step 4>
-Fix or escalation: <Support fix description from Step 8, or "Escalated to Engineering">
+Solution: <candidate solution or no-deploy action from Step 8>
 Test result: <from Step 9 summary>
 Investigation record: outputs/investigations/<KEY>.md
 
@@ -194,11 +194,11 @@ TASK: Draft and save THREE completely separate documents:
 2. Jira Message: customer-facing response only.
 3. Internal Notes: operator-only diagnosis memo.
 
-STOP RULE: Do not combine documents. Do not use the Engineering handoff path unless the issue is actually routed to Engineering.
+STOP RULE: Do not combine documents. Do not create or update Engineering handoff files.
 
 STEP A: DRAFT DOCUMENT 1 (Issue Brief — Neutral Summary)
 
-AUDIENCE: Operator, reviewer, and Engineering if the issue is routed there.
+AUDIENCE: Operator and reviewer.
 TEMPLATE: skills/caseops-pipeline/assets/issue-brief-template.md
 OUTPUT FILE: outputs/issue-briefs/<KEY>.md
 
@@ -215,7 +215,7 @@ CONTENT RULES:
 - Use sub-bullets for exact component names and related record IDs instead of long sentences.
 - Use natural, human language. Avoid bot-like phrases, duplicated facts, and labels such as "Business impact:".
 - State Production deploy/action requirement only if it changes the proposed action. Do not include deploy IDs, package paths, version IDs, or test result summaries.
-- This file is informational only. It must not claim the issue is escalated unless routing is Engineering-required.
+- This file is informational only. It must state the supported solution or blocker without changing pipeline routing.
 
 FORBIDDEN IN THIS FILE:
 - Internal pipeline sections.
@@ -247,7 +247,7 @@ CONTENT RULES:
 - Greeting: "Hi [Reporter name],"
 - Problem: What you found, in customer-friendly language (no internal jargon)
 - Root cause: Why it's broken, explained for non-technical stakeholder
-- Solution OR escalation: What happens next
+- Solution and next step: What happens next
 - Production vs Sandbox (if resolved): What was tested, what's the deploy plan
 - Closing: Thank them for what they provided (steps? screenshots? detail?)
 
@@ -355,8 +355,8 @@ OUTPUT FILE: outputs/internal-notes/<KEY>.md
 
 CONTENT RULES (LEAN — NOT Investigation replay):
 - Root cause: One-sentence diagnosis ONLY. Link to Investigation for full detail.
-- Decision: Support-resolved OR Escalate to Engineering + confidence + evidence (terse).
-- Actions: Concrete steps taken (if Support) or handoff summary (if Engineering).
+- Decision: Supported solution, no-change conclusion, or blocker + confidence + evidence (terse).
+- Actions: Concrete steps taken or the next operator action.
 - Production vs Sandbox: Explicit state (what changed where, what's next for operator).
 - Risks: Brief list, one line per risk.
 - DO NOT: Paste investigation sections, full metadata dumps, detailed evidence, narrative repros.
@@ -389,23 +389,6 @@ Content: ONLY the internal diagnosis draft from Step C
 Do NOT save Document 1 or Document 2 content here
 Do NOT reuse customer-facing greeting or tone
 
-ENGINEERING HANDOFF COPY (ONLY IF ROUTED TO ENGINEERING)
-
-If and only if the routing state is Engineering-required, also write:
-
-File: outputs/engineering-escalations/<KEY>.md
-Template: skills/caseops-pipeline/assets/engineering-handoff-template.md
-
-Use the same five-section shape as the Issue Brief:
-- Problem
-- Reproduce
-- Expected behavior
-- Affected record IDs
-- Proposed Solution
-
-The Engineering handoff may be identical to the Issue Brief if it already satisfies Engineering handoff rules. Do not create this file for Support-resolvable, no-deploy, data/admin, customer-reply, or closed/resolved issues.
-The Engineering handoff follows the same formatting rules as the Issue Brief: no Markdown links, no `sf://` links, no `SB` suffixes, no deploy IDs, no package paths, no duplicate facts, and no test-result narration unless the test result changes the proposed solution.
-
 FINAL CHECKPOINT (MANDATORY)
 
 After saving files, verify:
@@ -416,12 +399,12 @@ After saving files, verify:
 5. outputs/jira-messages/<KEY>.md contains ZERO internal diagnosis keywords.
 6. outputs/internal-notes/<KEY>.md EXISTS and contains root cause diagnosis.
 7. outputs/internal-notes/<KEY>.md does NOT contain "Hi [Name]," greeting.
-8. outputs/engineering-escalations/<KEY>.md exists only when routing is Engineering-required.
+8. No file under outputs/engineering-escalations/ was created or updated.
 
 If any checkpoint fails, STOP and fix before returning.
 
 Return summary (max 300 tokens):
-- Outcome (fixed/escalated)
+- Outcome (validated/data-only/blocked/in-progress)
 - DOCUMENT 1 summary (issue-brief file, five-section check)
 - DOCUMENT 2 summary (jira-message file, customer-facing tone check)
 - DOCUMENT 3 summary (internal-notes file, decision and action summary)

@@ -45,7 +45,7 @@ import knowledge_service
 import output_evals
 from model_config import validate_pinned_model
 from pipeline_fsm import record_transition
-from pipeline_gates import validate_escalation_handoff, validate_hypothesis_artifact
+from pipeline_gates import validate_hypothesis_artifact
 from issue_clusters import (
     CLUSTER_DIR_NAME,
     CLUSTER_INDEX_FILE,
@@ -68,8 +68,6 @@ class PipelineState(Enum):
     INVESTIGATING = "investigating"
     ANALYZED = "analyzed"
     VALIDATED = "validated"
-    ENGINEERING_HANDOFF = "engineering_handoff"
-    ESCALATED_TO_ENGINEERING = "escalated_to_engineering"
 
 
 PIPELINE_STATE_SCHEMA_VERSION = 2
@@ -984,6 +982,29 @@ def _active_canned_messages_file() -> tuple[Path, bool]:
     return ROOT / "canned-messages.json", False
 
 
+RETIRED_CANNED_MESSAGE_IDS = frozenset({"engineering-escalation"})
+
+
+def _active_canned_messages() -> list[dict[str, Any]]:
+    """Load supported messages while hiding retired built-in actions.
+
+    Persistent instance files may predate the no-escalation pipeline contract.
+    Filtering at the boundary preserves unrelated custom messages without
+    exposing a retired action.
+    """
+    messages_file, _ = _active_canned_messages_file()
+    if not messages_file.exists():
+        return []
+    payload = json.loads(messages_file.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise ValueError("Canned messages must be a JSON array")
+    return [
+        item
+        for item in payload
+        if isinstance(item, dict) and str(item.get("id") or "").strip() not in RETIRED_CANNED_MESSAGE_IDS
+    ]
+
+
 def _refresh_salesforce_token_from_refresh_token(instance_url: str, refresh_token: str, client_id: str = "PlatformCLI") -> tuple[bool, str | None]:
     """Use Salesforce OAuth 2.0 refresh_token grant to get a new access token.
 
@@ -1615,12 +1636,7 @@ def _remove_env_keys(keys: set[str], env_file: Path | None = None) -> None:
         os.environ.pop(key, None)
 
 CLOSED_STATUSES = {"closed", "resolved", "canceled", "cancelled"}
-ESCALATED_STATUS = "escalated to engineering"
-ESCALATED_STATUS_ALIASES = {
-    ESCALATED_STATUS,
-    "escalated to eng",
-    "jira escalated",
-}
+HOLD_STATUSES = {"hold", "on hold"}
 
 FILE_LOCATIONS: dict[str, str] = {
     "jira_summary":       "jira/summary/{key}.md",
@@ -1642,7 +1658,7 @@ FILE_LABELS: dict[str, str] = {
     "jira_message":    "Jira Message",
     "issue_brief":     "Issue Brief",
     "test_report":     "Test Report",
-    "eng_handoff":     "Needs Engineering",
+    "eng_handoff":     "Legacy Handoff",
     "closed_resolved": "Closed / Resolved / Canceled",
     "attachments":     "Attachments",
     "generated_files": "Generated Files",
@@ -1916,8 +1932,8 @@ def _read_text_for_resume(path: Path, max_chars: int = 80_000) -> str:
 _RECENT_EVIDENCE_RE = re.compile(
     r"(?is)"
     r"(?:root cause confirmed|confirmed root cause|classification complete|fix confirmed|"
-    r"support-resolvable|no-deploy|no deploy|no apex changes needed|sandbox deploy skipped|"
-    r"production deploy|engineering escalation|engineering-required|missing .*access|"
+    r"full-pipeline|solution path confirmed|no-deploy|no deploy|no apex changes needed|sandbox deploy skipped|"
+    r"production deploy|missing .*access|"
     r"missing .*permission|permission set|ready for production|artifacts written)"
 )
 
@@ -2054,18 +2070,13 @@ def _infer_routing_state(
     raw = state.get("routing") if isinstance(state.get("routing"), dict) else {}
     path = (str(raw.get("path") or "") or "").strip().lower()
     confidence = str(raw.get("confidence") or "low").strip().lower()
-    if path not in {"support_resolvable", "engineering_required", "on_hold", "unknown"}:
-        if has_eng_handoff and has_test_report:
-            path = "engineering_required"
-            confidence = "medium"
-        elif has_eng_handoff:
-            path = "engineering_required"
-            confidence = "low"
-        elif has_test_report:
-            path = "support_resolvable"
-            confidence = "low"
-        else:
-            path = "unknown"
+    # Historical routes migrate into one active path. Existing evidence and
+    # checkpoints continue forward without preserving escalation behavior.
+    if path in {"support_resolvable", "engineering_required"}:
+        path = "full_pipeline"
+    if path not in {"full_pipeline", "on_hold", "unknown"}:
+        path = "full_pipeline" if has_test_report or has_eng_handoff else "unknown"
+        confidence = "low"
     return {
         "path": path,
         "confidence": confidence if confidence in {"low", "medium", "high"} else "low",
@@ -2370,10 +2381,6 @@ def _issue_brief_has_required_sections(text: str) -> bool:
     return _brief_template_has_required_format(text)
 
 
-def _engineering_handoff_has_required_sections(text: str) -> bool:
-    return _brief_template_has_required_format(text)
-
-
 def _brief_template_has_required_format(text: str) -> bool:
     lines = [line.strip() for line in (text or "").splitlines() if line.strip()]
     if not lines:
@@ -2623,7 +2630,6 @@ def _build_pipeline_resume_plan(
     status: str = "",
     jira_updated: str | None = None,
     *,
-    force_active: bool = False,
     rebuild_from_artifacts: bool = False,
 ) -> dict[str, Any]:
     """Build a resume plan based on persisted state signatures and fallback signals."""
@@ -2723,9 +2729,9 @@ def _build_pipeline_resume_plan(
         artifacts["investigation"]["exists"]
         and re.search(r"(?is)problem location|specific artifact|failure point|confirmed root cause|root cause", investigation)
     )
-    route_known = routing["path"] in {"support_resolvable", "engineering_required"} or bool(
+    route_known = routing["path"] == "full_pipeline" or bool(
         re.search(
-            r"(?is)support-resolvable|engineering[- ]required|engineering escalation|escalate to engineering|classification complete|no-deploy|no deploy|sandbox deploy skipped",
+            r"(?is)full[- ]pipeline|solution path confirmed|implementation path confirmed|classification complete|no-deploy|no deploy|sandbox deploy skipped",
             diagnosis_and_recent_text,
         )
     )
@@ -2784,12 +2790,6 @@ def _build_pipeline_resume_plan(
             "reason": "No-deploy path does not require a metadata workspace manifest.",
             "required_fields": (),
         }
-    engineering_handoff_required = routing["path"] == "engineering_required"
-    engineering_handoff_current = bool(
-        artifacts["eng_handoff"]["exists"]
-        and artifacts["eng_handoff"]["size"] > 80
-        and _engineering_handoff_has_required_sections(eng_handoff)
-    )
     step10_artifacts_current = bool(
         artifacts["internal_notes"]["exists"]
         and artifacts["internal_notes"]["size"] > 80
@@ -2798,7 +2798,6 @@ def _build_pipeline_resume_plan(
         and artifacts["issue_brief"]["exists"]
         and artifacts["issue_brief"]["size"] > 80
         and _issue_brief_has_required_sections(issue_brief)
-        and (not engineering_handoff_required or engineering_handoff_current)
     )
 
     if has_schema and has_stored_signatures:
@@ -2823,7 +2822,7 @@ def _build_pipeline_resume_plan(
     step6_complete = bool(step5_complete and not routing_on_hold and problem_location)
     step7_complete = bool(step6_complete and route_known)
     step8_complete = bool(step7_complete and not routing_on_hold and (candidate_exists or has_no_deploy))
-    step9_required = routing["path"] in {"support_resolvable", "engineering_required"} or (route_known and not has_no_deploy)
+    step9_required = routing["path"] == "full_pipeline" or (route_known and not has_no_deploy)
     if step9_required:
         step9_complete = bool(
             step8_complete
@@ -2850,7 +2849,7 @@ def _build_pipeline_resume_plan(
 
     steps: list[dict[str, Any]] = []
     original_disposition = _disposition(status or "")
-    disposition = "active" if force_active and original_disposition == "escalated" else original_disposition
+    disposition = original_disposition
     if disposition == "closed":
         closed_current = artifacts["closed_resolved"]["current"]
         steps.append(_resume_step(
@@ -2861,16 +2860,6 @@ def _build_pipeline_resume_plan(
             "Stop issue processing after closed/resolved archive is current." if closed_current else "Create or refresh closed/resolved archive, then stop for this key.",
             [artifacts["closed_resolved"]["path"]],
         ))
-    elif disposition == "escalated":
-        handoff_current = artifacts["eng_handoff"]["current"]
-        steps.append(_resume_step(
-            2,
-                "Triage pre-escalated issue",
-                "complete" if handoff_current else "pending",
-                "Jira status is already Escalated to Engineering.",
-                "Stop issue processing after engineering escalation archive is current." if handoff_current else "Create or refresh engineering escalation archive, then stop for this key.",
-                [artifacts["eng_handoff"]["path"]],
-            ))
     else:
         steps.extend([
             _resume_step(
@@ -2907,11 +2896,11 @@ def _build_pipeline_resume_plan(
             ),
             _resume_step(
                 7,
-                "Engineering escalation gate",
+                "Confirm solution path",
                 "complete" if step7_complete else ("stale" if step6_complete and not route_known else "pending"),
-                "Routing state is recorded in durable state." if step7_complete else "Classify Support-resolvable vs Engineering-required and record it in state." ,
-                "Emit STEP_7 resume-skip; reuse durable routing." if step7_complete else "Classify Support-resolvable vs Engineering-required and record it in durable state.",
-                [artifacts["eng_handoff"]["path"], artifacts["investigation"]["path"]],
+                "Full-pipeline solution path is recorded in durable state." if step7_complete else "Confirm the solution approach and record routing.path=full_pipeline in state." ,
+                "Emit STEP_7 resume-skip; reuse the durable solution path." if step7_complete else "Confirm the solution approach and record routing.path=full_pipeline in durable state.",
+                [artifacts["investigation"]["path"]],
             ),
             _resume_step(
                 8,
@@ -2945,9 +2934,9 @@ def _build_pipeline_resume_plan(
                 10,
                 "Draft issue brief, internal notes, and Jira message",
                 "complete" if step10_complete else ("stale" if step9_complete and step10_artifacts_current else ("pending" if step9_complete else "blocked")),
-                "Draft artifacts are current and separated." if step10_complete else "Draft/update issue brief, internal notes, Jira message, and engineering handoff if required.",
+                "Draft artifacts are current and separated." if step10_complete else "Draft/update issue brief, internal notes, and Jira message.",
                 "Emit STEP_10 resume-skip; avoid rewriting drafts if Step 9 is still current." if step10_complete else "Draft/update issue brief, internal notes, and Jira message from latest Step 9 result." ,
-                [artifacts["issue_brief"]["path"], artifacts["internal_notes"]["path"], artifacts["jira_message"]["path"], artifacts["eng_handoff"]["path"]],
+                [artifacts["issue_brief"]["path"], artifacts["internal_notes"]["path"], artifacts["jira_message"]["path"]],
             ),
         ])
 
@@ -3005,7 +2994,6 @@ def _build_pipeline_resume_plan(
         "quality_gates": quality_gates,
         "mode": disposition,
         "original_mode": original_disposition,
-        "force_active": force_active,
         "next_step": next_step,
         "why_next_step": (next_step or {}).get("reason"),
         "artifacts": artifacts,
@@ -3199,7 +3187,7 @@ def _apply_artifact_gates_to_plan(plan: dict[str, Any]) -> dict[str, Any]:
     except (TypeError, ValueError):
         next_step_no = 0
     step4_gate_required = next_step_no >= 5 or _plan_has_gate_failure(plan, "step4_hypothesis")
-    if mode not in {"closed", "escalated"} and step4_gate_required:
+    if mode != "closed" and step4_gate_required:
         result = validate_hypothesis_artifact(OUTPUTS, key)
         _set_plan_gate_failure(plan, result.gate, None if result.passed else result.reason)
         if not result.passed:
@@ -3208,21 +3196,9 @@ def _apply_artifact_gates_to_plan(plan: dict[str, Any]) -> dict[str, Any]:
     else:
         _set_plan_gate_failure(plan, "step4_hypothesis", None)
 
-    routing = plan.get("routing") if isinstance(plan.get("routing"), dict) else {}
-    handoff_path = OUTPUTS / "engineering-escalations" / f"{key}.md"
-    escalation_path = routing.get("path") == "engineering_required" or handoff_path.is_file()
-    step7_gate_required = next_step_no >= 8 or _plan_has_gate_failure(plan, "step7_problem_location")
-    if mode not in {"closed", "escalated"} and escalation_path and step7_gate_required:
-        result = validate_escalation_handoff(OUTPUTS, key)
-        _set_plan_gate_failure(plan, result.gate, None if result.passed else result.reason)
-        if not result.passed:
-            # Missing artifact specifics means metadata drilling is incomplete
-            # (back to Step 5); anything else is a decision/structure problem
-            # (back to Step 7).
-            target = 5 if result.details.get("concrete_artifact") is False else 7
-            _force_plan_to_step(plan, target, f"Step 7 gate failed: {result.reason}")
-    else:
-        _set_plan_gate_failure(plan, "step7_problem_location", None)
+    # Historical Engineering handoffs remain readable evidence, but they no
+    # longer gate or redirect the active pipeline.
+    _set_plan_gate_failure(plan, "step7_problem_location", None)
     return plan
 
 
@@ -3261,14 +3237,12 @@ def _build_pipeline_resume_plan(
     status: str = "",
     jira_updated: str | None = None,
     *,
-    force_active: bool = False,
     rebuild_from_artifacts: bool = False,
 ) -> dict[str, Any]:
     plan = _build_pipeline_resume_plan_legacy(
         key,
         status,
         jira_updated,
-        force_active=force_active,
         rebuild_from_artifacts=rebuild_from_artifacts,
     )
     similarity_lookup = _build_similarity_lookup_for_plan(key, status=status)
@@ -3325,14 +3299,6 @@ def _format_resume_plan_for_prompt(plan: dict[str, Any], plan_path: Path) -> str
             f"- Gate: `{latest_gate.get('gate') or 'unknown'}`",
             f"- Reason: {latest_gate.get('reason') or 'Artifact validation failed.'}",
             "- The code-level gate forced this plan backward. Repair the artifact before attempting downstream work.",
-            "",
-        ])
-    if plan.get("force_active"):
-        lines.extend([
-            "## Operator Force-Run Override",
-            "- The Jira status is already Escalated to Engineering, but the operator explicitly requested a full CaseOps pipeline run anyway.",
-            "- Ignore the normal pre-escalated skip rule for this run only. Process the issue through investigation, Salesforce diagnosis, sandbox-safe validation/proposal, notes, Jira message draft, and summary as applicable.",
-            "- This override does not relax safety rules: Production remains read-only, Jira writes are not allowed unless separately approved, and Sandbox writes/deploys must use the allowlisted Sandbox only.",
             "",
         ])
     recent_evidence = plan.get("recent_evidence") or []
@@ -3582,10 +3548,8 @@ def _prepare_resume_plan(
     key: str,
     status: str = "",
     jira_updated: str | None = None,
-    *,
-    force_active: bool = False,
 ) -> tuple[dict[str, Any], Path, str]:
-    plan = _build_pipeline_resume_plan(key, status, jira_updated, force_active=force_active)
+    plan = _build_pipeline_resume_plan(key, status, jira_updated)
     plan_path = _write_pipeline_resume_plan(plan)
     return plan, plan_path, _format_resume_plan_for_prompt(plan, plan_path)
 
@@ -3597,7 +3561,6 @@ def _repair_pipeline_state_from_artifacts_after_run(
     reason: str,
     status: str = "",
     jira_updated: str | None = None,
-    force_active: bool = False,
     ignore_previous_state: bool = True,
 ) -> None:
     """Rebuild durable resume state after an interrupted run so the next run does not trust stale state."""
@@ -3606,7 +3569,6 @@ def _repair_pipeline_state_from_artifacts_after_run(
             key,
             status,
             jira_updated,
-            force_active=force_active,
             rebuild_from_artifacts=ignore_previous_state,
         )
         plan["repair"] = {
@@ -3701,8 +3663,6 @@ def _resume_plan_short_circuit(run_key: str, plan: dict[str, Any]) -> bool:
     key = str(plan.get("key") or run_key)
     if mode == "closed":
         _log_emit_line(run_key, f"STEP_2 {key} resume-skip — closed/resolved archive is already current.")
-    elif mode == "escalated":
-        _log_emit_line(run_key, f"STEP_2 {key} resume-skip — pre-escalated handoff is already current.")
     else:
         _log_emit_line(run_key, f"Resume planner: no actionable pipeline steps remain for {key}.")
     _log_emit_line(run_key, "STEP_12 __complete__")
@@ -6612,7 +6572,6 @@ def _stream_full_issue(
     key: str,
     run_key: str,
     run_preflight: bool = True,
-    force_active: bool = False,
     defer_daily_summary: bool = False,
 ) -> None:
     """Run full CaseOps pipeline via the mounted caseops-pipeline playbook.
@@ -6636,7 +6595,6 @@ def _stream_full_issue(
             key,
             row.get("Status", ""),
             row.get("Updated", ""),
-            force_active=force_active,
         )
         _log_resume_plan_summary(run_key, resume_plan, resume_path)
         if _resume_plan_short_circuit(run_key, resume_plan):
@@ -6645,18 +6603,14 @@ def _stream_full_issue(
         prompt = _build_claude_prompt(
             key,
             "Run the full CaseOps pipeline for this issue through completion of investigation, "
-            "internal notes, and Jira customer message (and any sandbox/escalation steps the playbook "
-            "requires for this issue). Read the mounted playbook files directly; do not invoke a slash-skill."
+            "candidate implementation, sandbox validation, internal notes, and Jira customer message. "
+            "Read the mounted playbook files directly; do not invoke a slash-skill."
             + (
                 " This issue is running inside a global queue. Complete issue-specific Steps 3-10 only; "
                 "do not create or edit the dated summary file. For Step 11, print exactly "
                 "`STEP_11 __summary__ defer-skip — global queue will update the dated summary after workers finish`, "
                 "then print `STEP_12 __complete__` when issue-specific artifacts are current."
                 if defer_daily_summary else ""
-            )
-            + (
-                " Operator override: ignore the normal pre-escalated Jira-status skip for this issue and process it as active."
-                if force_active else ""
             ),
             resume_block,
         )
@@ -6674,7 +6628,6 @@ def _stream_full_issue(
                 reason=run_status,
                 status=row.get("Status", ""),
                 jira_updated=row.get("Updated", ""),
-                force_active=force_active,
                 ignore_previous_state=(run_status != "completed"),
             )
         if should_update_metrics:
@@ -6705,7 +6658,6 @@ def _stream_reprocess_issue(
     key: str,
     run_key: str,
     run_preflight: bool = True,
-    force_active: bool = False,
     defer_daily_summary: bool = False,
 ) -> None:
     """Reprocess single issue without Jira sync via the mounted caseops-pipeline playbook.
@@ -6728,7 +6680,6 @@ def _stream_reprocess_issue(
             key,
             row.get("Status", ""),
             row.get("Updated", ""),
-            force_active=force_active,
         )
         _log_resume_plan_summary(run_key, resume_plan, resume_path)
         if _resume_plan_short_circuit(run_key, resume_plan):
@@ -6744,10 +6695,6 @@ def _stream_reprocess_issue(
                 "`STEP_11 __summary__ defer-skip — global queue will update the dated summary after workers finish`, "
                 "then print `STEP_12 __complete__` when issue-specific artifacts are current."
                 if defer_daily_summary else ""
-            )
-            + (
-                " Operator override: ignore the normal pre-escalated Jira-status skip for this issue and process it as active."
-                if force_active else ""
             ),
             resume_block,
         )
@@ -6765,7 +6712,6 @@ def _stream_reprocess_issue(
                 reason=run_status,
                 status=row.get("Status", ""),
                 jira_updated=row.get("Updated", ""),
-                force_active=force_active,
                 ignore_previous_state=(run_status != "completed"),
             )
         if should_update_metrics:
@@ -6886,14 +6832,45 @@ def _queue_disposition_skip_label(disposition: str) -> str:
         "skip_unchanged_success": "already current",
         "skip_unchanged_failure": "unchanged failed run",
         "skip_closed_or_resolved": "closed/resolved",
-        "skip_escalated_to_engineering": "escalated to engineering",
+        "skip_jira_hold": "hold",
         "blocked_by_operator": "blocked by operator",
-        "blocked_by_engineering": "blocked by engineering",
         "stale_state_needs_repair": "stale state needs repair",
         "failed_retry_budget_exhausted": "failed retry budget exhausted",
         "on_hold": "on hold",
     }
     return labels.get(disposition, disposition.replace("_", " "))
+
+
+def _queue_disposition_for_jira_status(
+    row: dict[str, str],
+    *,
+    fingerprint: str,
+    detail: str,
+    plan: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    disposition = _disposition(row.get("Status", ""))
+    if disposition == "active":
+        return None
+
+    dispositions = {
+        "closed": (
+            "skip_closed_or_resolved",
+            "Jira status is closed/resolved; active queue processing is not needed.",
+        ),
+        "hold": (
+            "skip_jira_hold",
+            "Jira status is Hold; Auto-Process only processes issues in the Active list.",
+        ),
+    }
+    disposition_name, reason = dispositions[disposition]
+    return _queue_disposition_payload(
+        disposition=disposition_name,
+        reason=reason,
+        fingerprint=fingerprint,
+        detail=detail,
+        row=row,
+        plan=plan,
+    )
 
 
 def _queue_disposition_prior_reason(prior: dict[str, Any], disposition: str) -> str:
@@ -6909,10 +6886,7 @@ def _classify_incomplete_queue_disposition(plan: dict[str, Any], detail: str) ->
     pending = _plan_pending_issue_steps(plan)
     next_step = pending[0] if pending else (plan.get("next_step") if isinstance(plan.get("next_step"), dict) else {})
     next_status = str((next_step or {}).get("status") or "").lower()
-    routing = plan.get("routing") if isinstance(plan.get("routing"), dict) else {}
     if "blocked" in text or next_status == "blocked":
-        if routing.get("path") == "engineering_required":
-            return "blocked_by_engineering"
         return "blocked_by_operator"
     if "failed unexpectedly" in text or "timeout" in text or "killing subprocess" in text:
         return "failed_retry_budget_exhausted"
@@ -6925,22 +6899,19 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
     key = (row.get("Key") or plan.get("key") or "").strip()
     status = row.get("Status", "") or str(plan.get("status") or "")
     mode = str(plan.get("mode") or "").strip().lower()
-    routing = plan.get("routing") if isinstance(plan.get("routing"), dict) else {}
-    normalized_status = _normalized_jira_status(status)
     fsm_violation = plan.get("fsm_violation") if isinstance(plan.get("fsm_violation"), dict) else {}
-    if _disposition(status) == "closed" or mode == "closed":
+    jira_status_disposition = _queue_disposition_for_jira_status(
+        row,
+        fingerprint=fingerprint,
+        detail=detail,
+        plan=plan,
+    )
+    if jira_status_disposition:
+        return jira_status_disposition
+    if mode == "closed":
         return _queue_disposition_payload(
             disposition="skip_closed_or_resolved",
             reason="Jira status is closed/resolved; active queue processing is not needed.",
-            fingerprint=fingerprint,
-            detail=detail,
-            row=row,
-            plan=plan,
-        )
-    if _disposition(status) == "escalated" or mode == "escalated":
-        return _queue_disposition_payload(
-            disposition="skip_escalated_to_engineering",
-            reason="Jira status is escalated to engineering; Auto-Process should not reprocess it.",
             fingerprint=fingerprint,
             detail=detail,
             row=row,
@@ -6955,16 +6926,6 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
             row=row,
             plan=plan,
         )
-    if routing.get("path") == "engineering_required" and normalized_status in {"on hold", "waiting for engineering"}:
-        return _queue_disposition_payload(
-            disposition="blocked_by_engineering",
-            reason=f"Jira status is {status or 'On Hold'} and CaseOps routing requires Engineering; Auto-Process should not reprocess until the blocker changes.",
-            fingerprint=fingerprint,
-            detail=detail,
-            row=row,
-            plan=plan,
-        )
-
     pending = _plan_pending_issue_steps(plan)
     if not pending:
         return _queue_disposition_payload(
@@ -6983,7 +6944,6 @@ def _queue_disposition_for_plan(row: dict[str, str], plan: dict[str, Any], detai
     skip_dispositions = {
         "skip_unchanged_failure",
         "blocked_by_operator",
-        "blocked_by_engineering",
         "stale_state_needs_repair",
         "failed_retry_budget_exhausted",
         "on_hold",
@@ -7036,11 +6996,6 @@ def _global_issue_queue_snapshot_from_row(row: dict[str, str]) -> tuple[bool, st
     key = row.get("Key", "")
     plan = _build_pipeline_resume_plan(key, row.get("Status", ""), row.get("Updated", ""))
     fingerprint = _global_issue_queue_fingerprint(plan)
-    handoff = OUTPUTS / "engineering-escalations" / f"{key}.md"
-    if handoff.is_file():
-        gate = validate_escalation_handoff(OUTPUTS, key)
-        if not gate.passed:
-            return False, f"incomplete; Step 7 gate: {gate.reason}", fingerprint, plan
     fsm_violation = plan.get("fsm_violation") if isinstance(plan.get("fsm_violation"), dict) else {}
     if fsm_violation.get("violation") == "loop_cap_exceeded":
         return False, "on-hold; FSM loop cap exceeded", fingerprint, plan
@@ -7094,15 +7049,33 @@ def _select_global_issue_queue(run_key: str) -> list[str]:
     skip_counts: Counter[str] = Counter()
     aggregate_skip_dispositions = {
         "skip_closed_or_resolved",
-        "skip_escalated_to_engineering",
+        "skip_jira_hold",
     }
     aggregate_skip_reasons: dict[str, str] = {}
     for row in rows:
         key = (row.get("Key") or "").strip()
         if not key:
             continue
-        complete, detail, fingerprint, plan = _global_issue_queue_snapshot_from_row(row)
-        disposition = _queue_disposition_for_plan(row, plan, detail, fingerprint)
+        status_fingerprint = _sha256_signature(
+            json.dumps(
+                {
+                    "key": key,
+                    "status": row.get("Status", ""),
+                    "updated": row.get("Updated", ""),
+                },
+                sort_keys=True,
+                ensure_ascii=False,
+            )
+        )
+        detail = f"Jira status is {row.get('Status', '') or 'unknown'}"
+        disposition = _queue_disposition_for_jira_status(
+            row,
+            fingerprint=status_fingerprint,
+            detail=detail,
+        )
+        if disposition is None:
+            complete, detail, fingerprint, plan = _global_issue_queue_snapshot_from_row(row)
+            disposition = _queue_disposition_for_plan(row, plan, detail, fingerprint)
         disposition_name = str(disposition.get("disposition") or "")
         if disposition_name == "ready_to_process":
             _log_emit_line(
@@ -7120,7 +7093,7 @@ def _select_global_issue_queue(run_key: str) -> list[str]:
                     run_key,
                     f"Queue skip: {key} — {_queue_disposition_skip_label(disposition_name)}; {disposition.get('reason')}",
                 )
-    for disposition_name in ("skip_closed_or_resolved", "skip_escalated_to_engineering"):
+    for disposition_name in ("skip_closed_or_resolved", "skip_jira_hold"):
         count = skip_counts.get(disposition_name, 0)
         if count:
             issue_word = "issue" if count == 1 else "issues"
@@ -7261,7 +7234,7 @@ def _stream_global_dated_summary(
         "Classification rules:\n"
         "- Treat the queue outcome facts and the exact allowed pipeline-state files below as authoritative.\n"
         "- If an issue outcome says incomplete, stalled, blocked, stale, or pending, do not summarize it as complete.\n"
-        "- Do not count an incomplete or blocked issue as support-resolvable unless pipeline-state routing.path is support_resolvable and the next step is clear.\n"
+        "- Do not count an incomplete or blocked issue as complete; pipeline-state routing.path must be full_pipeline and the next step must be clear.\n"
         "- Do not count an issue as sandbox-validated unless its test report has `Validation Status: passed` and `Fixed?: yes` in the structured Validation Verdict.\n"
         "- Treat Partial Pass, partially passed, mixed result, blocked, failed, not-run, or unknown as not sandbox-validated. Put those in Issue Rollup with the precise next step instead.\n"
         "- Do not infer Production readiness from a Sandbox pass; Production deploy readiness requires a specific artifact or state that says it is ready.\n"
@@ -7675,8 +7648,7 @@ def _build_claude_prompt(
         f"- Issue workspace: `${{CASEOPS_METADATA_WORKSPACES_DIR}}/{key}/`\n"
         f"- Sandbox solution attempts: `${{CASEOPS_METADATA_SANDBOX_WORK_DIR}}/{key}/attempt-001/`, "
         f"`attempt-002/`, etc.\n"
-        f"- Confirmed packages: `${{CASEOPS_METADATA_CONFIRMED_DIR}}/{key}/confirmed/support-owned/` or "
-        f"`${{CASEOPS_METADATA_CONFIRMED_DIR}}/{key}/confirmed/engineering-proposal/`\n"
+        f"- Confirmed package: `${{CASEOPS_METADATA_CONFIRMED_DIR}}/{key}/confirmed/solution/`\n"
         f"- Environment variables available:\n"
         f"  - `CASEOPS_METADATA_ROOT={str(_metadata_workspace_dirs()['root'])}`\n"
         f"  - `CASEOPS_METADATA_CACHE_DIR={str(_metadata_workspace_dirs()['cache_root'])}`\n"
@@ -7743,7 +7715,7 @@ def _build_claude_prompt(
         f"   - UI clicks (when automation can't use CLI, e.g., custom buttons, flow runs)\n"
         f"   - Human-readable confirmation\n"
         f"6. If `sf` reports no authenticated orgs, treat that as a CaseOps/container auth configuration blocker. Do **not** test frontdoor SIDs with `curl` and do not conclude Salesforce API is unreachable from frontdoor 401s.\n"
-        f"7. **Production is read-only in normal pipeline runs.** Do not run `sf data create`, `sf data update`, `sf data delete`, permission-set assignment commands, Apex anonymous execution, deploys, or any other mutating command against Production unless this prompt includes a valid **Temporary Production Write Approval** section. For Support-resolvable Production data/config/permission fixes without that approval, document the exact operator action and validation plan only.\n"
+        f"7. **Production is read-only in normal pipeline runs.** Do not run `sf data create`, `sf data update`, `sf data delete`, permission-set assignment commands, Apex anonymous execution, deploys, or any other mutating command against Production unless this prompt includes a valid **Temporary Production Write Approval** section. For Production data/config/permission fixes without that approval, document the exact operator action and validation plan only.\n"
         f"\n{_salesforce_browser_prompt_section()}"
         f"## CaseOps Output Files (update these when your task is complete)\n"
         f"You can read and write these files directly for issue {key}:\n"
@@ -7753,10 +7725,10 @@ def _build_claude_prompt(
         f"|------|---------|----------------|\n"
         f"| `{outputs_dir_relative}/investigations/{key}.md` | Investigation record (issue understanding, Salesforce problem, similar items analysis) | After diagnosis, before drafting notes |\n"
         f"| `{outputs_dir_relative}/issue-briefs/{key}.md` | Concise five-section issue brief for every processed issue | During Step 10 after testing/validation evidence exists |\n"
-        f"| `{outputs_dir_relative}/internal-notes/{key}.md` | Internal notes for operator (root cause, escalation decision, fix notes) | When you've diagnosed the issue |\n"
-        f"| `{outputs_dir_relative}/jira-messages/{key}.md` | Customer-facing Jira message (confirmed fix OR engineering escalation) | When ready to respond to customer |\n"
+        f"| `{outputs_dir_relative}/internal-notes/{key}.md` | Internal notes for operator (root cause, solution, validation, next action) | When you've diagnosed the issue |\n"
+        f"| `{outputs_dir_relative}/jira-messages/{key}.md` | Customer-facing Jira message describing the confirmed result or next step | When ready to respond to customer |\n"
         f"| `{outputs_dir_relative}/test-reports/{key}.md` | Test cases, results, and fix validation | After testing the fix in Sandbox |\n"
-        f"| `{outputs_dir_relative}/engineering-escalations/{key}.md` | Engineering handoff only for issues routed to Engineering | When escalating to Engineering team |\n"
+        f"| `{outputs_dir_relative}/engineering-escalations/{key}.md` | Legacy handoff evidence from older CaseOps versions; never create or update | Read-only historical context when present |\n"
         f"| `{outputs_dir_relative}/pipeline-failures/{key}.json` | Structured timeout/failure artifact for resumable recovery | Written by CaseOps automatically when a run times out or Claude exits unexpectedly |\n"
         f"| `{outputs_dir_relative}/generated-files/{key}/` | Issue-specific generated files such as spreadsheets, exports, CSVs, or supporting documents | Whenever a run creates non-markdown files |\n"
         f"\n"
@@ -8184,7 +8156,7 @@ def _build_similarity_lookup_for_plan(
 
 
 def _count_open_issues(issues: list[dict[str, str]]) -> int:
-    """Count issues not in closed/resolved/escalated states."""
+    """Count issues in the Active list."""
     return sum(1 for issue in issues if _disposition(issue.get("Status", "")) == "active")
 
 
@@ -8199,17 +8171,13 @@ def _is_closed_status(status: str = "") -> bool:
 def _disposition(status: str) -> str:
     if _is_closed_status(status):
         return "closed"
-    if _is_jira_engineering_escalated(status):
-        return "escalated"
+    if _is_jira_hold_status(status):
+        return "hold"
     return "active"
 
 
-def _is_jira_engineering_escalated(status: str = "") -> bool:
-    return _normalized_jira_status(status) in ESCALATED_STATUS_ALIASES
-
-
-def _is_jira_escalated_any(status: str = "") -> bool:
-    return _is_jira_engineering_escalated(status)
+def _is_jira_hold_status(status: str = "") -> bool:
+    return _normalized_jira_status(status) in HOLD_STATUSES
 
 
 def _available_tabs(key: str) -> list[dict[str, str]]:
@@ -8594,8 +8562,6 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
     has_issue_brief = (OUTPUTS / FILE_LOCATIONS["issue_brief"].format(key=key)).exists()
     has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
     has_test_report = (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).exists()
-    is_jira_escalated = _is_jira_engineering_escalated(status)
-    is_jira_escalated_any = _is_jira_escalated_any(status)
     state_payload = _read_pipeline_state(key)
     has_schema = _state_has_schema(state_payload)
     has_data_only_legacy = _test_report_is_data_only(key)
@@ -8629,10 +8595,6 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         has_confirmed_solution
         and (not verdict_contract_present or (verdict_passed and verdict_fixed))
     )
-    needs_escalation = (
-        (has_schema and routing["path"] == "engineering_required")
-        or (not has_schema and has_eng_handoff)
-    ) and not is_jira_escalated_any
     is_operator_owned_data_action = bool(
         is_data_admin_action
         and has_issue_brief
@@ -8642,8 +8604,6 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         and test_report_verdict.get("fixed") == "unknown"
         and production_deploy_required == "n/a"
         and not is_blocked
-        and not needs_escalation
-        and not is_jira_escalated_any
     )
     is_data_only = bool(is_data_admin_action and (has_confirmed_solution or is_operator_owned_data_action))
     has_generated_files = bool(_generated_files_for_issue(key))
@@ -8660,8 +8620,6 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         and production_deploy_required in {"no", "n/a"}
         and not is_blocked
         and not is_data_admin_action
-        and not needs_escalation
-        and not is_jira_escalated_any
     )
     is_ready_to_deploy = bool(
         pipeline_state == PipelineState.VALIDATED.value
@@ -8669,8 +8627,6 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         and production_deploy_required == "yes"
         and not is_blocked
         and not is_data_admin_action
-        and not needs_escalation
-        and not is_jira_escalated_any
     )
 
     return {
@@ -8686,16 +8642,12 @@ def _pipeline_file_flags(key: str, status: str = "") -> dict[str, Any]:
         "has_failed_validation": has_failed_validation,
         "test_report_verdict": test_report_verdict,
         "has_solution": has_solution,
-        "needs_escalation": needs_escalation,
-        "is_jira_escalated": is_jira_escalated,
-        "is_jira_escalated_any": is_jira_escalated_any,
         "production_deploy_required": production_deploy_required,
         "is_ready_to_deploy": is_ready_to_deploy,
         "is_complete_no_deploy": is_complete_no_deploy,
 
         # Pipeline state machine (authoritative status first, file-only fallback)
         "pipeline_state": pipeline_state,
-        "is_escalation_path": routing["path"] == "engineering_required",  # Source of truth: routing state
         "is_blocked": is_blocked,
         "is_data_only": is_data_only,
         "is_operator_owned_data_action": is_operator_owned_data_action,
@@ -8722,12 +8674,10 @@ def _derive_issue_tag_contract(status: str, flags: dict[str, Any], *, has_new_co
 
     if disposition == "closed":
         primary = "closed"
-    elif disposition == "escalated" or flags.get("is_jira_escalated_any") or pipeline_state == PipelineState.ESCALATED_TO_ENGINEERING.value:
-        primary = "escalated to engineering"
+    elif disposition == "hold":
+        primary = "hold"
     elif flags.get("is_blocked"):
         primary = "blocked"
-    elif flags.get("needs_escalation") or pipeline_state == PipelineState.ENGINEERING_HANDOFF.value:
-        primary = "needs engineering"
     elif flags.get("is_data_only"):
         primary = "data only"
     elif flags.get("is_ready_to_deploy"):
@@ -8745,8 +8695,7 @@ def _derive_issue_tag_contract(status: str, flags: dict[str, Any], *, has_new_co
 
     terminal_primary_tags = {
         "closed",
-        "escalated to engineering",
-        "needs engineering",
+        "hold",
         "data only",
         "ready to deploy",
         "complete no deploy",
@@ -8940,9 +8889,9 @@ def _test_report_is_data_only(key: str) -> bool:
 def _calculate_pipeline_state(key: str, status: str = "") -> PipelineState:
     """Calculate current pipeline state based on schema-driven routing and artifact presence.
 
-    Jira status is the only source of truth for actual Jira escalation.
-    CaseOps handoff is derived from durable routing state when available.
-    Support-resolvable progression falls back to artifact presence for compatibility.
+    Jira escalation status does not alter CaseOps progression. All assigned,
+    non-Hold issues use the same full pipeline. Historical handoff artifacts
+    remain readable but do not own state.
     """
     has_investigation = (OUTPUTS / FILE_LOCATIONS["investigation"].format(key=key)).exists()
     has_internal_notes = (OUTPUTS / FILE_LOCATIONS["internal_notes"].format(key=key)).exists()
@@ -8950,18 +8899,13 @@ def _calculate_pipeline_state(key: str, status: str = "") -> PipelineState:
     has_eng_handoff = (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).exists()
     state_payload = _read_pipeline_state(key)
 
-    if _is_jira_engineering_escalated(status):
-        return PipelineState.ESCALATED_TO_ENGINEERING
-
     if _state_has_schema(state_payload):
         routing = _infer_routing_state(
             state_payload,
             has_eng_handoff=has_eng_handoff and (OUTPUTS / FILE_LOCATIONS["eng_handoff"].format(key=key)).is_file(),
             has_test_report=has_test_report and (OUTPUTS / FILE_LOCATIONS["test_report"].format(key=key)).is_file(),
         )
-        if routing["path"] == "engineering_required":
-            return PipelineState.ENGINEERING_HANDOFF
-        if routing["path"] == "support_resolvable":
+        if routing["path"] == "full_pipeline":
             if has_test_report:
                 return PipelineState.VALIDATED
             if has_internal_notes:
@@ -8970,10 +8914,7 @@ def _calculate_pipeline_state(key: str, status: str = "") -> PipelineState:
                 return PipelineState.INVESTIGATING
             return PipelineState.UNTRIAGED
 
-    if has_eng_handoff:
-        return PipelineState.ENGINEERING_HANDOFF
-
-    # Support-resolvable progression
+    # Full-pipeline progression. Historical handoff files are not state.
     if not has_investigation:
         return PipelineState.UNTRIAGED
     elif not has_internal_notes:
@@ -9063,7 +9004,7 @@ def index():
     issues = _read_manifest()
     has_manifest = _manifest_path().exists()
 
-    # Count open issues (not closed/resolved/canceled/escalated)
+    # Count issues shown in the Active list.
     open_count = _count_open_issues(issues)
 
     return render_template(
@@ -9416,7 +9357,6 @@ def api_run():
     use_claude_cli = False
     use_full_issue = False
     use_reprocess_issue = False
-    use_force_reprocess_issue = False
     production_approval: dict[str, str] | None = None
     use_global_skill = False
     cmd: list[str] | None = None
@@ -9454,8 +9394,6 @@ def api_run():
         use_full_issue = True
     elif action == "reprocess_issue" and key:
         use_reprocess_issue = True
-    elif action == "force_reprocess_issue" and key:
-        use_force_reprocess_issue = True
     elif action == "claude_instruction" and key:
         instruction = data.get("instruction", "").strip()
         if not instruction:
@@ -9470,7 +9408,7 @@ def api_run():
     else:
         return jsonify({"error": "unknown action"}), 400
 
-    if action in {"reprocess", "full", "full_issue", "reprocess_issue", "force_reprocess_issue", "claude_instruction"}:
+    if action in {"reprocess", "full", "full_issue", "reprocess_issue", "claude_instruction"}:
         try:
             _pinned_model()
         except ValueError as exc:
@@ -9503,8 +9441,6 @@ def api_run():
         t = threading.Thread(target=_stream_full_issue, args=(key, run_key), daemon=True)
     elif use_reprocess_issue:
         t = threading.Thread(target=_stream_reprocess_issue, args=(key, run_key), daemon=True)
-    elif use_force_reprocess_issue:
-        t = threading.Thread(target=_stream_reprocess_issue, args=(key, run_key, True, True), daemon=True)
     elif use_global_skill:
         t = threading.Thread(target=_stream_global_skill, args=(instruction, run_key), daemon=True)
     elif use_claude_cli:
@@ -10090,7 +10026,6 @@ def api_issue_mark_viewed(key: str):
         "CommentCount",
         "ExternalCommentCount",
         "HasNewComments",
-        "EscalationReady",
     ]
     rows: list[dict[str, str]] = []
     try:
@@ -10124,13 +10059,8 @@ def api_issue_mark_viewed(key: str):
 
 @app.route("/api/canned-messages", methods=["GET"])
 def api_canned_messages():
-    messages_file, _ = _active_canned_messages_file()
-
-    if not messages_file.exists():
-        return jsonify([])
     try:
-        messages = json.loads(messages_file.read_text(encoding="utf-8"))
-        return jsonify(messages)
+        return jsonify(_active_canned_messages())
     except Exception:
         return jsonify([])
 
@@ -10142,12 +10072,8 @@ def api_send_canned_message(key: str):
     if not message_id:
         return jsonify({"error": "message_id required"}), 400
 
-    messages_file, _ = _active_canned_messages_file()
-
-    if not messages_file.exists():
-        return jsonify({"error": "No canned messages configured"}), 400
     try:
-        messages = json.loads(messages_file.read_text(encoding="utf-8"))
+        messages = _active_canned_messages()
     except Exception:
         return jsonify({"error": "Failed to load canned messages"}), 500
 
@@ -10730,8 +10656,7 @@ def api_settings_get_canned_messages():
     messages_file, is_custom = _active_canned_messages_file()
 
     try:
-        content = messages_file.read_text(encoding="utf-8")
-        json.loads(content)  # Validate JSON
+        content = json.dumps(_active_canned_messages(), indent=2)
         path = str(messages_file.resolve())
         return jsonify({
             "content": content,
@@ -10753,9 +10678,20 @@ def api_settings_set_canned_messages():
 
     # Validate JSON
     try:
-        json.loads(content)
+        parsed = json.loads(content)
     except json.JSONDecodeError as e:
         return jsonify({"error": f"Invalid JSON: {str(e)}"}), 400
+    if not isinstance(parsed, list):
+        return jsonify({"error": "Canned messages must be a JSON array"}), 400
+    retired = sorted(
+        {
+            str(item.get("id") or "").strip()
+            for item in parsed
+            if isinstance(item, dict) and str(item.get("id") or "").strip() in RETIRED_CANNED_MESSAGE_IDS
+        }
+    )
+    if retired:
+        return jsonify({"error": f"Retired canned message id is not allowed: {', '.join(retired)}"}), 400
 
     messages_file = _persistent_canned_messages_file()
 

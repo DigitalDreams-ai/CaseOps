@@ -21,7 +21,7 @@ The dashboard lists synced Jira issues and their CaseOps state. Select an issue 
 - Jira Message
 - Test Report
 - Generated Files
-- Needs Engineering, when present
+- Legacy Handoff, when historical evidence is present
 - Pipeline Log
 
 The issue filter can search by issue key, summary text, status text, and canonical tags.
@@ -37,8 +37,6 @@ Each issue has exactly one primary tag:
 | `data only` | CaseOps identified a no-deploy data/admin/operator action and finished the operator-facing artifacts, or the Test Report confirms the action is already completed |
 | `ready to deploy` | Test Report confirms the fix and says Production deployment is required |
 | `complete no deploy` | Test Report confirms the fix and says Production deployment is not required for a non-data/admin outcome |
-| `needs engineering` | CaseOps determined Engineering ownership is required |
-| `escalated to engineering` | Jira status is escalated to Engineering |
 | `closed` | Jira issue is closed, resolved, or canceled |
 
 Issues may also have independent condition tags:
@@ -69,7 +67,7 @@ Common actions:
 
 Run pipeline actions only on approved issues.
 
-`Auto-Process All` and `Reprocess All (No Sync)` skip issues already marked `Escalated to Engineering` in Jira. Use a single-issue run only when you intentionally want to inspect or override one escalated issue.
+`Auto-Process All` and `Reprocess All (No Sync)` process every issue assigned to the configured Jira user except issues that are Closed, Resolved, Canceled, Cancelled, Hold, or On Hold. A legacy Jira status of `Escalated to Engineering` remains active and follows the same full pipeline as every other assigned issue.
 
 The final queue summary includes the stop reason, such as all queued issues complete, stalled/no progress, max passes reached, or stop requested. Incomplete issue lines include the reason CaseOps stopped retrying that issue, and grouped counts summarize repeated blockers by step and status.
 
@@ -90,7 +88,7 @@ Test Reports use a required verdict contract so CaseOps does not infer status fr
 
 CaseOps treats `Validation Status: passed` plus `Fixed?: yes` as a confirmed fix. It treats `Validation Status: failed` or `Fixed?: no` as failed validation. It treats `Validation Status: blocked` as a blocked issue. If a report contains a `Validation Verdict` section, historical notes elsewhere in the report do not drive tags.
 
-`partial run` finds issues where CaseOps started the pipeline but has not reached a terminal outcome yet. `needs engineering` means CaseOps determined the work is not support-resolvable and needs Engineering instead of a Support-owned deployment.
+`partial run` finds issues where CaseOps started the pipeline but has not reached a terminal outcome yet.
 
 ## Similar Issues
 

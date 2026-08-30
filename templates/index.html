@@ -32,7 +32,6 @@
       <button class="menu-item" id="sync-issue-btn" onclick="runAction('sync_issue',activeKey); closeIssueActionsMenu();">Sync This Issue</button>
       <button class="menu-item primary" id="run-issue-btn" onclick="runAction('full_issue',activeKey); closeIssueActionsMenu();">Run Pipeline For This Issue</button>
       <button class="menu-item" id="reprocess-issue-btn" onclick="runAction('reprocess_issue',activeKey); closeIssueActionsMenu();">Reprocess Issue (No Sync)</button>
-      <button class="menu-item" id="force-reprocess-issue-btn" onclick="confirmForceReprocess(activeKey); closeIssueActionsMenu();" title="Run even if Jira status is Escalated to Engineering">Force Reprocess</button>
       <div style="border-top:1px solid var(--color-border); margin:6px 0; padding:0 12px;">
         <select id="transition-select-topbar" class="menu-select" style="margin-bottom:4px; width:100%;"><option value="">Change status…</option></select>
         <button class="menu-item" id="transition-btn-topbar" onclick="applyTransitionTopbar(activeKey); closeIssueActionsMenu();" disabled>Apply</button>
@@ -105,7 +104,6 @@
       <button class="btn desktop-only" id="detail-sync-btn" onclick="runAction('sync_issue',activeKey)" style="display:none;">Sync This Issue</button>
       <button class="btn primary desktop-only" id="detail-pipeline-btn" onclick="runAction('full_issue',activeKey)" style="display:none;">Run Pipeline</button>
       <button class="btn desktop-only" id="detail-reprocess-btn" onclick="runAction('reprocess_issue',activeKey)" style="display:none;">Reprocess</button>
-      <button class="btn desktop-only" id="detail-force-reprocess-btn" onclick="confirmForceReprocess(activeKey)" title="Run even if Jira status is Escalated to Engineering" style="display:none;">Force Reprocess</button>
       <select id="detail-transition-select" class="action-menu-select desktop-only" style="display:none; padding:5px 8px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:4px; font-size:12px;"><option value="">Change status…</option></select>
       <button class="btn desktop-only" id="detail-transition-btn" onclick="applyTransitionDetail(activeKey)" disabled style="display:none; padding:6px 8px;">Apply</button>
       <select id="detail-message-select" class="action-menu-select desktop-only" style="display:none; padding:5px 8px; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:4px; font-size:12px;"><option value="">Send message…</option></select>
@@ -121,7 +119,6 @@
             <button class="action-menu-item" onclick="runAction('sync_issue',activeKey)">Sync This Issue</button>
             <button class="action-menu-item primary" onclick="runAction('full_issue',activeKey)">Run Pipeline For This Issue</button>
             <button class="action-menu-item" onclick="runAction('reprocess_issue',activeKey)">Reprocess Issue (No Sync)</button>
-            <button class="action-menu-item" id="detail-force-reprocess-mobile-btn" onclick="confirmForceReprocess(activeKey); closeDetailActionsMenu();" title="Run even if Jira status is Escalated to Engineering">Force Reprocess</button>
             <div style="border-top:1px solid var(--color-border); margin:6px 0; padding-top:6px;">
               <select id="detail-transition-select-mobile" class="action-menu-select" style="width:100%; margin-bottom:4px; font-size:12px; padding:4px;"><option value="">Change status…</option></select>
               <button class="action-menu-item" id="detail-transition-btn-mobile" onclick="applyTransitionDetailMobile(activeKey)" disabled style="width:100%; padding:6px 8px;">Apply</button>
@@ -155,10 +152,6 @@
             <div class="dash-count" id="dash-active">—</div>
             <div class="dash-label">Active</div>
           </div>
-          <div class="dash-card c-escalated">
-            <div class="dash-count" id="dash-escalated">—</div>
-            <div class="dash-label">Escalated</div>
-          </div>
           <div class="dash-card c-ready">
             <div class="dash-count" id="dash-ready">—</div>
             <div class="dash-label">Draft ready</div>
@@ -183,13 +176,6 @@
           <div class="overview-fold-body">
             <p class="overview-lede" style="margin-top:8px;">Draft Jira reply is on file — open an issue to review or post.</p>
             <div id="overview-ready-post"></div>
-          </div>
-        </details>
-
-        <details class="overview-fold">
-          <summary>Escalations without handoff <span id="overview-summary-esc" class="overview-pill-count"></span></summary>
-          <div class="overview-fold-body">
-            <div id="overview-escalations"></div>
           </div>
         </details>
 
@@ -687,11 +673,9 @@
 
   function updateDashboard(issues) {
     const active    = issues.filter(i => i.disposition === 'active').length;
-    const escalated = issues.filter(i => i.disposition === 'escalated').length;
     const ready     = issues.filter(i => i.disposition === 'active' && i.has_jira_message).length;
     const pending   = issues.filter(i => i.disposition === 'active' && !i.has_jira_message).length;
     document.getElementById('dash-active').textContent    = active;
-    document.getElementById('dash-escalated').textContent = escalated;
     document.getElementById('dash-ready').textContent     = ready;
     document.getElementById('dash-pending').textContent   = pending;
   }
@@ -781,18 +765,6 @@
         : '<p class="overview-empty">No drafts ready yet.</p>';
     }
 
-    const escNeed = issues.filter(i => i.disposition === 'escalated' && !i.has_eng_handoff)
-      .sort((a, b) =>
-        (parseInt(b.key.split('-')[1], 10) || 0) - (parseInt(a.key.split('-')[1], 10) || 0));
-    const sumEsc = document.getElementById('overview-summary-esc');
-    if (sumEsc) sumEsc.textContent = escNeed.length ? String(escNeed.length) : '';
-    const escEl = document.getElementById('overview-escalations');
-    if (escEl) {
-      escEl.innerHTML = escNeed.length
-        ? escNeed.slice(0, 10).map(item => overviewRowButton(item, 'Handoff')).join('')
-        : '<p class="overview-empty">All set here.</p>';
-    }
-
     const recent = [...issues].sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
     const recentEl = document.getElementById('overview-recent');
     if (recentEl) {
@@ -829,8 +801,7 @@
     'data only': 'Data Only',
     'ready to deploy': 'Ready to Deploy',
     'complete no deploy': 'Complete No Deploy',
-    'needs engineering': 'Needs Engineering',
-    'escalated to engineering': 'Escalated to Engineering',
+    'hold': 'Hold',
     'closed': 'Closed',
     'new comments': 'New Comments',
     'partial run': 'Partial Run',
@@ -849,8 +820,7 @@
     'data only': 'badge-data-only',
     'ready to deploy': 'badge-ready-deploy',
     'complete no deploy': 'tag-complete-no-deploy',
-    'needs engineering': 'tag-needs-engineering',
-    'escalated to engineering': 'tag-escalated-engineering',
+    'hold': 'tag-hold',
     'closed': 'tag-closed',
     'new comments': 'tag-new-comments',
     'partial run': 'tag-partial-run',
@@ -966,7 +936,7 @@
 
   function renderIssueList(issues) {
     const active    = sortedGroup(issues.filter(i => i.disposition === 'active'));
-    const escalated = sortedGroup(issues.filter(i => i.disposition === 'escalated'));
+    const hold      = sortedGroup(issues.filter(i => i.disposition === 'hold'));
     const closed    = sortedGroup(issues.filter(i => i.disposition === 'closed'));
 
     const el = document.getElementById('issue-list');
@@ -979,7 +949,7 @@
     }
 
     if (active.length)    renderGroup(el, 'Active', active);
-    if (escalated.length) renderGroup(el, 'Escalated', escalated);
+    if (hold.length)      renderGroup(el, 'Hold', hold);
     if (closed.length)    renderGroup(el, 'Closed / Resolved / Canceled', closed);
 
     applyStepIndicators();
@@ -1270,7 +1240,6 @@
       const updated = issue.updated ? issue.updated.split('.')[0] : '—';
       metaEl.textContent = `Status: ${issue.status}   |   Updated: ${updated}`;
     }
-    updateForceReprocessVisibility(issue);
 
     if (headerEl) headerEl.style.display = 'block';
 
@@ -2468,7 +2437,6 @@
       const initialStep = (
         action === 'full_issue'
         || action === 'reprocess_issue'
-        || action === 'force_reprocess_issue'
         || action === 'claude_instruction'
       ) ? 3 : 1;
       updateStepIndicator(runKey, initialStep);
@@ -2794,7 +2762,7 @@
       { id: 'issue_brief',    label: 'Brief drafted',     group: 'done'    },
       { id: 'internal_notes', label: 'Notes drafted',     group: 'done'    },
       { id: 'jira_message',   label: 'Jira message',      group: 'done'    },
-      { id: 'eng_handoff',    label: 'Eng escalation',    group: 'done'    },
+      { id: 'eng_handoff',    label: 'Legacy handoff',    group: 'done'    },
       { id: 'closed_resolved', label: 'Closed / Resolved / Canceled', group: 'done' },
     ];
     const pending = [
@@ -2879,29 +2847,6 @@
       await loadIssues();
       await selectIssue(key);
     }
-  }
-
-  function updateForceReprocessVisibility(issue) {
-    const show = !!(issue && issue.is_jira_escalated);
-    [
-      'force-reprocess-issue-btn',
-      'detail-force-reprocess-btn',
-      'detail-force-reprocess-mobile-btn',
-    ].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.toggle('force-hidden', !show);
-    });
-  }
-
-  async function confirmForceReprocess(key) {
-    if (!key) return;
-    const ok = confirm(
-      `Force reprocess ${key}?\n\n` +
-      'This ignores the normal CaseOps skip for Jira issues already Escalated to Engineering. ' +
-      'Production remains read-only and Jira will not be updated automatically.'
-    );
-    if (!ok) return;
-    await runAction('force_reprocess_issue', key);
   }
 
   // ── Lightbox ──────────────────────────────────────────────

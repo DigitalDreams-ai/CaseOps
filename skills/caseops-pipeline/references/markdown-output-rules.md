@@ -30,24 +30,21 @@ Use these rules for every CaseOps-generated Markdown artifact.
 - Explain the problem and next step in human, non-technical language.
 - Do not include internal diagnosis, metadata dumps, file paths, NAS paths, local repo paths, tokens, private URLs, or operator-only notes.
 
-## Internal Notes, Issue Briefs, And Engineering Handoffs
+## Internal Notes And Issue Briefs
 
 - Tables are acceptable for compact evidence, rollups, or test matrices.
 - Keep operational details outside tables when they require commands, logs, or multi-step explanation.
 - Issue briefs should stay concise and Jira-ready for every processed issue: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
-- Engineering handoffs should stay concise and Jira-ready: Problem, Reproduce, Expected behavior, Affected record IDs, Proposed Solution.
 
-## Issue Brief And Engineering Handoff Template Formatting
+## Issue Brief Template Formatting
 
 These rules apply only to files generated from:
 
 - `assets/issue-brief-template.md`
-- `assets/engineering-handoff-template.md`
 
 That means only:
 
 - `outputs/issue-briefs/<KEY>.md`
-- `outputs/engineering-escalations/<KEY>.md`
 
 Do not apply these stricter formatting rules to Jira messages, internal notes, investigation records, test reports, dated summaries, Jira summaries, or generated supporting documents.
 
@@ -73,4 +70,8 @@ Do not apply these stricter formatting rules to Jira messages, internal notes, i
 - Use inline backticks for short commands, file names, field names, API names, and identifiers.
 - Use fenced code blocks for multi-line commands, logs, JSON, SOQL, Apex, XML, or diffs.
 - Do not place fenced code blocks inside table cells.
-- Exception: do not use inline backticks or fenced code blocks in issue briefs or engineering handoffs. Those two outputs are copied into Jira and must remain plain text.
+- Exception: do not use inline backticks or fenced code blocks in issue briefs. This output is copied into Jira and must remain plain text.
+
+## Legacy Engineering Handoffs
+
+Files already present under `outputs/engineering-escalations/` are read-only historical evidence. CaseOps must not create or update them, and they do not control routing, tags, or completion.

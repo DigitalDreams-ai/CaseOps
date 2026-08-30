@@ -10,6 +10,10 @@ import jira_sync
 
 
 class JiraSyncManifestTests(unittest.TestCase):
+    def test_legacy_escalated_status_remains_active(self):
+        self.assertTrue(jira_sync.manifest_status_is_active("Escalated to Engineering"))
+        self.assertFalse(jira_sync.sync_status_is_excluded("Escalated to Engineering"))
+
     def test_closed_issue_refresh_updates_manifest_status_without_raw_refresh(self):
         with tempfile.TemporaryDirectory() as tmp:
             jira_dir = Path(tmp)
@@ -34,7 +38,6 @@ class JiraSyncManifestTests(unittest.TestCase):
                 "CommentCount": "5",
                 "ExternalCommentCount": "4",
                 "HasNewComments": "false",
-                "EscalationReady": "",
             }
             jira_sync.write_manifest(manifest_path, [old_row])
 
@@ -83,7 +86,6 @@ class JiraSyncManifestTests(unittest.TestCase):
                 "CommentCount": "5",
                 "ExternalCommentCount": "4",
                 "HasNewComments": "false",
-                "EscalationReady": "",
             }
             jira_sync.write_manifest(manifest_path, [old_row])
 
