@@ -81,16 +81,16 @@ Query Production first:
 
 ```
 # Custom fields
-sf data query --target-org "$CASEOPS_PRODUCTION_READ_ORG" --use-tooling-api \
-  --query "SELECT QualifiedApiName FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName = '[Object]' AND QualifiedApiName = '[FieldApiName]'"
+python scripts/sf_caseops_helper.py query-tooling --org "$CASEOPS_PRODUCTION_READ_ORG" \
+  --soql "SELECT QualifiedApiName FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName = '[Object]' AND QualifiedApiName = '[FieldApiName]'" --name existing-field --out-dir "$RAW_DIR"
 
 # Permission sets
-sf data query --target-org "$CASEOPS_PRODUCTION_READ_ORG" \
-  --query "SELECT Name, Label FROM PermissionSet WHERE Name = '[Name]'"
+python scripts/sf_caseops_helper.py query-data --org "$CASEOPS_PRODUCTION_READ_ORG" \
+  --soql "SELECT Name, Label FROM PermissionSet WHERE Name = '[Name]'" --name existing-permission-set --out-dir "$RAW_DIR"
 
 # Objects, layouts, flows, etc.
-sf data query --target-org "$CASEOPS_PRODUCTION_READ_ORG" --use-tooling-api \
-  --query "SELECT DeveloperName FROM [MetadataType] WHERE DeveloperName = '[Name]'"
+python scripts/sf_caseops_helper.py query-tooling --org "$CASEOPS_PRODUCTION_READ_ORG" \
+  --soql "SELECT DeveloperName FROM [MetadataType] WHERE DeveloperName = '[Name]'" --name existing-metadata --out-dir "$RAW_DIR"
 ```
 
 Once you confirm it exists, determine whether it is the same thing you intend to create:

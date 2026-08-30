@@ -21,8 +21,8 @@ description: Investigates Salesforce Production metadata read-only to identify o
 
 1. Start from the Jira issue analysis and problem hypothesis.
 2. Identify the smallest relevant metadata set.
-3. For custom field, picklist, layout, FLS, field/Flow verification, SOQL, and targeted metadata retrieval, run `python scripts/sf_caseops_helper.py ...` before writing equivalent ad hoc SOQL or retrieve commands.
-4. Retrieve metadata from Production read-only using `python scripts/sf_caseops_helper.py retrieve-metadata ...` or, when the helper does not cover the case, modern `sf project retrieve start --metadata` or `--source-dir` and `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`.
+3. For custom field, picklist, layout, FLS, field/Flow verification, SOQL, targeted REST reads, and metadata retrieval, use `python scripts/sf_caseops_helper.py ...` so the result is structured and classified.
+4. Retrieve metadata from Production read-only using `python scripts/sf_caseops_helper.py retrieve-metadata ...` and `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`. Do not bypass the helper with raw project retrieve commands.
 5. Treat retrieved Production files as read-only evidence.
 6. Record why each metadata item was retrieved.
 7. Summarize findings and likely implementation surface.

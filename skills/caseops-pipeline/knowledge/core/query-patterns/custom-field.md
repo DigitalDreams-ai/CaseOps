@@ -7,13 +7,13 @@ Use these patterns before experimenting.
 FieldDefinition commonly uses DeveloperName without the `__c` suffix:
 
 ```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, DeveloperName, Label, DataType FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName = 'Case' AND DeveloperName = 'Field_Name'"
+python scripts/sf_caseops_helper.py query-data --org "$ORG" --soql "SELECT Id, DeveloperName, Label, DataType FROM FieldDefinition WHERE EntityDefinition.QualifiedApiName = 'Case' AND DeveloperName = 'Field_Name'" --name field-definition --out-dir "$RAW_DIR"
 ```
 
 Tooling `CustomField` is often better for metadata details:
 
 ```bash
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, DeveloperName, TableEnumOrId, FullName, Metadata FROM CustomField WHERE TableEnumOrId = 'Case' AND DeveloperName = 'Field_Name'"
+python scripts/sf_caseops_helper.py query-tooling --org "$ORG" --soql "SELECT Id, DeveloperName, TableEnumOrId, FullName, Metadata FROM CustomField WHERE TableEnumOrId = 'Case' AND DeveloperName = 'Field_Name'" --name custom-field --out-dir "$RAW_DIR"
 ```
 
 Notes:

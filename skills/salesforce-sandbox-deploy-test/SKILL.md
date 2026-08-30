@@ -60,7 +60,7 @@ description: Mandatory for caseops-pipeline after a proposed solution is prepare
 - Deployment command and result are recorded.
 - Deployment uses CaseOps helper operations before equivalent raw `sf` commands.
 - Helper failures with `retryable=false` stop the attempt and trigger replanning instead of repeated command variants.
-- Any raw fallback deploy uses modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
+- Do not bypass CaseOps deploy helpers with raw `sf project deploy start`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
 - Tests map to Jira acceptance criteria.
 - Failure evidence is preserved.
 - Failed or abandoned attempts were reverted and verified.

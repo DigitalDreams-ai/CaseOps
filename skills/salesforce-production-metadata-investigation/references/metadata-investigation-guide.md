@@ -7,7 +7,7 @@ Investigate only metadata that could plausibly affect the Jira issue.
 - Store Production retrievals under `${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>/`.
 - Treat this directory as read-only evidence. Never edit retrieved Production files in place.
 - Use focused retrieve commands with `--output-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"`.
-- Retrieve with `python scripts/sf_caseops_helper.py retrieve-metadata ...` first. If the helper does not cover the case, use modern `sf project retrieve start --metadata` or `--source-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
+- Retrieve with `python scripts/sf_caseops_helper.py retrieve-metadata ...`. Do not bypass it with raw `sf project retrieve start`; do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
 - Do not use root-level `temp*`, `retrieve*`, `deploy*`, or `metadata*` directories.
 - If a later step needs to test a modified version, copy only the required files into that step's Sandbox attempt directory.
 - Use `python scripts/sf_caseops_helper.py ...` helpers first for custom fields, picklists, layouts, FLS, SOQL checks, field/Flow verification, and targeted metadata retrieval. They write compact JSON summaries, classify failures, and avoid noisy or secret-bearing CLI output.

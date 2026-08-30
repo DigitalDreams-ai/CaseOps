@@ -3,8 +3,8 @@
 Resolve Apex classes/triggers with Tooling API before reading or testing broadly.
 
 ```bash
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, Status FROM ApexClass WHERE Name = 'ClassName'"
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, TableEnumOrId, Status FROM ApexTrigger WHERE Name = 'TriggerName'"
+python scripts/sf_caseops_helper.py query-tooling --org "$ORG" --soql "SELECT Id, Name, Status FROM ApexClass WHERE Name = 'ClassName'" --name apex-class --out-dir "$RAW_DIR"
+python scripts/sf_caseops_helper.py query-tooling --org "$ORG" --soql "SELECT Id, Name, TableEnumOrId, Status FROM ApexTrigger WHERE Name = 'TriggerName'" --name apex-trigger --out-dir "$RAW_DIR"
 ```
 
 Run targeted tests first. Broad test runs need a clear reason.

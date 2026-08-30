@@ -3,7 +3,7 @@ import subprocess
 import tempfile
 import unittest
 import zipfile
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from argparse import Namespace
 from pathlib import Path
@@ -141,6 +141,19 @@ class SalesforceHelperTests(unittest.TestCase):
         self.assertIn("not json at all", result["stdoutTail"])
         self.assertIn("non-JSON", result["next_action"])
 
+    def test_command_result_accepts_warning_prefixed_json_array(self):
+        proc = subprocess.CompletedProcess(
+            args=["sf"],
+            returncode=0,
+            stdout='[WARN] CLI update available.\n[{"id":"001"}]',
+            stderr="",
+        )
+
+        result = helper._command_result(kind="unit", proc=proc, command=["sf", "example", "--json"])
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["sf"], [{"id": "001"}])
+
     def test_workspace_init_writes_issue_scoped_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
             with redirect_stdout(StringIO()):
@@ -194,7 +207,11 @@ class SalesforceHelperTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as tmp,
             patch.object(helper, "_verify_tooling_sobject", return_value=precheck) as precheck_mock,
-            patch.object(helper, "_query") as query_mock,
+            patch.object(
+                helper,
+                "_query",
+                return_value={"ok": True, "records": [{"Id": "00B"}], "failure_class": "", "retryable": False},
+            ) as query_mock,
         ):
             with redirect_stdout(StringIO()):
                 rc = helper.query_tooling(Namespace(
@@ -207,12 +224,68 @@ class SalesforceHelperTests(unittest.TestCase):
                 ))
             summary = json.loads((Path(tmp) / "query-tooling.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(rc, 1)
-        self.assertFalse(summary["ok"])
-        self.assertEqual(summary["failure_class"], "invalid_query_type")
+        self.assertEqual(rc, 0)
+        self.assertTrue(summary["ok"])
         self.assertEqual(summary["precheck"]["sobject"], "MissingToolingObject")
+        self.assertIn("precheckAdvisory", summary)
         precheck_mock.assert_called_once()
-        query_mock.assert_not_called()
+        query_mock.assert_called_once()
+
+    def test_api_request_allows_get_and_writes_structured_output(self):
+        proc = subprocess.CompletedProcess(
+            args=["sf"],
+            returncode=0,
+            stdout='Warning: update available.\n{"records":[{"Id":"001"}]}',
+            stderr="",
+        )
+        with tempfile.TemporaryDirectory() as tmp, patch.object(helper, "_run", return_value=proc) as run_mock:
+            with redirect_stdout(StringIO()):
+                rc = helper.api_request(Namespace(
+                    org="prod",
+                    endpoint="/services/data/v66.0/query/?q=SELECT%20Id%20FROM%20Account",
+                    method="GET",
+                    name="accounts",
+                    out_dir=tmp,
+                    timeout=10,
+                ))
+            summary = json.loads((Path(tmp) / "accounts.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(rc, 0)
+        self.assertTrue(summary["ok"])
+        self.assertEqual(summary["sf"]["records"][0]["Id"], "001")
+        command = run_mock.call_args.args[0]
+        self.assertEqual(command[:4], ["sf", "api", "request", "rest"])
+        self.assertEqual(command[command.index("--method") + 1], "GET")
+
+    def test_api_request_rejects_mutating_method(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(helper, "_run") as run_mock:
+            with redirect_stdout(StringIO()):
+                rc = helper.api_request(Namespace(
+                    org="prod",
+                    endpoint="/services/data/v66.0/sobjects/Account",
+                    method="POST",
+                    name="blocked",
+                    out_dir=tmp,
+                    timeout=10,
+                ))
+            summary = json.loads((Path(tmp) / "blocked.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(rc, 1)
+        self.assertEqual(summary["failure_class"], "unsafe_method")
+        self.assertFalse(summary["retryable"])
+        run_mock.assert_not_called()
+
+    def test_main_reports_invalid_arguments_as_json(self):
+        stderr = StringIO()
+
+        with redirect_stderr(stderr):
+            rc = helper.main(["query-data", "--org", "prod"])
+
+        payload = json.loads(stderr.getvalue())
+        self.assertEqual(rc, 2)
+        self.assertEqual(payload["failure_class"], "invalid_helper_arguments")
+        self.assertFalse(payload["retryable"])
+        self.assertIn("Do not replace", payload["next_action"])
 
     def test_deploy_mdapi_zips_metadata_dir_before_deploy(self):
         proc = subprocess.CompletedProcess(

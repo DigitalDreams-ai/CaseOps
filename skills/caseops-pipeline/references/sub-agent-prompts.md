@@ -53,9 +53,9 @@ Instructions:
 5. If additional metadata is discovered to be needed (e.g., during drilling in Step 6), 
    Step 6 will loop back to you with a refined request.
 6. Use selected CaseOps knowledge first. If a known query/retrieve pattern fails twice, stop and replan instead of trying many variants.
-7. Use `python scripts/sf_caseops_helper.py ...` helpers before equivalent raw `sf` commands. Start with `custom-field`, `layout`, `fls`, `sobject-fields`, `verify-field`, `verify-flow`, `query-data`, `query-tooling`, and `retrieve-metadata` as appropriate.
+7. Use `python scripts/sf_caseops_helper.py ...` for structured Salesforce work. Start with `custom-field`, `layout`, `fls`, `sobject-fields`, `verify-field`, `verify-flow`, `query-data`, `query-tooling`, `api-request`, and `retrieve-metadata` as appropriate.
 8. Helper failures return `failure_class`, `retryable`, and `next_action`. If `retryable=false`, stop and replan instead of trying small command variants.
-9. If a helper does not cover the case, retrieve with modern `sf project retrieve start --metadata` or `--source-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
+9. Do not bypass a helper failure with raw `sf data query`, `sf project retrieve start`, or read-only `sf api request rest`. Record the structured blocker and replan.
 10. Do not print raw access tokens or use `SF_TEMP_SHOW_SECRETS=true sf org display`.
 
 Return a compact summary (max 400 tokens) containing:
@@ -151,14 +151,14 @@ Instructions:
    Use passed/yes only when actual post-action validation evidence exists.
    Fill **Production deployment state** (Sandbox vs Production; Gearset required Y/N/N/A).
 7. Use selected CaseOps knowledge first. Initialize the attempt with `python scripts/sf_caseops_helper.py workspace-init --issue-key "<KEY>" --attempt attempt-N` when the attempt directories or manifest are missing.
-8. Prefer structured helpers before equivalent raw `sf` commands:
+8. Use structured helpers for Salesforce operations:
    - `verify-sobject` before the first query against an unfamiliar, optional, or managed-package object.
    - `deploy-source` for source-format candidate directories.
    - `deploy-mdapi` for deterministic metadata-dir deploys.
    - `deploy-report` for deploy status follow-up.
-   - `verify-field`, `verify-flow`, `query-data`, and `query-tooling` for validation checks that need classified failures.
+   - `verify-field`, `verify-flow`, `query-data`, `query-tooling`, and `api-request` for validation checks that need classified failures.
 9. Helper failures return `failure_class`, `retryable`, and `next_action`. If `retryable=false`, stop and replan instead of repeating the same command family.
-10. If a helper does not cover the case, deploy with modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`. Raw `sf project` commands still require an issue-scoped SFDX workspace.
+10. Do not bypass deploy helpers with raw `sf project deploy start`. Record the structured blocker and replan. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
 11. Never print raw Salesforce access tokens. Do not use `SF_TEMP_SHOW_SECRETS=true sf org display`; use `sf` commands or JSON outputs that do not reveal secrets.
 
 Return a compact summary (max 400 tokens) containing:

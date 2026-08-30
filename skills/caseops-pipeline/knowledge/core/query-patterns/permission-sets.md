@@ -3,13 +3,13 @@
 Resolve candidate permission sets first:
 
 ```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, Name, Label FROM PermissionSet WHERE Name LIKE '%Customer%' OR Label LIKE '%Customer%'"
+python scripts/sf_caseops_helper.py query-data --org "$ORG" --soql "SELECT Id, Name, Label FROM PermissionSet WHERE Name LIKE '%Customer%' OR Label LIKE '%Customer%'" --name permission-sets --out-dir "$RAW_DIR"
 ```
 
 Check FLS with parent details:
 
 ```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, Field, PermissionsRead, PermissionsEdit, ParentId, Parent.Name, Parent.Type FROM FieldPermissions WHERE Field = 'Case.Field_Name__c'"
+python scripts/sf_caseops_helper.py query-data --org "$ORG" --soql "SELECT Id, Field, PermissionsRead, PermissionsEdit, ParentId, Parent.Name, Parent.Type FROM FieldPermissions WHERE Field = 'Case.Field_Name__c'" --name field-permissions --out-dir "$RAW_DIR"
 ```
 
 Guidance:

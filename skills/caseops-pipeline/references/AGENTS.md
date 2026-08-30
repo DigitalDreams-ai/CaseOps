@@ -59,7 +59,7 @@ CASEOPS_PRODUCTION_MAGIC_LINK=<production visual-inspection login URL>
 
 ### Sandbox Magic Link
 
-Used only for **visual Sandbox UI inspection** or UI-only actions. Use `sf project deploy`, `sf data query`, and Apex test commands for Step 9 deploy/test.
+Used only for **visual Sandbox UI inspection** or UI-only actions. Use CaseOps Salesforce helpers and targeted Apex test commands for Step 9 deploy/test.
 
 ```
 CASEOPS_SANDBOX_MAGIC_LINK=<sandbox visual-inspection login URL>

@@ -18,19 +18,19 @@ Use only fields returned in the helper output or by `sf sobject describe`.
 Opportunity share rows:
 
 ```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, UserOrGroupId, UserOrGroup.Name, OpportunityId, OpportunityAccessLevel, RowCause FROM OpportunityShare WHERE UserOrGroup.Name = 'Tier 1 Tech Support' LIMIT 20"
+python scripts/sf_caseops_helper.py query-data --org "$ORG" --soql "SELECT Id, UserOrGroupId, UserOrGroup.Name, OpportunityId, OpportunityAccessLevel, RowCause FROM OpportunityShare WHERE UserOrGroup.Name = 'Tier 1 Tech Support' LIMIT 20" --name opportunity-share --out-dir "$RAW_DIR"
 ```
 
 Account share rows:
 
 ```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, UserOrGroupId, UserOrGroup.Name, AccountId, AccountAccessLevel, RowCause FROM AccountShare WHERE UserOrGroup.Name = 'Tier 1 Tech Support' LIMIT 20"
+python scripts/sf_caseops_helper.py query-data --org "$ORG" --soql "SELECT Id, UserOrGroupId, UserOrGroup.Name, AccountId, AccountAccessLevel, RowCause FROM AccountShare WHERE UserOrGroup.Name = 'Tier 1 Tech Support' LIMIT 20" --name account-share --out-dir "$RAW_DIR"
 ```
 
 User share rows:
 
 ```bash
-sf data query --target-org "$ORG" --json --query "SELECT Id, UserId, UserOrGroupId, RowCause, UserAccessLevel FROM UserShare WHERE UserId = '005...' LIMIT 20"
+python scripts/sf_caseops_helper.py query-data --org "$ORG" --soql "SELECT Id, UserId, UserOrGroupId, RowCause, UserAccessLevel FROM UserShare WHERE UserId = '005...' LIMIT 20" --name user-share --out-dir "$RAW_DIR"
 ```
 
 Rules:

@@ -9,7 +9,7 @@ CaseOps does not deploy to Salesforce Production. Production access is read-only
 CaseOps is intended to run from a published Docker image:
 
 ```text
-ghcr.io/digitaldreams-ai/caseops:0.1.64
+ghcr.io/digitaldreams-ai/caseops:0.1.65
 ```
 
 The container uses:
@@ -91,19 +91,21 @@ The first implementation is intentionally conservative:
 
 ## Salesforce Command Contract
 
-CaseOps uses modern `sf` CLI commands for Salesforce work.
+CaseOps uses deterministic helper commands for Salesforce work so failures are classified and issue workspaces remain valid.
 
-Allowed command families:
+Directly allowed command families:
 
 - `sf org ...`
-- `sf data query ...`
-- `sf project retrieve start --metadata ...`
-- `sf project retrieve start --source-dir ...`
-- `sf project deploy start --source-dir ...`
-- `sf project deploy start --metadata-dir ...`
+- `python scripts/sf_caseops_helper.py query-data ...`
+- `python scripts/sf_caseops_helper.py query-tooling ...`
+- `python scripts/sf_caseops_helper.py api-request ...`
+- `python scripts/sf_caseops_helper.py retrieve-metadata ...`
+- `python scripts/sf_caseops_helper.py deploy-source ...`
+- `python scripts/sf_caseops_helper.py deploy-mdapi ...`
 
 Forbidden for routine CaseOps retrieve/deploy:
 
+- raw `sf data query`, `sf project retrieve start`, `sf project deploy start`, and read-only `sf api request rest`,
 - legacy `sfdx force:*`,
 - `package.xml`,
 - `--manifest`,

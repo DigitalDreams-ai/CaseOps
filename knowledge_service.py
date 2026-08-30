@@ -624,6 +624,7 @@ def write_signal(
     topic: str = "",
     helper_available: str = "",
     knowledge_selected: list[str] | None = None,
+    observed_at: str = "",
 ) -> dict[str, Any]:
     issue = safe_slug(issue_key, "issue")
     signal = safe_slug(signal_type, "signal")
@@ -636,6 +637,7 @@ def write_signal(
     if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES and quality in {"low", "report_only"}:
         quality = "medium"
         quality_reason = "Explicit high-value gotcha/deploy/validation signal is eligible for operator review."
+    created_at = utc_now_iso()
     payload = {
         "schema_version": KNOWLEDGE_SCHEMA_VERSION,
         "signal_id": f"{issue}-{safe_slug(source_step, 'step')}-{timestamp}-{signal}",
@@ -653,7 +655,8 @@ def write_signal(
         "quality": quality,
         "quality_reason": quality_reason,
         "redaction_status": redaction_status_for_text(json.dumps({"summary": summary, "evidence": evidence}, ensure_ascii=False)),
-        "created_at": utc_now_iso(),
+        "observed_at": observed_at or created_at,
+        "created_at": created_at,
     }
     if developer_review_type:
         payload["developer_review_type"] = developer_review_type
@@ -794,7 +797,12 @@ def _classify_log_signal(text: str) -> dict[str, Any] | None:
     return None
 
 
-def _iter_pipeline_log_records(outputs: Path, *, include_global: bool = True) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def _iter_pipeline_log_records(
+    outputs: Path,
+    *,
+    include_global: bool = True,
+    line_cursors: dict[str, int] | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     logs_dir = outputs / "pipeline-logs"
     scope = {
         "issue_logs_scanned": 0,
@@ -805,12 +813,15 @@ def _iter_pipeline_log_records(outputs: Path, *, include_global: bool = True) ->
         "since_cursor": "",
         "until_cursor": "",
         "scope_limitations": [],
+        "file_line_counts": {},
+        "effective_line_cursors": {},
     }
     if not logs_dir.exists():
         scope["scope_limitations"].append("pipeline-logs directory does not exist")
         scope["scan_completed_at"] = utc_now_iso()
         return [], scope
     records: list[dict[str, Any]] = []
+    cursors = line_cursors or {}
     for path in sorted(logs_dir.glob("*.jsonl")):
         is_global = path.name == "__global__.jsonl"
         if is_global and not include_global:
@@ -824,7 +835,17 @@ def _iter_pipeline_log_records(outputs: Path, *, include_global: bool = True) ->
             scope["global_logs_scanned"] += 1
         else:
             scope["issue_logs_scanned"] += 1
+        scope["file_line_counts"][path.name] = len(lines)
+        cursor = max(0, int(cursors.get(path.name) or 0))
+        if cursor > len(lines):
+            scope["scope_limitations"].append(
+                f"reset line cursor for truncated or rotated log: {path.name}"
+            )
+            cursor = 0
+        scope["effective_line_cursors"][path.name] = cursor
         for line_no, line in enumerate(lines, start=1):
+            if line_no <= cursor:
+                continue
             if not line.strip():
                 continue
             try:
@@ -851,7 +872,14 @@ def _iter_pipeline_log_records(outputs: Path, *, include_global: bool = True) ->
 def _write_log_signal_if_needed(outputs: Path, record: dict[str, Any], pattern: dict[str, Any]) -> bool:
     issue_key = safe_slug(str(record.get("run_key") or ""), "issue")
     signal_type = str(pattern["signal_type"])
-    signal_id = f"{issue_key}-LOG-{safe_slug(signal_type)}"
+    source_identity = "|".join([
+        Path(str(record.get("path") or "")).name,
+        str(record.get("line_no") or 0),
+        str(record.get("ts") or ""),
+        str(record.get("text") or ""),
+    ])
+    occurrence = hashlib.sha256(source_identity.encode("utf-8", errors="replace")).hexdigest()[:12]
+    signal_id = f"{issue_key}-LOG-{safe_slug(signal_type)}-{occurrence}"
     path = knowledge_root(outputs) / "signals" / f"{signal_id}.json"
     if path.exists():
         return False
@@ -861,6 +889,7 @@ def _write_log_signal_if_needed(outputs: Path, record: dict[str, Any], pattern: 
     failure_class = classify_failure_class(signal_type, str(pattern["topic"]), redacted_evidence)
     route, developer_review_type = route_for_failure_class(failure_class, signal_type)
     quality, quality_reason = quality_for_group(failure_class, 1)
+    created_at = utc_now_iso()
     payload = {
         "schema_version": KNOWLEDGE_SCHEMA_VERSION,
         "signal_id": signal_id,
@@ -881,7 +910,10 @@ def _write_log_signal_if_needed(outputs: Path, record: dict[str, Any], pattern: 
         "quality": quality,
         "quality_reason": quality_reason,
         "redaction_status": redaction_status_for_text(evidence),
-        "created_at": utc_now_iso(),
+        "observed_at": str(record.get("ts") or created_at),
+        "source_log": Path(str(record.get("path") or "")).name,
+        "source_line": int(record.get("line_no") or 0),
+        "created_at": created_at,
     }
     if developer_review_type:
         payload["developer_review_type"] = developer_review_type
@@ -890,13 +922,36 @@ def _write_log_signal_if_needed(outputs: Path, record: dict[str, Any], pattern: 
     return True
 
 
-def derive_signals_from_pipeline_logs(outputs: Path, *, max_created: int = 200) -> dict[str, Any]:
+def derive_signals_from_pipeline_logs(
+    outputs: Path,
+    *,
+    max_created: int = 200,
+    line_cursors: dict[str, int] | None = None,
+    initialize_cursor_only: bool = False,
+) -> dict[str, Any]:
     """Create deterministic signal artifacts from high-confidence pipeline log patterns."""
     ensure_knowledge_defaults(outputs)
     created = 0
     seen: set[tuple[str, str]] = set()
-    records, scope = _iter_pipeline_log_records(outputs)
+    records, scope = _iter_pipeline_log_records(outputs, line_cursors=line_cursors)
+    next_cursors = dict(scope.get("effective_line_cursors") or {})
+    if initialize_cursor_only:
+        next_cursors.update({
+            str(name): int(count)
+            for name, count in (scope.get("file_line_counts") or {}).items()
+        })
+        scope["records_scanned"] = 0
+        scope["signals_created"] = 0
+        scope["next_log_cursors"] = next_cursors
+        scope["cursor_initialized"] = True
+        return scope
+    records_scanned = 0
     for record in records:
+        if created >= max_created:
+            break
+        records_scanned += 1
+        path_name = Path(str(record.get("path") or "")).name
+        next_cursors[path_name] = int(record.get("line_no") or 0)
         pattern = _classify_log_signal(str(record.get("text") or ""))
         if not pattern:
             continue
@@ -910,17 +965,17 @@ def derive_signals_from_pipeline_logs(outputs: Path, *, max_created: int = 200) 
                 created += 1
         except ValueError:
             continue
-        if created >= max_created:
-            break
-    scope["records_scanned"] = len(records)
+    scope["records_scanned"] = records_scanned
     scope["signals_created"] = created
+    scope["next_log_cursors"] = next_cursors
+    scope["cursor_initialized"] = False
     return scope
 
 
 def _read_auditor_state(outputs: Path) -> dict[str, Any]:
     state_path = knowledge_root(outputs) / "audit-reports" / "knowledge-auditor-state.json"
-    data = _load_json(state_path, {"processed_signal_ids": []})
-    return data if isinstance(data, dict) else {"processed_signal_ids": []}
+    data = _load_json(state_path, {"processed_signal_ids": [], "log_cursors": {}})
+    return data if isinstance(data, dict) else {"processed_signal_ids": [], "log_cursors": {}}
 
 
 def _candidate_exists(outputs: Path, source_signal_ids: list[str]) -> bool:
@@ -935,6 +990,174 @@ def _candidate_exists(outputs: Path, source_signal_ids: list[str]) -> bool:
         if target == set(data.get("source_signal_ids") or []):
             return True
     return False
+
+
+def _semantic_key(signal_type: str, topic: str, route: str, discriminator: str = "") -> str:
+    parts = [
+        safe_slug(route, "report_only").lower(),
+        safe_slug(signal_type, "unknown").lower(),
+        safe_slug(topic, "general").lower(),
+    ]
+    if route != "helper_work_item" and discriminator:
+        normalized = re.sub(r"\s+", " ", discriminator.strip().lower())
+        parts.append(hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:12])
+    return ":".join(parts)
+
+
+def _record_semantic_key(outputs: Path, record: dict[str, Any]) -> str:
+    existing = str(record.get("semantic_key") or "").strip()
+    if existing:
+        return existing
+    signals = _signals_for_candidate(outputs, record)
+    signal_type, topic = _signal_type_topic_from_candidate(record, signals)
+    route = str(record.get("route") or "")
+    if not route:
+        failure_class = str(record.get("failure_class") or "")
+        route, _review_type = route_for_failure_class(failure_class, signal_type)
+    discriminator = str(record.get("lesson") or record.get("trigger") or "")
+    return _semantic_key(signal_type, topic, route, discriminator)
+
+
+def _parse_iso_datetime(value: str) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _merge_unique_strings(existing: Any, incoming: Any, *, limit: int | None = None) -> list[str]:
+    merged: list[str] = []
+    for value in [*(existing or []), *(incoming or [])]:
+        text = str(value or "").strip()
+        if text and text not in merged:
+            merged.append(text)
+        if limit is not None and len(merged) >= limit:
+            break
+    return merged
+
+
+def _group_observed_after(group: list[dict[str, Any]], boundary: str) -> bool:
+    boundary_dt = _parse_iso_datetime(boundary)
+    if boundary_dt is None:
+        return False
+    for signal in group:
+        observed = _parse_iso_datetime(str(signal.get("observed_at") or signal.get("created_at") or ""))
+        if observed and observed > boundary_dt:
+            return True
+    return False
+
+
+def _semantic_records(outputs: Path, semantic_key: str, route: str) -> list[tuple[Path, dict[str, Any]]]:
+    root = knowledge_root(outputs)
+    directories = ("helper-work-items",) if route == "helper_work_item" else (
+        "pending-lessons",
+        "accepted-lessons",
+        "rejected-lessons",
+    )
+    matches: list[tuple[Path, dict[str, Any]]] = []
+    for directory in directories:
+        for path in sorted((root / directory).glob("*.json")):
+            record = _load_json(path, {})
+            if isinstance(record, dict) and record and _record_semantic_key(outputs, record) == semantic_key:
+                matches.append((path, record))
+    return matches
+
+
+def _merge_or_reopen_semantic_record(
+    outputs: Path,
+    *,
+    signal_type: str,
+    topic: str,
+    route: str,
+    group: list[dict[str, Any]],
+    evidence: list[str],
+    issue_keys: list[str],
+    semantic_key: str = "",
+) -> str:
+    """Merge a group into one semantic record and reopen only for newer evidence."""
+    semantic_key = semantic_key or _semantic_key(signal_type, topic, route)
+    matches = _semantic_records(outputs, semantic_key, route)
+    if not matches:
+        return ""
+
+    status_rank = {
+        "verified": 5,
+        "implemented": 4,
+        "accepted_for_work": 3,
+        "pending": 2,
+        "accepted": 2,
+        "active": 2,
+        "retired": 1,
+        "rejected": 1,
+    }
+    path, record = sorted(
+        matches,
+        key=lambda item: (
+            -status_rank.get(str(item[1].get("status") or "pending"), 0),
+            str(item[1].get("created_at") or ""),
+            str(item[0]),
+        ),
+    )[0]
+    status = str(record.get("status") or "pending")
+    terminal = status in {"retired", "rejected", "verified"}
+    boundary = str(
+        record.get("retired_at")
+        or record.get("rejected_at")
+        or record.get("verified_at")
+        or ""
+    )
+    if terminal and not _group_observed_after(group, boundary):
+        return "covered"
+
+    updated = copy.deepcopy(record)
+    if terminal:
+        history = list(updated.get("resolution_history") or [])
+        history.append({
+            "status": status,
+            "retired_at": updated.get("retired_at"),
+            "rejected_at": updated.get("rejected_at"),
+            "verified_at": updated.get("verified_at"),
+            "retirement_reason": updated.get("retirement_reason"),
+            "rejection_reason": updated.get("rejection_reason"),
+            "implementation_reference": updated.get("implementation_reference"),
+            "verification_reference": updated.get("verification_reference"),
+        })
+        updated["resolution_history"] = history
+        updated["status"] = "pending"
+        updated["reopened_at"] = utc_now_iso()
+        updated["reopen_reason"] = "New evidence was observed after the previous resolution."
+        for key in (
+            "retired_at",
+            "rejected_at",
+            "verified_at",
+            "retirement_reason",
+            "rejection_reason",
+            "implementation_reference",
+            "verification_reference",
+        ):
+            updated.pop(key, None)
+
+    source_ids = [str(item.get("signal_id") or "") for item in group]
+    updated["source_signal_ids"] = _merge_unique_strings(updated.get("source_signal_ids"), source_ids)
+    updated["affected_issue_keys"] = _merge_unique_strings(updated.get("affected_issue_keys"), issue_keys)
+    updated["evidence"] = _merge_unique_strings(updated.get("evidence"), evidence, limit=20)
+    updated["recurrence_count"] = len(updated["source_signal_ids"])
+    updated["signal_type"] = signal_type
+    updated["semantic_key"] = semantic_key
+    updated["updated_at"] = utc_now_iso()
+    updated.pop("_source_path", None)
+    if route == "helper_work_item":
+        validate_helper_work_item(updated)
+    else:
+        validate_candidate(updated)
+    _write_json(path, updated)
+    return "reopened" if terminal else "merged"
 
 
 def _signals_for_candidate(outputs: Path, candidate: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1039,12 +1262,13 @@ def _refine_lesson_candidate(signal_type: str, topic: str, group: list[dict[str,
         )
     if signal_type == "helper_failure":
         return LessonRefinement(
-            action="pending_lesson",
+            action="helper_work_item",
             trigger=f"Repeated helper failure signal for {topic}.",
             lesson=f"When {topic} helper failures recur, inspect the helper failure_class and next_action before retrying ad hoc commands.",
             recommended_file=_recommended_file(signal_type, topic),
-            knowledge_type=_candidate_type(signal_type),
+            knowledge_type="helper_contract",
             confidence="medium",
+            reason="Helper failures are shared runtime contracts, not org-specific lessons.",
         )
     if signal_type == "invalid_query_field":
         return LessonRefinement(
@@ -1057,27 +1281,41 @@ def _refine_lesson_candidate(signal_type: str, topic: str, group: list[dict[str,
         )
     if signal_type == "helper_available_not_used":
         return LessonRefinement(
-            action="pending_lesson",
+            action="helper_work_item",
             trigger=f"Repeated helper available but not used signal for {topic}.",
             lesson=f"When a deterministic helper exists for {topic}, use it before equivalent raw Salesforce commands.",
             recommended_file=_recommended_file(signal_type, topic),
-            knowledge_type=_candidate_type(signal_type),
+            knowledge_type="helper_contract",
             confidence="medium",
+            reason="Helper bypass is a shared command-routing gap, not org-specific knowledge.",
         )
     if signal_type == "helper_related_failure":
         return LessonRefinement(
-            action="helper_work_item",
+            action="suppress",
             trigger=f"Repeated helper related failure signal for {topic}.",
             lesson=(
-                f"CaseOps should classify and handle recurring {topic} helper failures deterministically. "
-                "Preserve the failure class, command, stderr/stdout excerpt, and next action so the pipeline "
-                "does not convert helper/runtime failures into reusable org lessons."
+                "A generic Claude or subprocess failure is not enough evidence of a deterministic helper defect. "
+                "Create helper work only from a named helper command and a structured failure class."
             ),
             recommended_file="lessons-learned/general.md",
             knowledge_type="helper_contract",
+            confidence="low",
+            keywords=tuple(_keywords_from_group(signal_type, topic, group)),
+            reason="Generic helper-related telemetry is too broad to produce actionable work.",
+        )
+    if signal_type == "invalid_command_pattern":
+        return LessonRefinement(
+            action="helper_work_item",
+            trigger=f"Repeated invalid command pattern signal for {topic}.",
+            lesson=(
+                "CaseOps should route Salesforce queries, retrieves, deploys, and JSON API requests through "
+                "the deterministic helper that owns their validation and structured failure contract."
+            ),
+            recommended_file="helper-scripts.md",
+            knowledge_type="helper_contract",
             confidence="medium" if recurrence < 3 else "high",
             keywords=tuple(_keywords_from_group(signal_type, topic, group)),
-            reason="Helper-related failures are runtime/helper guardrail work, not org-specific knowledge.",
+            reason="Command bypass is a shared runtime guardrail gap, not org-specific knowledge.",
         )
     if signal_type in HIGH_VALUE_SINGLE_LESSON_TYPES:
         return LessonRefinement(
@@ -1189,6 +1427,7 @@ def _normalize_existing_signals(outputs: Path) -> dict[str, Any]:
         defaults = {
             "schema_version": KNOWLEDGE_SCHEMA_VERSION,
             "topic": topic,
+            "observed_at": str(signal.get("created_at") or utc_now_iso()),
             "failure_class": failure_class,
             "route": route,
             "quality": quality,
@@ -1409,6 +1648,8 @@ def _refine_existing_helper_work_items(outputs: Path) -> dict[str, Any]:
         updated["topic"] = topic or str(updated.get("topic") or "general")
         updated["status"] = str(updated.get("status") or "pending")
         updated["created_at"] = str(updated.get("created_at") or utc_now_iso())
+        updated["signal_type"] = signal_type or str(updated.get("signal_type") or "helper_work_item")
+        updated["semantic_key"] = _semantic_key(updated["signal_type"], updated["topic"], "helper_work_item")
         for key, value in contract_fields.items():
             if updated.get(key) in (None, "", [], {}):
                 updated[key] = value
@@ -1419,6 +1660,105 @@ def _refine_existing_helper_work_items(outputs: Path) -> dict[str, Any]:
     return counts
 
 
+def _consolidate_existing_helper_work_items(outputs: Path) -> dict[str, Any]:
+    """Keep one lifecycle record per semantic helper problem without deleting history."""
+    helper_dir = knowledge_root(outputs) / "helper-work-items"
+    records: list[tuple[Path, dict[str, Any]]] = []
+    for path in sorted(helper_dir.glob("*.json")):
+        item = _load_json(path, {})
+        if isinstance(item, dict) and item:
+            records.append((path, item))
+
+    grouped: dict[str, list[tuple[Path, dict[str, Any]]]] = defaultdict(list)
+    for path, item in records:
+        grouped[_record_semantic_key(outputs, item)].append((path, item))
+
+    status_rank = {
+        "verified": 5,
+        "implemented": 4,
+        "accepted_for_work": 3,
+        "pending": 2,
+        "retired": 1,
+    }
+    consolidated = 0
+    retired_duplicates = 0
+    for semantic_key, matches in grouped.items():
+        if len(matches) < 2:
+            continue
+        canonical_path, canonical = sorted(
+            matches,
+            key=lambda entry: (
+                -status_rank.get(str(entry[1].get("status") or "pending"), 0),
+                str(entry[1].get("created_at") or ""),
+                str(entry[0]),
+            ),
+        )[0]
+        duplicates_to_retire = [
+            (path, item)
+            for path, item in matches
+            if path != canonical_path
+            and not (
+                str(item.get("status") or "") == "retired"
+                and str(item.get("superseded_by") or "") == str(canonical.get("work_item_id") or "")
+            )
+        ]
+        if not duplicates_to_retire:
+            continue
+        updated = copy.deepcopy(canonical)
+        all_signals: list[dict[str, Any]] = []
+        for _path, item in matches:
+            updated["source_signal_ids"] = _merge_unique_strings(
+                updated.get("source_signal_ids"), item.get("source_signal_ids")
+            )
+            updated["affected_issue_keys"] = _merge_unique_strings(
+                updated.get("affected_issue_keys"), item.get("affected_issue_keys")
+            )
+            updated["evidence"] = _merge_unique_strings(updated.get("evidence"), item.get("evidence"), limit=20)
+            item_signals = _signals_for_candidate(outputs, item)
+            all_signals.extend(item_signals or [{"observed_at": item.get("created_at")}])
+
+        canonical_status = str(updated.get("status") or "pending")
+        if canonical_status == "verified" and _group_observed_after(all_signals, str(updated.get("verified_at") or "")):
+            history = list(updated.get("resolution_history") or [])
+            history.append({
+                "status": "verified",
+                "verified_at": updated.get("verified_at"),
+                "implementation_reference": updated.get("implementation_reference"),
+                "verification_reference": updated.get("verification_reference"),
+            })
+            updated["resolution_history"] = history
+            updated["status"] = "pending"
+            updated["reopened_at"] = utc_now_iso()
+            updated["reopen_reason"] = "A duplicate record contained evidence observed after verification."
+            updated.pop("verified_at", None)
+            updated.pop("implementation_reference", None)
+            updated.pop("verification_reference", None)
+
+        updated["semantic_key"] = semantic_key
+        updated["recurrence_count"] = len(updated.get("source_signal_ids") or [])
+        updated["updated_at"] = utc_now_iso()
+        validate_helper_work_item(updated)
+        _write_json(canonical_path, updated)
+
+        for duplicate_path, duplicate in duplicates_to_retire:
+            retired = copy.deepcopy(duplicate)
+            previous_status = str(retired.get("status") or "pending")
+            retired["status"] = "retired"
+            retired["retired_at"] = utc_now_iso()
+            retired["retirement_reason"] = (
+                f"Superseded by semantic helper work item {updated['work_item_id']}."
+            )
+            retired["superseded_by"] = updated["work_item_id"]
+            retired["superseded_from_status"] = previous_status
+            retired["semantic_key"] = semantic_key
+            validate_helper_work_item(retired)
+            _write_json(duplicate_path, retired)
+            retired_duplicates += 1
+        consolidated += 1
+
+    return {"consolidated": consolidated, "retired_duplicates": retired_duplicates}
+
+
 def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any]:
     """Review signal/log artifacts and create pending lesson/helper candidates."""
     ensure_knowledge_defaults(outputs)
@@ -1427,9 +1767,17 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
     pending_refinement = _refine_existing_pending_candidates(outputs)
     accepted_refinement = _refine_existing_accepted_lessons(outputs)
     helper_refinement = _refine_existing_helper_work_items(outputs)
-    log_scope = derive_signals_from_pipeline_logs(outputs)
-    log_signals_created = int(log_scope.get("signals_created") or 0)
+    helper_consolidation = _consolidate_existing_helper_work_items(outputs)
+    state_path = knowledge_root(outputs) / "audit-reports" / "knowledge-auditor-state.json"
     state = _read_auditor_state(outputs)
+    existing_signals = any((knowledge_root(outputs) / "signals").glob("*.json"))
+    initialize_cursor_only = state_path.exists() and "log_cursors" not in state and existing_signals
+    log_scope = derive_signals_from_pipeline_logs(
+        outputs,
+        line_cursors=state.get("log_cursors") if isinstance(state.get("log_cursors"), dict) else {},
+        initialize_cursor_only=initialize_cursor_only,
+    )
+    log_signals_created = int(log_scope.get("signals_created") or 0)
     processed = set(state.get("processed_signal_ids") or [])
     signals = [item for item in _read_signal_files(outputs) if item.get("signal_id") not in processed]
 
@@ -1474,12 +1822,33 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
                     break
         refinement = _refine_lesson_candidate(signal_type, topic, group)
         contract_fields = _candidate_contract_fields(signal_type, topic, group, refinement.action)
+        semantic_result = _merge_or_reopen_semantic_record(
+            outputs,
+            signal_type=signal_type,
+            topic=topic,
+            route=str(contract_fields.get("route") or "report_only"),
+            group=group,
+            evidence=evidence or summaries[:5],
+            issue_keys=issue_keys,
+            semantic_key=_semantic_key(signal_type, topic, str(contract_fields.get("route") or "report_only"), refinement.lesson),
+        )
+        if semantic_result:
+            existing_candidate_groups += 1
+            consumed_signal_ids.update(source_ids)
+            continue
         candidate = {
             "schema_version": KNOWLEDGE_SCHEMA_VERSION,
             "candidate_id": f"lesson-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-{safe_slug(signal_type)}-{safe_slug(topic)}",
             "source_signal_ids": source_ids,
             "affected_issue_keys": issue_keys,
             "topic": topic,
+            "signal_type": signal_type,
+            "semantic_key": _semantic_key(
+                signal_type,
+                topic,
+                str(contract_fields.get("route") or "report_only"),
+                refinement.lesson,
+            ),
             "trigger": refinement.trigger,
             "lesson": refinement.lesson,
             "evidence": evidence or summaries[:5],
@@ -1565,16 +1934,13 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
         )
         candidates.append(candidate)
         consumed_signal_ids.update(source_ids)
-        if signal_type in {"helper_failure", "helper_available_not_used", "invalid_command_pattern"}:
-            helper = _helper_work_item_from_candidate(candidate)
-            _write_json(knowledge_root(outputs) / "helper-work-items" / f"{helper_work_filename(helper['work_item_id'])}.json", helper)
-            helper_items.append(helper)
 
     processed.update(consumed_signal_ids)
     state_payload = {
         "schema_version": KNOWLEDGE_SCHEMA_VERSION,
         "last_run_at": utc_now_iso(),
         "processed_signal_ids": sorted(processed),
+        "log_cursors": dict(log_scope.get("next_log_cursors") or state.get("log_cursors") or {}),
     }
     _write_json(knowledge_root(outputs) / "audit-reports" / "knowledge-auditor-state.json", state_payload)
 
@@ -1615,6 +1981,8 @@ def run_manual_audit(outputs: Path, *, min_recurrence: int = 2) -> dict[str, Any
         "accepted_lessons_refined": accepted_refinement["refined"],
         "accepted_lessons_retired": accepted_refinement["retired"],
         "helper_work_items_refined": helper_refinement["refined"],
+        "helper_work_item_groups_consolidated": helper_consolidation["consolidated"],
+        "helper_work_item_duplicates_retired": helper_consolidation["retired_duplicates"],
         "candidates_created": len(candidates),
         "helper_work_items_created": len(helper_items) + int(pending_refinement["converted_to_helper"]) + len(accepted_refinement["helper_work_item_ids"]),
         "candidate_ids": [item["candidate_id"] for item in candidates],
@@ -1888,9 +2256,19 @@ def classify_guardrail_command(command: str, *, production_approved: bool = Fals
     if "sf data query" in lower and "sf_caseops_helper.py" not in lower:
         findings.append({
             "rule": "raw_soql_without_helper",
-            "severity": "warn",
+            "severity": "block",
             "message": "Raw sf data query bypasses CaseOps object/field prechecks and structured INVALID_TYPE handling.",
-            "next_action": "Use `python scripts/sf_caseops_helper.py query-data ...` or verify the sObject with `verify-sobject` first.",
+            "next_action": "Use `python scripts/sf_caseops_helper.py query-data ...` or `query-tooling ...`; verify unfamiliar objects first.",
+        })
+    raw_api_request = re.search(r"\bsf\s+api\s+request\s+rest\b", lower) and "sf_caseops_helper.py" not in lower
+    api_method_match = re.search(r"(?:--method(?:=|\s+)|\s-x\s+)([a-z]+)", lower)
+    api_method = api_method_match.group(1).upper() if api_method_match else "GET"
+    if raw_api_request and api_method == "GET":
+        findings.append({
+            "rule": "raw_api_request_without_helper",
+            "severity": "block",
+            "message": "Raw sf API output can include warnings that break ad hoc JSON parsing.",
+            "next_action": "Use `python scripts/sf_caseops_helper.py api-request ...` for read-only REST requests.",
         })
     if re.search(r"\b(project\s+deploy|deploy\s+start|data\s+(?:update|delete|upsert|create)|apex\s+run)\b", lower) and "production" in lower and not production_approved:
         findings.append({
@@ -1975,6 +2353,12 @@ def _helper_work_item_from_candidate(candidate: dict[str, Any]) -> dict[str, Any
         "source_signal_ids": candidate.get("source_signal_ids") or [],
         "affected_issue_keys": candidate.get("affected_issue_keys") or [],
         "topic": candidate["topic"],
+        "signal_type": candidate.get("signal_type") or "helper_work_item",
+        "semantic_key": _semantic_key(
+            str(candidate.get("signal_type") or "helper_work_item"),
+            str(candidate.get("topic") or "general"),
+            "helper_work_item",
+        ),
         "summary": f"Evaluate helper/guardrail support for: {candidate['trigger']}",
         "lesson": candidate.get("lesson") or "",
         "evidence": candidate.get("evidence") or [],
@@ -2026,6 +2410,8 @@ def _write_audit_markdown(
         f"- Existing accepted lessons refined: {summary.get('accepted_lessons_refined', 0)}",
         f"- Existing accepted lessons retired: {summary.get('accepted_lessons_retired', 0)}",
         f"- Existing helper work items normalized: {summary.get('helper_work_items_refined', 0)}",
+        f"- Semantic helper groups consolidated: {summary.get('helper_work_item_groups_consolidated', 0)}",
+        f"- Duplicate helper records retired: {summary.get('helper_work_item_duplicates_retired', 0)}",
         "",
         "## Pending Lesson Candidates",
         "",

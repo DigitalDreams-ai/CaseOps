@@ -8,6 +8,15 @@ if [[ ! -x "$REAL_SF" ]]; then
   exit 127
 fi
 
+block_for_helper() {
+  local failure_class="$1"
+  local helper_command="$2"
+  local message="$3"
+  printf '{"ok":false,"failure_class":"%s","retryable":false,"next_action":"Use %s","error":"%s"}\n' \
+    "$failure_class" "$helper_command" "$message" >&2
+  exit 65
+}
+
 has_sfdx_workspace() {
   local dir="$PWD"
   while [[ -n "$dir" ]]; do
@@ -77,10 +86,33 @@ for ((i=0; i<${#args[@]}; i++)); do
   esac
 done
 
-is_mutating=0
 first="${1:-}"
 second="${2:-}"
 third="${3:-}"
+
+# Claude subprocesses receive this wrapper first on PATH. Commands with an
+# owned CaseOps helper must not bypass its prechecks and structured failures.
+case "$first $second $third" in
+  "data query "*)
+    block_for_helper "raw_sf_query_blocked" "python scripts/sf_caseops_helper.py query-data or query-tooling" "Raw sf data query bypasses CaseOps object checks and failure classification."
+    ;;
+  "project retrieve start")
+    block_for_helper "raw_sf_retrieve_blocked" "python scripts/sf_caseops_helper.py retrieve-metadata" "Raw sf project retrieve bypasses the issue-scoped workspace and retrieve summary."
+    ;;
+  "project deploy start")
+    if [[ "${CASEOPS_PRODUCTION_WRITE_APPROVED:-}" != "1" ]]; then
+      block_for_helper "raw_sf_deploy_blocked" "python scripts/sf_caseops_helper.py deploy-source or deploy-mdapi" "Raw sf project deploy bypasses CaseOps candidate and deploy summaries."
+    fi
+    ;;
+  "api request rest")
+    method_upper="${request_method^^}"
+    if [[ -z "$method_upper" || "$method_upper" == "GET" ]]; then
+      block_for_helper "raw_sf_api_request_blocked" "python scripts/sf_caseops_helper.py api-request" "Raw read-only API output may contain warnings that break ad hoc JSON parsing."
+    fi
+    ;;
+esac
+
+is_mutating=0
 
 needs_project_workspace=0
 case "$first $second $third" in

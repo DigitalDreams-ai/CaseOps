@@ -45,7 +45,7 @@ python scripts/sf_caseops_helper.py deploy-report --org "$CASEOPS_SANDBOX_TARGET
 ```
 
 - If the helper or deploy pattern fails with `retryable=false`, stop and summarize the blocker. Do not inspect `.sf` internals or try many small deploy variants.
-- If no helper covers the case, deploy with modern `sf project deploy start --source-dir` or `--metadata-dir`. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
+- Do not bypass CaseOps deploy helpers with raw `sf project deploy start`. Record the structured blocker and replan. Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest`.
 
 After deploying:
 

@@ -163,6 +163,7 @@ python scripts/sf_caseops_helper.py verify-sobject --org "$ORG" --sobject Case -
 python scripts/sf_caseops_helper.py retrieve-metadata --org "$ORG" --metadata "Flow:Flow_API_Name" --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
 python scripts/sf_caseops_helper.py query-data --org "$ORG" --soql "SELECT Id FROM Account LIMIT 1" --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
 python scripts/sf_caseops_helper.py query-tooling --org "$ORG" --soql "SELECT Id, DeveloperName FROM FlowDefinition LIMIT 1" --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
+python scripts/sf_caseops_helper.py api-request --org "$ORG" --endpoint "/services/data/v66.0/limits" --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
 python scripts/sf_caseops_helper.py verify-field --org "$ORG" --sobject Case --field Field_Name__c --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
 python scripts/sf_caseops_helper.py verify-flow --org "$ORG" --flow Flow_API_Name --out-dir "${CASEOPS_METADATA_RAW_PROD_DIR}/<KEY>"
 python scripts/sf_caseops_helper.py deploy-source --sandbox-org "$CASEOPS_SANDBOX_TARGET_ORG" --source-dir "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-001/candidate/force-app" --attempt "${CASEOPS_METADATA_SANDBOX_WORK_DIR}/<KEY>/attempt-001"
@@ -176,11 +177,9 @@ Before the first query against an unfamiliar, optional, or managed-package objec
 
 Retrieve/deploy command contract:
 
-- Use modern `sf` CLI commands only.
-- Do not use legacy `sfdx force:*` commands.
-- Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy.
-- Prefer the helper operations above. If a helper does not cover the case, use `sf project retrieve start --metadata`, `sf project retrieve start --source-dir`, `sf project deploy start --source-dir`, or `sf project deploy start --metadata-dir`.
-- Raw `sf project` commands must run inside an issue-scoped Salesforce DX workspace. CaseOps now guards these commands, but helper-based retrieve/deploy is still the preferred path.
+- Use the helper operations above for SOQL, targeted REST reads, retrieve, and deploy. Their structured output is part of the pipeline contract.
+- Raw `sf data query`, `sf project retrieve start`, `sf project deploy start`, and read-only `sf api request rest` are blocked by the CaseOps guard.
+- Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest` for routine CaseOps work.
 
 If a run discovers a durable, verified, reusable org fact, update the most specific selected topic file with one short bullet. Do not store secrets, raw access tokens, frontdoor links, or customer-private narrative.
 

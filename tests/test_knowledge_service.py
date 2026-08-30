@@ -242,6 +242,53 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(second["log_signals_created"], 0)
         self.assertEqual(second["candidates_created"], 0)
 
+    def test_manual_auditor_uses_line_cursors_and_preserves_log_provenance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            logs = outputs / "pipeline-logs"
+            logs.mkdir(parents=True)
+            log_path = logs / "OPEN-1.jsonl"
+            first_record = {
+                "ts": "2026-08-30T17:00:00+00:00",
+                "run_key": "OPEN-1",
+                "kind": "line",
+                "text": 'Tool warning: {"name":"INVALID_TYPE","errorCode":"INVALID_TYPE"}',
+            }
+            log_path.write_text(json.dumps(first_record) + "\n", encoding="utf-8")
+
+            first = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            first_signal = json.loads(next((outputs / "org-knowledge" / "signals").glob("*.json")).read_text(encoding="utf-8"))
+            second_record = {
+                "ts": "2026-08-30T18:00:00+00:00",
+                "run_key": "OPEN-1",
+                "kind": "line",
+                "text": 'Tool warning: {"name":"INVALID_TYPE","errorCode":"INVALID_TYPE"}',
+            }
+            with log_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(second_record) + "\n")
+            second = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            third = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            rotated_record = {
+                "ts": "2026-08-31T08:00:00+00:00",
+                "run_key": "OPEN-1",
+                "kind": "line",
+                "text": "json.decoder.JSONDecodeError: Expecting value: line 1 column 1",
+            }
+            log_path.write_text(json.dumps(rotated_record) + "\n", encoding="utf-8")
+            fourth = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            signals = [json.loads(path.read_text(encoding="utf-8")) for path in (outputs / "org-knowledge" / "signals").glob("*.json")]
+
+        self.assertEqual(first["log_signals_created"], 1)
+        self.assertEqual(second["log_signals_created"], 1)
+        self.assertEqual(third["log_signals_created"], 0)
+        self.assertEqual(fourth["log_signals_created"], 1)
+        self.assertTrue(any("truncated or rotated log" in item for item in fourth["scope_limitations"]))
+        self.assertEqual(len(signals), 3)
+        self.assertEqual(first_signal["observed_at"], "2026-08-30T17:00:00+00:00")
+        self.assertEqual(first_signal["source_log"], "OPEN-1.jsonl")
+        self.assertEqual(first_signal["source_line"], 1)
+        self.assertEqual({item["source_line"] for item in signals}, {1, 2})
+
     def test_manual_auditor_reports_scope_and_global_logs(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"
@@ -373,7 +420,113 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(len(helpers), 1)
         self.assertEqual(second["helper_work_items_created"], 0)
 
-    def test_manual_auditor_routes_helper_related_failure_to_helper_work(self):
+    def test_manual_auditor_merges_new_signals_into_one_semantic_helper_item(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            for key in ("OPEN-1", "OPEN-2"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="json_decode_error",
+                    topic="salesforce-cli-output",
+                    summary="A Salesforce command returned non-JSON output.",
+                    evidence=["JSONDecodeError"],
+                    observed_at="2026-08-29T10:00:00+00:00",
+                )
+            first = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+
+            for key in ("OPEN-3", "OPEN-4"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="json_decode_error",
+                    topic="salesforce-cli-output",
+                    summary="A Salesforce command returned non-JSON output again.",
+                    evidence=["Expecting value: line 1 column 1"],
+                    observed_at="2026-08-30T10:00:00+00:00",
+                )
+            second = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            helper_paths = list((outputs / "org-knowledge" / "helper-work-items").glob("*.json"))
+            helper = json.loads(helper_paths[0].read_text(encoding="utf-8"))
+
+        self.assertEqual(first["helper_work_items_created"], 1)
+        self.assertEqual(second["helper_work_items_created"], 0)
+        self.assertEqual(len(helper_paths), 1)
+        self.assertEqual(helper["recurrence_count"], 4)
+        self.assertEqual(helper["affected_issue_keys"], ["OPEN-1", "OPEN-2", "OPEN-3", "OPEN-4"])
+        self.assertEqual(helper["semantic_key"], "helper_work_item:json_decode_error:salesforce-cli-output")
+
+    def test_retired_helper_reopens_only_for_evidence_observed_after_retirement(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            for key in ("OPEN-1", "OPEN-2"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="json_decode_error",
+                    topic="salesforce-cli-output",
+                    summary="A Salesforce command returned non-JSON output.",
+                    evidence=["JSONDecodeError"],
+                    observed_at="2026-08-29T10:00:00+00:00",
+                )
+            knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            helper_path = next((outputs / "org-knowledge" / "helper-work-items").glob("*.json"))
+            helper = json.loads(helper_path.read_text(encoding="utf-8"))
+            helper.update({
+                "status": "retired",
+                "retired_at": "2026-08-30T12:00:00+00:00",
+                "retirement_reason": "Covered by structured CLI parsing.",
+            })
+            helper_path.write_text(json.dumps(helper), encoding="utf-8")
+
+            for key in ("OPEN-3", "OPEN-4"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="json_decode_error",
+                    topic="salesforce-cli-output",
+                    summary="Historical Salesforce CLI evidence.",
+                    evidence=["old JSONDecodeError"],
+                    observed_at="2026-08-30T11:00:00+00:00",
+                )
+            covered = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            still_retired = json.loads(helper_path.read_text(encoding="utf-8"))
+
+            for key in ("OPEN-5", "OPEN-6"):
+                knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="json_decode_error",
+                    topic="salesforce-cli-output",
+                    summary="A new Salesforce CLI parsing regression occurred.",
+                    evidence=["new JSONDecodeError"],
+                    observed_at="2026-08-31T10:00:00+00:00",
+                )
+            reopened_summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            reopened = json.loads(helper_path.read_text(encoding="utf-8"))
+            helper_paths = list((outputs / "org-knowledge" / "helper-work-items").glob("*.json"))
+
+        self.assertEqual(covered["helper_work_items_created"], 0)
+        self.assertEqual(still_retired["status"], "retired")
+        self.assertEqual(reopened_summary["helper_work_items_created"], 0)
+        self.assertEqual(len(helper_paths), 1)
+        self.assertEqual(reopened["status"], "pending")
+        self.assertEqual(len(reopened["resolution_history"]), 1)
+        self.assertEqual(reopened["recurrence_count"], 4)
+
+    def test_manual_auditor_suppresses_generic_helper_related_failure(self):
         with tempfile.TemporaryDirectory() as tmp:
             outputs = Path(tmp) / "outputs"
             knowledge_service.ensure_knowledge_defaults(outputs)
@@ -391,14 +544,13 @@ class KnowledgeServiceTests(unittest.TestCase):
 
             summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
             pending = list((outputs / "org-knowledge" / "pending-lessons").glob("*.json"))
-            helper = json.loads(next((outputs / "org-knowledge" / "helper-work-items").glob("*.json")).read_text(encoding="utf-8"))
+            helpers = list((outputs / "org-knowledge" / "helper-work-items").glob("*.json"))
 
         self.assertEqual(summary["candidates_created"], 0)
-        self.assertEqual(summary["helper_only_groups"], 1)
-        self.assertEqual(summary["helper_work_items_created"], 1)
+        self.assertEqual(summary["suppressed_groups"], 1)
+        self.assertEqual(summary["helper_work_items_created"], 0)
         self.assertEqual(pending, [])
-        self.assertEqual(helper["route"], "helper_work_item")
-        self.assertEqual(helper["failure_class"], "helper_failure")
+        self.assertEqual(helpers, [])
 
     def test_manual_auditor_normalizes_legacy_helper_work_items(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -439,6 +591,70 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertEqual(updated["failure_class"], "invalid_salesforce_assumption")
         self.assertEqual(updated["quality"], "high")
         self.assertEqual(updated["redaction_status"], "not_needed")
+
+    def test_manual_auditor_consolidates_duplicate_semantic_helper_items(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp) / "outputs"
+            knowledge_service.ensure_knowledge_defaults(outputs)
+            signals = []
+            for key in ("OPEN-1", "OPEN-2"):
+                signals.append(knowledge_service.write_signal(
+                    outputs,
+                    issue_key=key,
+                    run_id=key,
+                    source_step="LOG",
+                    signal_type="json_decode_error",
+                    topic="salesforce-cli-output",
+                    summary="Salesforce CLI output was not valid JSON.",
+                    evidence=["JSONDecodeError"],
+                    observed_at="2026-08-29T10:00:00+00:00",
+                ))
+            helper_dir = outputs / "org-knowledge" / "helper-work-items"
+            base = {
+                "schema_version": 1,
+                "topic": "salesforce-cli-output",
+                "signal_type": "json_decode_error",
+                "summary": "Evaluate structured Salesforce CLI parsing.",
+                "lesson": "Parse Salesforce CLI output defensively.",
+                "evidence": ["JSONDecodeError"],
+                "failure_class": "helper_failure",
+                "route": "helper_work_item",
+                "quality": "high",
+                "quality_reason": "Repeated deterministic failure.",
+                "redaction_status": "not_needed",
+                "status": "pending",
+            }
+            first = dict(
+                base,
+                work_item_id="helper-first",
+                source_candidate_id="lesson-first",
+                source_signal_ids=[signals[0]["signal_id"]],
+                affected_issue_keys=["OPEN-1"],
+                created_at="2026-08-29T10:00:00+00:00",
+            )
+            second = dict(
+                base,
+                work_item_id="helper-second",
+                source_candidate_id="lesson-second",
+                source_signal_ids=[signals[1]["signal_id"]],
+                affected_issue_keys=["OPEN-2"],
+                created_at="2026-08-29T11:00:00+00:00",
+            )
+            (helper_dir / "helper-first.json").write_text(json.dumps(first), encoding="utf-8")
+            (helper_dir / "helper-second.json").write_text(json.dumps(second), encoding="utf-8")
+
+            summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            second_summary = knowledge_service.run_manual_audit(outputs, min_recurrence=2)
+            items = knowledge_service.list_review_items(outputs)
+
+        self.assertEqual(summary["helper_work_item_groups_consolidated"], 1)
+        self.assertEqual(summary["helper_work_item_duplicates_retired"], 1)
+        self.assertEqual(second_summary["helper_work_item_groups_consolidated"], 0)
+        self.assertEqual(second_summary["helper_work_item_duplicates_retired"], 0)
+        self.assertEqual(len(items["helper_work_items"]), 1)
+        self.assertEqual(len(items["retired_helper_work_items"]), 1)
+        self.assertEqual(items["helper_work_items"][0]["recurrence_count"], 2)
+        self.assertEqual(items["retired_helper_work_items"][0]["superseded_by"], "helper-first")
 
     def test_manual_auditor_suppresses_broad_missing_file_bucket(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -855,6 +1071,12 @@ class KnowledgeServiceTests(unittest.TestCase):
         raw_query = knowledge_service.classify_guardrail_command(
             "sf data query --query 'SELECT Id FROM Missing_Object__c'"
         )
+        raw_api = knowledge_service.classify_guardrail_command(
+            "sf api request rest /services/data/v66.0/query/?q=SELECT%20Id%20FROM%20Account --target-org prod"
+        )
+        raw_api_post = knowledge_service.classify_guardrail_command(
+            "sf api request rest /services/data/v66.0/sobjects/Account --method POST --target-org sandbox"
+        )
 
         self.assertFalse(legacy["ok"])
         self.assertTrue(any(item["rule"] == "routine_manifest_deploy" for item in manifest["findings"]))
@@ -863,8 +1085,11 @@ class KnowledgeServiceTests(unittest.TestCase):
         self.assertTrue(any(item["rule"] == "raw_project_retrieve_without_helper" for item in raw_retrieve["findings"]))
         self.assertFalse(raw_deploy["ok"])
         self.assertTrue(any(item["rule"] == "raw_project_deploy_without_helper" for item in raw_deploy["findings"]))
-        self.assertTrue(raw_query["ok"])
+        self.assertFalse(raw_query["ok"])
         self.assertTrue(any(item["rule"] == "raw_soql_without_helper" for item in raw_query["findings"]))
+        self.assertFalse(raw_api["ok"])
+        self.assertTrue(any(item["rule"] == "raw_api_request_without_helper" for item in raw_api["findings"]))
+        self.assertTrue(raw_api_post["ok"])
 
     def test_knowledge_review_api_accepts_pending_candidate(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1086,6 +1311,70 @@ class KnowledgeServiceTests(unittest.TestCase):
             saved = json.loads(signals[0].read_text(encoding="utf-8"))
 
         self.assertEqual(saved["signal_type"], "helper_failure")
+
+    def test_generic_claude_exit_does_not_create_helper_signal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            log_dir = outputs / "pipeline-logs"
+            log_dir.mkdir(parents=True)
+            (log_dir / "OPEN-1.jsonl").write_text(
+                json.dumps({"ts": "2026-08-30T12:00:00+00:00", "text": "STEP_3 OPEN-1"}) + "\n",
+                encoding="utf-8",
+            )
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "OUTPUTS_PIPELINE_LOGS", log_dir),
+                patch.object(app, "_log_emit_line"),
+            ):
+                app._write_pipeline_failure_artifact(
+                    "OPEN-1",
+                    "OPEN-1",
+                    failure_class="claude_exit_failure",
+                    reason="Claude exited before producing a final result.",
+                    retryable=False,
+                    next_action="Inspect the agent transcript.",
+                )
+
+            signals = list((outputs / "org-knowledge" / "signals").glob("*.json"))
+
+        self.assertEqual(signals, [])
+
+    def test_raw_salesforce_failure_creates_only_invalid_command_signal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = Path(tmp)
+            log_dir = outputs / "pipeline-logs"
+            log_dir.mkdir(parents=True)
+            (log_dir / "OPEN-1.jsonl").write_text(
+                "\n".join([
+                    json.dumps({"ts": "2026-08-30T12:00:00+00:00", "text": "STEP_5 OPEN-1"}),
+                    json.dumps({"ts": "2026-08-30T12:01:00+00:00", "text": "[Bash] sf data query --query 'SELECT Id FROM Account'"}),
+                    json.dumps({"ts": "2026-08-30T12:02:00+00:00", "text": '{"failure_class":"raw_sf_query_blocked","retryable":false}'}),
+                ]) + "\n",
+                encoding="utf-8",
+            )
+
+            with (
+                patch.object(app, "OUTPUTS", outputs),
+                patch.object(app, "OUTPUTS_PIPELINE_LOGS", log_dir),
+                patch.object(app, "_log_emit_line"),
+            ):
+                app._write_pipeline_failure_artifact(
+                    "OPEN-1",
+                    "OPEN-1",
+                    failure_class="claude_exit_failure",
+                    reason="Raw Salesforce command was blocked.",
+                    retryable=False,
+                    next_action="Use the CaseOps helper.",
+                )
+
+            signals = [
+                json.loads(path.read_text(encoding="utf-8"))
+                for path in (outputs / "org-knowledge" / "signals").glob("*.json")
+            ]
+
+        self.assertEqual(len(signals), 1)
+        self.assertEqual(signals[0]["signal_type"], "invalid_command_pattern")
 
 
 if __name__ == "__main__":

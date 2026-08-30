@@ -1617,7 +1617,7 @@
             const metric = (count, label) => `<div class="health-metric"><strong>${escapeHtml(String(count))}</strong><span>${escapeHtml(label)}</span></div>`;
             const pendingHtml = pending.length ? pending.map(renderPendingLessonCard).join('') : '<div class="field-note">No pending lessons.</div>';
             const acceptedHtml = accepted.length ? accepted.slice(0, 8).map(renderAcceptedLessonCard).join('') : '<div class="field-note">No accepted lessons.</div>';
-            const helperHtml = helpers.length ? helpers.slice(0, 8).map(renderHelperWorkItemCard).join('') : '<div class="field-note">No helper work items.</div>';
+            const helperHtml = helpers.length ? helpers.map(renderHelperWorkItemCard).join('') : '<div class="field-note">No helper work items.</div>';
             panel.innerHTML = `
                 <div class="health-metric-grid">
                     ${metric(pending.length, 'Pending lessons')}
@@ -1914,6 +1914,8 @@
                     <li>Existing accepted lessons refined: ${escapeHtml(String(acceptedRefined))}</li>
                     <li>Existing accepted lessons retired: ${escapeHtml(String(acceptedRetired))}</li>
                     <li>Existing helper work items normalized: ${escapeHtml(String(helpersRefined))}</li>
+                    <li>Semantic helper groups consolidated: ${escapeHtml(String(summary.helper_work_item_groups_consolidated || 0))}</li>
+                    <li>Duplicate helper records retired: ${escapeHtml(String(summary.helper_work_item_duplicates_retired || 0))}</li>
                     <li>New signal groups routed directly to helper work: ${escapeHtml(String(helperOnly))}</li>
                     <li>Noisy signal groups suppressed: ${escapeHtml(String(suppressedNew))}</li>
                     <li>Pending lessons created: ${escapeHtml(String(created))}</li>

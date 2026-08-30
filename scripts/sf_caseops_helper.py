@@ -23,6 +23,15 @@ from typing import Any
 SF_TOKEN_RE = re.compile(r"\b00D[A-Za-z0-9]{12,18}![A-Za-z0-9._~=-]{20,}\b")
 
 
+class HelperArgumentError(ValueError):
+    """Raised when helper CLI arguments do not satisfy the command contract."""
+
+
+class JsonArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        raise HelperArgumentError(message)
+
+
 def _redact(value: str) -> str:
     return SF_TOKEN_RE.sub("[REDACTED_SF_ACCESS_TOKEN]", value)
 
@@ -39,7 +48,12 @@ def _sf_env() -> dict[str, str]:
 
 
 def _run(cmd: list[str], timeout: int = 90, cwd: str | Path | None = None) -> subprocess.CompletedProcess[str]:
-    sf = shutil.which("sf")
+    configured_sf = (os.environ.get("CASEOPS_REAL_SF") or "").strip()
+    sf = (
+        configured_sf
+        if configured_sf and Path(configured_sf).is_file() and os.access(configured_sf, os.X_OK)
+        else shutil.which("sf")
+    )
     if not sf:
         raise RuntimeError("Salesforce CLI `sf` is not on PATH")
     if cmd and cmd[0] == "sf":
@@ -56,18 +70,24 @@ def _run(cmd: list[str], timeout: int = 90, cwd: str | Path | None = None) -> su
     )
 
 
-def _json_from_stdout(stdout: str) -> dict[str, Any]:
+def _json_value_from_stdout(stdout: str) -> Any:
     text = (stdout or "").strip()
     if not text:
-        return {}
-    if not text.startswith("{"):
-        idx = text.find("{")
-        if idx >= 0:
-            text = text[idx:]
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        return {}
+        return None
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(text):
+        if char not in "[{":
+            continue
+        try:
+            value, _end = decoder.raw_decode(text[index:])
+        except json.JSONDecodeError:
+            continue
+        return value
+    return None
+
+
+def _json_from_stdout(stdout: str) -> dict[str, Any]:
+    data = _json_value_from_stdout(stdout)
     return data if isinstance(data, dict) else {}
 
 
@@ -75,10 +95,11 @@ def _json_parse_error(stdout: str) -> str | None:
     text = (stdout or "").strip()
     if not text:
         return None
-    if not text.startswith("{"):
-        idx = text.find("{")
-        if idx >= 0:
-            text = text[idx:]
+    if _json_value_from_stdout(text) is not None:
+        return None
+    starts = [idx for idx, char in enumerate(text) if char in "[{"]
+    if starts:
+        text = text[starts[-1]:]
     try:
         json.loads(text)
     except json.JSONDecodeError as exc:
@@ -119,8 +140,8 @@ def _command_result(
     operation: str = "",
     include_result: bool = True,
 ) -> dict[str, Any]:
-    parsed = _json_from_stdout(proc.stdout)
-    parse_error = _json_parse_error(proc.stdout) if proc.returncode == 0 and proc.stdout and not parsed else None
+    parsed_value = _json_value_from_stdout(proc.stdout)
+    parse_error = _json_parse_error(proc.stdout) if proc.returncode == 0 and proc.stdout and parsed_value is None else None
     combined = "\n".join(part for part in (proc.stderr, proc.stdout, parse_error or "") if part)
     failure_class, retryable, next_action = _classify_failure(combined, returncode=proc.returncode, operation=operation)
     ok = proc.returncode == 0 and parse_error is None
@@ -140,8 +161,8 @@ def _command_result(
         result["retryable"] = False
         result["next_action"] = "The CLI returned non-JSON output. Capture stderr/stdout and re-run with --json only after fixing the command."
         result["json_parse_error"] = parse_error
-    if include_result and parsed:
-        result["sf"] = parsed
+    if include_result and parsed_value is not None:
+        result["sf"] = parsed_value
     return result
 
 
@@ -656,9 +677,10 @@ def query_data(args: argparse.Namespace) -> int:
 
 def query_tooling(args: argparse.Namespace) -> int:
     primary_sobject = _extract_primary_sobject(args.soql)
+    precheck: dict[str, Any] | None = None
     if not args.skip_existence_check and primary_sobject:
         precheck = _verify_tooling_sobject(args.org, primary_sobject, timeout=args.timeout)
-        if not precheck.get("ok"):
+        if not precheck.get("ok") and precheck.get("failure_class") != "invalid_query_type":
             result = {
                 "kind": "query-tooling",
                 "org": args.org,
@@ -677,7 +699,49 @@ def query_tooling(args: argparse.Namespace) -> int:
     result["org"] = args.org
     if primary_sobject:
         result["primarySObject"] = primary_sobject
+    if precheck is not None:
+        result["precheck"] = precheck
+        if result.get("ok") and not precheck.get("ok"):
+            result["precheckAdvisory"] = (
+                "EntityDefinition did not list this Tooling API object, but the targeted Tooling query succeeded."
+            )
     _write_output(args.out_dir, f"{_safe_name(args.name or 'query-tooling')}.json", result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0 if result.get("ok") else 1
+
+
+def api_request(args: argparse.Namespace) -> int:
+    """Run a read-only Salesforce REST request with structured output."""
+    method = str(args.method or "GET").upper()
+    if method != "GET":
+        result = {
+            "kind": "api-request",
+            "ok": False,
+            "method": method,
+            "endpoint": args.endpoint,
+            "failure_class": "unsafe_method",
+            "retryable": False,
+            "next_action": "The CaseOps api-request helper is read-only. Use an approved, target-specific write path for mutations.",
+        }
+        _write_output(args.out_dir, f"{_safe_name(args.name or 'api-request')}.json", result)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 1
+
+    command = [
+        "sf",
+        "api",
+        "request",
+        "rest",
+        args.endpoint,
+        "--target-org",
+        args.org,
+        "--method",
+        "GET",
+    ]
+    proc = _run(command, timeout=args.timeout)
+    result = _command_result(kind="api-request", proc=proc, command=command)
+    result.update({"org": args.org, "endpoint": args.endpoint, "method": method})
+    _write_output(args.out_dir, f"{_safe_name(args.name or 'api-request')}.json", result)
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0 if result.get("ok") else 1
 
@@ -958,8 +1022,8 @@ def deploy_mdapi(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="CaseOps deterministic Salesforce helper")
-    sub = parser.add_subparsers(dest="command", required=True)
+    parser = JsonArgumentParser(description="CaseOps deterministic Salesforce helper")
+    sub = parser.add_subparsers(dest="command", required=True, parser_class=JsonArgumentParser)
 
     p = sub.add_parser("custom-field", help="Inspect a custom field and picklist metadata")
     p.add_argument("--org", required=True)
@@ -1022,6 +1086,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--skip-existence-check", action="store_true")
     p.set_defaults(func=query_tooling)
 
+    p = sub.add_parser("api-request", help="Run a read-only Salesforce REST request and return structured JSON")
+    p.add_argument("--org", required=True)
+    p.add_argument("--endpoint", required=True)
+    p.add_argument("--method", default="GET")
+    p.add_argument("--name")
+    p.add_argument("--out-dir")
+    p.add_argument("--timeout", type=int, default=90)
+    p.set_defaults(func=api_request)
+
     p = sub.add_parser("retrieve-metadata", help="Retrieve targeted metadata to an issue-scoped output directory")
     p.add_argument("--org", required=True)
     p.add_argument("--metadata", action="append")
@@ -1068,7 +1141,21 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--timeout", type=int, default=600)
     p.set_defaults(func=deploy_mdapi)
 
-    args = parser.parse_args(argv)
+    try:
+        args = parser.parse_args(argv)
+    except HelperArgumentError as exc:
+        attempted = list(argv) if argv is not None else sys.argv[1:]
+        result = {
+            "kind": "helper-argument-error",
+            "ok": False,
+            "command": attempted[0] if attempted else "",
+            "failure_class": "invalid_helper_arguments",
+            "retryable": False,
+            "error": _redact(str(exc)),
+            "next_action": "Correct the named helper arguments before retrying. Do not replace the helper with a raw sf command.",
+        }
+        print(json.dumps(result, indent=2, ensure_ascii=False), file=sys.stderr)
+        return 2
     try:
         return int(args.func(args))
     except subprocess.TimeoutExpired as exc:

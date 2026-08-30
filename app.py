@@ -4313,18 +4313,34 @@ def _write_pipeline_knowledge_signals_from_failure(key: str, run_key: str, artif
     recent_error_lines = [str(item) for item in artifact.get("recent_error_lines") or [] if item]
 
     try:
-        if last_family.startswith("sf-helper") or any(cls and cls != "timeout_total" for cls in failure_classes):
+        actionable_failure_classes = [
+            cls for cls in failure_classes
+            if cls not in {
+                "",
+                "claude_exit_failure",
+                "stop_requested",
+                "timeout",
+                "timeout_idle",
+                "timeout_total",
+                "timeout_exit_wait",
+            }
+        ]
+        helper_signal_type = ""
+        if last_family.startswith("sf-helper"):
+            helper_signal_type = "helper_failure"
+        if helper_signal_type:
             knowledge_service.write_signal(
                 OUTPUTS,
                 issue_key=key,
                 run_id=run_key,
                 source_step=f"STEP_{artifact.get('failed_step') or 'unknown'}",
-                signal_type="helper_failure" if last_family.startswith("sf-helper") else "helper_related_failure",
+                signal_type=helper_signal_type,
                 topic=last_family or "salesforce",
                 summary=f"Pipeline failure captured {artifact.get('failure_class') or 'unknown'} while running {last_family or 'Salesforce/Claude command'}.",
-                evidence=recent_error_lines[:5] or failure_classes[:5],
+                evidence=recent_error_lines[:5] or actionable_failure_classes[:5],
                 helper_available="scripts/sf_caseops_helper.py" if last_family.startswith("sf-helper") else "",
                 knowledge_selected=knowledge_selected,
+                observed_at=str(artifact.get("run_ended") or artifact.get("created_at") or ""),
             )
         guardrail = knowledge_service.classify_guardrail_command(last_command)
         guardrail_findings = guardrail.get("findings") if isinstance(guardrail, dict) else []
@@ -4340,6 +4356,7 @@ def _write_pipeline_knowledge_signals_from_failure(key: str, run_key: str, artif
                 evidence=[f"{item.get('rule')}: {item.get('message')}" for item in guardrail_findings[:5]] + [last_command[:500]],
                 helper_available="scripts/sf_caseops_helper.py",
                 knowledge_selected=knowledge_selected,
+                observed_at=str(artifact.get("run_ended") or artifact.get("created_at") or ""),
             )
     except Exception as exc:
         _log_emit_line(run_key, f"WARNING: unable to write knowledge signal: {exc}")
@@ -7702,13 +7719,14 @@ def _build_claude_prompt(
         f"1. **Use CaseOps Salesforce helper commands first** when available:\n"
         f"   - `python scripts/sf_caseops_helper.py retrieve-metadata ...`\n"
         f"   - `python scripts/sf_caseops_helper.py query-data ...` or `query-tooling ...`\n"
+        f"   - `python scripts/sf_caseops_helper.py api-request ...` for read-only REST endpoints not covered by SOQL helpers\n"
         f"   - `python scripts/sf_caseops_helper.py verify-field ...` or `verify-flow ...`\n"
         f"   - `python scripts/sf_caseops_helper.py deploy-source|deploy-mdapi|deploy-report ...` for Sandbox deploy/test work\n"
-        f"2. **Use raw `sf` CLI commands only when no helper covers the task** (read-only, fast, no browser needed):\n"
+        f"2. **Use raw `sf` CLI commands only for read-only operations that have no CaseOps helper**:\n"
         f"   - `sf org display --target-org <alias>` and `sf org list` to verify auth\n"
         f"   - `sf sobject get --sobject [type]` only when helper describe commands do not cover the need\n"
-        f"   - Do not run raw `sf project retrieve start` or `sf project deploy start`; use `scripts/sf_caseops_helper.py retrieve-metadata`, `deploy-source`, or `deploy-mdapi` so CaseOps creates a valid SFDX workspace and captures structured output.\n"
-        f"3. **Use SOQL queries** via helper or `sf data query` to inspect data, field values, record types, assignments\n"
+        f"   - Raw `sf data query`, `sf project retrieve start`, `sf project deploy start`, and read-only `sf api request rest` are blocked. Use `query-data`, `query-tooling`, `retrieve-metadata`, `deploy-source`, `deploy-mdapi`, or `api-request` so CaseOps captures structured output and applies safety checks.\n"
+        f"3. **Use SOQL queries** through `query-data` or `query-tooling` to inspect data, field values, record types, and assignments.\n"
         f"4. **Never use Playwright, browser automation, frontdoor links, or frontdoor SIDs** for metadata queries, SOQL/API access, field inspection, permission checks, retrieval, deploy, or Apex tests\n"
         f"5. **Only open browser / frontdoor links for:**\n"
         f"   - Visual verification (testing layouts, field placement, visual tests)\n"

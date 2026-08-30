@@ -5,13 +5,13 @@ For layout section and field placement checks, Tooling `Layout.Metadata` is ofte
 Find Case layouts:
 
 ```bash
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, TableEnumOrId FROM Layout WHERE TableEnumOrId = 'Case'"
+python scripts/sf_caseops_helper.py query-tooling --org "$ORG" --soql "SELECT Id, Name, TableEnumOrId FROM Layout WHERE TableEnumOrId = 'Case'" --name case-layouts --out-dir "$RAW_DIR"
 ```
 
 Fetch layout metadata:
 
 ```bash
-sf data query --target-org "$ORG" --use-tooling-api --json --query "SELECT Id, Name, Metadata FROM Layout WHERE Id = '00h...'" > "$RAW_DIR/Case-Customer_Experience_layout.json"
+python scripts/sf_caseops_helper.py query-tooling --org "$ORG" --soql "SELECT Id, Name, Metadata FROM Layout WHERE Id = '00h...'" --name case-layout-metadata --out-dir "$RAW_DIR"
 ```
 
 Then parse `Metadata.layoutSections[].layoutColumns[].layoutItems[].field`.

@@ -18,6 +18,7 @@ python scripts/sf_caseops_helper.py verify-sobject --org "$ORG" --sobject Opport
 python scripts/sf_caseops_helper.py sobject-fields --org "$ORG" --sobject OpportunityShare --contains "AccessLevel" --out-dir "$RAW_DIR"
 python scripts/sf_caseops_helper.py query-data --org "$ORG" --soql "SELECT Id FROM Account LIMIT 1" --out-dir "$RAW_DIR"
 python scripts/sf_caseops_helper.py query-tooling --org "$ORG" --soql "SELECT Id FROM FlowDefinition LIMIT 1" --out-dir "$RAW_DIR"
+python scripts/sf_caseops_helper.py api-request --org "$ORG" --endpoint "/services/data/v66.0/limits" --out-dir "$RAW_DIR"
 python scripts/sf_caseops_helper.py deploy-mdapi --sandbox-org "$SANDBOX_ORG" --candidate "$CANDIDATE" --attempt "$ATTEMPT"
 ```
 
@@ -29,6 +30,6 @@ Rules:
 - `deploy-mdapi` packages the MDAPI directory into an issue-scoped zip before deploy. Do not bypass this with raw directory deploys when Salesforce reports package or source-tracking ambiguity.
 - Helpers write compact JSON summaries into the issue-scoped directory and avoid raw access-token output.
 - If a helper fails, inspect the helper summary/error and replan. Do not try many ad hoc variants of the same query.
-- Retrieve/deploy through modern `sf` CLI commands only. Do not use legacy `sfdx force:*` commands.
-- Do not use `package.xml` or `--manifest` for routine CaseOps retrieve/deploy. Use `--metadata`, `--source-dir`, or `--metadata-dir`.
+- Raw `sf data query`, `sf project retrieve start`, `sf project deploy start`, and read-only `sf api request rest` are blocked. Use the corresponding helper so failures are structured and workspace/safety rules are applied.
+- Do not use legacy `sfdx force:*`, `package.xml`, or `--manifest` for routine CaseOps work.
 - Before querying setup/share objects with unfamiliar fields, run `sobject-fields` and use only fields returned by describe.
